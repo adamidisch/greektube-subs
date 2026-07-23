@@ -15,6 +15,7 @@ type CaptionResponse = {
   channel: string;
   sourceLanguage: string;
   sourceType: "manual" | "automatic";
+  translationMethod: string;
   cues: CaptionCue[];
 };
 
@@ -23,6 +24,7 @@ type YouTubePlayer = {
   getCurrentTime: () => number;
   playVideo: () => void;
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  unloadModule?: (module: string) => void;
 };
 
 declare global {
@@ -127,9 +129,14 @@ export default function GreekTubePlayer() {
           rel: 0,
           modestbranding: 1,
           cc_load_policy: 0,
+          cc_lang_pref: "el",
+          hl: "el",
         },
         events: {
-          onReady: ({ target }) => target.playVideo(),
+          onReady: ({ target }) => {
+            target.unloadModule?.("captions");
+            target.playVideo();
+          },
         },
       });
     };
@@ -202,9 +209,7 @@ export default function GreekTubePlayer() {
       setData(payload);
       setStatus("ready");
       setMessage(
-        `${payload.cues.length.toLocaleString("el-GR")} ελληνικά segments · ${
-          payload.sourceType === "automatic" ? "Auto-generated English captions" : "English captions"
-        }`,
+        `${payload.cues.length.toLocaleString("el-GR")} ελληνικά segments · Η μετάφραση ολοκληρώθηκε`,
       );
     } catch (error) {
       setStatus("error");
