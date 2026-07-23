@@ -24,6 +24,7 @@ type YouTubePlayer = {
   getCurrentTime: () => number;
   playVideo: () => void;
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  setOption?: (module: string, option: string, value: unknown) => void;
   unloadModule?: (module: string) => void;
 };
 
@@ -134,7 +135,13 @@ export default function GreekTubePlayer() {
         },
         events: {
           onReady: ({ target }) => {
-            target.unloadModule?.("captions");
+            const disableYouTubeCaptions = () => {
+              target.setOption?.("captions", "track", {});
+              target.unloadModule?.("captions");
+            };
+            disableYouTubeCaptions();
+            window.setTimeout(disableYouTubeCaptions, 600);
+            window.setTimeout(disableYouTubeCaptions, 1600);
             target.playVideo();
           },
         },

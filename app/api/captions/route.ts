@@ -220,13 +220,38 @@ async function translateBatch(batch: { index: number; text: string }[]) {
     .map((part) => (Array.isArray(part) && typeof part[0] === "string" ? part[0] : ""))
     .join("");
   const results = new Map<number, string>();
-  const marker = /\[\[(\d+)\]\]\s*([\s\S]*?)(?=\n?\[\[\d+\]\]|$)/g;
+  const marker =
+    /\[\[\s*(\d+)\s*\]\]\s*([\s\S]*?)(?=\n?\[\[\s*\d+\s*\]\]|$)/g;
   let match: RegExpExecArray | null;
   while ((match = marker.exec(translated))) {
     const text = match[2].replace(/\s+/g, " ").trim();
     if (text) results.set(Number(match[1]), text);
   }
   return results;
+}
+
+async function translateSingleCue(index: number, text: string) {
+  const body = new URLSearchParams({
+    client: "gtx",
+    sl: "en",
+    tl: "el",
+    dt: "t",
+    q: text,
+  });
+  const response = await fetch("https://translate.googleapis.com/translate_a/single", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    body,
+  });
+  if (!response.ok) return null;
+  const payload = (await response.json()) as unknown;
+  if (!Array.isArray(payload) || !Array.isArray(payload[0])) return null;
+  const translated = (payload[0] as unknown[])
+    .map((part) => (Array.isArray(part) && typeof part[0] === "string" ? part[0] : ""))
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
+  return translated ? { index, text: translated } : null;
 }
 
 async function translateCuesToGreek(cues: CaptionCue[]) {
@@ -240,8 +265,26 @@ async function translateCuesToGreek(cues: CaptionCue[]) {
     });
   }
 
-  const missing = cues.filter((_, index) => !translated.has(index)).length;
-  if (missing > Math.max(3, Math.floor(cues.length * 0.04))) {
+  const missingIndexes = cues
+    .map((_, index) => index)
+    .filter((index) => !translated.has(index));
+
+  // Google occasionally drops or alters one of the numeric separators in a
+  // large translation batch. Retry only those cues individually so a single
+  // missing separator cannot invalidate the whole video.
+  for (let start = 0; start < missingIndexes.length; start += 12) {
+    const retries = await Promise.all(
+      missingIndexes.slice(start, start + 12).map((index) =>
+        translateSingleCue(index, cues[index].text),
+      ),
+    );
+    retries.forEach((result) => {
+      if (result) translated.set(result.index, result.text);
+    });
+  }
+
+  const stillMissing = cues.filter((_, index) => !translated.has(index)).length;
+  if (stillMissing > Math.max(2, Math.floor(cues.length * 0.015))) {
     throw new Error("Η ελληνική μετάφραση δεν ολοκληρώθηκε");
   }
 
