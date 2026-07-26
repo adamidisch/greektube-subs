@@ -10,6 +10,7 @@ type Video = {
   id: string; url: string; title: string; originalTitle?:string; channel: string; category: Category;
   tags: string[]; notes: string; description: string; duration: number; addedAt: string;
   favorite: boolean; lastPosition: number; progress: number; lastWatched?: string; captions?: Cue[];
+  speakerName?:string; views?:number;
 };
 type Moment = { id: string; videoId: string; time: number; note: string; tags: string[]; excerpt: string };
 type Settings = {
@@ -66,6 +67,7 @@ const SPEAKERS:Record<string,SpeakerProfile>={
   "0_adZSC0sFI":{name:"Dr Sarah Myhill",role:"Ιατρός με ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
   D2RjneeG_xA:{name:"Dr Sarah Myhill",role:"Ιατρός με ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
   "fX2z-BF8Jac":{name:"Dr Natasha Campbell-McBride",role:"Ιατρός με εκπαίδευση στη νευρολογία και στην ανθρώπινη διατροφή",importance:"Γνωστή για την προσέγγιση GAPS και τη σχέση εντέρου και εγκεφάλου.",currentWork:"",highlights:[]},
+  HDK3Y9mGMiA:{name:"Dr Natasha Campbell-McBride",role:"Ιατρός με εκπαίδευση στη νευρολογία και στην ανθρώπινη διατροφή",importance:"Γνωστή για την προσέγγιση GAPS και τη σχέση εντέρου και εγκεφάλου.",currentWork:"",highlights:[]},
 };
 function speakerForVideo(id:string,channel:string):SpeakerProfile{return SPEAKERS[id]||{name:channel||"Ομιλητής του βίντεο",role:"Ομιλητής και δημιουργός του περιεχομένου",importance:"Το επαγγελματικό προφίλ του ομιλητή δεν έχει ακόμη επιβεβαιωθεί.",currentWork:"Θα προστεθούν περισσότερα στοιχεία μόλις επιβεβαιωθεί η ταυτότητά του.",highlights:["Ταυτότητα ομιλητή","Επαγγελματική ιδιότητα","Κύριο έργο","Σημερινή δραστηριότητα"]};}
 const GREEK_TITLES:Record<string,string>={
@@ -196,11 +198,11 @@ export default function GreekTubePlayer() {
     return [...state.videos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt))[0]||null;
   },[state.videos]);
   const featuredMoments=featured?state.moments.filter(m=>m.videoId===featured.id):[];
-  const featuredTopics=featured?[...new Set([CATEGORY_LABELS[featured.category],...featured.tags])].slice(0,4):[];
 
   function patchVideo(id:string,patch:Partial<Video>){setState(s=>({...s,videos:s.videos.map(v=>v.id===id?{...v,...patch}:v)}));}
   async function openVideo(video:Video,start?:number,showTranscript=false){
     const knownPoints=transcriptHighlights(video.captions||[]);
+    patchVideo(video.id,{views:(video.views||0)+1});
     setSelectedId(video.id); setView("library"); setLoading(true); setProgress(4); setError(""); setCaptions(null); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript);
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
     const timer=window.setInterval(()=>setProgress(p=>Math.min(84,p+(p<28?2:p<60?1:.5))),1200);
@@ -241,7 +243,7 @@ export default function GreekTubePlayer() {
         if(!isCompleteGreekTranscript(sharedData,video.duration))throw new Error("incomplete-transcript");
         data=sharedData;
         localStorage.setItem(`greektube-transcript:${video.id}:v2`,JSON.stringify(sharedData));
-        patchVideo(video.id,{title:sharedData.title,originalTitle:sharedData.originalTitle||englishTitle(video),channel:sharedData.channel,captions:sharedData.cues});
+        patchVideo(video.id,{title:sharedData.title,originalTitle:sharedData.originalTitle||englishTitle(video),channel:sharedData.channel,captions:sharedData.cues,speakerName:sharedData.speaker?.name});
       }
       const points=data.keyPoints?.length?data.keyPoints:transcriptHighlights(data.cues);
       if(points.length){setLoadingPoints(points);setProgress(100);await new Promise(resolve=>window.setTimeout(resolve,750));}
@@ -344,17 +346,11 @@ export default function GreekTubePlayer() {
           <div className="featured-progress"><i style={{width:`${featured.progress}%`}}/></div>
         </button>
         <div className="featured-panel">
-          <div className="featured-meta"><span>{CATEGORY_LABELS[featured.category]}</span><button aria-label="Αγαπημένο" className={`featured-favorite ${featured.favorite?"active":""}`} onClick={()=>patchVideo(featured.id,{favorite:!featured.favorite})}>♥</button></div>
+          <div className="featured-meta"><span>{CATEGORY_LABELS[featured.category]} · Προβολές: {featured.views||0}</span><button aria-label="Αγαπημένο" className={`featured-favorite ${featured.favorite?"active":""}`} onClick={()=>patchVideo(featured.id,{favorite:!featured.favorite})}>♥</button></div>
           <h2>{greekTitle(featured)}</h2>
           {englishTitle(featured)&&<p className="featured-original-title">{englishTitle(featured)}</p>}
-          <small>{featured.channel}</small>
-          <p>{featured.description}</p>
-          <div className="topic-list">{featuredTopics.map(topic=><span key={topic}>{topic}</span>)}</div>
-          <div className="featured-stats">
-            <div><strong>{Math.round(featured.progress)}%</strong><span>προβλήθηκε</span></div>
-            <div><strong>{featured.duration>0?clock(Math.max(0,featured.duration-featured.lastPosition)):"—"}</strong><span>απομένει</span></div>
-            <div><strong>{featuredMoments.length}</strong><span>στιγμές</span></div>
-          </div>
+          <small className="featured-speaker">{featured.speakerName||speakerForVideo(featured.id,featured.channel).name}</small>
+          <div className="featured-details"><span>{Math.round(featured.progress)}% ολοκληρώθηκε</span>{featured.duration>0&&<span>{clock(Math.max(0,featured.duration-featured.lastPosition))} απομένουν</span>}<span>{featuredMoments.length} στιγμές</span></div>
           <div className="featured-actions">
             <button className="primary" onClick={()=>void openVideo(featured,featured.lastPosition)}>▶ Συνέχεια προβολής</button>
             <button className="secondary" onClick={()=>void openVideo(featured,0)}>↺ Από την αρχή</button>
@@ -373,7 +369,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 3.1</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 3.2</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;const title=greekTitle(video);return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img loading="lazy" decoding="async" src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Ελληνικοί υπότιτλοι"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onKeyDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
