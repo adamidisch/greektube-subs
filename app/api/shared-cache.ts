@@ -95,7 +95,7 @@ export async function acquireProcessingLock(videoId: string, token: string) {
   await ensureTranscriptTable();
   const database = await db();
   const now = new Date();
-  const expires = new Date(now.getTime() + 120_000).toISOString();
+  const expires = new Date(now.getTime() + 600_000).toISOString();
   const result = await database.prepare(
     `INSERT INTO video_transcripts (
       video_id, status, progress, lock_token, lock_expires_at, transcript_version, created_at, updated_at
@@ -116,7 +116,7 @@ export async function updateProcessingProgress(videoId: string, token: string, p
   const database = await db();
   await database.prepare(
     "UPDATE video_transcripts SET progress = ?, lock_expires_at = ?, updated_at = ? WHERE video_id = ? AND lock_token = ?",
-  ).bind(progress, new Date(Date.now()+120_000).toISOString(), new Date().toISOString(), videoId, token).run();
+  ).bind(progress, new Date(Date.now()+600_000).toISOString(), new Date().toISOString(), videoId, token).run();
 }
 
 export async function completeTranscript(record: TranscriptRecord, token: string) {

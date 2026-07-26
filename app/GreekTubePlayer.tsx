@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Cue = { start: number; duration: number; text: string };
 type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
-type Captions = { videoId: string; title: string; originalTitle?:string; channel: string; cues: Cue[]; duration?: number; transcriptVersion?: number; keyPoints?: string[]; topics?: string[]; speaker?:SpeakerProfile };
+type Captions = { videoId: string; title: string; originalTitle?:string; channel: string; cues: Cue[]; englishCues?:Cue[]; duration?: number; transcriptVersion?: number; keyPoints?: string[]; topics?: string[]; speaker?:SpeakerProfile };
 type Category = "Medical" | "Tech" | "Podcasts" | "Comedy" | "Education" | "Documentaries" | "Other";
 type Video = {
   id: string; url: string; title: string; originalTitle?:string; channel: string; category: Category;
@@ -44,6 +44,7 @@ const DEFAULT_SETTINGS: Settings = {
   autoTranslate: true, autoCategory: true, layout: "grid", compact: true,
   theme: "dark", descriptions: true, continueWatching: true,
 };
+const PERSONAL_CACHE_KEY="greektube-personal-state:v1";
 const SEED: Video[] = [
   ["ATKu1Cxs2Pc","Καρδιοχειρουργός: Ο μεγαλύτερος παράγοντας κινδύνου για καρδιακή νόσο","Dr. Philip Ovadia","Ο Dr. Philip Ovadia εξηγεί τη σχέση της αντίστασης στην ινσουλίνη με την καρδιακή νόσο."],
   ["NqLpQhii_fU","Αν θέλεις να μειώσεις τους υδατάνθρακες δες αυτό!","Dr. Sarah Myhill","Τι συμβαίνει στον οργανισμό όταν μειώνονται οι υδατάνθρακες."],
@@ -152,11 +153,28 @@ export default function GreekTubePlayer() {
   const player=useRef<Player|null>(null);
   const transcript=useRef<HTMLDivElement>(null);
   const saveTimer=useRef<number|undefined>(undefined);
+  const activeRef=useRef(-1);
+  const lastProgressSave=useRef(0);
   const selected=state.videos.find(v=>v.id===selectedId)||null;
 
-  useEffect(()=>{ void (async()=>{try{const r=await fetch("/api/state"); const j=await r.json(); if(j.state?.videos) setState({settings:{...DEFAULT_SETTINGS,...j.state.settings},videos:j.state.videos,moments:j.state.moments||[]});}finally{setHydrated(true);}})(); },[]);
-  useEffect(()=>{ if(!hydrated)return; window.clearTimeout(saveTimer.current); saveTimer.current=window.setTimeout(()=>{void fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(state)});},450); },[state,hydrated]);
-  useEffect(()=>{document.documentElement.dataset.theme=state.settings.theme;},[state.settings.theme]);
+  useEffect(()=>{ void (async()=>{
+    let fallback:AppState|null=null;
+    try{const raw=localStorage.getItem(PERSONAL_CACHE_KEY);if(raw)fallback=JSON.parse(raw) as AppState;}catch{}
+    if(fallback?.videos)setState({settings:{...DEFAULT_SETTINGS,...fallback.settings},videos:fallback.videos,moments:fallback.moments||[]});
+    try{
+      const r=await fetch("/api/state");
+      if(r.ok){
+        const j=await r.json();
+        if(j.state?.videos)setState({settings:{...DEFAULT_SETTINGS,...j.state.settings},videos:j.state.videos,moments:j.state.moments||[]});
+      }
+    }finally{setHydrated(true);}
+  })(); },[]);
+  useEffect(()=>{ if(!hydrated)return;try{localStorage.setItem(PERSONAL_CACHE_KEY,JSON.stringify(state));}catch{}window.clearTimeout(saveTimer.current); saveTimer.current=window.setTimeout(()=>{void fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(state)}).catch(()=>undefined);},1500);return()=>window.clearTimeout(saveTimer.current); },[state,hydrated]);
+  useEffect(()=>{
+    const media=window.matchMedia("(prefers-color-scheme: light)");
+    const apply=()=>{document.documentElement.dataset.theme=state.settings.theme==="system"?(media.matches?"light":"dark"):state.settings.theme;};
+    apply();media.addEventListener("change",apply);return()=>media.removeEventListener("change",apply);
+  },[state.settings.theme]);
 
   const filtered=useMemo(()=> {
     let list=state.videos.filter(v=>(category==="Όλα"||v.category===category)&&(`${v.title} ${v.channel} ${v.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase())));
@@ -192,7 +210,7 @@ export default function GreekTubePlayer() {
         let transientFailures=0;
         for(let attempt=0;attempt<120;attempt++){
           const controller=new AbortController();
-          const timeout=window.setTimeout(()=>controller.abort(),120000);
+          const timeout=window.setTimeout(()=>controller.abort(),300000);
           try{
             response=await fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url}),signal:controller.signal});
           }catch{
@@ -254,7 +272,7 @@ export default function GreekTubePlayer() {
     const create=()=>{if(!window.YT||!playerHost.current)return; player.current?.destroy(); playerHost.current.innerHTML=""; player.current=new window.YT.Player(playerHost.current,{videoId:id,width:"100%",height:"100%",playerVars:{autoplay:state.settings.autoplay?1:0,controls:1,modestbranding:1,rel:0,playsinline:1,start:Math.floor(start),cc_load_policy:0,hl:"el"},events:{onReady:({target}:{target:Player})=>{disableYouTubeCaptions(target);window.setTimeout(()=>disableYouTubeCaptions(target),350);target.setPlaybackRate(state.settings.speed);if(state.settings.autoplay)target.playVideo();},onApiChange:({target}:{target:Player})=>disableYouTubeCaptions(target),onStateChange:({target}:{target:Player})=>disableYouTubeCaptions(target)}});};
     if(window.YT?.Player)create(); else{if(!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')){const s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);}window.onYouTubeIframeAPIReady=create;}
   }
-  useEffect(()=>{if(!captions||!selectedId)return;const timer=window.setInterval(()=>{const now=player.current?.getCurrentTime();if(typeof now!=="number")return;const duration=player.current?.getDuration()||selected?.duration||0;setActive(activeIndex(captions.cues,now+state.settings.delay));if(duration>0)patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});},1000);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay]);
+  useEffect(()=>{if(!captions||!selectedId)return;lastProgressSave.current=0;const selectedDuration=selected?.duration||0;const timer=window.setInterval(()=>{const now=player.current?.getCurrentTime();if(typeof now!=="number")return;const nextActive=activeIndex(captions.cues,now+state.settings.delay);if(nextActive!==activeRef.current){activeRef.current=nextActive;setActive(nextActive);}const duration=player.current?.getDuration()||selectedDuration;if(duration>0&&now-lastProgressSave.current>=5){lastProgressSave.current=now;patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});}},250);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay,selected?.duration]);
   useEffect(()=>{if(active<0||!state.settings.autoScroll)return;transcript.current?.querySelector(`[data-cue="${active}"]`)?.scrollIntoView({block:"center",behavior:"smooth"});},[active,state.settings.autoScroll]);
   useEffect(()=>{const params=new URLSearchParams(location.search);const id=params.get("video");const t=Number(params.get("t")||0);if(hydrated&&id){const v=state.videos.find(x=>x.id===id);if(v)window.setTimeout(()=>void openVideo(v,t),0);}},[hydrated]);
   useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key.toLowerCase()==="m"&&selected){e.preventDefault();beginMoment();}};addEventListener("keydown",key);return()=>removeEventListener("keydown",key);},[selected,active,captions]);
@@ -295,7 +313,7 @@ export default function GreekTubePlayer() {
         <section className={`watch-layout ${transcriptOpen?"transcript-open":"player-only"}`}>
           <div className="watch-main">
             <div className="sticky-player" onContextMenu={e=>{e.preventDefault();beginMoment();}}>
-              <div className="video-frame"><div ref={playerHost}/>{state.settings.subtitles&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{fontSize:state.settings.subtitleSize,background:`rgba(0,0,0,${state.settings.opacity})`}}>{captions.cues[active]?.text}</div>}</div>
+              <div className="video-frame"><div ref={playerHost}/>{state.settings.subtitles&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{fontSize:state.settings.subtitleSize,background:`rgba(0,0,0,${state.settings.opacity})`}}>{state.settings.subtitleMode==="en"?(captions.englishCues?.[active]?.text||captions.cues[active]?.text):state.settings.subtitleMode==="dual"?<><span>{captions.cues[active]?.text}</span>{captions.englishCues?.[active]?.text&&<small>{captions.englishCues[active].text}</small>}</>:captions.cues[active]?.text}</div>}</div>
               <div className="player-actions"><div><button className="primary compact" onClick={()=>beginMoment()}>＋ Αποθήκευση στιγμής</button><button className="secondary compact transcript-toggle" onClick={()=>setTranscriptOpen(value=>!value)}>{transcriptOpen?"Κλείσιμο μεταγραφής":"Άνοιγμα μεταγραφής"}</button></div><span>{Math.round(selected.progress)}% προβολή</span></div>
             </div>
             <div className="video-heading"><div><small>{selected.channel} · {CATEGORY_LABELS[selected.category]}</small><h1>{captions.title}</h1>{(captions.originalTitle||englishTitle(selected))&&<p className="player-original-title">{captions.originalTitle||englishTitle(selected)}</p>}<div className="speaker-row"><span>Ομιλητής</span><strong>{speaker.name}</strong><i>{speaker.role}</i></div></div><button aria-label="Αγαπημένο" className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div>
@@ -348,19 +366,19 @@ export default function GreekTubePlayer() {
       <section className={`video-grid ${state.settings.layout} ${state.settings.compact?"compact":""}`}>{filtered.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} settings={state.settings}/>)}</section>
       {filtered.length===0&&<div className="empty"><h2>Δεν βρέθηκαν βίντεο</h2><p>Δοκίμασε διαφορετική κατηγορία ή αναζήτηση.</p></div>}
     </>}
-    {modal&&<AddVideo close={()=>setModal(false)} add={async(video,translate)=>{setState(s=>({...s,videos:[video,...s.videos]}));setModal(false);if(translate)await openVideo(video);}}/>}
+    {modal&&<AddVideo existingIds={state.videos.map(video=>video.id)} close={()=>setModal(false)} add={async(video,translate)=>{setState(s=>({...s,videos:[video,...s.videos]}));setModal(false);if(translate)await openVideo(video);}}/>}
   </main>;
 }
 
-function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.8</small></div>;}
-function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
-function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;const title=greekTitle(video);return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Ελληνικοί υπότιτλοι"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
+function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.9</small></div>;}
+function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
+function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;const title=greekTitle(video);return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img loading="lazy" decoding="async" src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Ελληνικοί υπότιτλοι"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onKeyDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
-function AddVideo({close,add}:{close:()=>void;add:(v:Video,t:boolean)=>Promise<void>}) {
+function AddVideo({close,add,existingIds}:{close:()=>void;add:(v:Video,t:boolean)=>Promise<void>;existingIds:string[]}) {
   const [url,setUrl]=useState("");const [metadata,setMetadata]=useState<{id:string;title:string;originalTitle?:string;channel:string}|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState("");
-  async function inspect(){const id=extractId(url);if(!id){setError("Βάλε έναν έγκυρο σύνδεσμο YouTube.");return;}setBusy(true);setError("");try{const r=await fetch("/api/metadata",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});const j=await r.json();if(!r.ok)throw new Error(j.error);setMetadata(j);}catch(e){setError(e instanceof Error?e.message:"Σφάλμα");}finally{setBusy(false);}}
-  async function submit(e:React.MouseEvent<HTMLButtonElement>,translate:boolean){e.preventDefault();const form=e.currentTarget.form;if(!form)return;if(!metadata){await inspect();return;}const fd=new FormData(form);const v:Video={id:metadata.id,url,title:metadata.title,originalTitle:metadata.originalTitle,channel:metadata.channel,category:String(fd.get("category")) as Category,tags:String(fd.get("tags")||"").split(",").map(x=>x.trim()).filter(Boolean),notes:String(fd.get("notes")||""),description:String(fd.get("notes")||"Νέο βίντεο στη βιβλιοθήκη."),duration:0,addedAt:new Date().toISOString(),favorite:false,lastPosition:0,progress:0};await add(v,translate);}
-  return <Modal title="Προσθήκη βίντεο" close={close}><form className="form"><label>Σύνδεσμος YouTube<div className="inspect-row"><input value={url} onChange={e=>{setUrl(e.target.value);setMetadata(null)}} placeholder="https://youtube.com/watch?v=…"/><button type="button" onClick={()=>void inspect()}>{busy?"…":"Έλεγχος"}</button></div></label>{error&&<p className="form-error">{error}</p>}{metadata&&<div className="metadata"><img src={`https://i.ytimg.com/vi/${metadata.id}/hqdefault.jpg`} alt=""/><div><strong>{metadata.title}</strong><span>{metadata.channel}</span></div></div>}<div className="form-grid"><label>Κατηγορία<select name="category" defaultValue="Other">{CATEGORIES.slice(1).map(c=><option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}</select></label><label>Ετικέτες<input name="tags" placeholder="υγεία, ινσουλίνη"/></label></div><label>Προσωπικές σημειώσεις<textarea name="notes" placeholder="Γιατί θέλω να κρατήσω αυτό το βίντεο…"/></label><div className="modal-actions"><button className="secondary" onClick={e=>void submit(e,false)}>Αποθήκευση χωρίς μετάφραση</button><button className="primary" onClick={e=>void submit(e,true)}>Μετάφραση τώρα</button></div></form></Modal>;
+  async function inspect(){const id=extractId(url);if(!id){setError("Βάλε έναν έγκυρο σύνδεσμο YouTube.");return;}if(existingIds.includes(id)){setError("Αυτό το βίντεο υπάρχει ήδη στη βιβλιοθήκη.");return;}setBusy(true);setError("");try{const r=await fetch("/api/metadata",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});const j=await r.json();if(!r.ok)throw new Error(j.error);setMetadata(j);}catch(e){setError(e instanceof Error?e.message:"Σφάλμα");}finally{setBusy(false);}}
+  async function submit(e:React.MouseEvent<HTMLButtonElement>,translate:boolean){e.preventDefault();const form=e.currentTarget.form;if(!form||busy)return;if(!metadata){await inspect();return;}setBusy(true);const fd=new FormData(form);const v:Video={id:metadata.id,url,title:metadata.title,originalTitle:metadata.originalTitle,channel:metadata.channel,category:String(fd.get("category")) as Category,tags:String(fd.get("tags")||"").split(",").map(x=>x.trim()).filter(Boolean),notes:String(fd.get("notes")||""),description:String(fd.get("notes")||"Νέο βίντεο στη βιβλιοθήκη."),duration:0,addedAt:new Date().toISOString(),favorite:false,lastPosition:0,progress:0};await add(v,translate);}
+  return <Modal title="Προσθήκη βίντεο" close={close}><form className="form"><label>Σύνδεσμος YouTube<div className="inspect-row"><input value={url} onChange={e=>{setUrl(e.target.value);setMetadata(null);setError("")}} placeholder="https://youtube.com/watch?v=…"/><button type="button" disabled={busy} onClick={()=>void inspect()}>{busy?"Έλεγχος…":"Έλεγχος"}</button></div></label>{error&&<p className="form-error">{error}</p>}{metadata&&<div className="metadata"><img src={`https://i.ytimg.com/vi/${metadata.id}/hqdefault.jpg`} alt=""/><div><strong>{metadata.title}</strong><span>{metadata.channel}</span></div></div>}<div className="form-grid"><label>Κατηγορία<select name="category" defaultValue="Other">{CATEGORIES.slice(1).map(c=><option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}</select></label><label>Ετικέτες<input name="tags" placeholder="υγεία, ινσουλίνη"/></label></div><label>Προσωπικές σημειώσεις<textarea name="notes" placeholder="Γιατί θέλω να κρατήσω αυτό το βίντεο…"/></label><div className="modal-actions"><button className="secondary" disabled={busy} onClick={e=>void submit(e,false)}>Αποθήκευση χωρίς μετάφραση</button><button className="primary" disabled={busy} onClick={e=>void submit(e,true)}>Μετάφραση τώρα</button></div></form></Modal>;
 }
 
 function SettingsPage({settings,update}:{settings:Settings;update:(p:Partial<Settings>)=>void}) {

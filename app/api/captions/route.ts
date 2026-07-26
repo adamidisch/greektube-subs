@@ -567,7 +567,12 @@ export async function POST(request: Request) {
 
     const cached = await getTranscript(videoId);
     if (cached?.status === "ready" && cached.transcriptVersion === TRANSCRIPT_VERSION) {
-      return NextResponse.json(await cachedResponse(cached));
+      try {
+        validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
+        return NextResponse.json(await cachedResponse(cached));
+      } catch {
+        // Rebuild stale or incomplete cached subtitles under the video lock.
+      }
     }
     if (cached?.status === "processing" && cached.transcriptVersion === TRANSCRIPT_VERSION && cached.lockExpiresAt && cached.lockExpiresAt > new Date().toISOString()) {
       return NextResponse.json(await cachedResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
@@ -585,6 +590,8 @@ export async function POST(request: Request) {
     const tracks = player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
     const track = chooseTrack(tracks);
     if (!track?.baseUrl) {
+      await failTranscript(videoId, lockToken, "Το video δεν διαθέτει captions.");
+      lockToken = null;
       return NextResponse.json({ error: "Το video δεν διαθέτει captions." }, { status: 404 });
     }
 

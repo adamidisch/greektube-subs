@@ -304,6 +304,9 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
 }
 
 .mobile-settings{display:none}
+.subtitles span,.subtitles small{display:block}
+.subtitles small{margin-top:3px;color:#ddd;font-size:.72em;line-height:1.35}
+button:disabled{cursor:wait;opacity:.58}
 @media(max-width:620px){
   .app-header .mobile-settings{display:grid;place-items:center;margin-left:auto;padding:0;width:36px}
   .app-header .mobile-settings+.add-top{margin-left:0}
