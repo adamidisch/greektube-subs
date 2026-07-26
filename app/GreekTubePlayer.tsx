@@ -126,10 +126,10 @@ function isCompleteGreekTranscript(data:Captions|null|undefined,duration=0) {
   return true;
 }
 const PREPARATION_STAGES=[
-  {at:4,label:"Στοιχεία βίντεο"},
-  {at:12,label:"Αρχικοί υπότιτλοι"},
-  {at:28,label:"Ελληνική μετάφραση"},
-  {at:88,label:"Τελικός έλεγχος"},
+  {at:4,label:"Διαβάζουμε τα στοιχεία του βίντεο"},
+  {at:12,label:"Βρίσκουμε τους αρχικούς υπότιτλους"},
+  {at:28,label:"Μεταφράζουμε τους υπότιτλους στα ελληνικά"},
+  {at:88,label:"Ελέγχουμε τον συγχρονισμό"},
 ];
 function transcriptHighlights(cues:Cue[]) {
   if(!cues.length)return [];
@@ -307,6 +307,7 @@ export default function GreekTubePlayer() {
   if(selected){
     const moments=state.moments.filter(m=>m.videoId===selected.id);
     const speaker=captions?.speaker||speakerForVideo(selected.id,selected.channel);
+    const preparationStage=progress>=100?"Οι ελληνικοί υπότιτλοι είναι έτοιμοι":[...PREPARATION_STAGES].reverse().find(stage=>progress>=stage.at)?.label||PREPARATION_STAGES[0].label;
     return <main className="app-shell viewer">
       <header className="app-header"><button className="ghost" onClick={close}>← Βιβλιοθήκη</button><Brand home={goHome}/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}>⚙</button></header>
       {loading&&<section className="content-loading">
@@ -314,14 +315,7 @@ export default function GreekTubePlayer() {
         <div className="loading-insights">
           <div className="loading-progress-line"><span>Περιεχόμενο βίντεο</span><strong>{Math.round(progress)}%</strong></div>
           <div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div>
-          <ol className="preparation-stages">
-            {PREPARATION_STAGES.map((stage,index)=>{
-              const next=PREPARATION_STAGES[index+1]?.at??101;
-              const done=progress>=next;
-              const activeStage=progress>=stage.at&&!done;
-              return <li key={stage.label} className={done?"done":activeStage?"active":""}><i>{done?"✓":String(index+1).padStart(2,"0")}</i><span>{stage.label}</span>{activeStage&&<em>Σε εξέλιξη</em>}</li>;
-            })}
-          </ol>
+          <div className={`preparation-status ${progress>=100?"done":""}`} aria-live="polite"><i aria-hidden="true">{progress>=100?"✓":""}</i><span key={preparationStage}>{preparationStage}</span></div>
           <section className="speaker-loading-card"><h2>{speaker.name}</h2><strong>{speaker.role}</strong></section>
           <h2>Περιγραφή βίντεο</h2>
           <div className="loading-description">{loadingDescription}</div>
@@ -384,7 +378,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 3.4</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 3.5</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;const title=greekTitle(video);return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img loading="lazy" decoding="async" src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Ελληνικοί υπότιτλοι"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onKeyDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
