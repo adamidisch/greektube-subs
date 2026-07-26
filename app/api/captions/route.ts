@@ -463,22 +463,22 @@ async function translateCuesToGreek(cues: CaptionCue[]) {
     });
   }
 
-  const missingIndexes = cues
-    .map((_, index) => index)
-    .filter((index) => !translated.has(index));
-
   // Google occasionally drops or alters one of the numeric separators in a
   // large translation batch. Retry only those cues individually so a single
   // missing separator cannot invalidate the whole video.
-  for (let start = 0; start < missingIndexes.length; start += 12) {
-    const retries = await Promise.all(
-      missingIndexes.slice(start, start + 12).map((index) =>
-        translateSingleCue(index, cues[index].text),
-      ),
-    );
-    retries.forEach((result) => {
-      if (result) translated.set(result.index, result.text);
-    });
+  for (let retry = 0; retry < 3; retry += 1) {
+    const pending = cues.map((_, index) => index).filter(index => !translated.has(index));
+    if (!pending.length) break;
+    for (let start = 0; start < pending.length; start += 4) {
+      const retries = await Promise.all(
+        pending.slice(start, start + 4).map((index) =>
+          translateSingleCue(index, cues[index].text),
+        ),
+      );
+      retries.forEach((result) => {
+        if (result) translated.set(result.index, result.text);
+      });
+    }
   }
 
   const stillMissing = cues.filter((_, index) => !translated.has(index)).length;
@@ -508,8 +508,11 @@ function validateCompleteGreekTranscript(cues: CaptionCue[], duration: number) {
   if (duration > 0) {
     const first = cues[0].start;
     const last = cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
-    const startsInTime = first <= Math.max(60, duration * 0.08);
-    const reachesEnd = last >= duration * 0.9;
+    const startsInTime = first <= Math.max(90, duration * 0.1);
+    // Many YouTube videos end with a silent end-screen or recommendation
+    // cards. Require the complete spoken portion instead of rejecting an
+    // otherwise complete transcript because that outro has no captions.
+    const reachesEnd = last >= duration * 0.82 || duration - last <= 180;
     if (!startsInTime || !reachesEnd) {
       throw new Error("Δεν βρέθηκαν πλήρεις υπότιτλοι για όλη τη διάρκεια του video");
     }
@@ -598,7 +601,7 @@ export async function POST(request: Request) {
       await updateProcessingProgress(videoId, lockToken, 48);
       try {
         const youtubeTranslated = await fetchCaptionCues(track, "el");
-        if (hasGreekText(youtubeTranslated)) {
+        if (hasGreekText(youtubeTranslated) && youtubeTranslated.length >= sourceCues.length * 0.95) {
           cues = youtubeTranslated;
           translationMethod = "youtube_auto_translate";
         }

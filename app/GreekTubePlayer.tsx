@@ -111,10 +111,18 @@ function isCompleteGreekTranscript(data:Captions|null|undefined,duration=0) {
   const fullDuration=duration||data.duration||0;
   if(fullDuration>0){
     const last=cues.reduce((max,cue)=>Math.max(max,cue.start+cue.duration),0);
-    if(cues[0].start>Math.max(60,fullDuration*.08)||last<fullDuration*.9)return false;
+    const startsInTime=cues[0].start<=Math.max(90,fullDuration*.1);
+    const reachesSpokenEnd=last>=fullDuration*.82||fullDuration-last<=180;
+    if(!startsInTime||!reachesSpokenEnd)return false;
   }
   return true;
 }
+const PREPARATION_STAGES=[
+  {at:4,label:"Διαβάζουμε τα στοιχεία του βίντεο"},
+  {at:12,label:"Βρίσκουμε τους αρχικούς υπότιτλους"},
+  {at:28,label:"Μεταφράζουμε όλους τους υπότιτλους στα ελληνικά"},
+  {at:88,label:"Ελέγχουμε τον συγχρονισμό και την πληρότητα"},
+];
 function transcriptHighlights(cues:Cue[]) {
   if(!cues.length)return [];
   const step=Math.max(1,Math.floor(cues.length/10));
@@ -175,12 +183,13 @@ export default function GreekTubePlayer() {
     const knownPoints=transcriptHighlights(video.captions||[]);
     setSelectedId(video.id); setView("library"); setLoading(true); setProgress(4); setError(""); setCaptions(null); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript);
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
-    const timer=window.setInterval(()=>setProgress(p=>Math.min(92,p+(p<35?5:p<70?2:1))),420);
+    const timer=window.setInterval(()=>setProgress(p=>Math.min(84,p+(p<28?2:p<60?1:.5))),1200);
     try{
       let data:Captions;
       {
         let response:Response|null=null;
         let sharedData:Captions|null=null;
+        let transientFailures=0;
         for(let attempt=0;attempt<120;attempt++){
           const controller=new AbortController();
           const timeout=window.setTimeout(()=>controller.abort(),120000);
@@ -199,7 +208,14 @@ export default function GreekTubePlayer() {
             continue;
           }
           if(response?.ok){sharedData=await response.json();break;}
-          if(!response||response.status===429||response.status>=500)throw new Error("shared-storage");
+          if(!response||response.status===429||response.status>=500){
+            transientFailures+=1;
+            if(transientFailures<5){
+              await new Promise(resolve=>window.setTimeout(resolve,Math.min(6000,1000*transientFailures)));
+              continue;
+            }
+            throw new Error("shared-storage");
+          }
           break;
         }
         if(!isCompleteGreekTranscript(sharedData,video.duration))throw new Error("incomplete-transcript");
@@ -260,6 +276,14 @@ export default function GreekTubePlayer() {
         <div className="loading-insights">
           <div className="loading-progress-line"><span>Περιεχόμενο βίντεο</span><strong>{Math.round(progress)}%</strong></div>
           <div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div>
+          <ol className="preparation-stages">
+            {PREPARATION_STAGES.map((stage,index)=>{
+              const next=PREPARATION_STAGES[index+1]?.at??101;
+              const done=progress>=next;
+              const activeStage=progress>=stage.at&&!done;
+              return <li key={stage.label} className={done?"done":activeStage?"active":""}><i>{done?"✓":String(index+1).padStart(2,"0")}</i><span>{stage.label}</span>{activeStage&&<em>Σε εξέλιξη</em>}</li>;
+            })}
+          </ol>
           <section className="speaker-loading-card"><h2>{speaker.name}</h2><strong>{speaker.role}</strong></section>
           <h2>Περιγραφή βίντεο</h2>
           <div className="loading-description">{loadingDescription}</div>
@@ -328,7 +352,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.7</small></div>;}
+function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.8</small></div>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;const title=greekTitle(video);return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Ελληνικοί υπότιτλοι"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 

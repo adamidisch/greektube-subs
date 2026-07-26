@@ -231,6 +231,14 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
 .loading-progress-line strong{color:var(--muted);font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
 .content-loading .progress{width:100%;height:4px;margin:0 0 20px;background:var(--raised)}
 .content-loading .progress i{background:#8f7ff0}
+.preparation-stages{display:grid;gap:7px;margin:0 0 18px;padding:0;list-style:none}
+.preparation-stages li{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px 9px;border:1px solid transparent;border-radius:9px;color:#777b85;font-size:11px}
+.preparation-stages li i{display:grid;place-items:center;width:20px;height:20px;border:1px solid var(--line);border-radius:50%;font-family:var(--font-geist-mono);font-size:8px;font-style:normal}
+.preparation-stages li em{color:#aaa1ef;font-size:9px;font-style:normal}
+.preparation-stages li.active{border-color:rgba(143,127,240,.22);background:rgba(143,127,240,.07);color:#e3e0f3}
+.preparation-stages li.active i{border-color:#8f7ff0;color:#bcb2ff}
+.preparation-stages li.done{color:#a9abb4}
+.preparation-stages li.done i{border-color:rgba(115,204,157,.3);color:#73cc9d}
 .loading-insights h2{margin:0 0 12px;font-size:17px;font-weight:680;letter-spacing:-.02em}
 .loading-insights ul{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;margin:0;padding:0;list-style:none}
 .loading-insights li{min-width:0;display:grid;grid-template-columns:25px 1fr;gap:8px;padding:9px 0;border-top:1px solid rgba(255,255,255,.055)}
