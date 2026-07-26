@@ -260,7 +260,7 @@ export default function GreekTubePlayer() {
         <div className="loading-insights">
           <div className="loading-progress-line"><span>Περιεχόμενο βίντεο</span><strong>{Math.round(progress)}%</strong></div>
           <div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div>
-          <section className="speaker-loading-card"><small>Ο ΓΙΑΤΡΟΣ ΠΟΥ ΜΙΛΑ</small><h2>{speaker.name}</h2><strong>{speaker.role}</strong></section>
+          <section className="speaker-loading-card"><h2>{speaker.name}</h2><strong>{speaker.role}</strong></section>
           <h2>Περιγραφή βίντεο</h2>
           <div className="loading-description">{loadingDescription}</div>
           {loadingPoints.length>0&&<><h2 className="loading-points-title">Βασικά σημεία του βίντεο</h2><ul>{loadingPoints.slice(0,10).map((point,index)=><li key={`${point}-${index}`}><i>{String(index+1).padStart(2,"0")}</i><span>{point}</span></li>)}</ul></>}
@@ -328,7 +328,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.6</small></div>;}
+function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.7</small></div>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;const title=greekTitle(video);return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Ελληνικοί υπότιτλοι"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
