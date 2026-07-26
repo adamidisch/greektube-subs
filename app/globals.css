@@ -293,3 +293,9 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
   .speaker-loading-card>div{gap:4px}
   .speaker-row i{flex-basis:100%;line-height:1.45}
 }
+
+.mobile-settings{display:none}
+@media(max-width:620px){
+  .app-header .mobile-settings{display:grid;place-items:center;margin-left:auto;padding:0;width:36px}
+  .app-header .mobile-settings+.add-top{margin-left:0}
+}
