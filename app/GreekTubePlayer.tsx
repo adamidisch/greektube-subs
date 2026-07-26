@@ -40,7 +40,7 @@ const CATEGORY_LABELS: Record<(typeof CATEGORIES)[number], string> = {
   Comedy: "Κωμωδία", Education: "Εκπαίδευση", Documentaries: "Ντοκιμαντέρ", Other: "Άλλα",
 };
 const DEFAULT_SETTINGS: Settings = {
-  subtitleMode: "el", subtitleSize: 21, subtitlePosition: "bottom", opacity: .8, delay: 0,
+  subtitleMode: "el", subtitleSize: 23, subtitlePosition: "bottom", opacity: .8, delay: 0,
   subtitles: true, autoScroll: true, highlight: true, autoplay: true, speed: 1,
   autoTranslate: true, autoCategory: true, layout: "grid", compact: true,
   theme: "dark", descriptions: true, continueWatching: true,
@@ -48,7 +48,7 @@ const DEFAULT_SETTINGS: Settings = {
 const PERSONAL_CACHE_KEY="greektube-personal-state:v1";
 function normalizedSettings(settings?:Partial<Settings>):Settings{
   const merged={...DEFAULT_SETTINGS,...settings};
-  return {...merged,subtitleSize:merged.subtitleSize===18?21:merged.subtitleSize};
+  return {...merged,subtitleSize:merged.subtitleSize===18||merged.subtitleSize===21?23:merged.subtitleSize};
 }
 const SEED: Video[] = [
   ["ATKu1Cxs2Pc","Καρδιοχειρουργός: Ο μεγαλύτερος παράγοντας κινδύνου για καρδιακή νόσο","Dr. Philip Ovadia","Ο Dr. Philip Ovadia εξηγεί τη σχέση της αντίστασης στην ινσουλίνη με την καρδιακή νόσο."],
@@ -301,13 +301,24 @@ export default function GreekTubePlayer() {
   function saveMoment(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!selected||!momentModal)return;const fd=new FormData(event.currentTarget);const m:Moment={id:uid(),videoId:selected.id,time:momentModal.time,note:String(fd.get("note")||"Αποθηκευμένη στιγμή"),tags:String(fd.get("tags")||"").split(",").map(x=>x.trim()).filter(Boolean),excerpt:momentModal.excerpt};setState(s=>({...s,moments:[m,...s.moments]}));setMomentModal(null);void copyMoment(m);}
   async function copyMoment(m:Moment){const url=`${location.origin}/?video=${m.videoId}&t=${Math.floor(m.time)}`;await navigator.clipboard?.writeText(url);}
   function close(){player.current?.destroy();player.current=null;setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
-  function goToSettings(){player.current?.destroy();player.current=null;setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");setView("settings");history.replaceState(null,"","/");}
+  function goToSettings(){
+    const time=player.current?.getCurrentTime()||selected?.lastPosition||0;
+    if(selectedId)patchVideo(selectedId,{lastPosition:time});
+    player.current?.destroy();player.current=null;setTranscriptOpen(false);setError("");setView("settings");
+  }
+  function returnToVideo(){
+    if(!selectedId)return;
+    const position=state.videos.find(video=>video.id===selectedId)?.lastPosition||0;
+    setView("library");
+    window.setTimeout(()=>initPlayer(selectedId,position),120);
+  }
   function goHome(){close();setView("library");setMobileMenu(false);}
 
   if(selected){
     const moments=state.moments.filter(m=>m.videoId===selected.id);
     const speaker=captions?.speaker||speakerForVideo(selected.id,selected.channel);
     const preparationStage=progress>=100?"Οι ελληνικοί υπότιτλοι είναι έτοιμοι":[...PREPARATION_STAGES].reverse().find(stage=>progress>=stage.at)?.label||PREPARATION_STAGES[0].label;
+    if(view==="settings")return <main className="app-shell viewer settings-from-player"><header className="app-header"><button className="ghost back-to-video" onClick={returnToVideo}>← Πίσω στο βίντεο</button><Brand home={goHome}/><button className="icon-button active" aria-label="Ρυθμίσεις">⚙</button></header><SettingsPage settings={state.settings} update={patch=>setState(current=>({...current,settings:{...current.settings,...patch}}))}/></main>;
     return <main className="app-shell viewer">
       <header className="app-header"><button className="ghost" onClick={close}>← Βιβλιοθήκη</button><Brand home={goHome}/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}>⚙</button></header>
       {loading&&<section className="content-loading">
@@ -327,8 +338,8 @@ export default function GreekTubePlayer() {
         <section className={`watch-layout ${transcriptOpen?"transcript-open":"player-only"}`}>
           <div className="watch-main">
             <div className="sticky-player" onContextMenu={e=>{e.preventDefault();beginMoment();}}>
-              <div className="video-frame" ref={fullscreenHost}><div ref={playerHost}/>{state.settings.subtitles&&active>=0&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{fontSize:state.settings.subtitleSize,background:`rgba(0,0,0,${state.settings.opacity})`}}>{state.settings.subtitleMode==="en"?(captions.englishCues?.[active]?.text||captions.cues[active]?.text):state.settings.subtitleMode==="dual"?<><span>{captions.cues[active]?.text}</span>{captions.englishCues?.[active]?.text&&<small>{captions.englishCues[active].text}</small>}</>:captions.cues[active]?.text}</div>}<button className="custom-fullscreen" title={isFullscreen?"Έξοδος από πλήρη οθόνη":"Πλήρης οθόνη"} aria-label={isFullscreen?"Έξοδος από πλήρη οθόνη":"Πλήρης οθόνη"} onClick={()=>void toggleFullscreen()}>{isFullscreen?"↙":"⛶"}</button></div>
-              <div className="player-actions"><div><button className="primary compact" onClick={()=>beginMoment()}>＋ Αποθήκευση στιγμής</button><button className="secondary compact transcript-toggle" onClick={()=>setTranscriptOpen(value=>!value)}>{transcriptOpen?"Κλείσιμο μεταγραφής":"Άνοιγμα μεταγραφής"}</button><button className="secondary compact fullscreen-toggle" aria-label="Πλήρης οθόνη" onClick={()=>void toggleFullscreen()}><span aria-hidden="true">↗</span><b>Πλήρης οθόνη</b></button></div><span>{Math.round(selected.progress)}% προβολή</span></div>
+              <div className="video-frame" ref={fullscreenHost}><div ref={playerHost}/>{state.settings.subtitles&&active>=0&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{fontSize:state.settings.subtitleSize,background:`rgba(0,0,0,${state.settings.opacity})`}}>{state.settings.subtitleMode==="en"?(captions.englishCues?.[active]?.text||captions.cues[active]?.text):state.settings.subtitleMode==="dual"?<><span>{captions.cues[active]?.text}</span>{captions.englishCues?.[active]?.text&&<small>{captions.englishCues[active].text}</small>}</>:captions.cues[active]?.text}</div>}{isFullscreen&&<button className="custom-fullscreen" title="Έξοδος από πλήρη οθόνη" aria-label="Έξοδος από πλήρη οθόνη" onClick={()=>void toggleFullscreen()}>↙</button>}</div>
+              <div className="player-actions"><div><button className="primary compact fullscreen-toggle" aria-label="Πλήρης οθόνη" onClick={()=>void toggleFullscreen()}><span aria-hidden="true">↗</span><b>Πλήρης οθόνη</b></button><button className="secondary compact moment-save" onClick={()=>beginMoment()}><span aria-hidden="true">＋</span> Κράτησε στιγμή</button><button className="secondary compact transcript-toggle" onClick={()=>setTranscriptOpen(value=>!value)}>{transcriptOpen?"Κλείσιμο μεταγραφής":"Άνοιγμα μεταγραφής"}</button></div><span>{Math.round(selected.progress)}% προβολή</span></div>
             </div>
             <div className="video-heading"><div><small>{selected.channel} · {CATEGORY_LABELS[selected.category]}</small><h1 className="player-greek-title">{isGreekTitle(captions.title)?captions.title:isGreekTitle(greekTitle(selected))?greekTitle(selected):"Βίντεο με ελληνικούς υπότιτλους"}</h1>{(captions.originalTitle||englishTitle(selected))&&<p className="player-original-title">{captions.originalTitle||englishTitle(selected)}</p>}<div className="speaker-row"><span>Ομιλητής</span><strong>{speaker.name}</strong><i>{speaker.role}</i></div></div><button aria-label="Αγαπημένο" className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div>
             <section className="moments"><div className="section-title"><h2>Αποθηκευμένες στιγμές</h2><small>{moments.length}</small></div>{moments.length===0?<p className="muted">Πάτησε M ή το κουμπί πάνω για να κρατήσεις ένα σημείο.</p>:moments.map(m=><article className="moment" key={m.id} onClick={()=>seek(m.time)}><time>{clock(m.time)}</time><div><strong>{m.note}</strong><p>{m.excerpt}</p></div><div className="moment-actions"><button onClick={e=>{e.stopPropagation();seek(m.time)}}>Αναπαραγωγή</button><button onClick={e=>{e.stopPropagation();void copyMoment(m)}}>Αντιγραφή συνδέσμου</button><button onClick={e=>{e.stopPropagation();navigator.share?.({title:m.note,url:`${location.origin}/?video=${m.videoId}&t=${Math.floor(m.time)}`})}}>Κοινοποίηση</button><button onClick={e=>{e.stopPropagation();setState(s=>({...s,moments:s.moments.filter(x=>x.id!==m.id)}))}}>Διαγραφή</button></div></article>)}</section>
