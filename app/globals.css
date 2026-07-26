@@ -691,3 +691,15 @@ body{font-size:13px}
   .player-actions>div:first-child button{padding-inline:6px!important;font-size:9.5px!important}
   .subtitle-size-label{font-size:9px!important}
 }
+
+/* iPhone-safe fullscreen that preserves Greek subtitle overlays — ver 4.1 */
+.video-frame.pseudo-fullscreen{position:fixed;inset:0;z-index:1000;width:100vw;height:100vh;height:100dvh;aspect-ratio:auto;background:#000;display:flex;align-items:center;justify-content:center}
+.video-frame.pseudo-fullscreen>div:first-child,.video-frame.pseudo-fullscreen iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video-frame.pseudo-fullscreen .subtitles{z-index:1002;max-width:88%;font-size:calc(var(--subtitle-size,19px) * 1.16)!important}
+.video-frame.pseudo-fullscreen .subtitles.bottom{bottom:max(5%,calc(env(safe-area-inset-bottom) + 18px))}
+.video-frame.pseudo-fullscreen .subtitles.top{top:max(5%,calc(env(safe-area-inset-top) + 18px))}
+.video-frame.pseudo-fullscreen .custom-fullscreen{display:grid;place-items:center;z-index:1003;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));width:42px;height:42px;opacity:.94;touch-action:manipulation}
+@media(orientation:landscape) and (max-height:560px){
+  .video-frame.pseudo-fullscreen .subtitles{font-size:var(--subtitle-size,19px)!important}
+  .video-frame.pseudo-fullscreen .subtitles.bottom{bottom:max(4%,calc(env(safe-area-inset-bottom) + 10px))}
+}
