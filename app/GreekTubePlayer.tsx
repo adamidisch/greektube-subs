@@ -107,6 +107,18 @@ export default function GreekTubePlayer() {
     return [...list].sort((a,b)=>sort==="title"?a.title.localeCompare(b.title):sort==="progress"?b.progress-a.progress:b.addedAt.localeCompare(a.addedAt));
   },[state.videos,category,search,sort,filter]);
   const continueVideos=state.videos.filter(v=>v.progress>0&&v.progress<96).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||"")).slice(0,5);
+  const featured=useMemo(()=>{
+    const unfinished=state.videos.filter(v=>v.progress>0&&v.progress<96&&v.lastWatched).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||""));
+    if(unfinished[0])return unfinished[0];
+    const lastCompleted=[...state.videos].filter(v=>v.progress>=96&&v.lastWatched).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||""))[0];
+    if(lastCompleted){
+      const index=state.videos.findIndex(v=>v.id===lastCompleted.id);
+      return state.videos[(index+1)%state.videos.length]||lastCompleted;
+    }
+    return [...state.videos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt))[0]||null;
+  },[state.videos]);
+  const featuredMoments=featured?state.moments.filter(m=>m.videoId===featured.id):[];
+  const featuredTopics=featured?[...new Set([CATEGORY_LABELS[featured.category],...featured.tags])].slice(0,4):[];
 
   function patchVideo(id:string,patch:Partial<Video>){setState(s=>({...s,videos:s.videos.map(v=>v.id===id?{...v,...patch}:v)}));}
   async function openVideo(video:Video,start?:number){
@@ -201,7 +213,33 @@ export default function GreekTubePlayer() {
   return <main className="app-shell">
     <header className="app-header"><Brand/><nav><button className={view==="library"?"active":""} onClick={()=>setView("library")}>Βιβλιοθήκη</button><button className={view==="settings"?"active":""} onClick={()=>setView("settings")}>Ρυθμίσεις</button></nav><button className="primary compact add-top" onClick={()=>setModal(true)}>＋ Προσθήκη βίντεο</button></header>
     {view==="settings"?<SettingsPage settings={state.settings} update={patch=>setState(s=>({...s,settings:{...s.settings,...patch}}))}/>:<>
-      <section className="hero"><div><span>Η προσωπική σου βιβλιοθήκη βίντεο</span><h1>Αυτόματοι ελληνικοί υπότιτλοι</h1><p>Όλα τα βίντεό σου με συγχρονισμένη μεταγραφή, προσωπικές στιγμές και πραγματική πρόοδο προβολής.</p></div><button className="primary hero-add" onClick={()=>setModal(true)}>＋ Προσθήκη βίντεο</button></section>
+      <section className="home-intro"><span>Η προσωπική σου βιβλιοθήκη βίντεο</span><h1>Αυτόματοι ελληνικοί υπότιτλοι</h1></section>
+      {featured&&<section className="featured" aria-label="Προτεινόμενο βίντεο">
+        <button className="featured-media" onClick={()=>void openVideo(featured,featured.lastPosition)} aria-label={`Συνέχεια προβολής: ${featured.title}`}>
+          <img src={`https://i.ytimg.com/vi/${featured.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${featured.id}/hqdefault.jpg`}} alt=""/>
+          <span className="featured-play">▶</span>
+          <div className="featured-overlay"><small>{featured.channel}</small><strong>{featured.title}</strong></div>
+          <div className="featured-progress"><i style={{width:`${featured.progress}%`}}/></div>
+        </button>
+        <div className="featured-panel">
+          <div className="featured-meta"><span>{CATEGORY_LABELS[featured.category]}</span><button aria-label="Αγαπημένο" className={`featured-favorite ${featured.favorite?"active":""}`} onClick={()=>patchVideo(featured.id,{favorite:!featured.favorite})}>♥</button></div>
+          <h2>{featured.title}</h2>
+          <small>{featured.channel}</small>
+          <p>{featured.description}</p>
+          <div className="topic-list">{featuredTopics.map(topic=><span key={topic}>{topic}</span>)}</div>
+          <div className="featured-stats">
+            <div><strong>{Math.round(featured.progress)}%</strong><span>προβλήθηκε</span></div>
+            <div><strong>{featured.duration>0?clock(Math.max(0,featured.duration-featured.lastPosition)):"—"}</strong><span>απομένει</span></div>
+            <div><strong>{featuredMoments.length}</strong><span>στιγμές</span></div>
+          </div>
+          <div className="featured-actions">
+            <button className="primary" onClick={()=>void openVideo(featured,featured.lastPosition)}>▶ Συνέχεια προβολής</button>
+            <button className="secondary" onClick={()=>void openVideo(featured,0)}>↺ Από την αρχή</button>
+            <button className="text-action" onClick={()=>void openVideo(featured,featured.lastPosition)}>Άνοιγμα μεταγραφής →</button>
+          </div>
+          {featuredMoments[0]&&<button className="latest-moment" onClick={()=>void openVideo(featured,featuredMoments[0].time)}><span>Τελευταία στιγμή · {clock(featuredMoments[0].time)}</span><strong>{featuredMoments[0].note}</strong></button>}
+        </div>
+      </section>}
       {state.settings.continueWatching&&continueVideos.length>0&&<section className="continue-section"><div className="continue-header"><div><span>ΣΥΝΕΧΙΣΗ ΠΡΟΒΟΛΗΣ</span><div className="continue-title-line"><h2>Συνέχισε την προβολή</h2><small>{continueVideos.length} {continueVideos.length===1?"βίντεο":"βίντεο"}</small></div><p>Συνέχισε από το σημείο που σταμάτησες.</p></div><button onClick={()=>document.querySelector(".library-tools")?.scrollIntoView({behavior:"smooth",block:"start"})}>Προβολή όλων</button></div><div className="continue-row">{continueVideos.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} settings={state.settings} variant="continue"/>)}</div></section>}
       <section className="library-tools"><div className="search"><span>⌕</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Αναζήτηση βίντεο, καναλιού ή ετικέτας"/></div><select aria-label="Ταξινόμηση" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Πρόσφατα</option><option value="title">Τίτλος</option><option value="progress">Πρόοδος</option></select><div className="quick-filters"><button className={filter==="all"?"active":""} onClick={()=>setFilter("all")}>Όλα</button><button className={filter==="favorites"?"active":""} onClick={()=>setFilter("favorites")}>♥ Αγαπημένα</button><button className={filter==="recent"?"active":""} onClick={()=>setFilter("recent")}>Πρόσφατη προβολή</button></div></section>
       <div className="category-row">{CATEGORIES.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{CATEGORY_LABELS[c]}</button>)}</div>
@@ -212,7 +250,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 1.7</small></div>;}
+function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 1.8</small></div>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${video.title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Υπότιτλοι · EL"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{video.title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
