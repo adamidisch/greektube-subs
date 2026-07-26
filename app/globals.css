@@ -55,7 +55,6 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
 .classic-processing .process-card h1{max-width:680px;margin:10px 0 18px;text-align:center;font-size:21px;line-height:1.35}
 .classic-processing .progress{width:min(520px,90%);height:5px;margin:0 0 18px}
 .classic-processing .process-card span{width:auto;padding:0;color:#d8d3ff;font-size:15px;text-align:center}
-.caption-notice{margin:0 4px 14px;padding:10px 12px;border:1px solid rgba(213,169,111,.24);border-radius:10px;background:rgba(213,169,111,.07);color:#d8c3a6;font-size:12px;line-height:1.5}
 .transcript-empty{padding:24px 18px;color:var(--muted);font-size:13px;line-height:1.55}
 @media(max-width:620px){
   .classic-processing{margin:18px auto}
@@ -244,4 +243,28 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
   .loading-insights ul{grid-template-columns:1fr}
   .loading-insights li{padding:8px 0}
   .loading-insights li span{font-size:12px}
+}
+
+/* Clean player and optional transcript drawer — ver 2.0 */
+.watch-layout.player-only{grid-template-columns:minmax(0,1fr)}
+.watch-layout.transcript-open{grid-template-columns:minmax(0,1.7fr) minmax(320px,.65fr)}
+.player-actions>div{display:flex;align-items:center;gap:7px}
+.transcript-toggle{border-color:rgba(143,127,240,.24);color:#c3bcfa}
+.transcript-drawer{animation:drawer-in .2s ease-out}
+.drawer-header{min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 12px 9px 15px;border-bottom:1px solid var(--line)}
+.drawer-header small,.drawer-header strong{display:block}
+.drawer-header small{margin-bottom:3px;color:#aaa1ef;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.drawer-header strong{font-size:14px}
+.drawer-header button{width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--raised);color:var(--muted);font-size:18px}
+@keyframes drawer-in{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+@media(max-width:900px){
+  .watch-layout.transcript-open{grid-template-columns:1fr}
+  .transcript-drawer{height:470px;min-height:0;animation:none}
+}
+@media(max-width:620px){
+  .player-actions{height:auto;min-height:52px;gap:8px;padding:8px}
+  .player-actions>div{min-width:0;flex:1}
+  .player-actions .primary,.player-actions .secondary{min-width:0;padding-inline:10px;font-size:11px}
+  .player-actions>span{white-space:nowrap}
+  .transcript-drawer{height:440px}
 }

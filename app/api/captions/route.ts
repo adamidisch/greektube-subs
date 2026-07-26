@@ -1,4 +1,12 @@
 import { NextResponse } from "next/server";
+import {
+  TRANSCRIPT_VERSION,
+  acquireProcessingLock,
+  completeTranscript,
+  failTranscript,
+  getTranscript,
+  updateProcessingProgress,
+} from "../shared-cache";
 
 type PlayerResponse = {
   playabilityStatus?: { status?: string; reason?: string };
@@ -411,7 +419,36 @@ async function translateCuesToGreek(cues: CaptionCue[]) {
   }));
 }
 
+function keyPoints(cues: CaptionCue[]) {
+  if (!cues.length) return [];
+  const step = Math.max(1, Math.floor(cues.length / 10));
+  return cues.filter((_, index) => index % step === 0)
+    .map(cue => cue.text.replace(/\s+/g, " ").trim())
+    .filter((text, index, all) => text.length > 18 && all.indexOf(text) === index)
+    .slice(0, 10);
+}
+
+function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
+  if (!record) return null;
+  return {
+    status: record.status,
+    progress: record.progress,
+    videoId: record.videoId,
+    title: record.title,
+    channel: record.channel,
+    sourceLanguage: record.originalLanguage,
+    cues: record.greekTranscript,
+    englishCues: record.englishTranscript,
+    topics: record.topics,
+    keyPoints: record.keyPoints,
+    transcriptVersion: record.transcriptVersion,
+    cached: true,
+  };
+}
+
 export async function POST(request: Request) {
+  let lockToken: string | null = null;
+  let lockedVideoId: string | null = null;
   try {
     const body = (await request.json()) as { url?: unknown };
     if (typeof body.url !== "string" || body.url.length > 500) {
@@ -421,6 +458,23 @@ export async function POST(request: Request) {
     if (!videoId) {
       return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
     }
+    lockedVideoId = videoId;
+
+    const cached = await getTranscript(videoId);
+    if (cached?.status === "ready" && cached.transcriptVersion === TRANSCRIPT_VERSION) {
+      return NextResponse.json(cachedResponse(cached));
+    }
+    if (cached?.status === "processing" && cached.transcriptVersion === TRANSCRIPT_VERSION && cached.lockExpiresAt && cached.lockExpiresAt > new Date().toISOString()) {
+      return NextResponse.json(cachedResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
+    }
+
+    lockToken = crypto.randomUUID();
+    const acquired = await acquireProcessingLock(videoId, lockToken);
+    if (!acquired) {
+      const active = await getTranscript(videoId);
+      return NextResponse.json(cachedResponse(active), { status: 202, headers: { "Retry-After": "1" } });
+    }
+    await updateProcessingProgress(videoId, lockToken, 12);
 
     const player = await fetchPlayer(videoId);
     const tracks = player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
@@ -429,12 +483,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Το video δεν διαθέτει captions." }, { status: 404 });
     }
 
+    await updateProcessingProgress(videoId, lockToken, 28);
     let cues: CaptionCue[] = [];
+    let sourceCues: CaptionCue[] = [];
     let translationMethod = "original_greek";
 
     if (track.languageCode === "el") {
       cues = await fetchCaptionCues(track);
     } else {
+      sourceCues = await fetchCaptionCues(track);
+      if (!sourceCues.length) throw new Error("Το αγγλικό caption track είναι κενό");
+      await updateProcessingProgress(videoId, lockToken, 48);
       try {
         const youtubeTranslated = await fetchCaptionCues(track, "el");
         if (hasGreekText(youtubeTranslated)) {
@@ -446,8 +505,6 @@ export async function POST(request: Request) {
       }
 
       if (!cues.length) {
-        const sourceCues = await fetchCaptionCues(track);
-        if (!sourceCues.length) throw new Error("Το αγγλικό caption track είναι κενό");
         cues = await translateCuesToGreek(sourceCues);
         translationMethod = "google_translate_fallback";
       }
@@ -459,8 +516,33 @@ export async function POST(request: Request) {
         { status: 422 },
       );
     }
+    await updateProcessingProgress(videoId, lockToken, 88);
+
+    const now = new Date().toISOString();
+    const points = keyPoints(cues);
+    const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\p{L}]{6,}/gu) || []))].slice(0, 6);
+    const duration = cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
+    await completeTranscript({
+      videoId,
+      title: player.videoDetails?.title || "YouTube video",
+      channel: player.videoDetails?.author || "YouTube",
+      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      duration,
+      originalLanguage: track.languageCode || "unknown",
+      englishTranscript: sourceCues,
+      greekTranscript: cues,
+      timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
+      topics,
+      keyPoints: points,
+      status: "ready",
+      progress: 100,
+      transcriptVersion: TRANSCRIPT_VERSION,
+      createdAt: cached?.createdAt || now,
+      updatedAt: now,
+    }, lockToken);
 
     return NextResponse.json({
+      status: "ready",
       videoId,
       title: player.videoDetails?.title || "YouTube video",
       channel: player.videoDetails?.author || "YouTube",
@@ -468,8 +550,16 @@ export async function POST(request: Request) {
       sourceType: track.kind === "asr" ? "automatic" : "manual",
       translationMethod,
       cues,
+      englishCues: sourceCues,
+      topics,
+      keyPoints: points,
+      transcriptVersion: TRANSCRIPT_VERSION,
+      cached: false,
     });
   } catch (error) {
+    if (lockedVideoId && lockToken) {
+      await failTranscript(lockedVideoId, lockToken, error instanceof Error ? error.message : "failed").catch(() => undefined);
+    }
     return NextResponse.json(
       {
         error:
