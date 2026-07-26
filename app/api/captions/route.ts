@@ -41,42 +41,42 @@ type SpeakerProfile = {
 
 const SPEAKERS_BY_VIDEO: Record<string, SpeakerProfile> = {
   ATKu1Cxs2Pc: {
-    name: "Δρ Philip Ovadia",
+    name: "Dr Philip Ovadia",
     role: "Καρδιοθωρακοχειρουργός και ειδικός στη μεταβολική υγεία",
     importance: "Έχει πραγματοποιήσει χιλιάδες καρδιοχειρουργικές επεμβάσεις και είναι γνωστός για τη σύνδεση της μεταβολικής υγείας με την πρόληψη της καρδιοπάθειας.",
     currentWork: "Συνεχίζει ως καρδιοθωρακοχειρουργός και διευθύνει την Ovadia Heart Health με εξ αποστάσεως προγράμματα πρόληψης.",
     highlights: ["Καρδιοχειρουργική εμπειρία", "Πρόληψη καρδιοπάθειας", "Μεταβολική υγεία", "Διατροφή και τρόπος ζωής"],
   },
   NqLpQhii_fU: {
-    name: "Δρ Sarah Myhill",
+    name: "Dr Sarah Myhill",
     role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
     importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
     currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
     highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
   },
   KkBy__7d9Fs: {
-    name: "Δρ Sarah Myhill",
+    name: "Dr Sarah Myhill",
     role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
     importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
     currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
     highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
   },
   "0_adZSC0sFI": {
-    name: "Δρ Sarah Myhill",
+    name: "Dr Sarah Myhill",
     role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
     importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
     currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
     highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
   },
   D2RjneeG_xA: {
-    name: "Δρ Sarah Myhill",
+    name: "Dr Sarah Myhill",
     role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
     importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
     currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
     highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
   },
   "fX2z-BF8Jac": {
-    name: "Δρ Natasha Campbell-McBride",
+    name: "Dr Natasha Campbell-McBride",
     role: "Ιατρός με μεταπτυχιακή εκπαίδευση στη νευρολογία και στην ανθρώπινη διατροφή",
     importance: "Είναι γνωστή διεθνώς ως δημιουργός της προσέγγισης GAPS και για το έργο της γύρω από τη σχέση εντέρου εγκεφάλου και διατροφής.",
     currentWork: "Σήμερα γράφει εκπαιδεύει επαγγελματίες και αναπτύσσει το διεθνές εκπαιδευτικό πρόγραμμα GAPS.",
@@ -88,7 +88,7 @@ function speakerProfile(videoId: string, description = "", channel = ""): Speake
   const known = SPEAKERS_BY_VIDEO[videoId];
   if (known) return known;
   const match = description.match(/\b(?:Dr\.?|Doctor)\s+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,3})/);
-  const name = match ? `Δρ ${match[1]}` : channel;
+  const name = match ? `Dr ${match[1]}` : channel;
   return {
     name: name || "Ομιλητής του βίντεο",
     role: "Ομιλητής και δημιουργός του περιεχομένου",
@@ -528,11 +528,13 @@ function keyPoints(cues: CaptionCue[]) {
 async function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
   if (!record) return null;
   const title = await translateTitleToGreek(record.title);
+  const originalTitle = hasGreekText([{ start: 0, duration: 1, text: record.title }]) ? "" : record.title;
   return {
     status: record.status,
     progress: record.progress,
     videoId: record.videoId,
     title,
+    originalTitle,
     channel: record.channel,
     duration: record.duration,
     sourceLanguage: record.originalLanguage,
@@ -615,14 +617,15 @@ export async function POST(request: Request) {
     await updateProcessingProgress(videoId, lockToken, 88);
 
     const now = new Date().toISOString();
-    const translatedTitle = await translateTitleToGreek(player.videoDetails?.title || "YouTube video");
+    const originalTitle = player.videoDetails?.title || "YouTube video";
+    const translatedTitle = await translateTitleToGreek(originalTitle);
     const speaker = speakerProfile(videoId, player.videoDetails?.shortDescription, player.videoDetails?.author);
     const points = keyPoints(cues);
     const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\p{L}]{6,}/gu) || []))].slice(0, 6);
     const duration = videoDuration || cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
     await completeTranscript({
       videoId,
-      title: translatedTitle,
+      title: originalTitle,
       channel: player.videoDetails?.author || "YouTube",
       thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
       duration,
@@ -643,6 +646,7 @@ export async function POST(request: Request) {
       status: "ready",
       videoId,
       title: translatedTitle,
+      originalTitle,
       channel: player.videoDetails?.author || "YouTube",
       duration,
       sourceLanguage: track.languageCode || "unknown",

@@ -54,10 +54,12 @@ export async function POST(request: Request) {
     );
     if (!response.ok) throw new Error();
     const metadata = (await response.json()) as { title?: string; author_name?: string };
-    const title = await greekTitle(metadata.title || "Βίντεο YouTube");
+    const originalTitle = metadata.title || "YouTube video";
+    const title = await greekTitle(originalTitle);
     return NextResponse.json({
       id,
       title,
+      originalTitle,
       channel: metadata.author_name || "YouTube",
       thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
     });
