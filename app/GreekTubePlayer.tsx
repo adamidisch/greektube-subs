@@ -190,7 +190,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 1.4</small></div>;}
+function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 1.5</small></div>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,settings}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings}){return <article className="video-card" onClick={()=>void open(video)}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"CC · EL"}</span><button className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{video.title}</strong><span>{video.channel}</span><small>{video.category}{video.progress>0?` · ${Math.round(video.progress)}%`:""}</small>{settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 

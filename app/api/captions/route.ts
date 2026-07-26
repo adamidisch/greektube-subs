@@ -27,6 +27,12 @@ const API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const PLAYER_URL = `https://www.youtube.com/youtubei/v1/player?key=${API_KEY}&prettyPrint=false`;
 const CLIENTS = [
   {
+    clientName: "WEB",
+    clientVersion: "2.20260723.00.00",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0.0.0 Safari/537.36",
+  },
+  {
     clientName: "ANDROID",
     clientVersion: "20.10.38",
     androidSdkVersion: 30,
@@ -37,6 +43,12 @@ const CLIENTS = [
     clientVersion: "20.10.4",
     deviceModel: "iPhone16,2",
     userAgent: "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3 like Mac OS X)",
+  },
+  {
+    clientName: "TVHTML5",
+    clientVersion: "7.20260723.18.00",
+    userAgent:
+      "Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version",
   },
 ];
 
@@ -76,6 +88,8 @@ async function fetchPlayer(videoId: string) {
           "Content-Type": "application/json",
           "User-Agent": profile.userAgent,
           Origin: "https://www.youtube.com",
+          "X-Youtube-Client-Name": profile.clientName,
+          "X-Youtube-Client-Version": profile.clientVersion,
         },
         body: JSON.stringify({
           videoId,
@@ -95,6 +109,54 @@ async function fetchPlayer(videoId: string) {
     } catch (error) {
       errors.push(`${profile.clientName}: ${error instanceof Error ? error.message : "failed"}`);
     }
+  }
+
+  try {
+    const watchResponse = await fetch(
+      `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&hl=en`,
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0.0.0 Safari/537.36",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+      },
+    );
+    if (watchResponse.ok) {
+      const html = await watchResponse.text();
+      const marker = "ytInitialPlayerResponse";
+      const markerIndex = html.indexOf(marker);
+      const objectStart = markerIndex >= 0 ? html.indexOf("{", markerIndex + marker.length) : -1;
+      if (objectStart >= 0) {
+        let depth = 0;
+        let quoted = false;
+        let escaped = false;
+        for (let index = objectStart; index < html.length; index += 1) {
+          const character = html[index];
+          if (quoted) {
+            if (escaped) escaped = false;
+            else if (character === "\\") escaped = true;
+            else if (character === '"') quoted = false;
+            continue;
+          }
+          if (character === '"') quoted = true;
+          else if (character === "{") depth += 1;
+          else if (character === "}") {
+            depth -= 1;
+            if (depth === 0) {
+              const player = JSON.parse(html.slice(objectStart, index + 1)) as PlayerResponse;
+              const tracks =
+                player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+              if (tracks.length) return player;
+              break;
+            }
+          }
+        }
+      }
+    }
+    errors.push(`WEB page: ${watchResponse.status}`);
+  } catch (error) {
+    errors.push(`WEB page: ${error instanceof Error ? error.message : "failed"}`);
   }
   throw new Error(errors.join(" · "));
 }
@@ -131,6 +193,34 @@ function decodeEntities(value: string) {
 }
 
 function parseTimedText(xml: string) {
+  const trimmed = xml.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      const payload = JSON.parse(trimmed) as {
+        events?: {
+          tStartMs?: number;
+          dDurationMs?: number;
+          segs?: { utf8?: string }[];
+        }[];
+      };
+      return (payload.events ?? [])
+        .map((event) => ({
+          start: (event.tStartMs ?? 0) / 1000,
+          duration: (event.dDurationMs ?? 2800) / 1000,
+          text: decodeEntities(
+            (event.segs ?? [])
+              .map((segment) => segment.utf8 ?? "")
+              .join("")
+              .replace(/\s+/g, " ")
+              .trim(),
+          ),
+        }))
+        .filter((cue) => cue.text);
+    } catch {
+      return [];
+    }
+  }
+
   const cues: CaptionCue[] = [];
   const paragraph = /<p\b([^>]*)>([\s\S]*?)<\/p>/gi;
   let match: RegExpExecArray | null;
@@ -146,6 +236,24 @@ function parseTimedText(xml: string) {
       duration: durationMatch ? Number(durationMatch[1]) / 1000 : 2.8,
       text,
     });
+  }
+  if (!cues.length) {
+    const textNode = /<text\b([^>]*)>([\s\S]*?)<\/text>/gi;
+    while ((match = textNode.exec(xml))) {
+      const attributes = match[1];
+      const startMatch = /\bstart="(\d+(?:\.\d+)?)"/.exec(attributes);
+      if (!startMatch) continue;
+      const durationMatch = /\bdur="(\d+(?:\.\d+)?)"/.exec(attributes);
+      const text = decodeEntities(
+        match[2].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim(),
+      );
+      if (!text) continue;
+      cues.push({
+        start: Number(startMatch[1]),
+        duration: durationMatch ? Number(durationMatch[1]) : 2.8,
+        text,
+      });
+    }
   }
   return cues;
 }
@@ -163,7 +271,7 @@ function hasGreekText(cues: CaptionCue[]) {
 async function fetchCaptionCues(track: CaptionTrack, targetLanguage?: string) {
   if (!track.baseUrl) return [];
   const captionUrl = new URL(track.baseUrl);
-  captionUrl.searchParams.set("fmt", "srv3");
+  captionUrl.searchParams.set("fmt", "json3");
   if (targetLanguage) {
     captionUrl.searchParams.set("tlang", targetLanguage);
   } else {
@@ -174,7 +282,16 @@ async function fetchCaptionCues(track: CaptionTrack, targetLanguage?: string) {
     headers: { "User-Agent": CLIENTS[0].userAgent },
   });
   if (!response.ok) throw new Error(`Captions ${response.status}`);
-  return parseTimedText(await response.text());
+  const body = await response.text();
+  const cues = parseTimedText(body);
+  if (cues.length) return cues;
+
+  captionUrl.searchParams.set("fmt", "srv3");
+  const xmlResponse = await fetch(captionUrl.toString(), {
+    headers: { "User-Agent": CLIENTS[0].userAgent },
+  });
+  if (!xmlResponse.ok) throw new Error(`Captions ${xmlResponse.status}`);
+  return parseTimedText(await xmlResponse.text());
 }
 
 function createTranslationBatches(cues: CaptionCue[]) {
