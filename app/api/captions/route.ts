@@ -10,7 +10,7 @@ import {
 
 type PlayerResponse = {
   playabilityStatus?: { status?: string; reason?: string };
-  videoDetails?: { title?: string; author?: string };
+  videoDetails?: { title?: string; author?: string; lengthSeconds?: string };
   captions?: {
     playerCaptionsTracklistRenderer?: {
       captionTracks?: CaptionTrack[];
@@ -409,14 +409,38 @@ async function translateCuesToGreek(cues: CaptionCue[]) {
   }
 
   const stillMissing = cues.filter((_, index) => !translated.has(index)).length;
-  if (stillMissing > Math.max(2, Math.floor(cues.length * 0.015))) {
+  if (stillMissing > 0) {
     throw new Error("Η ελληνική μετάφραση δεν ολοκληρώθηκε");
   }
 
   return cues.map((cue, index) => ({
     ...cue,
-    text: translated.get(index) ?? cue.text,
+    text: translated.get(index) as string,
   }));
+}
+
+function validateCompleteGreekTranscript(cues: CaptionCue[], duration: number) {
+  if (cues.length < 3 || !hasGreekText(cues)) {
+    throw new Error("Οι ελληνικοί υπότιτλοι δεν ολοκληρώθηκαν");
+  }
+  const ordered = cues.every((cue, index) =>
+    Number.isFinite(cue.start) &&
+    Number.isFinite(cue.duration) &&
+    cue.duration > 0 &&
+    cue.text.trim().length > 0 &&
+    (index === 0 || cue.start >= cues[index - 1].start),
+  );
+  if (!ordered) throw new Error("Οι χρονισμοί των υποτίτλων δεν ολοκληρώθηκαν");
+
+  if (duration > 0) {
+    const first = cues[0].start;
+    const last = cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
+    const startsInTime = first <= Math.max(60, duration * 0.08);
+    const reachesEnd = last >= duration * 0.9;
+    if (!startsInTime || !reachesEnd) {
+      throw new Error("Δεν βρέθηκαν πλήρεις υπότιτλοι για όλη τη διάρκεια του video");
+    }
+  }
 }
 
 function keyPoints(cues: CaptionCue[]) {
@@ -436,6 +460,7 @@ function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
     videoId: record.videoId,
     title: record.title,
     channel: record.channel,
+    duration: record.duration,
     sourceLanguage: record.originalLanguage,
     cues: record.greekTranscript,
     englishCues: record.englishTranscript,
@@ -510,18 +535,14 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!cues.length) {
-      return NextResponse.json(
-        { error: "Τα captions βρέθηκαν αλλά η ελληνική μετάφραση δεν ήταν διαθέσιμη." },
-        { status: 422 },
-      );
-    }
+    const videoDuration = Number(player.videoDetails?.lengthSeconds || 0);
+    validateCompleteGreekTranscript(cues, videoDuration);
     await updateProcessingProgress(videoId, lockToken, 88);
 
     const now = new Date().toISOString();
     const points = keyPoints(cues);
     const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\p{L}]{6,}/gu) || []))].slice(0, 6);
-    const duration = cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
+    const duration = videoDuration || cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
     await completeTranscript({
       videoId,
       title: player.videoDetails?.title || "YouTube video",
@@ -546,6 +567,7 @@ export async function POST(request: Request) {
       videoId,
       title: player.videoDetails?.title || "YouTube video",
       channel: player.videoDetails?.author || "YouTube",
+      duration,
       sourceLanguage: track.languageCode || "unknown",
       sourceType: track.kind === "asr" ? "automatic" : "manual",
       translationMethod,
