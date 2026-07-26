@@ -448,8 +448,13 @@ async function translateSingleCue(index: number, text: string) {
 
 async function translateTitleToGreek(title: string) {
   if (!title || hasGreekText([{ start: 0, duration: 1, text: title }])) return title;
-  const translated = await translateSingleCue(0, title);
-  return translated?.text || title;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const translated = await translateSingleCue(0, title);
+    if (translated?.text && hasGreekText([{ start: 0, duration: 1, text: translated.text }])) {
+      return translated.text;
+    }
+  }
+  return title;
 }
 
 async function translateCuesToGreek(cues: CaptionCue[]) {
