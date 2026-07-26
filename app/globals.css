@@ -572,3 +572,21 @@ body{font-size:13px}
   .player-actions{min-height:58px;padding:10px 9px 11px}
   .video-heading{padding:19px 2px 14px}
 }
+
+/* Persistent three-step subtitle sizing — ver 3.8 */
+.subtitles{font-size:var(--subtitle-size,19px)!important}
+.video-frame:fullscreen .subtitles{font-size:calc(var(--subtitle-size,19px) * 1.35)!important}
+.player-actions-meta{display:flex;align-items:center;gap:10px;margin-left:auto}
+.subtitle-size-picker{height:30px;display:flex;align-items:center;gap:2px;padding:2px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(255,255,255,.025)}
+.subtitle-size-picker button{width:27px;height:24px;display:grid;place-items:center;padding:0;border:0;border-radius:6px;background:transparent;color:#8f94a0;font-weight:700;line-height:1;transition:background .16s,color .16s,box-shadow .16s}
+.subtitle-size-picker button:hover{color:#d7d9df;background:rgba(255,255,255,.05)}
+.subtitle-size-picker button.active{color:#fff;background:rgba(126,111,220,.76);box-shadow:0 3px 10px rgba(105,90,195,.24)}
+.fullscreen-toggle{position:relative;z-index:3;touch-action:manipulation;pointer-events:auto;-webkit-tap-highlight-color:transparent}
+@media(max-width:620px){
+  .player-actions{flex-wrap:wrap;gap:7px}
+  .player-actions>div:first-child{position:relative;z-index:2;display:flex;align-items:center}
+  .player-actions-meta{width:100%;justify-content:space-between;margin:0;padding-top:3px}
+  .subtitle-size-picker{height:28px}
+  .subtitle-size-picker button{width:26px;height:22px}
+  .fullscreen-toggle{width:40px!important;flex-basis:40px!important;min-width:40px}
+}
