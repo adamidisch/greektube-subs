@@ -1,544 +1,189 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 
-type CaptionCue = {
-  start: number;
-  duration: number;
-  text: string;
+type Cue = { start: number; duration: number; text: string };
+type Captions = { videoId: string; title: string; channel: string; cues: Cue[] };
+type Category = "Medical" | "Tech" | "Podcasts" | "Comedy" | "Education" | "Documentaries" | "Other";
+type Video = {
+  id: string; url: string; title: string; channel: string; category: Category;
+  tags: string[]; notes: string; description: string; duration: number; addedAt: string;
+  favorite: boolean; lastPosition: number; progress: number; lastWatched?: string; captions?: Cue[];
 };
-
-type CaptionResponse = {
-  videoId: string;
-  title: string;
-  channel: string;
-  sourceLanguage: string;
-  sourceType: "manual" | "automatic";
-  translationMethod: string;
-  cues: CaptionCue[];
+type Moment = { id: string; videoId: string; time: number; note: string; tags: string[]; excerpt: string };
+type Settings = {
+  subtitleMode: "el" | "en" | "dual"; subtitleSize: number; subtitlePosition: "top" | "bottom";
+  opacity: number; delay: number; subtitles: boolean; autoScroll: boolean; highlight: boolean;
+  autoplay: boolean; speed: number; autoTranslate: boolean; autoCategory: boolean;
+  layout: "grid" | "list"; compact: boolean; theme: "dark" | "light" | "system";
+  descriptions: boolean; continueWatching: boolean;
 };
-
-type LibraryVideo = {
-  number: string;
-  id: string;
-  url: string;
-  title: string;
-  description: string;
-  featured?: boolean;
+type AppState = { videos: Video[]; moments: Moment[]; settings: Settings };
+type Player = {
+  destroy: () => void; getCurrentTime: () => number; getDuration: () => number;
+  playVideo: () => void; seekTo: (seconds: number, allow: boolean) => void;
+  setPlaybackRate: (rate: number) => void;
 };
-
-type YouTubePlayer = {
-  destroy: () => void;
-  getCurrentTime: () => number;
-  playVideo: () => void;
-  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
-  setOption?: (module: string, option: string, value: unknown) => void;
-  unloadModule?: (module: string) => void;
-};
-
 declare global {
   interface Window {
-    YT?: {
-      Player: new (
-        element: HTMLElement,
-        options: {
-          videoId: string;
-          width: string;
-          height: string;
-          playerVars: Record<string, number | string>;
-          events: {
-            onReady: (event: { target: YouTubePlayer }) => void;
-          };
-        },
-      ) => YouTubePlayer;
-    };
+    YT?: { Player: new (el: HTMLElement, options: Record<string, unknown>) => Player };
     onYouTubeIframeAPIReady?: () => void;
   }
 }
 
-const LIBRARY: LibraryVideo[] = [
-  {
-    number: "01",
-    id: "ATKu1Cxs2Pc",
-    url: "https://www.youtube.com/watch?v=ATKu1Cxs2Pc",
-    title: "Heart Surgeon: The Biggest Risk Factor for Heart Disease",
-    description:
-      "Ο Dr. Philip Ovadia εξηγεί τη σχέση της αντίστασης στην ινσουλίνη με την καρδιακή νόσο και γιατί το LDL δεν δίνει μόνο του ολόκληρη την εικόνα.",
-    featured: true,
-  },
-  {
-    number: "02",
-    id: "NqLpQhii_fU",
-    url: "https://www.youtube.com/watch?v=NqLpQhii_fU",
-    title: "If You Want to Cut Carbs, Watch This!",
-    description:
-      "Η Dr. Sarah Myhill αναλύει τι συμβαίνει στον οργανισμό όταν μειώνονται οι υδατάνθρακες και πώς αλλάζει η παραγωγή ενέργειας.",
-  },
-  {
-    number: "03",
-    id: "D7bBCcbAuYQ",
-    url: "https://www.youtube.com/watch?v=D7bBCcbAuYQ",
-    title: "The Hidden Cause of Stubborn Fat",
-    description:
-      "Μια συζήτηση για τους μεταβολικούς μηχανισμούς που μπορεί να δυσκολεύουν την απώλεια λίπους πέρα από την απλή μέτρηση θερμίδων.",
-  },
-  {
-    number: "04",
-    id: "fX2z-BF8Jac",
-    url: "https://www.youtube.com/watch?v=fX2z-BF8Jac",
-    title: "Let Food Be Thy Medicine",
-    description:
-      "Η Dr. Natasha Campbell-McBride εξετάζει τη σύνδεση της τροφής με το μικροβίωμα και τον ρόλο του εντέρου στη συνολική υγεία.",
-  },
-  {
-    number: "05",
-    id: "KkBy__7d9Fs",
-    url: "https://www.youtube.com/watch?v=KkBy__7d9Fs",
-    title: "Why Most People Are Insulin Resistant",
-    description:
-      "Η Dr. Sarah Myhill παρουσιάζει τη δική της εξήγηση για την αντίσταση στην ινσουλίνη και τους παράγοντες που την τροφοδοτούν.",
-  },
-  {
-    number: "06",
-    id: "0_adZSC0sFI",
-    url: "https://www.youtube.com/watch?v=0_adZSC0sFI",
-    title: "The Fastest Way to Get Rid of an Upper Fermenting Gut",
-    description:
-      "Πρακτική ανάλυση του upper fermenting gut με έμφαση στην πέψη στα συμπτώματα και στους μηχανισμούς πίσω από τη ζύμωση.",
-  },
-  {
-    number: "07",
-    id: "D2RjneeG_xA",
-    url: "https://www.youtube.com/watch?v=D2RjneeG_xA",
-    title: "The Easiest Way to Reverse Metabolic Issues",
-    description:
-      "Μια σύντομη προσέγγιση στα βασικά βήματα που μπορούν να βελτιώσουν τη μεταβολική λειτουργία και την καθημερινή ενέργεια.",
-  },
-];
+const CATEGORIES = ["Όλα", "Medical", "Tech", "Podcasts", "Comedy", "Education", "Documentaries", "Other"] as const;
+const DEFAULT_SETTINGS: Settings = {
+  subtitleMode: "el", subtitleSize: 18, subtitlePosition: "bottom", opacity: .8, delay: 0,
+  subtitles: true, autoScroll: true, highlight: true, autoplay: true, speed: 1,
+  autoTranslate: true, autoCategory: true, layout: "grid", compact: true,
+  theme: "dark", descriptions: true, continueWatching: true,
+};
+const SEED: Video[] = [
+  ["ATKu1Cxs2Pc","Heart Surgeon: The Biggest Risk Factor for Heart Disease","Dr. Philip Ovadia","Ο Dr. Philip Ovadia εξηγεί τη σχέση της αντίστασης στην ινσουλίνη με την καρδιακή νόσο."],
+  ["NqLpQhii_fU","If You Want to Cut Carbs, Watch This!","Dr. Sarah Myhill","Τι συμβαίνει στον οργανισμό όταν μειώνονται οι υδατάνθρακες."],
+  ["D7bBCcbAuYQ","The Hidden Cause of Stubborn Fat","Health Podcast","Οι μεταβολικοί μηχανισμοί πίσω από την απώλεια λίπους."],
+  ["fX2z-BF8Jac","Let Food Be Thy Medicine","Dr. Natasha Campbell-McBride","Η σύνδεση της τροφής με το μικροβίωμα και το έντερο."],
+  ["KkBy__7d9Fs","Why Most People Are Insulin Resistant","Dr. Sarah Myhill","Αντίσταση στην ινσουλίνη και οι παράγοντες που την τροφοδοτούν."],
+  ["0_adZSC0sFI","The Fastest Way to Get Rid of an Upper Fermenting Gut","Dr. Sarah Myhill","Πέψη και μηχανισμοί πίσω από τη ζύμωση."],
+  ["D2RjneeG_xA","The Easiest Way to Reverse Metabolic Issues","Health Talk","Βασικά βήματα για καλύτερη μεταβολική λειτουργία."],
+].map(([id,title,channel,description], index) => ({
+  id, url:`https://www.youtube.com/watch?v=${id}`, title, channel, description,
+  category:"Medical", tags:["health"], notes:"", duration:0, addedAt:new Date(2026,6,23,index).toISOString(),
+  favorite:false, lastPosition:0, progress:0,
+})) as Video[];
 
-function extractVideoId(value: string): string | null {
-  const trimmed = value.trim();
-  if (/^[A-Za-z0-9_-]{6,20}$/.test(trimmed)) return trimmed;
+const uid = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+function extractId(value:string) {
   try {
-    const parsed = new URL(trimmed);
-    const host = parsed.hostname.replace(/^www\./, "");
-    if (host === "youtu.be") return parsed.pathname.split("/")[1] || null;
-    if (host.endsWith("youtube.com")) {
-      if (parsed.pathname === "/watch") return parsed.searchParams.get("v");
-      const parts = parsed.pathname.split("/").filter(Boolean);
-      if (["shorts", "embed", "live"].includes(parts[0])) return parts[1] || null;
-    }
-  } catch {
-    return null;
-  }
+    const u=new URL(value.trim()); const host=u.hostname.replace(/^www\./,"");
+    if(host==="youtu.be") return u.pathname.split("/")[1]||null;
+    if(host.endsWith("youtube.com")) { if(u.pathname==="/watch") return u.searchParams.get("v"); const p=u.pathname.split("/").filter(Boolean); if(["shorts","embed","live"].includes(p[0])) return p[1]||null; }
+  } catch { return null; }
   return null;
 }
-
-function formatTime(value: number) {
-  const total = Math.max(0, Math.floor(value));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const seconds = total % 60;
-  return hours
-    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
-    : `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-function cueIndexAtTime(cues: CaptionCue[], time: number) {
-  let low = 0;
-  let high = cues.length - 1;
-  let result = -1;
-  while (low <= high) {
-    const middle = Math.floor((low + high) / 2);
-    if (cues[middle].start <= time) {
-      result = middle;
-      low = middle + 1;
-    } else {
-      high = middle - 1;
-    }
-  }
-  if (result < 0) return -1;
-  const cue = cues[result];
-  return time <= cue.start + Math.max(cue.duration, 2.4) ? result : -1;
-}
-
-function progressMessage(progress: number) {
-  if (progress < 24) return "Εντοπίζω τα διαθέσιμα captions";
-  if (progress < 54) return "Λαμβάνω το αγγλικό transcript";
-  if (progress < 88) return "Μεταφράζω και συγχρονίζω στα ελληνικά";
-  return "Ολοκληρώνω την προετοιμασία";
-}
+function clock(n:number) { const t=Math.max(0,Math.floor(n)); const h=Math.floor(t/3600); const m=Math.floor((t%3600)/60); const s=t%60; return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`; }
+function activeIndex(cues:Cue[], time:number) { let result=-1; for(let i=0;i<cues.length;i++){if(cues[i].start<=time) result=i; else break;} return result; }
 
 export default function GreekTubePlayer() {
-  const [customUrl, setCustomUrl] = useState("");
-  const [selected, setSelected] = useState<LibraryVideo | null>(null);
-  const [videoId, setVideoId] = useState<string | null>(null);
-  const [data, setData] = useState<CaptionResponse | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [message, setMessage] = useState("");
-  const [progress, setProgress] = useState(0);
-  const [activeCue, setActiveCue] = useState(-1);
-  const [subtitleSize, setSubtitleSize] = useState<"compact" | "normal" | "large">("normal");
-  const playerHostRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<YouTubePlayer | null>(null);
-  const transcriptRef = useRef<HTMLDivElement>(null);
-  const requestRef = useRef(0);
+  const [state,setState]=useState<AppState>({videos:SEED,moments:[],settings:DEFAULT_SETTINGS});
+  const [hydrated,setHydrated]=useState(false);
+  const [view,setView]=useState<"library"|"settings">("library");
+  const [selectedId,setSelectedId]=useState<string|null>(null);
+  const [captions,setCaptions]=useState<Captions|null>(null);
+  const [loading,setLoading]=useState(false);
+  const [progress,setProgress]=useState(0);
+  const [error,setError]=useState("");
+  const [active,setActive]=useState(-1);
+  const [search,setSearch]=useState("");
+  const [category,setCategory]=useState<(typeof CATEGORIES)[number]>("Όλα");
+  const [sort,setSort]=useState("recent");
+  const [filter,setFilter]=useState<"all"|"favorites"|"recent">("all");
+  const [modal,setModal]=useState(false);
+  const [momentModal,setMomentModal]=useState<{time:number;excerpt:string}|null>(null);
+  const [askTab,setAskTab]=useState(false);
+  const [question,setQuestion]=useState("");
+  const [answer,setAnswer]=useState("");
+  const playerHost=useRef<HTMLDivElement>(null);
+  const player=useRef<Player|null>(null);
+  const transcript=useRef<HTMLDivElement>(null);
+  const saveTimer=useRef<number|undefined>(undefined);
+  const selected=state.videos.find(v=>v.id===selectedId)||null;
 
-  const activeText = activeCue >= 0 ? data?.cues[activeCue]?.text ?? "" : "";
-  const transcript = useMemo(() => data?.cues ?? [], [data]);
+  useEffect(()=>{ void (async()=>{try{const r=await fetch("/api/state"); const j=await r.json(); if(j.state?.videos) setState({settings:{...DEFAULT_SETTINGS,...j.state.settings},videos:j.state.videos,moments:j.state.moments||[]});}finally{setHydrated(true);}})(); },[]);
+  useEffect(()=>{ if(!hydrated)return; window.clearTimeout(saveTimer.current); saveTimer.current=window.setTimeout(()=>{void fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(state)});},450); },[state,hydrated]);
+  useEffect(()=>{document.documentElement.dataset.theme=state.settings.theme;},[state.settings.theme]);
 
-  useEffect(() => {
-    if (status !== "loading") return;
-    const timer = window.setInterval(() => {
-      setProgress((value) => {
-        if (value >= 92) return value;
-        const step = value < 35 ? 4 : value < 70 ? 2 : 1;
-        return Math.min(92, value + step);
-      });
-    }, 650);
-    return () => window.clearInterval(timer);
-  }, [status]);
+  const filtered=useMemo(()=> {
+    let list=state.videos.filter(v=>(category==="Όλα"||v.category===category)&&(`${v.title} ${v.channel} ${v.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase())));
+    if(filter==="favorites") list=list.filter(v=>v.favorite);
+    if(filter==="recent") list=list.filter(v=>v.lastWatched);
+    return [...list].sort((a,b)=>sort==="title"?a.title.localeCompare(b.title):sort==="progress"?b.progress-a.progress:b.addedAt.localeCompare(a.addedAt));
+  },[state.videos,category,search,sort,filter]);
+  const continueVideos=state.videos.filter(v=>v.progress>0&&v.progress<96).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||"")).slice(0,5);
 
-  useEffect(() => {
-    if (!videoId || !playerHostRef.current || status !== "ready") return;
-    let cancelled = false;
-
-    const createPlayer = () => {
-      if (cancelled || !window.YT || !playerHostRef.current) return;
-      playerRef.current?.destroy();
-      playerHostRef.current.innerHTML = "";
-      playerRef.current = new window.YT.Player(playerHostRef.current, {
-        videoId,
-        width: "100%",
-        height: "100%",
-        playerVars: {
-          autoplay: 1,
-          controls: 1,
-          playsinline: 1,
-          rel: 0,
-          modestbranding: 1,
-          cc_load_policy: 0,
-          cc_lang_pref: "el",
-          hl: "el",
-        },
-        events: {
-          onReady: ({ target }) => {
-            const disableYouTubeCaptions = () => {
-              target.setOption?.("captions", "track", {});
-              target.unloadModule?.("captions");
-            };
-            disableYouTubeCaptions();
-            window.setTimeout(disableYouTubeCaptions, 600);
-            window.setTimeout(disableYouTubeCaptions, 1600);
-            target.playVideo();
-          },
-        },
-      });
-    };
-
-    if (window.YT?.Player) {
-      createPlayer();
-    } else {
-      const existing = document.querySelector<HTMLScriptElement>(
-        'script[src="https://www.youtube.com/iframe_api"]',
-      );
-      if (!existing) {
-        const script = document.createElement("script");
-        script.src = "https://www.youtube.com/iframe_api";
-        script.async = true;
-        document.head.appendChild(script);
-      }
-      const previous = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        previous?.();
-        createPlayer();
-      };
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [videoId, status]);
-
-  useEffect(() => {
-    if (!data || status !== "ready") return;
-    const timer = window.setInterval(() => {
-      const current = playerRef.current?.getCurrentTime();
-      if (typeof current !== "number") return;
-      setActiveCue(cueIndexAtTime(data.cues, current));
-    }, 180);
-    return () => window.clearInterval(timer);
-  }, [data, status]);
-
-  useEffect(() => {
-    if (activeCue < 0 || !transcriptRef.current) return;
-    transcriptRef.current
-      .querySelector<HTMLElement>(`[data-cue="${activeCue}"]`)
-      ?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [activeCue]);
-
-  async function prepareVideo(video: LibraryVideo) {
-    const requestId = ++requestRef.current;
-    playerRef.current?.destroy();
-    playerRef.current = null;
-    setSelected(video);
-    setVideoId(null);
-    setData(null);
-    setActiveCue(-1);
-    setStatus("loading");
-    setProgress(7);
-    setMessage("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-
-    try {
-      const response = await fetch("/api/captions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: video.url }),
-      });
-      const payload = (await response.json()) as CaptionResponse & { error?: string };
-      if (!response.ok) throw new Error(payload.error || "Δεν μπόρεσα να πάρω υπότιτλους.");
-      if (requestId !== requestRef.current) return;
-      setProgress(100);
-      setData(payload);
-      setVideoId(payload.videoId);
-      setStatus("ready");
-      setMessage(`${payload.cues.length.toLocaleString("el-GR")} ελληνικά segments`);
-    } catch (error) {
-      if (requestId !== requestRef.current) return;
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Κάτι πήγε λάθος.");
-    }
+  function patchVideo(id:string,patch:Partial<Video>){setState(s=>({...s,videos:s.videos.map(v=>v.id===id?{...v,...patch}:v)}));}
+  async function openVideo(video:Video,start?:number){
+    setSelectedId(video.id); setView("library"); setLoading(true); setProgress(4); setError(""); setCaptions(null); setAskTab(false);
+    history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
+    const timer=window.setInterval(()=>setProgress(p=>Math.min(92,p+(p<35?5:p<70?2:1))),420);
+    try{
+      let data:Captions;
+      if(video.captions?.length) data={videoId:video.id,title:video.title,channel:video.channel,cues:video.captions};
+      else {const r=await fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url})}); const j=await r.json(); if(!r.ok)throw new Error(j.error); data=j; patchVideo(video.id,{title:j.title,channel:j.channel,captions:j.cues});}
+      setProgress(100); setCaptions(data); patchVideo(video.id,{lastWatched:new Date().toISOString()});
+      window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),80);
+    }catch(e){setError(e instanceof Error?e.message:"Δεν ολοκληρώθηκε η προετοιμασία.");}finally{clearInterval(timer);setLoading(false);}
   }
-
-  function submitCustomVideo(event: FormEvent) {
-    event.preventDefault();
-    const id = extractVideoId(customUrl);
-    if (!id) {
-      setMessage("Βάλε ένα έγκυρο YouTube link.");
-      return;
-    }
-    void prepareVideo({
-      number: "NEW",
-      id,
-      url: customUrl.trim(),
-      title: "Νέο YouTube video",
-      description: "Προσωρινό video από το link που πρόσθεσες.",
-    });
+  function initPlayer(id:string,start:number){
+    const create=()=>{if(!window.YT||!playerHost.current)return; player.current?.destroy(); playerHost.current.innerHTML=""; player.current=new window.YT.Player(playerHost.current,{videoId:id,width:"100%",height:"100%",playerVars:{autoplay:state.settings.autoplay?1:0,playsinline:1,rel:0,start:Math.floor(start),cc_load_policy:0},events:{onReady:({target}:{target:Player})=>{target.setPlaybackRate(state.settings.speed); if(state.settings.autoplay)target.playVideo();}}});};
+    if(window.YT?.Player)create(); else{if(!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')){const s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);}window.onYouTubeIframeAPIReady=create;}
   }
+  useEffect(()=>{if(!captions||!selectedId)return;const timer=window.setInterval(()=>{const now=player.current?.getCurrentTime();if(typeof now!=="number")return;const duration=player.current?.getDuration()||selected?.duration||0;setActive(activeIndex(captions.cues,now+state.settings.delay));if(duration>0)patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});},1000);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay]);
+  useEffect(()=>{if(active<0||!state.settings.autoScroll)return;transcript.current?.querySelector(`[data-cue="${active}"]`)?.scrollIntoView({block:"center",behavior:"smooth"});},[active,state.settings.autoScroll]);
+  useEffect(()=>{const params=new URLSearchParams(location.search);const id=params.get("video");const t=Number(params.get("t")||0);if(hydrated&&id){const v=state.videos.find(x=>x.id===id);if(v)window.setTimeout(()=>void openVideo(v,t),0);}},[hydrated]);
+  useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key.toLowerCase()==="m"&&selected){e.preventDefault();beginMoment();}};addEventListener("keydown",key);return()=>removeEventListener("keydown",key);},[selected,active,captions]);
 
-  function closePlayer() {
-    requestRef.current += 1;
-    playerRef.current?.destroy();
-    playerRef.current = null;
-    setSelected(null);
-    setVideoId(null);
-    setData(null);
-    setStatus("idle");
-    setProgress(0);
-    setMessage("");
-    setActiveCue(-1);
-  }
+  function seek(time:number){player.current?.seekTo(time,true);player.current?.playVideo();}
+  function beginMoment(time=player.current?.getCurrentTime()||0,excerpt=captions?.cues[active]?.text||""){setMomentModal({time,excerpt});}
+  function saveMoment(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!selected||!momentModal)return;const fd=new FormData(event.currentTarget);const m:Moment={id:uid(),videoId:selected.id,time:momentModal.time,note:String(fd.get("note")||"Αποθηκευμένη στιγμή"),tags:String(fd.get("tags")||"").split(",").map(x=>x.trim()).filter(Boolean),excerpt:momentModal.excerpt};setState(s=>({...s,moments:[m,...s.moments]}));setMomentModal(null);void copyMoment(m);}
+  async function copyMoment(m:Moment){const url=`${location.origin}/?video=${m.videoId}&t=${Math.floor(m.time)}`;await navigator.clipboard?.writeText(url);}
+  function askVideo(event:FormEvent){event.preventDefault();if(!captions)return;const terms=question.toLowerCase().split(/\s+/).filter(w=>w.length>3);const hits=captions.cues.filter(c=>terms.some(t=>c.text.toLowerCase().includes(t))).slice(0,5);setAnswer(hits.length?hits.map(h=>`${clock(h.start)} — ${h.text}`).join("\n\n"):"Δεν υπάρχει σχετική πληροφορία στο transcript αυτού του video.");}
+  function close(){player.current?.destroy();player.current=null;setSelectedId(null);setCaptions(null);setError("");history.replaceState(null,"","/");}
 
-  function seekTo(cue: CaptionCue) {
-    playerRef.current?.seekTo(cue.start, true);
-    playerRef.current?.playVideo();
-  }
-
-  if (selected) {
-    return (
-      <main className="viewer-shell">
-        <header className="viewer-topbar">
-          <button className="back-button" type="button" onClick={closePlayer}>
-            <span aria-hidden="true">←</span>
-            Βιβλιοθήκη
-          </button>
-          <Link className="brand compact-brand" href="/" onClick={closePlayer}>
-            <span className="brand-mark" aria-hidden="true"><span /></span>
-            <span>GreekTube</span>
-            <span className="brand-accent">Subs</span>
-          </Link>
-          <div className="language-pill"><span className="live-dot" />EN → EL</div>
-        </header>
-
-        {status === "loading" && (
-          <section className="preparing-view" aria-live="polite">
-            <div className="preparing-thumbnail">
-              {/* YouTube serves these thumbnails directly; dimensions prevent layout shift. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}
-                alt=""
-                width="480"
-                height="360"
-                decoding="async"
-              />
-              <div className="preparing-shade" />
-              <div className="preparing-center">
-                <span className="processing-ring" />
-                <span className="progress-number">{progress}%</span>
-              </div>
+  if(selected){
+    const moments=state.moments.filter(m=>m.videoId===selected.id);
+    const steps=["Έλεγχος YouTube link","Ανάγνωση metadata","Εντοπισμός English auto-generated captions","Μετάφραση EN → EL","Συγχρονισμός timestamps","Αποθήκευση στη βιβλιοθήκη","Έτοιμο"];
+    const step=Math.min(6,Math.floor(progress/16.7));
+    return <main className="app-shell viewer">
+      <header className="app-header"><button className="ghost" onClick={close}>← Βιβλιοθήκη</button><Brand/><button className="icon-button" onClick={()=>setView("settings")}>⚙</button></header>
+      {loading&&<section className="processing"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div className="process-card"><strong>{progress}%</strong><h1>{selected.title}</h1><div className="progress"><i style={{width:`${progress}%`}}/></div>{steps.map((s,i)=><span className={i<=step?"done":""} key={s}>{i<step?"✓":i===step?"●":"○"} {s}</span>)}</div></section>}
+      {error&&<section className="empty"><b>!</b><h2>Δεν ολοκληρώθηκε η προετοιμασία</h2><p>{error}</p><button className="primary" onClick={()=>void openVideo(selected)}>Δοκίμασε ξανά</button></section>}
+      {!loading&&captions&&<>
+        <section className="watch-layout">
+          <div className="watch-main">
+            <div className="sticky-player" onContextMenu={e=>{e.preventDefault();beginMoment();}}>
+              <div className="video-frame"><div ref={playerHost}/>{state.settings.subtitles&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{fontSize:state.settings.subtitleSize,background:`rgba(0,0,0,${state.settings.opacity})`}}>{captions.cues[active]?.text}</div>}</div>
+              <div className="player-actions"><button className="primary compact" onClick={()=>beginMoment()}>＋ Αποθήκευση στιγμής</button><span>{Math.round(selected.progress)}% προβολή</span></div>
             </div>
-            <div className="preparing-copy">
-              <span className="video-number">{selected.number}</span>
-              <h1>{selected.title}</h1>
-              <p>{progressMessage(progress)}</p>
-              <div className="progress-track" aria-label={`Πρόοδος ${progress}%`}>
-                <span style={{ width: `${progress}%` }} />
-              </div>
-              <small>Το video θα ξεκινήσει αυτόματα μόλις ολοκληρωθούν οι ελληνικοί υπότιτλοι.</small>
-            </div>
-          </section>
-        )}
-
-        {status === "error" && (
-          <section className="error-view">
-            <span className="error-symbol">!</span>
-            <h1>Δεν ολοκληρώθηκε η προετοιμασία</h1>
-            <p>{message}</p>
-            <button type="button" onClick={() => void prepareVideo(selected)}>Δοκίμασε ξανά</button>
-          </section>
-        )}
-
-        {status === "ready" && data && (
-          <section className="cinema-workspace" aria-live="polite">
-            <div className="cinema-main">
-              <div className="cinema-player">
-                <div className="video-frame">
-                  <div ref={playerHostRef} className="youtube-host" />
-                  <div className={`subtitle-overlay subtitle-${subtitleSize}`} aria-live="off">
-                    {activeText && <span>{activeText}</span>}
-                  </div>
-                </div>
-                <div className="player-toolbar">
-                  <div className="status-line status-ready">
-                    <span className="status-icon">✓</span>
-                    <span>{message} · Η μετάφραση ολοκληρώθηκε</span>
-                  </div>
-                  <div className="size-control" aria-label="Μέγεθος υποτίτλων">
-                    <button onClick={() => setSubtitleSize("compact")} className={subtitleSize === "compact" ? "active" : ""}>A</button>
-                    <button onClick={() => setSubtitleSize("normal")} className={subtitleSize === "normal" ? "active" : ""}>A</button>
-                    <button onClick={() => setSubtitleSize("large")} className={subtitleSize === "large" ? "active" : ""}>A</button>
-                  </div>
-                </div>
-              </div>
-              <div className="cinema-meta">
-                <span className="video-number">{selected.number}</span>
-                <div>
-                  <span className="meta-label">{data.channel}</span>
-                  <h1>{data.title}</h1>
-                </div>
-                <span className="verified-badge">Ελληνικοί υπότιτλοι</span>
-              </div>
-            </div>
-
-            <aside className="transcript-card">
-              <div className="transcript-header">
-                <div>
-                  <span className="eyebrow">Live transcript</span>
-                  <h2>Ελληνικά</h2>
-                </div>
-                <span className="cue-count">{data.cues.length}</span>
-              </div>
-              <div className="transcript-list" ref={transcriptRef}>
-                {transcript.map((cue, index) => (
-                  <button
-                    type="button"
-                    key={`${cue.start}-${index}`}
-                    data-cue={index}
-                    className={`cue-row ${index === activeCue ? "active" : ""}`}
-                    onClick={() => seekTo(cue)}
-                  >
-                    <span className="cue-time">{formatTime(cue.start)}</span>
-                    <span className="cue-text">{cue.text}</span>
-                  </button>
-                ))}
-              </div>
-            </aside>
-          </section>
-        )}
-      </main>
-    );
-  }
-
-  return (
-    <main className="library-shell">
-      <header className="topbar">
-        <Link className="brand" href="/" aria-label="GreekTube Subs αρχική">
-          <span className="brand-mark" aria-hidden="true"><span /></span>
-          <span>GreekTube</span>
-          <span className="brand-accent">Subs</span>
-        </Link>
-        <div className="header-actions">
-          <span className="library-count">{LIBRARY.length} videos</span>
-          <div className="language-pill"><span className="live-dot" />EN → EL</div>
-        </div>
-      </header>
-
-      <section className="library-intro">
-        <div>
-          <span className="eyebrow">Επιλεγμένη video library</span>
-          <h1>Δες τα στα ελληνικά.</h1>
-          <p>Επίλεξε ένα video. Οι αγγλικοί υπότιτλοι μεταφράζονται και συγχρονίζονται αυτόματα πριν ξεκινήσει.</p>
-        </div>
-        <form className="compact-url-form" onSubmit={submitCustomVideo}>
-          <label className="sr-only" htmlFor="youtube-url">YouTube link</label>
-          <div className="url-field">
-            <span aria-hidden="true">↗</span>
-            <input
-              id="youtube-url"
-              inputMode="url"
-              value={customUrl}
-              onChange={(event) => setCustomUrl(event.target.value)}
-              placeholder="Ή επικόλλησε άλλο YouTube link"
-              autoComplete="off"
-            />
+            <div className="video-heading"><div><small>{selected.channel} · {selected.category}</small><h1>{captions.title}</h1></div><button className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div>
+            <section className="moments"><div className="section-title"><h2>Αποθηκευμένες στιγμές</h2><small>{moments.length}</small></div>{moments.length===0?<p className="muted">Πάτησε M ή το κουμπί πάνω για να κρατήσεις ένα σημείο.</p>:moments.map(m=><article className="moment" key={m.id} onClick={()=>seek(m.time)}><time>{clock(m.time)}</time><div><strong>{m.note}</strong><p>{m.excerpt}</p></div><div className="moment-actions"><button onClick={e=>{e.stopPropagation();seek(m.time)}}>Play</button><button onClick={e=>{e.stopPropagation();void copyMoment(m)}}>Copy link</button><button onClick={e=>{e.stopPropagation();navigator.share?.({title:m.note,url:`${location.origin}/?video=${m.videoId}&t=${Math.floor(m.time)}`})}}>Share</button><button onClick={e=>{e.stopPropagation();setState(s=>({...s,moments:s.moments.filter(x=>x.id!==m.id)}))}}>Delete</button></div></article>)}</section>
           </div>
-          <button className="primary-button" type="submit">Προετοιμασία</button>
-        </form>
-      </section>
+          <aside className="side-panel">
+            <div className="tabs"><button className={!askTab?"active":""} onClick={()=>setAskTab(false)}>Transcript</button><button className={askTab?"active":""} onClick={()=>setAskTab(true)}>Ρώτησε το video</button></div>
+            {!askTab?<div className="transcript" ref={transcript}>{captions.cues.map((c,i)=><button key={`${c.start}-${i}`} data-cue={i} className={state.settings.highlight&&i===active?"active":""} onClick={()=>seek(c.start)} onContextMenu={e=>{e.preventDefault();beginMoment(c.start,c.text)}}><time>{clock(c.start)}</time><span>{c.text}</span><i onClick={e=>{e.stopPropagation();beginMoment(c.start,c.text)}}>＋</i></button>)}</div>:<div className="ask"><h2>Ρώτησε μόνο το transcript</h2><p>Οι απαντήσεις χρησιμοποιούν αποκλειστικά όσα λέγονται σε αυτό το video.</p><form onSubmit={askVideo}><textarea value={question} onChange={e=>setQuestion(e.target.value)} placeholder="Τι λέει για την ινσουλίνη;"/><button className="primary">Αναζήτηση</button></form>{answer&&<div className="answer">{answer.split("\n\n").map((x,i)=>{const t=Number(x.split(":")[0])*60+Number(x.split(":")[1]?.split(" ")[0]||0);return <button key={i} onClick={()=>seek(t)}>{x}</button>})}</div>}</div>}
+          </aside>
+        </section>
+      </>}
+      {momentModal&&<Modal title="Αποθήκευση στιγμής" close={()=>setMomentModal(null)}><form className="form" onSubmit={saveMoment}><div className="moment-preview"><time>{clock(momentModal.time)}</time><p>{momentModal.excerpt}</p></div><label>Σύντομη σημείωση<input name="note" autoFocus placeholder="Τι θέλεις να θυμάσαι;"/></label><label>Tags<input name="tags" placeholder="π.χ. ινσουλίνη, LDL"/></label><button className="primary">Αποθήκευση και αντιγραφή link</button></form></Modal>}
+    </main>;
+  }
 
-      <section className="video-grid" aria-label="Video library">
-        {LIBRARY.map((video) => (
-          <button
-            className={`video-card ${video.featured ? "featured" : ""}`}
-            type="button"
-            key={video.id}
-            onClick={() => void prepareVideo(video)}
-            aria-label={`Άνοιγμα video ${video.number}: ${video.title}`}
-          >
-            <span className="thumbnail-wrap">
-              {/* YouTube serves these thumbnails directly; dimensions prevent layout shift. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}
-                alt=""
-                width="480"
-                height="360"
-                loading={video.featured ? "eager" : "lazy"}
-                decoding="async"
-              />
-              <span className="thumbnail-gradient" />
-              <span className="card-play"><span /></span>
-              {video.featured && <span className="featured-label">Featured</span>}
-            </span>
-            <span className="card-content">
-              <span className="video-number">{video.number}</span>
-              <span className="card-copy">
-                <strong>{video.title}</strong>
-                <span>{video.description}</span>
-              </span>
-              <span className="card-arrow" aria-hidden="true">↗</span>
-            </span>
-          </button>
-        ))}
-      </section>
+  return <main className="app-shell">
+    <header className="app-header"><Brand/><nav><button className={view==="library"?"active":""} onClick={()=>setView("library")}>Βιβλιοθήκη</button><button className={view==="settings"?"active":""} onClick={()=>setView("settings")}>Settings</button></nav><button className="primary compact add-top" onClick={()=>setModal(true)}>＋ Προσθήκη video</button></header>
+    {view==="settings"?<SettingsPage settings={state.settings} update={patch=>setState(s=>({...s,settings:{...s.settings,...patch}}))}/>:<>
+      <section className="hero"><div><span>Προσωπική video library</span><h1>Αυτόματοι ελληνικοί υπότιτλοι</h1><p>Όλα τα video σου με συγχρονισμένο transcript, προσωπικές στιγμές και πραγματικό progress.</p></div><button className="primary hero-add" onClick={()=>setModal(true)}>＋ Προσθήκη video</button></section>
+      {state.settings.continueWatching&&continueVideos.length>0&&<section><div className="section-title"><h2>Συνέχισε την προβολή</h2></div><div className="continue-row">{continueVideos.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} settings={state.settings}/>)}</div></section>}
+      <section className="library-tools"><div className="search"><span>⌕</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Αναζήτηση video, καναλιού ή tag"/></div><select value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Πρόσφατα</option><option value="title">Τίτλος</option><option value="progress">Progress</option></select><div className="quick-filters"><button className={filter==="all"?"active":""} onClick={()=>setFilter("all")}>Όλα</button><button className={filter==="favorites"?"active":""} onClick={()=>setFilter("favorites")}>♥ Favorites</button><button className={filter==="recent"?"active":""} onClick={()=>setFilter("recent")}>Recently watched</button></div></section>
+      <div className="category-row">{CATEGORIES.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
+      <section className={`video-grid ${state.settings.layout} ${state.settings.compact?"compact":""}`}>{filtered.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} settings={state.settings}/>)}</section>
+      {filtered.length===0&&<div className="empty"><h2>Δεν βρέθηκαν videos</h2><p>Δοκίμασε διαφορετική κατηγορία ή αναζήτηση.</p></div>}
+    </>}
+    {modal&&<AddVideo close={()=>setModal(false)} add={async(video,translate)=>{setState(s=>({...s,videos:[video,...s.videos]}));setModal(false);if(translate)await openVideo(video);}}/>}
+  </main>;
+}
 
-      <footer>
-        <span>GreekTube Subs</span>
-        <span>Αγγλικά captions · Ελληνική μετάφραση · Ακριβής συγχρονισμός</span>
-      </footer>
-    </main>
-  );
+function Brand(){return <div className="brand"><span className="brand-mark">▶<i>≡</i></span><span>GreekTube <b>Subs</b></span></div>;}
+function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
+function VideoCard({video,open,patch,settings}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings}){return <article className="video-card" onClick={()=>void open(video)}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"CC · EL"}</span><button className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{video.title}</strong><span>{video.channel}</span><small>{video.category}{video.progress>0?` · ${Math.round(video.progress)}%`:""}</small>{settings.descriptions&&<p>{video.description}</p>}</div></article>;}
+
+function AddVideo({close,add}:{close:()=>void;add:(v:Video,t:boolean)=>Promise<void>}) {
+  const [url,setUrl]=useState("");const [metadata,setMetadata]=useState<{id:string;title:string;channel:string}|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState("");
+  async function inspect(){const id=extractId(url);if(!id){setError("Βάλε ένα έγκυρο YouTube link.");return;}setBusy(true);setError("");try{const r=await fetch("/api/metadata",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});const j=await r.json();if(!r.ok)throw new Error(j.error);setMetadata(j);}catch(e){setError(e instanceof Error?e.message:"Σφάλμα");}finally{setBusy(false);}}
+  async function submit(e:React.MouseEvent<HTMLButtonElement>,translate:boolean){e.preventDefault();const form=e.currentTarget.form;if(!form)return;if(!metadata){await inspect();return;}const fd=new FormData(form);const v:Video={id:metadata.id,url,title:metadata.title,channel:metadata.channel,category:String(fd.get("category")) as Category,tags:String(fd.get("tags")||"").split(",").map(x=>x.trim()).filter(Boolean),notes:String(fd.get("notes")||""),description:String(fd.get("notes")||"Νέο video στη βιβλιοθήκη."),duration:0,addedAt:new Date().toISOString(),favorite:false,lastPosition:0,progress:0};await add(v,translate);}
+  return <Modal title="Προσθήκη video" close={close}><form className="form"><label>YouTube link<div className="inspect-row"><input value={url} onChange={e=>{setUrl(e.target.value);setMetadata(null)}} placeholder="https://youtube.com/watch?v=…"/><button type="button" onClick={()=>void inspect()}>{busy?"…":"Έλεγχος"}</button></div></label>{error&&<p className="form-error">{error}</p>}{metadata&&<div className="metadata"><img src={`https://i.ytimg.com/vi/${metadata.id}/hqdefault.jpg`} alt=""/><div><strong>{metadata.title}</strong><span>{metadata.channel}</span></div></div>}<div className="form-grid"><label>Κατηγορία<select name="category" defaultValue="Other">{CATEGORIES.slice(1).map(c=><option key={c}>{c}</option>)}</select></label><label>Tags<input name="tags" placeholder="health, insulin"/></label></div><label>Προσωπικές σημειώσεις<textarea name="notes" placeholder="Γιατί θέλω να κρατήσω αυτό το video…"/></label><div className="modal-actions"><button className="secondary" onClick={e=>void submit(e,false)}>Αποθήκευση χωρίς μετάφραση</button><button className="primary" onClick={e=>void submit(e,true)}>Μετάφραση τώρα</button></div></form></Modal>;
+}
+
+function SettingsPage({settings,update}:{settings:Settings;update:(p:Partial<Settings>)=>void}) {
+  const toggle=(key:keyof Settings,label:string)=><label className="setting-row"><span>{label}</span><input type="checkbox" checked={Boolean(settings[key])} onChange={e=>update({[key]:e.target.checked})}/></label>;
+  return <section className="settings-page"><header><span>Προτιμήσεις εφαρμογής</span><h1>Settings</h1><p>Οι αλλαγές αποθηκεύονται αυτόματα και εφαρμόζονται σε όλα τα videos.</p></header><div className="settings-grid"><section><h2>Υπότιτλοι</h2><label>Προεπιλεγμένη γλώσσα<select value={settings.subtitleMode} onChange={e=>update({subtitleMode:e.target.value as Settings["subtitleMode"]})}><option value="el">Ελληνικά</option><option value="en">Αγγλικά</option><option value="dual">Dual subtitles</option></select></label><label>Μέγεθος γραμματοσειράς<input type="range" min="13" max="28" value={settings.subtitleSize} onChange={e=>update({subtitleSize:+e.target.value})}/><output>{settings.subtitleSize}px</output></label><label>Θέση<select value={settings.subtitlePosition} onChange={e=>update({subtitlePosition:e.target.value as "top"|"bottom"})}><option value="bottom">Κάτω</option><option value="top">Πάνω</option></select></label><label>Background opacity<input type="range" min="0" max="1" step=".1" value={settings.opacity} onChange={e=>update({opacity:+e.target.value})}/></label><label>Subtitle delay<input type="range" min="-5" max="5" step=".1" value={settings.delay} onChange={e=>update({delay:+e.target.value})}/><output>{settings.delay}s</output></label>{toggle("subtitles","Subtitles on/off")}{toggle("autoScroll","Auto-scroll transcript")}{toggle("highlight","Highlight active line")}</section><section><h2>Αναπαραγωγή</h2>{toggle("autoplay","Autoplay")}<label>Default playback speed<select value={settings.speed} onChange={e=>update({speed:+e.target.value})}>{[.5,.75,1,1.25,1.5,2].map(x=><option key={x} value={x}>{x}×</option>)}</select></label>{toggle("autoTranslate","Auto-translate")}{toggle("autoCategory","Auto-category")}{toggle("continueWatching","Continue watching")}</section><section><h2>Εμφάνιση</h2><label>Library layout<select value={settings.layout} onChange={e=>update({layout:e.target.value as "grid"|"list"})}><option value="grid">Grid</option><option value="list">List</option></select></label><label>Theme<select value={settings.theme} onChange={e=>update({theme:e.target.value as Settings["theme"]})}><option value="dark">Dark</option><option value="light">Light</option><option value="system">System</option></select></label>{toggle("compact","Compact cards")}{toggle("descriptions","Show descriptions")}</section></div></section>;
 }
