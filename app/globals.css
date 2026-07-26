@@ -231,9 +231,9 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
 .loading-progress-line strong{color:var(--muted);font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
 .content-loading .progress{width:100%;height:4px;margin:0 0 20px;background:var(--raised)}
 .content-loading .progress i{background:#8f7ff0}
-.preparation-stages{display:grid;gap:7px;margin:0 0 18px;padding:0;list-style:none}
-.preparation-stages li{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px 9px;border:1px solid transparent;border-radius:9px;color:#777b85;font-size:11px}
-.preparation-stages li i{display:grid;place-items:center;width:20px;height:20px;border:1px solid var(--line);border-radius:50%;font-family:var(--font-geist-mono);font-size:8px;font-style:normal}
+.preparation-stages{display:grid;gap:3px;margin:0 0 14px;padding:0;list-style:none}
+.preparation-stages li{display:grid;grid-template-columns:21px minmax(0,1fr) auto;align-items:center;gap:7px;min-height:31px;padding:4px 8px;border:1px solid transparent;border-radius:8px;color:#777b85;font-size:10.5px;line-height:1.25}
+.preparation-stages li i{display:grid;place-items:center;width:18px;height:18px;border:1px solid var(--line);border-radius:50%;font-family:var(--font-geist-mono);font-size:7.5px;font-style:normal}
 .preparation-stages li em{color:#aaa1ef;font-size:9px;font-style:normal}
 .preparation-stages li.active{border-color:rgba(143,127,240,.22);background:rgba(143,127,240,.07);color:#e3e0f3}
 .preparation-stages li.active i{border-color:#8f7ff0;color:#bcb2ff}
@@ -255,6 +255,9 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
   .loading-insights ul{grid-template-columns:1fr}
   .loading-insights li{padding:8px 0}
   .loading-insights li span{font-size:12px}
+  .preparation-stages{gap:2px;margin-bottom:13px}
+  .preparation-stages li{grid-template-columns:20px minmax(0,1fr);min-height:29px;padding:4px 7px;font-size:10.5px}
+  .preparation-stages li em{display:none}
 }
 
 /* Clean player and optional transcript drawer — ver 2.0 */
