@@ -68,6 +68,11 @@ function extractId(value:string) {
 }
 function clock(n:number) { const t=Math.max(0,Math.floor(n)); const h=Math.floor(t/3600); const m=Math.floor((t%3600)/60); const s=t%60; return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`; }
 function activeIndex(cues:Cue[], time:number) { let result=-1; for(let i=0;i<cues.length;i++){if(cues[i].start<=time) result=i; else break;} return result; }
+function transcriptHighlights(cues:Cue[]) {
+  if(!cues.length)return [];
+  const step=Math.max(1,Math.floor(cues.length/10));
+  return cues.filter((_,index)=>index%step===0).map(c=>c.text.replace(/\s+/g," ").trim()).filter((text,index,list)=>text.length>18&&list.indexOf(text)===index).slice(0,10);
+}
 
 export default function GreekTubePlayer() {
   const [state,setState]=useState<AppState>({videos:SEED,moments:[],settings:DEFAULT_SETTINGS});
@@ -78,6 +83,7 @@ export default function GreekTubePlayer() {
   const [loading,setLoading]=useState(false);
   const [progress,setProgress]=useState(0);
   const [delayMessage,setDelayMessage]=useState("");
+  const [loadingPoints,setLoadingPoints]=useState<string[]>([]);
   const [captionNotice,setCaptionNotice]=useState("");
   const [error,setError]=useState("");
   const [active,setActive]=useState(-1);
@@ -122,7 +128,8 @@ export default function GreekTubePlayer() {
 
   function patchVideo(id:string,patch:Partial<Video>){setState(s=>({...s,videos:s.videos.map(v=>v.id===id?{...v,...patch}:v)}));}
   async function openVideo(video:Video,start?:number){
-    setSelectedId(video.id); setView("library"); setLoading(true); setProgress(4); setError(""); setCaptions(null); setDelayMessage(""); setCaptionNotice(""); setAskTab(false);
+    const knownPoints=transcriptHighlights(video.captions||[]);
+    setSelectedId(video.id); setView("library"); setLoading(true); setProgress(4); setError(""); setCaptions(null); setDelayMessage(""); setLoadingPoints(knownPoints.length?knownPoints:[video.description,...video.tags.map(tag=>`Βασικό θέμα: ${tag}`)].filter(Boolean)); setCaptionNotice(""); setAskTab(false);
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
     const timer=window.setInterval(()=>setProgress(p=>Math.min(92,p+(p<35?5:p<70?2:1))),420);
     try{
@@ -151,6 +158,8 @@ export default function GreekTubePlayer() {
         if(!response?.ok)throw new Error();
         const j=await response.json(); data=j; patchVideo(video.id,{title:j.title,channel:j.channel,captions:j.cues});
       }
+      const points=transcriptHighlights(data.cues);
+      if(points.length){setLoadingPoints(points);setProgress(100);await new Promise(resolve=>window.setTimeout(resolve,750));}
       setProgress(100); setDelayMessage(""); setCaptions(data); setLoading(false); patchVideo(video.id,{lastWatched:new Date().toISOString()});
       window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),120);
     }catch{
@@ -184,10 +193,17 @@ export default function GreekTubePlayer() {
 
   if(selected){
     const moments=state.moments.filter(m=>m.videoId===selected.id);
-    const status=delayMessage||(progress<24?"Ετοιμάζουμε το βίντεο":progress<48?"Βρήκαμε τους αγγλικούς υπότιτλους":progress<86?"Δημιουργούμε τους ελληνικούς υπότιτλους":progress<100?"Σχεδόν έτοιμο":"Το βίντεο είναι έτοιμο");
     return <main className="app-shell viewer">
       <header className="app-header"><button className="ghost" onClick={close}>← Βιβλιοθήκη</button><Brand/><button className="icon-button" onClick={()=>setView("settings")}>⚙</button></header>
-      {loading&&<section className="processing classic-processing"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div className="process-card"><strong>{Math.round(progress)}%</strong><h1>{selected.title}</h1><div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div><span className="done">{status}</span></div></section>}
+      {loading&&<section className="content-loading">
+        <div className="loading-visual"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div><small>{selected.channel}</small><h1>{selected.title}</h1></div></div>
+        <div className="loading-insights">
+          <div className="loading-progress-line"><span>Περιεχόμενο βίντεο</span><strong>{Math.round(progress)}%</strong></div>
+          <div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div>
+          <h2>Σημεία από τη μεταγραφή</h2>
+          <ul>{loadingPoints.slice(0,10).map((point,index)=><li key={`${point}-${index}`}><i>{String(index+1).padStart(2,"0")}</i><span>{point}</span></li>)}</ul>
+        </div>
+      </section>}
       {error&&<section className="empty"><b>!</b><h2>Δεν ολοκληρώθηκε η προετοιμασία</h2><p>{error}</p><button className="primary" onClick={()=>void openVideo(selected)}>Δοκίμασε ξανά</button></section>}
       {!loading&&captions&&<>
         <section className="watch-layout">
@@ -250,7 +266,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 1.8</small></div>;}
+function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 1.9</small></div>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${video.title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Υπότιτλοι · EL"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{video.title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
