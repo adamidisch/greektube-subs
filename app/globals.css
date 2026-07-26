@@ -141,6 +141,7 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
 .featured-panel h2{margin:10px 0 4px;font-size:clamp(22px,1.8vw,26px);line-height:1.2;font-weight:700;letter-spacing:-.035em}
 .featured-panel>small{color:var(--muted);font-size:11px}
 .featured-panel>p{display:-webkit-box;margin:13px 0 12px;overflow:hidden;color:#b6bac3;font-size:12px;line-height:1.55;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+.featured-panel .featured-original-title{display:block;margin:5px 0 9px;overflow:visible;color:#777d8b;font-size:10px;line-height:1.4;font-weight:500;-webkit-line-clamp:unset}
 .topic-list{display:flex;flex-wrap:wrap;gap:6px}
 .topic-list span{padding:5px 8px;border:1px solid var(--line);border-radius:99px;background:rgba(255,255,255,.025);color:#c5c7ce;font-size:10px}
 .featured-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:17px 0}
