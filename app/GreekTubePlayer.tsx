@@ -72,6 +72,8 @@ export default function GreekTubePlayer() {
   const [captions,setCaptions]=useState<Captions|null>(null);
   const [loading,setLoading]=useState(false);
   const [progress,setProgress]=useState(0);
+  const [preparationReady,setPreparationReady]=useState(false);
+  const [delayMessage,setDelayMessage]=useState("");
   const [error,setError]=useState("");
   const [active,setActive]=useState(-1);
   const [search,setSearch]=useState("");
@@ -103,17 +105,31 @@ export default function GreekTubePlayer() {
 
   function patchVideo(id:string,patch:Partial<Video>){setState(s=>({...s,videos:s.videos.map(v=>v.id===id?{...v,...patch}:v)}));}
   async function openVideo(video:Video,start?:number){
-    setSelectedId(video.id); setView("library"); setLoading(true); setProgress(4); setError(""); setCaptions(null); setAskTab(false);
+    setSelectedId(video.id); setView("library"); setLoading(true); setProgress(4); setError(""); setCaptions(null); setPreparationReady(false); setDelayMessage(""); setAskTab(false);
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
     const timer=window.setInterval(()=>setProgress(p=>Math.min(92,p+(p<35?5:p<70?2:1))),420);
     try{
       let data:Captions;
       if(video.captions?.length) data={videoId:video.id,title:video.title,channel:video.channel,cues:video.captions};
-      else {const r=await fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url})}); const j=await r.json(); if(!r.ok)throw new Error(j.error); data=j; patchVideo(video.id,{title:j.title,channel:j.channel,captions:j.cues});}
-      setProgress(100); setCaptions(data); patchVideo(video.id,{lastWatched:new Date().toISOString()});
-      window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),80);
-    }catch(e){setError(e instanceof Error?e.message:"Δεν ολοκληρώθηκε η προετοιμασία.");}finally{clearInterval(timer);setLoading(false);}
+      else {
+        let response:Response|null=null;
+        for(let attempt=0;attempt<3;attempt++){
+          response=await fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url})});
+          if(response.ok)break;
+          if((response.status===429||response.status>=500)&&attempt<2){
+            setDelayMessage(attempt===0?"Υπάρχει μικρή καθυστέρηση. Συνεχίζουμε αυτόματα":"Δοκιμάζουμε ξανά αυτόματα");
+            await new Promise(resolve=>window.setTimeout(resolve,900*(attempt+1)));
+            continue;
+          }
+          break;
+        }
+        if(!response?.ok)throw new Error();
+        const j=await response.json(); data=j; patchVideo(video.id,{title:j.title,channel:j.channel,captions:j.cues});
+      }
+      setProgress(100); setDelayMessage(""); setCaptions(data); setPreparationReady(true); patchVideo(video.id,{lastWatched:new Date().toISOString()});
+    }catch{setError("Η προετοιμασία δεν ολοκληρώθηκε αυτή τη στιγμή.");}finally{clearInterval(timer);setLoading(false);}
   }
+  function startPreparedVideo(){if(!selected)return;setPreparationReady(false);window.setTimeout(()=>initPlayer(selected.id,selected.lastPosition),80);}
   function initPlayer(id:string,start:number){
     const create=()=>{if(!window.YT||!playerHost.current)return; player.current?.destroy(); playerHost.current.innerHTML=""; player.current=new window.YT.Player(playerHost.current,{videoId:id,width:"100%",height:"100%",playerVars:{autoplay:state.settings.autoplay?1:0,playsinline:1,rel:0,start:Math.floor(start),cc_load_policy:0},events:{onReady:({target}:{target:Player})=>{target.setPlaybackRate(state.settings.speed); if(state.settings.autoplay)target.playVideo();}}});};
     if(window.YT?.Player)create(); else{if(!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')){const s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);}window.onYouTubeIframeAPIReady=create;}
@@ -128,17 +144,19 @@ export default function GreekTubePlayer() {
   function saveMoment(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!selected||!momentModal)return;const fd=new FormData(event.currentTarget);const m:Moment={id:uid(),videoId:selected.id,time:momentModal.time,note:String(fd.get("note")||"Αποθηκευμένη στιγμή"),tags:String(fd.get("tags")||"").split(",").map(x=>x.trim()).filter(Boolean),excerpt:momentModal.excerpt};setState(s=>({...s,moments:[m,...s.moments]}));setMomentModal(null);void copyMoment(m);}
   async function copyMoment(m:Moment){const url=`${location.origin}/?video=${m.videoId}&t=${Math.floor(m.time)}`;await navigator.clipboard?.writeText(url);}
   function askVideo(event:FormEvent){event.preventDefault();if(!captions)return;const terms=question.toLowerCase().split(/\s+/).filter(w=>w.length>3);const hits=captions.cues.filter(c=>terms.some(t=>c.text.toLowerCase().includes(t))).slice(0,5);setAnswer(hits.length?hits.map(h=>`${clock(h.start)} — ${h.text}`).join("\n\n"):"Δεν υπάρχει σχετική πληροφορία στο transcript αυτού του video.");}
-  function close(){player.current?.destroy();player.current=null;setSelectedId(null);setCaptions(null);setError("");history.replaceState(null,"","/");}
+  function close(){player.current?.destroy();player.current=null;setSelectedId(null);setCaptions(null);setPreparationReady(false);setError("");history.replaceState(null,"","/");}
 
   if(selected){
     const moments=state.moments.filter(m=>m.videoId===selected.id);
-    const steps=["Έλεγχος YouTube link","Ανάγνωση metadata","Εντοπισμός English auto-generated captions","Μετάφραση EN → EL","Συγχρονισμός timestamps","Αποθήκευση στη βιβλιοθήκη","Έτοιμο"];
-    const step=Math.min(6,Math.floor(progress/16.7));
+    const status=delayMessage||(progress<24?"Ετοιμάζουμε το video":progress<48?"Βρήκαμε τους αγγλικούς υπότιτλους":progress<86?"Δημιουργούμε τους ελληνικούς υπότιτλους":progress<100?"Σχεδόν έτοιμο":"Το video είναι έτοιμο");
+    const naturalDescription=selected.description.replace(/^Ο (.+?) εξηγεί (τη|τις|το|τα)\s+/i,"$1: ").replace(/^Η (.+?) εξηγεί (τη|τις|το|τα)\s+/i,"$1: ");
+    const topics=[`${selected.channel} — ${selected.title}`,naturalDescription].filter(Boolean);
+    const keyPoints=[naturalDescription,`Κεντρικό θέμα: ${selected.title}`].filter(Boolean);
     return <main className="app-shell viewer">
       <header className="app-header"><button className="ghost" onClick={close}>← Βιβλιοθήκη</button><Brand/><button className="icon-button" onClick={()=>setView("settings")}>⚙</button></header>
-      {loading&&<section className="processing"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div className="process-card"><strong>{progress}%</strong><h1>{selected.title}</h1><div className="progress"><i style={{width:`${progress}%`}}/></div>{steps.map((s,i)=><span className={i<=step?"done":""} key={s}>{i<step?"✓":i===step?"●":"○"} {s}</span>)}</div></section>}
+      {(loading||preparationReady)&&<section className="processing"><div className="process-video"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt={`Thumbnail: ${selected.title}`}/><div><small>{selected.channel}</small><h1>{selected.title}</h1></div></div><div className="process-status"><div className="process-status-line"><strong>{preparationReady?"Το video είναι έτοιμο με ελληνικούς υπότιτλους.":status}</strong><span>{Math.round(progress)}%</span></div><div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div></div><div className="process-content"><section><span>Σύντομο βιογραφικό</span><p>{naturalDescription||`${selected.channel} — ${selected.title}`}</p></section><section><span>Βασικά θέματα</span><ul>{topics.map((item,i)=><li key={`${item}-${i}`}>{item}</li>)}</ul></section><section><span>Key points</span><ul>{keyPoints.map((item,i)=><li key={`${item}-${i}`}>{item}</li>)}</ul></section></div>{preparationReady&&<button className="primary start-video" onClick={startPreparedVideo}>Έναρξη video</button>}</section>}
       {error&&<section className="empty"><b>!</b><h2>Δεν ολοκληρώθηκε η προετοιμασία</h2><p>{error}</p><button className="primary" onClick={()=>void openVideo(selected)}>Δοκίμασε ξανά</button></section>}
-      {!loading&&captions&&<>
+      {!loading&&captions&&!preparationReady&&<>
         <section className="watch-layout">
           <div className="watch-main">
             <div className="sticky-player" onContextMenu={e=>{e.preventDefault();beginMoment();}}>
@@ -172,7 +190,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand(){return <div className="brand"><span className="brand-mark">▶<i>≡</i></span><span>GreekTube <b>Subs</b></span></div>;}
+function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 1.4</small></div>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,settings}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings}){return <article className="video-card" onClick={()=>void open(video)}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"CC · EL"}</span><button className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{video.title}</strong><span>{video.channel}</span><small>{video.category}{video.progress>0?` · ${Math.round(video.progress)}%`:""}</small>{settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
