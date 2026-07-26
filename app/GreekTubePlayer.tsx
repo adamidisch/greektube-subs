@@ -3,7 +3,8 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Cue = { start: number; duration: number; text: string };
-type Captions = { videoId: string; title: string; channel: string; cues: Cue[]; duration?: number; transcriptVersion?: number; keyPoints?: string[]; topics?: string[] };
+type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
+type Captions = { videoId: string; title: string; channel: string; cues: Cue[]; duration?: number; transcriptVersion?: number; keyPoints?: string[]; topics?: string[]; speaker?:SpeakerProfile };
 type Category = "Medical" | "Tech" | "Podcasts" | "Comedy" | "Education" | "Documentaries" | "Other";
 type Video = {
   id: string; url: string; title: string; channel: string; category: Category;
@@ -56,6 +57,26 @@ const SEED: Video[] = [
   category:"Medical", tags:["υγεία"], notes:"", duration:0, addedAt:new Date(2026,6,23,index).toISOString(),
   favorite:false, lastPosition:0, progress:0,
 })) as Video[];
+
+const SPEAKERS:Record<string,SpeakerProfile>={
+  ATKu1Cxs2Pc:{name:"Δρ Philip Ovadia",role:"Καρδιοθωρακοχειρουργός και ειδικός στη μεταβολική υγεία",importance:"Έχει πραγματοποιήσει χιλιάδες καρδιοχειρουργικές επεμβάσεις και είναι γνωστός για τη σύνδεση της μεταβολικής υγείας με την πρόληψη της καρδιοπάθειας.",currentWork:"Συνεχίζει ως καρδιοθωρακοχειρουργός και διευθύνει την Ovadia Heart Health με εξ αποστάσεως προγράμματα πρόληψης.",highlights:["Καρδιοχειρουργική εμπειρία","Πρόληψη καρδιοπάθειας","Μεταβολική υγεία","Διατροφή και τρόπος ζωής"]},
+  NqLpQhii_fU:{name:"Δρ Sarah Myhill",role:"Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",currentWork:"Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",highlights:["ME/CFS και χρόνια κόπωση","Μιτοχόνδρια και ενέργεια","Διατροφή και μικροθρεπτικά","Περιβαλλοντικοί παράγοντες"]},
+  KkBy__7d9Fs:{name:"Δρ Sarah Myhill",role:"Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",currentWork:"Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",highlights:["ME/CFS και χρόνια κόπωση","Μιτοχόνδρια και ενέργεια","Διατροφή και μικροθρεπτικά","Περιβαλλοντικοί παράγοντες"]},
+  "0_adZSC0sFI":{name:"Δρ Sarah Myhill",role:"Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",currentWork:"Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",highlights:["ME/CFS και χρόνια κόπωση","Μιτοχόνδρια και ενέργεια","Διατροφή και μικροθρεπτικά","Περιβαλλοντικοί παράγοντες"]},
+  D2RjneeG_xA:{name:"Δρ Sarah Myhill",role:"Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",currentWork:"Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",highlights:["ME/CFS και χρόνια κόπωση","Μιτοχόνδρια και ενέργεια","Διατροφή και μικροθρεπτικά","Περιβαλλοντικοί παράγοντες"]},
+  "fX2z-BF8Jac":{name:"Δρ Natasha Campbell-McBride",role:"Ιατρός με μεταπτυχιακή εκπαίδευση στη νευρολογία και στην ανθρώπινη διατροφή",importance:"Είναι γνωστή διεθνώς ως δημιουργός της προσέγγισης GAPS και για το έργο της γύρω από τη σχέση εντέρου εγκεφάλου και διατροφής.",currentWork:"Σήμερα γράφει εκπαιδεύει επαγγελματίες και αναπτύσσει το διεθνές εκπαιδευτικό πρόγραμμα GAPS.",highlights:["Σχέση εντέρου και εγκεφάλου","Ανθρώπινη διατροφή","Μικροβίωμα","Εκπαίδευση GAPS"]},
+};
+function speakerForVideo(id:string,channel:string):SpeakerProfile{return SPEAKERS[id]||{name:channel||"Ομιλητής του βίντεο",role:"Ομιλητής και δημιουργός του περιεχομένου",importance:"Το επαγγελματικό προφίλ του ομιλητή δεν έχει ακόμη επιβεβαιωθεί.",currentWork:"Θα προστεθούν περισσότερα στοιχεία μόλις επιβεβαιωθεί η ταυτότητά του.",highlights:["Ταυτότητα ομιλητή","Επαγγελματική ιδιότητα","Κύριο έργο","Σημερινή δραστηριότητα"]};}
+const GREEK_TITLES:Record<string,string>={
+  ATKu1Cxs2Pc:"Καρδιοχειρουργός: Ο μεγαλύτερος παράγοντας κινδύνου για καρδιακή νόσο",
+  NqLpQhii_fU:"Αν θέλεις να μειώσεις τους υδατάνθρακες δες αυτό!",
+  D7bBCcbAuYQ:"Η κρυφή αιτία του επίμονου λίπους",
+  "fX2z-BF8Jac":"Ας γίνει η τροφή το φάρμακό σου",
+  KkBy__7d9Fs:"Γιατί οι περισσότεροι άνθρωποι έχουν αντίσταση στην ινσουλίνη",
+  "0_adZSC0sFI":"Ο πιο γρήγορος τρόπος αντιμετώπισης της ζύμωσης στο ανώτερο έντερο",
+  D2RjneeG_xA:"Ο ευκολότερος τρόπος αντιστροφής μεταβολικών προβλημάτων",
+};
+function greekTitle(video:Video){return GREEK_TITLES[video.id]||video.title;}
 
 const uid = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 function extractId(value:string) {
@@ -219,14 +240,16 @@ export default function GreekTubePlayer() {
 
   if(selected){
     const moments=state.moments.filter(m=>m.videoId===selected.id);
+    const speaker=captions?.speaker||speakerForVideo(selected.id,selected.channel);
     return <main className="app-shell viewer">
       <header className="app-header"><button className="ghost" onClick={close}>← Βιβλιοθήκη</button><Brand/><button className="icon-button" onClick={()=>setView("settings")}>⚙</button></header>
       {loading&&<section className="content-loading">
-        <div className="loading-visual"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div><small>{selected.channel}</small><h1>{selected.title}</h1></div></div>
+        <div className="loading-visual"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div><small>Μιλά ο {speaker.name}</small><h1>{greekTitle(selected)}</h1></div></div>
         <div className="loading-insights">
           <div className="loading-progress-line"><span>Περιεχόμενο βίντεο</span><strong>{Math.round(progress)}%</strong></div>
           <div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div>
-          <h2>Σημεία από τη μεταγραφή</h2>
+          <section className="speaker-loading-card"><small>Ο ΓΙΑΤΡΟΣ ΠΟΥ ΜΙΛΑ</small><h2>{speaker.name}</h2><strong>{speaker.role}</strong><p>{speaker.importance}</p><p><b>Σήμερα:</b> {speaker.currentWork}</p><div>{speaker.highlights.map(item=><span key={item}>{item}</span>)}</div></section>
+          <h2>Βασικά σημεία του βίντεο</h2>
           <ul>{loadingPoints.slice(0,10).map((point,index)=><li key={`${point}-${index}`}><i>{String(index+1).padStart(2,"0")}</i><span>{point}</span></li>)}</ul>
         </div>
       </section>}
@@ -238,7 +261,7 @@ export default function GreekTubePlayer() {
               <div className="video-frame"><div ref={playerHost}/>{state.settings.subtitles&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{fontSize:state.settings.subtitleSize,background:`rgba(0,0,0,${state.settings.opacity})`}}>{captions.cues[active]?.text}</div>}</div>
               <div className="player-actions"><div><button className="primary compact" onClick={()=>beginMoment()}>＋ Αποθήκευση στιγμής</button><button className="secondary compact transcript-toggle" onClick={()=>setTranscriptOpen(value=>!value)}>{transcriptOpen?"Κλείσιμο μεταγραφής":"Άνοιγμα μεταγραφής"}</button></div><span>{Math.round(selected.progress)}% προβολή</span></div>
             </div>
-            <div className="video-heading"><div><small>{selected.channel} · {CATEGORY_LABELS[selected.category]}</small><h1>{captions.title}</h1></div><button aria-label="Αγαπημένο" className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div>
+            <div className="video-heading"><div><small>{selected.channel} · {CATEGORY_LABELS[selected.category]}</small><h1>{captions.title}</h1><div className="speaker-row"><span>Ομιλητής</span><strong>{speaker.name}</strong><i>{speaker.role}</i></div></div><button aria-label="Αγαπημένο" className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div>
             <section className="moments"><div className="section-title"><h2>Αποθηκευμένες στιγμές</h2><small>{moments.length}</small></div>{moments.length===0?<p className="muted">Πάτησε M ή το κουμπί πάνω για να κρατήσεις ένα σημείο.</p>:moments.map(m=><article className="moment" key={m.id} onClick={()=>seek(m.time)}><time>{clock(m.time)}</time><div><strong>{m.note}</strong><p>{m.excerpt}</p></div><div className="moment-actions"><button onClick={e=>{e.stopPropagation();seek(m.time)}}>Αναπαραγωγή</button><button onClick={e=>{e.stopPropagation();void copyMoment(m)}}>Αντιγραφή συνδέσμου</button><button onClick={e=>{e.stopPropagation();navigator.share?.({title:m.note,url:`${location.origin}/?video=${m.videoId}&t=${Math.floor(m.time)}`})}}>Κοινοποίηση</button><button onClick={e=>{e.stopPropagation();setState(s=>({...s,moments:s.moments.filter(x=>x.id!==m.id)}))}}>Διαγραφή</button></div></article>)}</section>
           </div>
           {transcriptOpen&&<aside className="side-panel transcript-drawer">
@@ -252,19 +275,18 @@ export default function GreekTubePlayer() {
   }
 
   return <main className="app-shell">
-    <header className="app-header"><Brand/><nav><button className={view==="library"?"active":""} onClick={()=>setView("library")}>Βιβλιοθήκη</button><button className={view==="settings"?"active":""} onClick={()=>setView("settings")}>Ρυθμίσεις</button></nav><button className="primary compact add-top" onClick={()=>setModal(true)}>＋ Προσθήκη βίντεο</button></header>
     {view==="settings"?<SettingsPage settings={state.settings} update={patch=>setState(s=>({...s,settings:{...s.settings,...patch}}))}/>:<>
       <section className="home-intro"><span>Η προσωπική σου βιβλιοθήκη βίντεο</span><h1>Αυτόματοι ελληνικοί υπότιτλοι</h1></section>
       {featured&&<section className="featured" aria-label="Προτεινόμενο βίντεο">
-        <button className="featured-media" onClick={()=>void openVideo(featured,featured.lastPosition)} aria-label={`Συνέχεια προβολής: ${featured.title}`}>
+        <button className="featured-media" onClick={()=>void openVideo(featured,featured.lastPosition)} aria-label={`Συνέχεια προβολής: ${greekTitle(featured)}`}>
           <img src={`https://i.ytimg.com/vi/${featured.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${featured.id}/hqdefault.jpg`}} alt=""/>
           <span className="featured-play">▶</span>
-          <div className="featured-overlay"><small>{featured.channel}</small><strong>{featured.title}</strong></div>
+          <div className="featured-overlay"><small>{featured.channel}</small><strong>{greekTitle(featured)}</strong></div>
           <div className="featured-progress"><i style={{width:`${featured.progress}%`}}/></div>
         </button>
         <div className="featured-panel">
           <div className="featured-meta"><span>{CATEGORY_LABELS[featured.category]}</span><button aria-label="Αγαπημένο" className={`featured-favorite ${featured.favorite?"active":""}`} onClick={()=>patchVideo(featured.id,{favorite:!featured.favorite})}>♥</button></div>
-          <h2>{featured.title}</h2>
+          <h2>{greekTitle(featured)}</h2>
           <small>{featured.channel}</small>
           <p>{featured.description}</p>
           <div className="topic-list">{featuredTopics.map(topic=><span key={topic}>{topic}</span>)}</div>
@@ -291,9 +313,9 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.1</small></div>;}
+function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.2</small></div>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
-function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${video.title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Υπότιτλοι · EL"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{video.title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
+function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;const title=greekTitle(video);return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Ελληνικοί υπότιτλοι"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
 function AddVideo({close,add}:{close:()=>void;add:(v:Video,t:boolean)=>Promise<void>}) {
   const [url,setUrl]=useState("");const [metadata,setMetadata]=useState<{id:string;title:string;channel:string}|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState("");

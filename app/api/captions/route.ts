@@ -10,7 +10,7 @@ import {
 
 type PlayerResponse = {
   playabilityStatus?: { status?: string; reason?: string };
-  videoDetails?: { title?: string; author?: string; lengthSeconds?: string };
+  videoDetails?: { title?: string; author?: string; lengthSeconds?: string; shortDescription?: string };
   captions?: {
     playerCaptionsTracklistRenderer?: {
       captionTracks?: CaptionTrack[];
@@ -30,6 +30,73 @@ type CaptionCue = {
   duration: number;
   text: string;
 };
+
+type SpeakerProfile = {
+  name: string;
+  role: string;
+  importance: string;
+  currentWork: string;
+  highlights: string[];
+};
+
+const SPEAKERS_BY_VIDEO: Record<string, SpeakerProfile> = {
+  ATKu1Cxs2Pc: {
+    name: "Δρ Philip Ovadia",
+    role: "Καρδιοθωρακοχειρουργός και ειδικός στη μεταβολική υγεία",
+    importance: "Έχει πραγματοποιήσει χιλιάδες καρδιοχειρουργικές επεμβάσεις και είναι γνωστός για τη σύνδεση της μεταβολικής υγείας με την πρόληψη της καρδιοπάθειας.",
+    currentWork: "Συνεχίζει ως καρδιοθωρακοχειρουργός και διευθύνει την Ovadia Heart Health με εξ αποστάσεως προγράμματα πρόληψης.",
+    highlights: ["Καρδιοχειρουργική εμπειρία", "Πρόληψη καρδιοπάθειας", "Μεταβολική υγεία", "Διατροφή και τρόπος ζωής"],
+  },
+  NqLpQhii_fU: {
+    name: "Δρ Sarah Myhill",
+    role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
+    importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
+    currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
+    highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
+  },
+  KkBy__7d9Fs: {
+    name: "Δρ Sarah Myhill",
+    role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
+    importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
+    currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
+    highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
+  },
+  "0_adZSC0sFI": {
+    name: "Δρ Sarah Myhill",
+    role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
+    importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
+    currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
+    highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
+  },
+  D2RjneeG_xA: {
+    name: "Δρ Sarah Myhill",
+    role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
+    importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
+    currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
+    highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
+  },
+  "fX2z-BF8Jac": {
+    name: "Δρ Natasha Campbell-McBride",
+    role: "Ιατρός με μεταπτυχιακή εκπαίδευση στη νευρολογία και στην ανθρώπινη διατροφή",
+    importance: "Είναι γνωστή διεθνώς ως δημιουργός της προσέγγισης GAPS και για το έργο της γύρω από τη σχέση εντέρου εγκεφάλου και διατροφής.",
+    currentWork: "Σήμερα γράφει εκπαιδεύει επαγγελματίες και αναπτύσσει το διεθνές εκπαιδευτικό πρόγραμμα GAPS.",
+    highlights: ["Σχέση εντέρου και εγκεφάλου", "Ανθρώπινη διατροφή", "Μικροβίωμα", "Εκπαίδευση GAPS"],
+  },
+};
+
+function speakerProfile(videoId: string, description = "", channel = ""): SpeakerProfile {
+  const known = SPEAKERS_BY_VIDEO[videoId];
+  if (known) return known;
+  const match = description.match(/\b(?:Dr\.?|Doctor)\s+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,3})/);
+  const name = match ? `Δρ ${match[1]}` : channel;
+  return {
+    name: name || "Ομιλητής του βίντεο",
+    role: "Ομιλητής και δημιουργός του περιεχομένου",
+    importance: "Το προφίλ του ομιλητή δεν έχει ακόμη επιβεβαιωθεί από αρκετές αξιόπιστες πληροφορίες.",
+    currentWork: "Θα προστεθούν περισσότερα στοιχεία μόλις επιβεβαιωθεί η ταυτότητα και η σημερινή δραστηριότητά του.",
+    highlights: ["Ταυτότητα ομιλητή", "Επαγγελματική ιδιότητα", "Κύριο έργο", "Σημερινή δραστηριότητα"],
+  };
+}
 
 const API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const PLAYER_URL = `https://www.youtube.com/youtubei/v1/player?key=${API_KEY}&prettyPrint=false`;
@@ -379,6 +446,12 @@ async function translateSingleCue(index: number, text: string) {
   return translated ? { index, text: translated } : null;
 }
 
+async function translateTitleToGreek(title: string) {
+  if (!title || hasGreekText([{ start: 0, duration: 1, text: title }])) return title;
+  const translated = await translateSingleCue(0, title);
+  return translated?.text || title;
+}
+
 async function translateCuesToGreek(cues: CaptionCue[]) {
   const batches = createTranslationBatches(cues);
   const translated = new Map<number, string>();
@@ -452,13 +525,14 @@ function keyPoints(cues: CaptionCue[]) {
     .slice(0, 10);
 }
 
-function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
+async function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
   if (!record) return null;
+  const title = await translateTitleToGreek(record.title);
   return {
     status: record.status,
     progress: record.progress,
     videoId: record.videoId,
-    title: record.title,
+    title,
     channel: record.channel,
     duration: record.duration,
     sourceLanguage: record.originalLanguage,
@@ -466,6 +540,7 @@ function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
     englishCues: record.englishTranscript,
     topics: record.topics,
     keyPoints: record.keyPoints,
+    speaker: speakerProfile(record.videoId, "", record.channel),
     transcriptVersion: record.transcriptVersion,
     cached: true,
   };
@@ -487,17 +562,17 @@ export async function POST(request: Request) {
 
     const cached = await getTranscript(videoId);
     if (cached?.status === "ready" && cached.transcriptVersion === TRANSCRIPT_VERSION) {
-      return NextResponse.json(cachedResponse(cached));
+      return NextResponse.json(await cachedResponse(cached));
     }
     if (cached?.status === "processing" && cached.transcriptVersion === TRANSCRIPT_VERSION && cached.lockExpiresAt && cached.lockExpiresAt > new Date().toISOString()) {
-      return NextResponse.json(cachedResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
+      return NextResponse.json(await cachedResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
     }
 
     lockToken = crypto.randomUUID();
     const acquired = await acquireProcessingLock(videoId, lockToken);
     if (!acquired) {
       const active = await getTranscript(videoId);
-      return NextResponse.json(cachedResponse(active), { status: 202, headers: { "Retry-After": "1" } });
+      return NextResponse.json(await cachedResponse(active), { status: 202, headers: { "Retry-After": "1" } });
     }
     await updateProcessingProgress(videoId, lockToken, 12);
 
@@ -540,12 +615,14 @@ export async function POST(request: Request) {
     await updateProcessingProgress(videoId, lockToken, 88);
 
     const now = new Date().toISOString();
+    const translatedTitle = await translateTitleToGreek(player.videoDetails?.title || "YouTube video");
+    const speaker = speakerProfile(videoId, player.videoDetails?.shortDescription, player.videoDetails?.author);
     const points = keyPoints(cues);
     const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\p{L}]{6,}/gu) || []))].slice(0, 6);
     const duration = videoDuration || cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
     await completeTranscript({
       videoId,
-      title: player.videoDetails?.title || "YouTube video",
+      title: translatedTitle,
       channel: player.videoDetails?.author || "YouTube",
       thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
       duration,
@@ -565,7 +642,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       status: "ready",
       videoId,
-      title: player.videoDetails?.title || "YouTube video",
+      title: translatedTitle,
       channel: player.videoDetails?.author || "YouTube",
       duration,
       sourceLanguage: track.languageCode || "unknown",
@@ -575,6 +652,7 @@ export async function POST(request: Request) {
       englishCues: sourceCues,
       topics,
       keyPoints: points,
+      speaker,
       transcriptVersion: TRANSCRIPT_VERSION,
       cached: false,
     });

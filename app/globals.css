@@ -268,3 +268,24 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
   .player-actions>span{white-space:nowrap}
   .transcript-drawer{height:440px}
 }
+
+/* Greek presentation and speaker profile — ver 2.2 */
+.speaker-loading-card{margin:0 0 19px;padding:14px 15px;border:1px solid rgba(143,127,240,.2);border-radius:13px;background:rgba(143,127,240,.065)}
+.speaker-loading-card>small{display:block;margin-bottom:6px;color:#aaa1ef;font-size:9px;font-weight:750;letter-spacing:.12em}
+.speaker-loading-card h2{margin:0 0 3px;font-size:17px}
+.speaker-loading-card>strong{display:block;color:#d4d0e7;font-size:11px;line-height:1.5}
+.speaker-loading-card p{margin:9px 0 0;color:var(--muted);font-size:10px;line-height:1.55}
+.speaker-loading-card p b{color:#cbc5ed;font-weight:650}
+.speaker-loading-card>div{display:flex;flex-wrap:wrap;gap:5px;margin-top:11px}
+.speaker-loading-card>div span{width:auto;padding:5px 8px;border:1px solid var(--line);border-radius:99px;background:var(--raised);color:#c4bfdc;font-size:8px}
+.speaker-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:9px}
+.speaker-row span{padding:4px 7px;border-radius:6px;background:rgba(143,127,240,.12);color:#aaa1ef;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.speaker-row strong{font-size:11px;font-weight:680}
+.speaker-row i{color:var(--muted);font-size:9px;font-style:normal}
+.video-heading>div{min-width:0}
+@media(max-width:760px){
+  .speaker-loading-card{padding:12px;margin-bottom:16px}
+  .speaker-loading-card p{font-size:10px}
+  .speaker-loading-card>div{gap:4px}
+  .speaker-row i{flex-basis:100%;line-height:1.45}
+}
