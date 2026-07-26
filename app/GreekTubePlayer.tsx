@@ -59,12 +59,12 @@ const SEED: Video[] = [
 })) as Video[];
 
 const SPEAKERS:Record<string,SpeakerProfile>={
-  ATKu1Cxs2Pc:{name:"Δρ Philip Ovadia",role:"Καρδιοθωρακοχειρουργός και ειδικός στη μεταβολική υγεία",importance:"Έχει πραγματοποιήσει χιλιάδες καρδιοχειρουργικές επεμβάσεις και είναι γνωστός για τη σύνδεση της μεταβολικής υγείας με την πρόληψη της καρδιοπάθειας.",currentWork:"Συνεχίζει ως καρδιοθωρακοχειρουργός και διευθύνει την Ovadia Heart Health με εξ αποστάσεως προγράμματα πρόληψης.",highlights:["Καρδιοχειρουργική εμπειρία","Πρόληψη καρδιοπάθειας","Μεταβολική υγεία","Διατροφή και τρόπος ζωής"]},
-  NqLpQhii_fU:{name:"Δρ Sarah Myhill",role:"Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",currentWork:"Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",highlights:["ME/CFS και χρόνια κόπωση","Μιτοχόνδρια και ενέργεια","Διατροφή και μικροθρεπτικά","Περιβαλλοντικοί παράγοντες"]},
-  KkBy__7d9Fs:{name:"Δρ Sarah Myhill",role:"Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",currentWork:"Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",highlights:["ME/CFS και χρόνια κόπωση","Μιτοχόνδρια και ενέργεια","Διατροφή και μικροθρεπτικά","Περιβαλλοντικοί παράγοντες"]},
-  "0_adZSC0sFI":{name:"Δρ Sarah Myhill",role:"Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",currentWork:"Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",highlights:["ME/CFS και χρόνια κόπωση","Μιτοχόνδρια και ενέργεια","Διατροφή και μικροθρεπτικά","Περιβαλλοντικοί παράγοντες"]},
-  D2RjneeG_xA:{name:"Δρ Sarah Myhill",role:"Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",currentWork:"Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",highlights:["ME/CFS και χρόνια κόπωση","Μιτοχόνδρια και ενέργεια","Διατροφή και μικροθρεπτικά","Περιβαλλοντικοί παράγοντες"]},
-  "fX2z-BF8Jac":{name:"Δρ Natasha Campbell-McBride",role:"Ιατρός με μεταπτυχιακή εκπαίδευση στη νευρολογία και στην ανθρώπινη διατροφή",importance:"Είναι γνωστή διεθνώς ως δημιουργός της προσέγγισης GAPS και για το έργο της γύρω από τη σχέση εντέρου εγκεφάλου και διατροφής.",currentWork:"Σήμερα γράφει εκπαιδεύει επαγγελματίες και αναπτύσσει το διεθνές εκπαιδευτικό πρόγραμμα GAPS.",highlights:["Σχέση εντέρου και εγκεφάλου","Ανθρώπινη διατροφή","Μικροβίωμα","Εκπαίδευση GAPS"]},
+  ATKu1Cxs2Pc:{name:"Δρ Philip Ovadia",role:"Καρδιοθωρακοχειρουργός και ειδικός στη μεταβολική υγεία",importance:"Γνωστός για το έργο του στην πρόληψη της καρδιοπάθειας μέσω της μεταβολικής υγείας.",currentWork:"",highlights:[]},
+  NqLpQhii_fU:{name:"Δρ Sarah Myhill",role:"Ιατρός με ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
+  KkBy__7d9Fs:{name:"Δρ Sarah Myhill",role:"Ιατρός με ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
+  "0_adZSC0sFI":{name:"Δρ Sarah Myhill",role:"Ιατρός με ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
+  D2RjneeG_xA:{name:"Δρ Sarah Myhill",role:"Ιατρός με ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
+  "fX2z-BF8Jac":{name:"Δρ Natasha Campbell-McBride",role:"Ιατρός με εκπαίδευση στη νευρολογία και στην ανθρώπινη διατροφή",importance:"Γνωστή για την προσέγγιση GAPS και τη σχέση εντέρου και εγκεφάλου.",currentWork:"",highlights:[]},
 };
 function speakerForVideo(id:string,channel:string):SpeakerProfile{return SPEAKERS[id]||{name:channel||"Ομιλητής του βίντεο",role:"Ομιλητής και δημιουργός του περιεχομένου",importance:"Το επαγγελματικό προφίλ του ομιλητή δεν έχει ακόμη επιβεβαιωθεί.",currentWork:"Θα προστεθούν περισσότερα στοιχεία μόλις επιβεβαιωθεί η ταυτότητά του.",highlights:["Ταυτότητα ομιλητή","Επαγγελματική ιδιότητα","Κύριο έργο","Σημερινή δραστηριότητα"]};}
 const GREEK_TITLES:Record<string,string>={
@@ -120,6 +120,7 @@ export default function GreekTubePlayer() {
   const [loading,setLoading]=useState(false);
   const [progress,setProgress]=useState(0);
   const [loadingPoints,setLoadingPoints]=useState<string[]>([]);
+  const [loadingDescription,setLoadingDescription]=useState("");
   const [transcriptOpen,setTranscriptOpen]=useState(false);
   const [error,setError]=useState("");
   const [active,setActive]=useState(-1);
@@ -162,7 +163,7 @@ export default function GreekTubePlayer() {
   function patchVideo(id:string,patch:Partial<Video>){setState(s=>({...s,videos:s.videos.map(v=>v.id===id?{...v,...patch}:v)}));}
   async function openVideo(video:Video,start?:number,showTranscript=false){
     const knownPoints=transcriptHighlights(video.captions||[]);
-    setSelectedId(video.id); setView("library"); setLoading(true); setProgress(4); setError(""); setCaptions(null); setLoadingPoints(knownPoints.length?knownPoints:[video.description,...video.tags.map(tag=>`Βασικό θέμα: ${tag}`)].filter(Boolean)); setTranscriptOpen(showTranscript);
+    setSelectedId(video.id); setView("library"); setLoading(true); setProgress(4); setError(""); setCaptions(null); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript);
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
     const timer=window.setInterval(()=>setProgress(p=>Math.min(92,p+(p<35?5:p<70?2:1))),420);
     try{
@@ -248,9 +249,10 @@ export default function GreekTubePlayer() {
         <div className="loading-insights">
           <div className="loading-progress-line"><span>Περιεχόμενο βίντεο</span><strong>{Math.round(progress)}%</strong></div>
           <div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div>
-          <section className="speaker-loading-card"><small>Ο ΓΙΑΤΡΟΣ ΠΟΥ ΜΙΛΑ</small><h2>{speaker.name}</h2><strong>{speaker.role}</strong><p>{speaker.importance}</p><p><b>Σήμερα:</b> {speaker.currentWork}</p><div>{speaker.highlights.map(item=><span key={item}>{item}</span>)}</div></section>
-          <h2>Βασικά σημεία του βίντεο</h2>
-          <ul>{loadingPoints.slice(0,10).map((point,index)=><li key={`${point}-${index}`}><i>{String(index+1).padStart(2,"0")}</i><span>{point}</span></li>)}</ul>
+          <section className="speaker-loading-card"><small>Ο ΓΙΑΤΡΟΣ ΠΟΥ ΜΙΛΑ</small><h2>{speaker.name}</h2><strong>{speaker.role}</strong></section>
+          <h2>Περιγραφή βίντεο</h2>
+          <div className="loading-description">{loadingDescription}</div>
+          {loadingPoints.length>0&&<><h2 className="loading-points-title">Βασικά σημεία του βίντεο</h2><ul>{loadingPoints.slice(0,10).map((point,index)=><li key={`${point}-${index}`}><i>{String(index+1).padStart(2,"0")}</i><span>{point}</span></li>)}</ul></>}
         </div>
       </section>}
       {error&&<section className="empty"><b>!</b><h2>Δεν ολοκληρώθηκε η προετοιμασία</h2><p>{error}</p><button className="primary" onClick={()=>void openVideo(selected)}>Δοκίμασε ξανά</button></section>}
@@ -313,7 +315,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.2</small></div>;}
+function Brand(){return <div className="brand"><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 2.3</small></div>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal"><header><h2>{title}</h2><button onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;settings:Settings;variant?:"library"|"continue"}){const remaining=video.duration>0?Math.max(0,video.duration-video.lastPosition):0;const title=greekTitle(video);return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Ελληνικοί υπότιτλοι"}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{title}</strong><span>{video.channel}</span><small>{variant==="continue"?(remaining>0?`${Math.round(video.progress)}% · Απομένουν ${clock(remaining)}`:`${Math.round(video.progress)}% ολοκληρώθηκε`):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 

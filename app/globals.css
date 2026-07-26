@@ -233,7 +233,9 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
 .loading-insights ul{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;margin:0;padding:0;list-style:none}
 .loading-insights li{min-width:0;display:grid;grid-template-columns:25px 1fr;gap:8px;padding:9px 0;border-top:1px solid rgba(255,255,255,.055)}
 .loading-insights li i{padding-top:1px;color:#8174df;font-family:var(--font-geist-mono);font-size:10px;font-style:normal}
-.loading-insights li span{display:-webkit-box;overflow:hidden;color:#c6c9d0;font-size:12px;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.loading-insights li span{display:block;overflow:visible;color:#c6c9d0;font-size:12px;line-height:1.55;white-space:normal;overflow-wrap:anywhere}
+.loading-description{width:100%;padding:13px 14px;border:1px solid rgba(255,255,255,.07);border-radius:11px;background:var(--raised);color:#c6c9d0;font-size:12px;line-height:1.65;white-space:normal;overflow-wrap:anywhere}
+.loading-points-title{margin-top:19px!important}
 @media(max-width:760px){
   .content-loading{grid-template-columns:1fr;margin:18px auto}
   .loading-visual{min-height:0;aspect-ratio:16/9}
