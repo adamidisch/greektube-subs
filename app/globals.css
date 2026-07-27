@@ -770,3 +770,56 @@ body{font-size:13px}
 @media(max-width:620px){
   .card-info .card-original-title{font-size:9.5px}
 }
+
+/* Stable subtitles, editable library and structured controls — ver 4.5 */
+.transcript{overflow-anchor:none;overscroll-behavior:contain;scroll-behavior:auto}
+.subtitles{contain:layout paint;transform:translateZ(0)}
+.card-edit{position:absolute;top:7px;left:7px;z-index:2;width:27px;height:27px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:rgba(5,6,9,.68);color:#d8d3ff;font-size:12px;backdrop-filter:blur(8px)}
+.card-edit:hover,.card-edit:focus-visible{border-color:rgba(143,127,240,.55);background:rgba(103,89,190,.75);color:#fff}
+.heading-actions{display:flex;align-items:center;gap:7px}
+.edit-video{height:34px;padding:0 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--muted);font-size:10px}
+.edit-video:hover,.edit-video:focus-visible{border-color:rgba(143,127,240,.35);color:var(--text)}
+.edit-video-preview{display:grid;grid-template-columns:124px 1fr;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--raised)}
+.edit-video-preview img{width:124px;aspect-ratio:16/9;object-fit:cover;border-radius:8px}
+.edit-video-preview strong,.edit-video-preview span{display:block}
+.edit-video-preview strong{font-size:11px;line-height:1.4}
+.edit-video-preview span{margin-top:5px;color:var(--muted);font-size:9px}
+.player-actions{gap:8px;padding:10px 12px 12px}
+.player-actions>.player-toolbar{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.control-section{min-width:0;padding:8px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.018)}
+.control-section>small{display:block;margin:0 0 7px;color:var(--soft);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.playback-section{width:max-content}
+.playback-controls{width:max-content}
+.display-section .display-controls{margin:0;justify-content:flex-end}
+.action-section{width:100%}
+.action-section .player-secondary-actions{gap:7px;padding:0;border:0}
+.player-secondary-actions .moment-save{height:34px;padding:0 13px;border:1px solid rgba(232,174,83,.48);background:linear-gradient(135deg,rgba(219,153,52,.22),rgba(183,113,31,.13));color:#ffd995;font-weight:700}
+.player-secondary-actions .moment-save span{color:#ffd07a}
+.player-secondary-actions .moment-save:hover,.player-secondary-actions .moment-save:focus-visible{border-color:rgba(255,199,104,.72);background:linear-gradient(135deg,rgba(229,162,55,.34),rgba(183,113,31,.22));color:#fff1d2}
+.player-secondary-actions .transcript-toggle{height:34px;padding:0 13px;border:1px solid var(--line);background:rgba(255,255,255,.025)}
+:root[data-theme="light"] .control-section{background:#f8f4ee}
+:root[data-theme="light"] .player-secondary-actions .moment-save{border-color:rgba(177,111,25,.38);background:#fff0d6;color:#80500e}
+
+@media(max-width:620px){
+  .sticky-player{position:relative;top:auto}
+  .player-actions{gap:8px;padding:9px}
+  .player-actions>.player-toolbar{display:grid;grid-template-columns:1fr;gap:8px;width:100%}
+  .control-section{width:100%;padding:9px}
+  .playback-section{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .playback-section>small{margin:0}
+  .playback-controls{width:auto;flex:0 0 auto}
+  .display-section>small{margin-bottom:8px}
+  .display-section .display-controls{width:100%;display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
+  .display-controls .subtitle-size-label{display:none}
+  .display-controls .fullscreen-toggle{width:100%!important;min-width:0!important}
+  .action-section .player-secondary-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .player-secondary-actions button{width:100%;min-width:0;height:38px!important;padding:0 8px!important;white-space:nowrap}
+  .heading-actions{flex-direction:column-reverse}
+  .edit-video{height:32px;padding:0 9px;font-size:9px}
+  .edit-video-preview{grid-template-columns:96px 1fr}
+  .edit-video-preview img{width:96px}
+}
+@media(max-width:390px){
+  .display-section .display-controls{grid-template-columns:minmax(112px,auto) 1fr}
+  .action-section .player-secondary-actions{grid-template-columns:1fr}
+}
