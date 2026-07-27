@@ -762,3 +762,11 @@ body{font-size:13px}
   .doctor-filter>span{display:block;margin-bottom:8px}
   .doctor-filter>div{padding-right:12px}
 }
+
+/* Complete import metadata and bilingual card titles — ver 4.4 */
+.card-info .card-original-title{display:-webkit-box;margin:5px 0 0;overflow:hidden;color:var(--soft);font-size:10px;line-height:1.35;font-weight:500;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.metadata small{display:-webkit-box;margin-top:4px;overflow:hidden;color:var(--soft);font-size:8px;line-height:1.4;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.continue-card .card-info>span{margin-top:7px}
+@media(max-width:620px){
+  .card-info .card-original-title{font-size:9.5px}
+}
