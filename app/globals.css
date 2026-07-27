@@ -747,3 +747,18 @@ body{font-size:13px}
   .display-controls{width:100%;justify-content:space-between}
   .display-controls .subtitle-size-label{display:block}
 }
+
+/* Doctor filters and visible video duration — ver 4.3 */
+.doctor-filter{display:flex;align-items:center;gap:10px;min-width:0;margin:-8px 0 20px}
+.doctor-filter>span{flex:0 0 auto;color:var(--soft);font-size:10px;font-weight:650;text-transform:uppercase;letter-spacing:.08em}
+.doctor-filter>div{display:flex;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.doctor-filter>div::-webkit-scrollbar{display:none}
+.doctor-filter button{height:31px;padding:0 11px;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--muted);font-size:11px;white-space:nowrap}
+.doctor-filter button:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.doctor-filter button.active{border-color:rgba(213,169,111,.48);background:rgba(213,169,111,.11);color:var(--text)}
+.duration{font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+@media(max-width:620px){
+  .doctor-filter{display:block;margin-top:-7px;margin-right:-12px}
+  .doctor-filter>span{display:block;margin-bottom:8px}
+  .doctor-filter>div{padding-right:12px}
+}

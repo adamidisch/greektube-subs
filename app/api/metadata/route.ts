@@ -43,6 +43,24 @@ async function greekTitle(value: string) {
   }
 }
 
+async function videoDuration(id: string) {
+  try {
+    const response = await fetch("https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&prettyPrint=false", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        videoId: id,
+        context: { client: { clientName: "ANDROID", clientVersion: "20.10.38", androidSdkVersion: 30, hl: "en", gl: "US" } },
+      }),
+    });
+    if (!response.ok) return 0;
+    const payload = (await response.json()) as { videoDetails?: { lengthSeconds?: string } };
+    return Number(payload.videoDetails?.lengthSeconds || 0);
+  } catch {
+    return 0;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { url?: unknown };
@@ -55,12 +73,13 @@ export async function POST(request: Request) {
     if (!response.ok) throw new Error();
     const metadata = (await response.json()) as { title?: string; author_name?: string };
     const originalTitle = metadata.title || "YouTube video";
-    const title = await greekTitle(originalTitle);
+    const [title, duration] = await Promise.all([greekTitle(originalTitle), videoDuration(id)]);
     return NextResponse.json({
       id,
       title,
       originalTitle,
       channel: metadata.author_name || "YouTube",
+      duration,
       thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
     });
   } catch {
