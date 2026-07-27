@@ -823,3 +823,33 @@ body{font-size:13px}
   .display-section .display-controls{grid-template-columns:minmax(112px,auto) 1fr}
   .action-section .player-secondary-actions{grid-template-columns:1fr}
 }
+
+/* Mobile control layout correction — ver 4.6 */
+@media(max-width:620px){
+  div.player-actions>div.player-toolbar{width:100%!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:8px!important;grid-template-columns:none!important}
+  div.player-actions>div.player-toolbar>.control-section{display:block!important;width:100%!important;min-width:0!important}
+  div.player-actions>div.player-toolbar>.playback-section>small,
+  div.player-actions>div.player-toolbar>.display-section>small{display:block!important;margin:0 0 8px!important}
+  div.player-actions>div.player-toolbar .playback-controls{width:100%!important;display:grid!important;grid-template-columns:1fr 44px 1fr!important;gap:5px!important;padding:4px!important}
+  div.player-actions>div.player-toolbar .playback-controls button{width:100%!important;min-width:0!important;height:36px!important;min-height:36px!important;padding:0 8px!important}
+  div.player-actions>div.player-toolbar .display-controls{width:100%!important;display:grid!important;grid-template-columns:minmax(126px,1fr) minmax(126px,1fr)!important;gap:8px!important;margin:0!important}
+  div.player-actions>div.player-toolbar .subtitle-size-picker{width:100%!important;height:38px!important;display:grid!important;grid-template-columns:repeat(3,1fr)!important;margin:0!important}
+  div.player-actions>div.player-toolbar .subtitle-size-picker button{width:100%!important;height:30px!important;min-height:30px!important;padding:0!important}
+  div.player-actions>div.player-toolbar .fullscreen-toggle{grid-column:auto!important;width:100%!important;min-width:0!important;height:38px!important;min-height:38px!important;margin:0!important}
+  div.player-actions>section.action-section .player-secondary-actions{width:100%!important;display:grid!important;grid-template-columns:1fr!important;gap:7px!important}
+  div.player-actions>section.action-section .player-secondary-actions button{width:100%!important;height:40px!important;min-height:40px!important}
+}
+
+.moment-form{gap:16px}
+.moment-form .moment-preview{display:grid;grid-template-columns:54px 1fr;gap:12px;align-items:center;min-height:68px;padding:12px;border:1px solid rgba(143,127,240,.18);background:linear-gradient(135deg,rgba(143,127,240,.09),rgba(255,255,255,.018))}
+.moment-form .moment-preview time{width:54px;height:36px;display:grid;place-items:center;margin:0;border-radius:9px;background:rgba(143,127,240,.16);color:#d5d0ff;font-size:11px;font-weight:750;font-variant-numeric:tabular-nums}
+.moment-form .moment-preview p{margin:0;color:#c1c5ce;font-size:11px;line-height:1.5}
+.moment-form label{gap:8px;font-size:11px}
+.moment-form label>small{margin:-20px 0 0 auto;color:var(--soft);font-size:9px;font-weight:500}
+.moment-form input{height:44px;font-size:12px}
+.moment-form .modal-actions button{min-height:42px}
+@media(max-width:620px){
+  .moment-form{padding:15px}
+  .moment-form .moment-preview{grid-template-columns:48px 1fr}
+  .moment-form .moment-preview time{width:48px}
+}
