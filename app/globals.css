@@ -294,7 +294,9 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
 .speaker-loading-card>div{display:flex;flex-wrap:wrap;gap:5px;margin-top:11px}
 .speaker-loading-card>div span{width:auto;padding:5px 8px;border:1px solid var(--line);border-radius:99px;background:var(--raised);color:#c4bfdc;font-size:8px}
 .speaker-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:9px}
-.player-original-title{margin:5px 0 0;color:var(--muted);font-size:10px;line-height:1.45}
+.player-original-title{display:block;width:max-content;max-width:100%;margin:5px 0 0;color:var(--muted);font-size:10px;line-height:1.45;text-decoration:none}
+.player-original-title:hover,.player-original-title:focus-visible{color:var(--text);text-decoration:underline;text-underline-offset:3px}
+.rebuild-translation{width:100%;border-color:rgba(217,164,65,.28);color:#d9a441}
 .speaker-row span{padding:4px 7px;border-radius:6px;background:rgba(143,127,240,.12);color:#aaa1ef;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .speaker-row strong{font-size:11px;font-weight:680}
 .speaker-row i{color:var(--muted);font-size:9px;font-style:normal}

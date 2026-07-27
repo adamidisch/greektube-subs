@@ -1,4 +1,4 @@
-export const TRANSCRIPT_VERSION = 2;
+export const TRANSCRIPT_VERSION = 3;
 
 export type CachedCue = { start: number; duration: number; text: string };
 
@@ -91,7 +91,7 @@ export async function getTranscript(videoId: string) {
   } satisfies TranscriptRecord;
 }
 
-export async function acquireProcessingLock(videoId: string, token: string) {
+export async function acquireProcessingLock(videoId: string, token: string, force = false) {
   await ensureTranscriptTable();
   const database = await db();
   const now = new Date();
@@ -104,11 +104,12 @@ export async function acquireProcessingLock(videoId: string, token: string) {
       status = 'processing', progress = 3, lock_token = excluded.lock_token,
       lock_expires_at = excluded.lock_expires_at, error = NULL,
       transcript_version = excluded.transcript_version, updated_at = excluded.updated_at
-    WHERE video_transcripts.transcript_version != excluded.transcript_version
+    WHERE ? = 1
+       OR video_transcripts.transcript_version != excluded.transcript_version
        OR video_transcripts.status = 'failed'
        OR video_transcripts.lock_expires_at IS NULL
        OR video_transcripts.lock_expires_at < excluded.updated_at`,
-  ).bind(videoId, token, expires, TRANSCRIPT_VERSION, now.toISOString(), now.toISOString()).run();
+  ).bind(videoId, token, expires, TRANSCRIPT_VERSION, now.toISOString(), now.toISOString(), force ? 1 : 0).run();
   return Number(result.meta?.changes || 0) > 0;
 }
 

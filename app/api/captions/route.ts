@@ -369,60 +369,44 @@ async function fetchCaptionCues(track: CaptionTrack, targetLanguage?: string) {
   return parseTimedText(await xmlResponse.text());
 }
 
-function createTranslationBatches(cues: CaptionCue[]) {
-  const batches: { index: number; text: string }[][] = [];
-  let current: { index: number; text: string }[] = [];
-  let length = 0;
+function createMeaningUnits(cues: CaptionCue[]) {
+  const units: CaptionCue[] = [];
+  let current: CaptionCue[] = [];
+  let characters = 0;
+
+  const flush = () => {
+    if (!current.length) return;
+    const start = current[0].start;
+    const end = current.reduce(
+      (latest, cue) => Math.max(latest, cue.start + cue.duration),
+      start,
+    );
+    units.push({
+      start,
+      duration: Math.max(0.8, end - start),
+      text: current.map(cue => cue.text).join(" ").replace(/\s+/g, " ").trim(),
+    });
+    current = [];
+    characters = 0;
+  };
 
   cues.forEach((cue, index) => {
-    const itemLength = cue.text.length + 14;
-    if (current.length && (current.length >= 48 || length + itemLength > 3400)) {
-      batches.push(current);
-      current = [];
-      length = 0;
-    }
-    current.push({ index, text: cue.text });
-    length += itemLength;
+    const next = cues[index + 1];
+    current.push(cue);
+    characters += cue.text.length;
+    const elapsed = cue.start + cue.duration - current[0].start;
+    const sentenceEnd = /[.!?…]["')\]]?$/.test(cue.text.trim());
+    const naturalPause = next ? next.start - (cue.start + cue.duration) >= 0.9 : true;
+    const longEnough = elapsed >= 7 || characters >= 150;
+    const mustSplit = elapsed >= 15 || characters >= 300;
+
+    if (mustSplit || (longEnough && (sentenceEnd || naturalPause)) || !next) flush();
   });
-  if (current.length) batches.push(current);
-  return batches;
+
+  return units;
 }
 
-async function translateBatch(batch: { index: number; text: string }[]) {
-  const source = batch.map((item) => `[[${item.index}]] ${item.text}`).join("\n");
-  const body = new URLSearchParams({
-    client: "gtx",
-    sl: "en",
-    tl: "el",
-    dt: "t",
-    q: source,
-  });
-  const response = await fetch("https://translate.googleapis.com/translate_a/single", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-    body,
-  });
-  if (!response.ok) throw new Error(`Translation ${response.status}`);
-  const payload = (await response.json()) as unknown;
-  if (!Array.isArray(payload) || !Array.isArray(payload[0])) {
-    throw new Error("Translation response invalid");
-  }
-
-  const translated = (payload[0] as unknown[])
-    .map((part) => (Array.isArray(part) && typeof part[0] === "string" ? part[0] : ""))
-    .join("");
-  const results = new Map<number, string>();
-  const marker =
-    /\[\[\s*(\d+)\s*\]\]\s*([\s\S]*?)(?=\n?\[\[\s*\d+\s*\]\]|$)/g;
-  let match: RegExpExecArray | null;
-  while ((match = marker.exec(translated))) {
-    const text = match[2].replace(/\s+/g, " ").trim();
-    if (text) results.set(Number(match[1]), text);
-  }
-  return results;
-}
-
-async function translateSingleCue(index: number, text: string) {
+async function translateText(text: string) {
   const body = new URLSearchParams({
     client: "gtx",
     sl: "en",
@@ -435,15 +419,39 @@ async function translateSingleCue(index: number, text: string) {
     headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
     body,
   });
-  if (!response.ok) return null;
+  if (!response.ok) throw new Error(`Translation ${response.status}`);
   const payload = (await response.json()) as unknown;
-  if (!Array.isArray(payload) || !Array.isArray(payload[0])) return null;
-  const translated = (payload[0] as unknown[])
+  if (!Array.isArray(payload) || !Array.isArray(payload[0])) {
+    throw new Error("Translation response invalid");
+  }
+
+  return (payload[0] as unknown[])
     .map((part) => (Array.isArray(part) && typeof part[0] === "string" ? part[0] : ""))
     .join("")
     .replace(/\s+/g, " ")
     .trim();
-  return translated ? { index, text: translated } : null;
+}
+
+async function translateSingleCue(index: number, text: string) {
+  try {
+    const translated = await translateText(text);
+    return translated ? { index, text: translated } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function translateMeaningBatch(batch: { index: number; text: string }[]) {
+  const source = batch.map(item => `[[${item.index}]] ${item.text}`).join("\n");
+  const translated = await translateText(source);
+  const results = new Map<number, string>();
+  const marker = /\[\[\s*(\d+)\s*\]\]\s*([\s\S]*?)(?=\n?\[\[\s*\d+\s*\]\]|$)/g;
+  let match: RegExpExecArray | null;
+  while ((match = marker.exec(translated))) {
+    const text = match[2].replace(/\s+/g, " ").trim();
+    if (text) results.set(Number(match[1]), text);
+  }
+  return results;
 }
 
 async function translateTitleToGreek(title: string) {
@@ -458,31 +466,27 @@ async function translateTitleToGreek(title: string) {
 }
 
 async function translateCuesToGreek(cues: CaptionCue[]) {
-  const batches = createTranslationBatches(cues);
   const translated = new Map<number, string>();
-
-  for (let start = 0; start < batches.length; start += 4) {
-    const group = await Promise.all(batches.slice(start, start + 4).map(translateBatch));
-    group.forEach((results) => {
-      results.forEach((text, index) => translated.set(index, text));
+  const batches: { index: number; text: string }[][] = [];
+  for (let start = 0; start < cues.length; start += 10) {
+    batches.push(cues.slice(start, start + 10).map((cue, offset) => ({
+      index: start + offset,
+      text: cue.text,
+    })));
+  }
+  for (let start = 0; start < batches.length; start += 3) {
+    const results = await Promise.all(batches.slice(start, start + 3).map(translateMeaningBatch));
+    results.forEach(batch => {
+      batch.forEach((text, index) => translated.set(index, text));
     });
   }
 
-  // Google occasionally drops or alters one of the numeric separators in a
-  // large translation batch. Retry only those cues individually so a single
-  // missing separator cannot invalidate the whole video.
-  for (let retry = 0; retry < 3; retry += 1) {
+  for (let retry = 0; retry < 2; retry += 1) {
     const pending = cues.map((_, index) => index).filter(index => !translated.has(index));
     if (!pending.length) break;
-    for (let start = 0; start < pending.length; start += 4) {
-      const retries = await Promise.all(
-        pending.slice(start, start + 4).map((index) =>
-          translateSingleCue(index, cues[index].text),
-        ),
-      );
-      retries.forEach((result) => {
-        if (result) translated.set(result.index, result.text);
-      });
+    for (const index of pending) {
+      const result = await translateSingleCue(index, cues[index].text);
+      if (result) translated.set(result.index, result.text);
     }
   }
 
@@ -560,7 +564,7 @@ export async function POST(request: Request) {
   let lockToken: string | null = null;
   let lockedVideoId: string | null = null;
   try {
-    const body = (await request.json()) as { url?: unknown };
+    const body = (await request.json()) as { url?: unknown; force?: unknown };
     if (typeof body.url !== "string" || body.url.length > 500) {
       return NextResponse.json({ error: "Βάλε ένα έγκυρο YouTube link." }, { status: 400 });
     }
@@ -570,8 +574,9 @@ export async function POST(request: Request) {
     }
     lockedVideoId = videoId;
 
+    const force = body.force === true;
     const cached = await getTranscript(videoId);
-    if (cached?.status === "ready" && cached.transcriptVersion === TRANSCRIPT_VERSION) {
+    if (!force && cached?.status === "ready" && cached.transcriptVersion === TRANSCRIPT_VERSION) {
       try {
         validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
         return NextResponse.json(await cachedResponse(cached));
@@ -579,12 +584,12 @@ export async function POST(request: Request) {
         // Rebuild stale or incomplete cached subtitles under the video lock.
       }
     }
-    if (cached?.status === "processing" && cached.transcriptVersion === TRANSCRIPT_VERSION && cached.lockExpiresAt && cached.lockExpiresAt > new Date().toISOString()) {
+    if (!force && cached?.status === "processing" && cached.transcriptVersion === TRANSCRIPT_VERSION && cached.lockExpiresAt && cached.lockExpiresAt > new Date().toISOString()) {
       return NextResponse.json(await cachedResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
     }
 
     lockToken = crypto.randomUUID();
-    const acquired = await acquireProcessingLock(videoId, lockToken);
+    const acquired = await acquireProcessingLock(videoId, lockToken, force);
     if (!acquired) {
       const active = await getTranscript(videoId);
       return NextResponse.json(await cachedResponse(active), { status: 202, headers: { "Retry-After": "1" } });
@@ -608,23 +613,12 @@ export async function POST(request: Request) {
     if (track.languageCode === "el") {
       cues = await fetchCaptionCues(track);
     } else {
-      sourceCues = await fetchCaptionCues(track);
-      if (!sourceCues.length) throw new Error("Το αγγλικό caption track είναι κενό");
+      const rawSourceCues = await fetchCaptionCues(track);
+      if (!rawSourceCues.length) throw new Error("Το αγγλικό caption track είναι κενό");
+      sourceCues = createMeaningUnits(rawSourceCues);
       await updateProcessingProgress(videoId, lockToken, 48);
-      try {
-        const youtubeTranslated = await fetchCaptionCues(track, "el");
-        if (hasGreekText(youtubeTranslated) && youtubeTranslated.length >= sourceCues.length * 0.95) {
-          cues = youtubeTranslated;
-          translationMethod = "youtube_auto_translate";
-        }
-      } catch {
-        // Continue with the verified translation fallback below.
-      }
-
-      if (!cues.length) {
-        cues = await translateCuesToGreek(sourceCues);
-        translationMethod = "google_translate_fallback";
-      }
+      cues = await translateCuesToGreek(sourceCues);
+      translationMethod = "contextual_meaning_units_v3";
     }
 
     const videoDuration = Number(player.videoDetails?.lengthSeconds || 0);
