@@ -973,3 +973,178 @@ body{font-size:13px}
 @media(max-width:360px) and (orientation:portrait){
   div.player-actions>div.player-toolbar .primary-control-row{grid-template-columns:1fr!important}
 }
+
+/* Compact mobile tools panel — ver 4.9 */
+.player-tools-label{display:none}
+@media(max-width:620px){
+  .viewer .app-header{
+    height:50px;
+    justify-content:flex-start;
+  }
+  .viewer .app-header>.icon-button{display:none}
+  .viewer .back-library{
+    height:36px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:0 8px;
+    border-radius:8px;
+    color:#9b9fa9;
+    font-size:11px;
+    font-weight:560;
+  }
+  .viewer .back-library span{
+    color:#777c86;
+    font-size:17px;
+    font-weight:400;
+    line-height:1;
+  }
+  .player-actions.player-tools{
+    display:block;
+    padding:14px 14px 12px;
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:18px;
+    background:#16171b;
+  }
+  .player-tools-label{
+    display:block;
+    margin:0;
+    padding-bottom:12px;
+    color:#64656c;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:1.3px;
+    text-transform:uppercase;
+  }
+  div.player-actions>div.player-toolbar .primary-control-row{
+    display:flex!important;
+    gap:0!important;
+    align-items:center;
+  }
+  div.player-actions>div.player-toolbar .primary-control-row .playback-controls{
+    flex:0 0 auto;
+    height:52px;
+    display:flex!important;
+    gap:6px!important;
+    padding:4px!important;
+    border:1px solid rgba(255,255,255,.07)!important;
+    border-radius:12px!important;
+    background:#1d1f24!important;
+  }
+  div.player-actions>div.player-toolbar .primary-control-row .playback-controls button{
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+    min-height:38px!important;
+    padding:0!important;
+    border:0;
+    border-radius:10px;
+    background:#1d1f24;
+    color:#9da2ac;
+    font-size:15px;
+  }
+  div.player-actions>div.player-toolbar .primary-control-row .playback-controls .play-toggle{
+    width:44px!important;
+    min-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
+    margin:-3px 0;
+    border-radius:11px;
+    background:#d9a441;
+    color:#161006;
+    font-size:18px;
+    box-shadow:0 6px 16px rgba(217,164,65,.2);
+  }
+  .controls-separator{
+    align-self:stretch;
+    flex:0 0 1px;
+    width:1px;
+    margin:2px 12px;
+    background:rgba(255,255,255,.07);
+  }
+  div.player-actions>div.player-toolbar .primary-control-row .subtitle-size-picker{
+    flex:1 1 auto!important;
+    width:auto!important;
+    height:44px!important;
+    gap:2px!important;
+    padding:3px!important;
+    border:0!important;
+    border-radius:11px!important;
+    background:#1d1f24!important;
+  }
+  div.player-actions>div.player-toolbar .primary-control-row .subtitle-size-picker button{
+    flex:1;
+    width:auto!important;
+    height:38px!important;
+    min-height:38px!important;
+    padding:8px 0!important;
+    border-radius:8px;
+    color:#9b9fa9;
+  }
+  div.player-actions>div.player-toolbar .primary-control-row .subtitle-size-picker button.active{
+    border:1px solid rgba(217,164,65,.35);
+    background:rgba(217,164,65,.16);
+    color:#d9a441;
+  }
+  div.player-actions>section.action-section{
+    margin-top:13px;
+    padding-top:13px!important;
+    border-top:1px solid rgba(255,255,255,.075);
+  }
+  div.player-actions>section.action-section .player-secondary-actions{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:5px!important;
+  }
+  div.player-actions>section.action-section .player-secondary-actions button{
+    height:84px!important;
+    min-height:84px!important;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+    padding:10px 4px 8px!important;
+    border:1px solid rgba(255,255,255,.07)!important;
+    border-radius:13px!important;
+    background:#1d1f24!important;
+    color:#98999f!important;
+    font-size:10px!important;
+    font-weight:700;
+    line-height:1.25!important;
+  }
+  div.player-actions>section.action-section .player-secondary-actions button b{
+    min-height:25px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:inherit;
+    font-size:10px;
+    font-weight:700;
+    line-height:1.25;
+  }
+  div.player-actions>section.action-section .player-secondary-actions .tool-icon{
+    width:38px;
+    height:38px;
+    display:grid;
+    place-items:center;
+    border-radius:50%;
+    background:#24262c;
+    color:#eef0f4;
+    font-size:16px;
+    line-height:1;
+  }
+  div.player-actions>section.action-section .player-secondary-actions .fullscreen-icon{
+    border-radius:0;
+    background:transparent;
+    color:#d9a441;
+    font-size:17px;
+  }
+}
+@media(max-width:360px){
+  div.player-actions>div.player-toolbar .primary-control-row{
+    transform:scale(.94);
+    transform-origin:left center;
+    width:106.38%!important;
+  }
+}
