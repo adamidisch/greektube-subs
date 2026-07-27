@@ -1,4 +1,4 @@
-export const TRANSCRIPT_VERSION = 3;
+export const TRANSCRIPT_VERSION = 4;
 
 export type CachedCue = { start: number; duration: number; text: string };
 

@@ -108,8 +108,32 @@ function extractId(value:string) {
 }
 function clock(n:number) { const t=Math.max(0,Math.floor(n)); const h=Math.floor(t/3600); const m=Math.floor((t%3600)/60); const s=t%60; return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`; }
 function activeIndex(cues:Cue[], time:number) { let result=-1; for(let i=0;i<cues.length;i++){if(cues[i].start<=time) result=i; else break;} return result; }
+function subtitleParts(text:string,maxCharacters=76){
+  const clean=text.replace(/\s+/g," ").trim();
+  if(!clean)return [];
+  const sentences=clean.match(/[^.!?…]+[.!?…]?/g)?.map(part=>part.trim()).filter(Boolean)||[clean];
+  const parts:string[]=[];
+  for(const sentence of sentences){
+    const words=sentence.split(" ");
+    let part="";
+    for(const word of words){
+      const next=part?`${part} ${word}`:word;
+      if(part&&next.length>maxCharacters){parts.push(part);part=word;}else part=next;
+    }
+    if(part)parts.push(part);
+  }
+  return parts;
+}
+function subtitleWindow(cue:Cue|undefined,currentTime:number){
+  if(!cue)return "";
+  const parts=subtitleParts(cue.text);
+  if(parts.length<=1)return parts[0]||"";
+  const elapsed=Math.max(0,currentTime-cue.start);
+  const ratio=cue.duration>0?Math.min(.999,elapsed/cue.duration):0;
+  return parts[Math.floor(ratio*parts.length)]||parts[0];
+}
 function isCompleteGreekTranscript(data:Captions|null|undefined,duration=0) {
-  if(!data?.cues?.length||data.transcriptVersion!==3)return false;
+  if(!data?.cues?.length||data.transcriptVersion!==4)return false;
   const cues=data.cues;
   const ordered=cues.length>=3&&cues.every((cue,index)=>Number.isFinite(cue.start)&&Number.isFinite(cue.duration)&&cue.duration>0&&cue.text.trim().length>0&&(index===0||cue.start>=cues[index-1].start));
   if(!ordered)return false;
@@ -151,6 +175,7 @@ export default function GreekTubePlayer() {
   const [transcriptOpen,setTranscriptOpen]=useState(false);
   const [error,setError]=useState("");
   const [active,setActive]=useState(-1);
+  const [playhead,setPlayhead]=useState(0);
   const [search,setSearch]=useState("");
   const [category,setCategory]=useState<(typeof CATEGORIES)[number]>("Όλα");
   const [doctor,setDoctor]=useState("Όλοι οι γιατροί");
@@ -254,7 +279,7 @@ export default function GreekTubePlayer() {
     patchVideo(video.id,{views:(video.views||0)+1});
     setSelectedId(video.id); setView("library"); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript);
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
-    const localRecord=localStorage.getItem(`greektube-transcript:${video.id}:v3`);
+    const localRecord=localStorage.getItem(`greektube-transcript:${video.id}:v4`);
     if(localRecord&&!forceTranslation){
       try{
         const cached=JSON.parse(localRecord) as Captions;
@@ -266,7 +291,7 @@ export default function GreekTubePlayer() {
             if(!response.ok)return;
             const refreshed=await response.json() as Captions;
             if(!isCompleteGreekTranscript(refreshed,video.duration))return;
-            localStorage.setItem(`greektube-transcript:${video.id}:v3`,JSON.stringify(refreshed));
+            localStorage.setItem(`greektube-transcript:${video.id}:v4`,JSON.stringify(refreshed));
             setCaptions(refreshed);
           }).catch(()=>undefined);
           return;
@@ -313,7 +338,7 @@ export default function GreekTubePlayer() {
         }
         if(!isCompleteGreekTranscript(sharedData,video.duration))throw new Error("incomplete-transcript");
         data=sharedData;
-        localStorage.setItem(`greektube-transcript:${video.id}:v3`,JSON.stringify(sharedData));
+        localStorage.setItem(`greektube-transcript:${video.id}:v4`,JSON.stringify(sharedData));
         patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:sharedData.title,originalTitle:video.originalTitle||sharedData.originalTitle||englishTitle(video),channel:video.channel||sharedData.channel,captions:sharedData.cues,speakerName:video.speakerName||sharedData.speaker?.name});
       }
       const points=data.keyPoints?.length?data.keyPoints:transcriptHighlights(data.cues);
@@ -321,7 +346,7 @@ export default function GreekTubePlayer() {
       setProgress(100); setCaptions(data); setLoading(false); patchVideo(video.id,{lastWatched:new Date().toISOString()});
       window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),120);
     }catch{
-      const local=localStorage.getItem(`greektube-transcript:${video.id}:v3`);
+      const local=localStorage.getItem(`greektube-transcript:${video.id}:v4`);
       if(local){
         try{
           const fallback=JSON.parse(local) as Captions;
@@ -347,7 +372,7 @@ export default function GreekTubePlayer() {
     const create=()=>{if(!window.YT||!playerHost.current)return; player.current?.destroy(); playerHost.current.innerHTML=""; player.current=new window.YT.Player(playerHost.current,{videoId:id,width:"100%",height:"100%",playerVars:{autoplay:state.settings.autoplay?1:0,controls:1,modestbranding:1,rel:0,playsinline:1,fs:0,start:Math.floor(start),cc_load_policy:0,iv_load_policy:3,showinfo:0,hl:"el"},events:{onReady:({target}:{target:Player})=>{disableYouTubeCaptions(target);window.setTimeout(()=>disableYouTubeCaptions(target),350);target.setPlaybackRate(state.settings.speed);if(state.settings.autoplay)target.playVideo();},onApiChange:({target}:{target:Player})=>disableYouTubeCaptions(target),onStateChange:({target,data}:{target:Player;data:number})=>{disableYouTubeCaptions(target);setIsPlaying(data===1);}}});};
     if(window.YT?.Player)create(); else{if(!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')){const s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);}window.onYouTubeIframeAPIReady=create;}
   }
-  useEffect(()=>{if(!captions||!selectedId)return;lastProgressSave.current=0;const selectedDuration=selected?.duration||0;const timer=window.setInterval(()=>{const now=player.current?.getCurrentTime();if(typeof now!=="number")return;const nextActive=activeIndex(captions.cues,now+state.settings.delay);if(nextActive!==activeRef.current){activeRef.current=nextActive;setActive(nextActive);}const duration=player.current?.getDuration()||selectedDuration;if(duration>0&&now-lastProgressSave.current>=5){lastProgressSave.current=now;patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});}},250);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay,selected?.duration]);
+  useEffect(()=>{if(!captions||!selectedId)return;lastProgressSave.current=0;const selectedDuration=selected?.duration||0;const timer=window.setInterval(()=>{const now=player.current?.getCurrentTime();if(typeof now!=="number")return;setPlayhead(now+state.settings.delay);const nextActive=activeIndex(captions.cues,now+state.settings.delay);if(nextActive!==activeRef.current){activeRef.current=nextActive;setActive(nextActive);}const duration=player.current?.getDuration()||selectedDuration;if(duration>0&&now-lastProgressSave.current>=5){lastProgressSave.current=now;patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});}},250);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay,selected?.duration]);
   useEffect(()=>{
     if(active<0||!state.settings.autoScroll||!transcript.current)return;
     const container=transcript.current;
@@ -404,6 +429,7 @@ export default function GreekTubePlayer() {
   function goHome(){close();setView("library");setMobileMenu(false);}
   async function rebuildTranslation(video:Video){
     localStorage.removeItem(`greektube-transcript:${video.id}:v3`);
+    localStorage.removeItem(`greektube-transcript:${video.id}:v4`);
     setEditingVideo(null);
     player.current?.destroy();
     player.current=null;
@@ -434,7 +460,7 @@ export default function GreekTubePlayer() {
         <section className={`watch-layout ${transcriptOpen?"transcript-open":"player-only"}`}>
           <div className="watch-main">
             <div className="sticky-player" onContextMenu={e=>{e.preventDefault();beginMoment();}}>
-              <div className={`video-frame ${isPseudoFullscreen?"pseudo-fullscreen":""}`} ref={fullscreenHost}><div ref={playerHost}/>{state.settings.subtitles&&active>=0&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{"--subtitle-size":`${state.settings.subtitleSize}px`,background:`rgba(0,0,0,${state.settings.opacity})`} as CSSProperties}>{state.settings.subtitleMode==="en"?(captions.englishCues?.[active]?.text||captions.cues[active]?.text):state.settings.subtitleMode==="dual"?<><span>{captions.cues[active]?.text}</span>{captions.englishCues?.[active]?.text&&<small>{captions.englishCues[active].text}</small>}</>:captions.cues[active]?.text}</div>}{(isFullscreen||isPseudoFullscreen)&&<button className="custom-fullscreen" title="Έξοδος από πλήρη οθόνη" aria-label="Έξοδος από πλήρη οθόνη" onClick={()=>void toggleFullscreen()}>↙</button>}</div>
+              <div className={`video-frame ${isPseudoFullscreen?"pseudo-fullscreen":""}`} ref={fullscreenHost}><div ref={playerHost}/>{state.settings.subtitles&&active>=0&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{"--subtitle-size":`${state.settings.subtitleSize}px`,background:`rgba(0,0,0,${state.settings.opacity})`} as CSSProperties}>{state.settings.subtitleMode==="en"?subtitleWindow(captions.englishCues?.[active]||captions.cues[active],playhead):state.settings.subtitleMode==="dual"?<><span>{subtitleWindow(captions.cues[active],playhead)}</span>{captions.englishCues?.[active]?.text&&<small>{subtitleWindow(captions.englishCues[active],playhead)}</small>}</>:subtitleWindow(captions.cues[active],playhead)}</div>}{(isFullscreen||isPseudoFullscreen)&&<button className="custom-fullscreen" title="Έξοδος από πλήρη οθόνη" aria-label="Έξοδος από πλήρη οθόνη" onClick={()=>void toggleFullscreen()}>↙</button>}</div>
               <div className="player-actions player-tools">
                 <small className="player-tools-label">Εργαλεία</small>
                 <div className="player-toolbar">
@@ -494,7 +520,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.0</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.1</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function VideoCard({video,open,patch,edit,settings,variant="library"}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;edit:(v:Video)=>void;settings:Settings;variant?:"library"|"continue"}){const title=greekTitle(video);const watchedMinutes=Math.round(video.lastPosition/60);const totalMinutes=Math.ceil(video.duration/60);return <article className={`video-card ${variant==="continue"?"continue-card":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img loading="lazy" decoding="async" src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span className="duration">{video.duration?clock(video.duration):"Ελληνικοί υπότιτλοι"}</span><button aria-label="Επεξεργασία βίντεο" className="card-edit" onKeyDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();edit(video)}}>✎</button><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onKeyDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><strong>{title}</strong>{englishTitle(video)&&englishTitle(video)!==title&&<p className="card-original-title">{englishTitle(video)}</p>}<span>{video.channel}</span><small>{variant==="continue"?(totalMinutes>0?`${watchedMinutes} / ${totalMinutes} λεπτά`:"Η διάρκεια υπολογίζεται…"):`${CATEGORY_LABELS[video.category]}${video.progress>0?` · ${Math.round(video.progress)}%`:""}`}</small>{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 

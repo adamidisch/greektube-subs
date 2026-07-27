@@ -397,13 +397,23 @@ function createMeaningUnits(cues: CaptionCue[]) {
     const elapsed = cue.start + cue.duration - current[0].start;
     const sentenceEnd = /[.!?…]["')\]]?$/.test(cue.text.trim());
     const naturalPause = next ? next.start - (cue.start + cue.duration) >= 0.9 : true;
-    const longEnough = elapsed >= 7 || characters >= 150;
-    const mustSplit = elapsed >= 15 || characters >= 300;
+    const longEnough = elapsed >= 4.5 || characters >= 90;
+    const mustSplit = elapsed >= 9 || characters >= 180;
 
     if (mustSplit || (longEnough && (sentenceEnd || naturalPause)) || !next) flush();
   });
 
   return units;
+}
+
+function cleanSubtitleText(text: string) {
+  return text
+    .replace(/\b([a-zα-ωάέήίόύώ])\1{3,}\b/giu, "")
+    .replace(/\b(?:um+|uh+|erm+|h+m+|μμ+|χ+μ+)\b/giu, "")
+    .replace(/\s+([,.;:!?…])/g, "$1")
+    .replace(/([!?.,…])\1{2,}/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function translateText(text: string) {
@@ -425,11 +435,10 @@ async function translateText(text: string) {
     throw new Error("Translation response invalid");
   }
 
-  return (payload[0] as unknown[])
+  return cleanSubtitleText((payload[0] as unknown[])
     .map((part) => (Array.isArray(part) && typeof part[0] === "string" ? part[0] : ""))
     .join("")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/\s+/g, " "));
 }
 
 async function translateSingleCue(index: number, text: string) {
@@ -448,7 +457,7 @@ async function translateMeaningBatch(batch: { index: number; text: string }[]) {
   const marker = /\[\[\s*(\d+)\s*\]\]\s*([\s\S]*?)(?=\n?\[\[\s*\d+\s*\]\]|$)/g;
   let match: RegExpExecArray | null;
   while ((match = marker.exec(translated))) {
-    const text = match[2].replace(/\s+/g, " ").trim();
+    const text = cleanSubtitleText(match[2]);
     if (text) results.set(Number(match[1]), text);
   }
   return results;
