@@ -1346,3 +1346,24 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 :root[data-theme="light"] .password-intro{background:#f6f1ea}
 :root[data-theme="light"] .player-actions.player-tools{background:#fffdf9}
 :root[data-theme="light"] .player-actions .control-section{background:#f6f1ea}
+
+/* Compact mobile subtitle menu — ver 5.5 */
+.subtitle-cc-control{position:relative;flex:0 0 auto}
+.cc-toggle{width:46px;height:38px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--raised);color:var(--muted);font-size:13px;font-weight:800;letter-spacing:.02em}
+.cc-toggle.active{border-color:rgba(217,164,65,.42);color:#e6b859;background:rgba(217,164,65,.11)}
+.subtitle-cc-menu{position:absolute;right:0;bottom:calc(100% + 9px);z-index:30;width:190px;padding:6px;border:1px solid rgba(255,255,255,.13);border-radius:13px;background:#22252c;box-shadow:0 16px 38px rgba(0,0,0,.42)}
+.subtitle-cc-menu button{width:100%;min-height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 11px;border:0;border-radius:8px;background:transparent;color:#c5c9d1;font-size:12px;text-align:left}
+.subtitle-cc-menu button:hover,.subtitle-cc-menu button.active{background:rgba(143,127,240,.14);color:#f5f6f8}
+.subtitle-cc-menu button i{color:#c2b9ff;font-size:12px;font-style:normal}
+@media(max-width:620px){
+  div.player-actions>div.player-toolbar .primary-control-row{justify-content:flex-start!important}
+  div.player-actions>div.player-toolbar .primary-control-row .playback-controls{flex:0 0 auto!important}
+  .controls-separator{margin-inline:10px}
+  .subtitle-cc-control{margin-left:0}
+  .cc-toggle{width:48px;height:44px;border-radius:11px;font-size:14px}
+  .subtitle-cc-menu{right:0;bottom:calc(100% + 10px);width:min(210px,72vw)}
+}
+:root[data-theme="light"] .subtitle-cc-menu{border-color:rgba(67,55,42,.16);background:#fffdf9;box-shadow:0 16px 38px rgba(67,55,42,.18)}
+:root[data-theme="light"] .subtitle-cc-menu button{color:#5f5851}
+:root[data-theme="light"] .subtitle-cc-menu button:hover,
+:root[data-theme="light"] .subtitle-cc-menu button.active{background:#eee9f8;color:#211d19}
