@@ -1347,7 +1347,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 :root[data-theme="light"] .player-actions.player-tools{background:#fffdf9}
 :root[data-theme="light"] .player-actions .control-section{background:#f6f1ea}
 
-/* Compact mobile subtitle menu — ver 5.5 */
+/* Compact mobile subtitle menu — ver 5.6 */
 .subtitle-cc-control{position:relative;flex:0 0 auto}
 .cc-toggle{width:46px;height:38px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--raised);color:var(--muted);font-size:13px;font-weight:800;letter-spacing:.02em}
 .cc-toggle.active{border-color:rgba(217,164,65,.42);color:#e6b859;background:rgba(217,164,65,.11)}
