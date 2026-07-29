@@ -47,6 +47,13 @@ const DEFAULT_SETTINGS: Settings = {
   theme: "dark", descriptions: true, continueWatching: true,
 };
 const PERSONAL_CACHE_KEY="greektube-personal-state:v1";
+function personalStatePayload(state:AppState):AppState{
+  return {...state,videos:state.videos.map(video=>{
+    const personalVideo={...video};
+    delete personalVideo.captions;
+    return personalVideo;
+  })};
+}
 function normalizedSettings(settings?:Partial<Settings>):Settings{
   const merged={...DEFAULT_SETTINGS,...settings};
   return settings?.subtitleSizeVersion===2?merged:{...merged,subtitleSize:19,subtitleSizeVersion:2};
@@ -195,6 +202,7 @@ export default function GreekTubePlayer() {
   const player=useRef<Player|null>(null);
   const transcript=useRef<HTMLDivElement>(null);
   const saveTimer=useRef<number|undefined>(undefined);
+  const stateRef=useRef(state);
   const activeRef=useRef(-1);
   const lastProgressSave=useRef(0);
   const selected=state.videos.find(v=>v.id===selectedId)||null;
@@ -204,14 +212,33 @@ export default function GreekTubePlayer() {
     try{const raw=localStorage.getItem(PERSONAL_CACHE_KEY);if(raw)fallback=JSON.parse(raw) as AppState;}catch{}
     if(fallback?.videos)setState({settings:normalizedSettings(fallback.settings),videos:fallback.videos,moments:fallback.moments||[]});
     try{
-      const r=await fetch("/api/state");
+      const r=await fetch("/api/state",{credentials:"same-origin",cache:"no-store"});
       if(r.ok){
         const j=await r.json();
         if(j.state?.videos)setState({settings:normalizedSettings(j.state.settings),videos:j.state.videos,moments:j.state.moments||[]});
       }
     }finally{setHydrated(true);}
   })(); },[]);
-  useEffect(()=>{ if(!hydrated)return;try{localStorage.setItem(PERSONAL_CACHE_KEY,JSON.stringify(state));}catch{}window.clearTimeout(saveTimer.current); saveTimer.current=window.setTimeout(()=>{void fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(state)}).catch(()=>undefined);},1500);return()=>window.clearTimeout(saveTimer.current); },[state,hydrated]);
+  useEffect(()=>{
+    stateRef.current=state;
+    if(!hydrated)return;
+    const payload=JSON.stringify(personalStatePayload(state));
+    try{localStorage.setItem(PERSONAL_CACHE_KEY,payload);}catch{}
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current=window.setTimeout(()=>{
+      void fetch("/api/state",{method:"PUT",credentials:"same-origin",cache:"no-store",headers:{"Content-Type":"application/json"},body:payload}).catch(()=>undefined);
+    },1200);
+    return()=>window.clearTimeout(saveTimer.current);
+  },[state,hydrated]);
+  useEffect(()=>{
+    if(!hydrated)return;
+    const saveBeforeLeaving=()=>{
+      const payload=JSON.stringify(personalStatePayload(stateRef.current));
+      void fetch("/api/state",{method:"PUT",credentials:"same-origin",cache:"no-store",keepalive:true,headers:{"Content-Type":"application/json"},body:payload}).catch(()=>undefined);
+    };
+    window.addEventListener("pagehide",saveBeforeLeaving);
+    return()=>window.removeEventListener("pagehide",saveBeforeLeaving);
+  },[hydrated]);
   useEffect(()=>{
     if(!hydrated)return;
     const missing=state.videos.filter(video=>video.metadataVersion!==3);
@@ -532,7 +559,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.6</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.7</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");

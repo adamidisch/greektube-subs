@@ -46,7 +46,8 @@ function sanitizePersonalState(input: unknown) {
 }
 
 function withIdentityCookie(response: NextResponse, value: string | null) {
-  if (value) response.cookies.set(COOKIE, value, { httpOnly: true, sameSite: "lax", secure: true, maxAge: 60*60*24*365, path: "/" });
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  if (value) response.cookies.set(COOKIE, value, { httpOnly: true, sameSite: "lax", secure: true, maxAge: 60*60*24*365*5, path: "/" });
   return response;
 }
 
