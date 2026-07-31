@@ -569,6 +569,29 @@ async function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>)
   };
 }
 
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const value = url.searchParams.get("videoId") || url.searchParams.get("url") || "";
+    const videoId = /^[\w-]{11}$/.test(value) ? value : extractVideoId(value);
+    if (!videoId) {
+      return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
+    }
+
+    const cached = await getTranscript(videoId);
+    if (!cached || cached.status !== "ready" || cached.transcriptVersion !== TRANSCRIPT_VERSION) {
+      return NextResponse.json({ ready: false }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    }
+
+    validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
+    return NextResponse.json(await cachedResponse(cached), {
+      headers: { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400" },
+    });
+  } catch {
+    return NextResponse.json({ ready: false }, { status: 404, headers: { "Cache-Control": "no-store" } });
+  }
+}
+
 export async function POST(request: Request) {
   let lockToken: string | null = null;
   let lockedVideoId: string | null = null;

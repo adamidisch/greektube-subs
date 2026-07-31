@@ -335,6 +335,22 @@ export default function GreekTubePlayer() {
         }
       }catch{}
     }
+
+    if(!forceTranslation){
+      try{
+        const readyResponse=await fetch(`/api/captions?videoId=${encodeURIComponent(video.id)}`,{cache:"no-store"});
+        if(readyResponse.ok){
+          const ready=await readyResponse.json() as Captions;
+          if(isCompleteGreekTranscript(ready,video.duration)){
+            localStorage.setItem(`greektube-transcript:${video.id}:v4`,JSON.stringify(ready));
+            setProgress(100);setCaptions(ready);setLoading(false);
+            patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:ready.title,originalTitle:video.originalTitle||ready.originalTitle||englishTitle(video),channel:video.channel||ready.channel,captions:ready.cues,speakerName:video.speakerName||ready.speaker?.name,lastWatched:new Date().toISOString()});
+            window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),80);
+            return;
+          }
+        }
+      }catch{}
+    }
     setLoading(false); setProgress(4); setCaptions(null);
     const loadingDelay=window.setTimeout(()=>setLoading(true),500);
     const timer=window.setInterval(()=>setProgress(p=>Math.min(84,p+(p<28?2:p<60?1:.5))),1200);
