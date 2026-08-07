@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState, type CSSProperties } f
 type Cue = { start: number; duration: number; text: string };
 type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
 type Captions = { videoId: string; title: string; originalTitle?:string; channel: string; cues: Cue[]; englishCues?:Cue[]; duration?: number; transcriptVersion?: number; keyPoints?: string[]; topics?: string[]; speaker?:SpeakerProfile };
+type GuideItem = { time:number; text:string };
 type Category = "Medical" | "Tech" | "Podcasts" | "Comedy" | "Education" | "Documentaries" | "Other";
 type Video = {
   id: string; url: string; title: string; originalTitle?:string; channel: string; category: Category;
@@ -53,6 +54,15 @@ function personalStatePayload(state:AppState):AppState{
     delete personalVideo.captions;
     return personalVideo;
   })};
+}
+function mergeAppStates(base:AppState,incoming:AppState):AppState{
+  const videos=new Map(base.videos.map(video=>[video.id,video]));
+  incoming.videos.forEach(video=>videos.set(video.id,{...(videos.get(video.id)||{}),...video}));
+  return {
+    settings:normalizedSettings(incoming.settings||base.settings),
+    moments:[...(incoming.moments||[]),...base.moments.filter(moment=>!(incoming.moments||[]).some(item=>item.id===moment.id))],
+    videos:Array.from(videos.values()).sort((a,b)=>b.addedAt.localeCompare(a.addedAt)),
+  };
 }
 function normalizedSettings(settings?:Partial<Settings>):Settings{
   const merged={...DEFAULT_SETTINGS,...settings};
@@ -171,6 +181,35 @@ function transcriptHighlights(cues:Cue[]) {
   const step=Math.max(1,Math.floor(cues.length/10));
   return cues.filter((_,index)=>index%step===0).map(c=>c.text.replace(/\s+/g," ").trim()).filter((text,index,list)=>text.length>18&&list.indexOf(text)===index).slice(0,10);
 }
+function cleanGuideText(text:string) {
+  return text.replace(/\s+/g," ").replace(/\bhttps?:\/\/\S+/gi,"").trim();
+}
+function videoGuide(captions:Captions|null|undefined):GuideItem[] {
+  if(!captions?.cues?.length)return [];
+  const cues=captions.cues.filter(cue=>cleanGuideText(cue.text).length>28);
+  if(!cues.length)return [];
+  const used=new Set<number>();
+  const items:GuideItem[]=[];
+  (captions.keyPoints||[]).forEach(point=>{
+    if(items.length>=5)return;
+    const needle=cleanGuideText(point).slice(0,38).toLowerCase();
+    const match=cues.findIndex((cue,index)=>!used.has(index)&&cleanGuideText(cue.text).toLowerCase().includes(needle));
+    if(match>=0){used.add(match);items.push({time:cues[match].start,text:cleanGuideText(point)});}
+  });
+  const targets=[.08,.24,.42,.6,.78];
+  targets.forEach(target=>{
+    if(items.length>=5)return;
+    const index=Math.min(cues.length-1,Math.max(0,Math.round((cues.length-1)*target)));
+    const cue=cues.slice(index).find((_,offset)=>!used.has(index+offset))||cues[index];
+    const cueIndex=cues.indexOf(cue);
+    if(cueIndex>=0)used.add(cueIndex);
+    items.push({time:cue.start,text:cleanGuideText(cue.text)});
+  });
+  return items.filter((item,index,list)=>item.text&&list.findIndex(other=>other.text===item.text)===index).slice(0,5);
+}
+function loadingGuide(points:string[]) {
+  return points.map(cleanGuideText).filter(Boolean).slice(0,5);
+}
 
 export default function GreekTubePlayer() {
   const [state,setState]=useState<AppState>({videos:SEED,moments:[],settings:DEFAULT_SETTINGS});
@@ -188,9 +227,8 @@ export default function GreekTubePlayer() {
   const [playhead,setPlayhead]=useState(0);
   const [search,setSearch]=useState("");
   const [category,setCategory]=useState<(typeof CATEGORIES)[number]>("Όλα");
-  const [doctor,setDoctor]=useState("Όλοι οι γιατροί");
   const [sort,setSort]=useState("recent");
-  const [filter,setFilter]=useState<"all"|"favorites"|"recent">("all");
+  const [filter,setFilter]=useState<"all"|"new"|"favorites"|"recent">("all");
   const [modal,setModal]=useState(false);
   const [editingVideo,setEditingVideo]=useState<Video|null>(null);
   const [editRequest,setEditRequest]=useState<Video|null>(null);
@@ -213,12 +251,12 @@ export default function GreekTubePlayer() {
   useEffect(()=>{ void (async()=>{
     let fallback:AppState|null=null;
     try{const raw=localStorage.getItem(PERSONAL_CACHE_KEY);if(raw)fallback=JSON.parse(raw) as AppState;}catch{}
-    if(fallback?.videos)setState({settings:normalizedSettings(fallback.settings),videos:fallback.videos,moments:fallback.moments||[]});
+    if(fallback?.videos)setState(current=>mergeAppStates(current,{settings:normalizedSettings(fallback.settings),videos:fallback.videos,moments:fallback.moments||[]}));
     try{
       const r=await fetch("/api/state",{credentials:"same-origin",cache:"no-store"});
       if(r.ok){
         const j=await r.json();
-        if(j.state?.videos)setState({settings:normalizedSettings(j.state.settings),videos:j.state.videos,moments:j.state.moments||[]});
+        if(j.state?.videos)setState(current=>mergeAppStates(current,{settings:normalizedSettings(j.state.settings),videos:j.state.videos,moments:j.state.moments||[]}));
       }
     }finally{setHydrated(true);}
   })(); },[]);
@@ -285,13 +323,14 @@ export default function GreekTubePlayer() {
     return()=>{document.body.style.overflow=previousOverflow;};
   },[isPseudoFullscreen]);
 
-  const doctors=useMemo(()=>["Όλοι οι γιατροί",...Array.from(new Set(state.videos.map(video=>video.speakerName||speakerForVideo(video.id,video.channel).name).filter(name=>/\b(?:Dr|Doctor|Δρ)\b/i.test(name)))).sort((a,b)=>a.localeCompare(b,"el"))],[state.videos]);
+  const newVideoIds=useMemo(()=>new Set([...state.videos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt)).slice(0,10).map(video=>video.id)),[state.videos]);
   const filtered=useMemo(()=> {
-    let list=state.videos.filter(v=>(category==="Όλα"||v.category===category)&&(doctor==="Όλοι οι γιατροί"||(v.speakerName||speakerForVideo(v.id,v.channel).name)===doctor)&&(`${v.title} ${v.channel} ${v.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase())));
+    let list=state.videos.filter(v=>(category==="Όλα"||v.category===category)&&(`${v.title} ${v.channel} ${v.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase())));
+    if(filter==="new") list=list.filter(v=>newVideoIds.has(v.id));
     if(filter==="favorites") list=list.filter(v=>v.favorite);
     if(filter==="recent") list=list.filter(v=>v.lastWatched);
     return [...list].sort((a,b)=>sort==="title"?a.title.localeCompare(b.title):sort==="progress"?b.progress-a.progress:b.addedAt.localeCompare(a.addedAt));
-  },[state.videos,category,doctor,search,sort,filter]);
+  },[state.videos,category,search,sort,filter,newVideoIds]);
   const continueVideos=state.videos.filter(v=>v.progress>0&&v.progress<96).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||"")).slice(0,5);
   const featured=useMemo(()=>{
     const unfinished=state.videos.filter(v=>v.progress>0&&v.progress<96&&v.lastWatched).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||""));
@@ -506,6 +545,8 @@ export default function GreekTubePlayer() {
     const moments=state.moments.filter(m=>m.videoId===selected.id);
     const speaker=captions?.speaker||speakerForVideo(selected.id,selected.channel);
     const preparationStage=progress>=100?"Οι ελληνικοί υπότιτλοι είναι έτοιμοι":[...PREPARATION_STAGES].reverse().find(stage=>progress>=stage.at)?.label||PREPARATION_STAGES[0].label;
+    const guideItems=videoGuide(captions);
+    const preparingGuide=loadingGuide(loadingPoints);
     if(view==="settings")return <main className="app-shell viewer settings-from-player"><header className="app-header"><button className="ghost back-to-video" onClick={returnToVideo}>← Πίσω στο βίντεο</button><Brand home={goHome}/><button className="icon-button active" aria-label="Ρυθμίσεις">⚙</button></header><SettingsPage settings={state.settings} update={patch=>setState(current=>({...current,settings:{...current.settings,...patch}}))}/></main>;
     return <main className="app-shell viewer">
       <header className="app-header"><button className="ghost back-library" onClick={close}><span aria-hidden="true">‹</span> Βιβλιοθήκη</button><Brand home={goHome}/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}>⚙</button></header>
@@ -516,9 +557,8 @@ export default function GreekTubePlayer() {
           <div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div>
           <div className={`preparation-status ${progress>=100?"done":""}`} aria-live="polite"><i aria-hidden="true">{progress>=100?"✓":""}</i><span key={preparationStage}>{preparationStage}</span></div>
           <section className="speaker-loading-card"><h2>{speaker.name}</h2><strong>{speaker.role}</strong></section>
-          <h2>Περιγραφή βίντεο</h2>
-          <div className="loading-description">{loadingDescription}</div>
-          {loadingPoints.length>0&&<><h2 className="loading-points-title">Βασικά σημεία του βίντεο</h2><ul>{loadingPoints.slice(0,10).map((point,index)=><li key={`${point}-${index}`}><i>{String(index+1).padStart(2,"0")}</i><span>{point}</span></li>)}</ul></>}
+          <h2>Οδηγός βίντεο</h2>
+          {preparingGuide.length>0?<ol className="loading-guide">{preparingGuide.map((point,index)=><li key={`${point}-${index}`}><i>{String(index+1).padStart(2,"0")}</i><span>{point}</span></li>)}</ol>:<div className="loading-description">Μόλις ετοιμαστούν οι ελληνικοί υπότιτλοι, εδώ θα εμφανιστούν 4-5 σημεία με timestamps για γρήγορη πλοήγηση.</div>}
         </div>
       </section>}
       {error&&<section className="empty"><b>!</b><h2>Δεν ολοκληρώθηκε η προετοιμασία</h2><p>{error}</p><button className="primary" onClick={()=>void openVideo(selected)}>Δοκίμασε ξανά</button></section>}
@@ -536,6 +576,7 @@ export default function GreekTubePlayer() {
               </div>
             </div>
             <div className="video-heading"><div><small>{selected.channel} · {CATEGORY_LABELS[selected.category]} · Προβολές: {selected.views||0}</small><h1 className="player-greek-title">{isGreekTitle(selected.title)?selected.title:isGreekTitle(captions.title)?captions.title:"Βίντεο με ελληνικούς υπότιτλους"}</h1>{(selected.originalTitle||captions.originalTitle||englishTitle(selected))&&<a className="player-original-title" href={selected.url} target="_blank" rel="noreferrer" title="Άνοιγμα στο YouTube">{selected.originalTitle||captions.originalTitle||englishTitle(selected)}</a>}<div className="speaker-row"><span>ΟΜΙΛΗΤΗΣ</span><strong>{selected.speakerName||speaker.name}</strong><i>{speaker.role}</i></div></div><div className="heading-actions"><button type="button" className="edit-video" onClick={()=>void requestEdit(selected)}><span aria-hidden="true">✎</span> Επεξεργασία</button><button aria-label="Αγαπημένο" className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div></div>
+            <section className="video-guide"><div className="section-title"><h2>Οδηγός βίντεο</h2><small>{guideItems.length}</small></div><div className="guide-list">{guideItems.map((item,index)=><button key={`${item.time}-${index}`} onClick={()=>seek(item.time)}><time>{clock(item.time)}</time><span>{item.text}</span></button>)}</div></section>
             <section className="moments"><div className="section-title"><h2>Αποθηκευμένες στιγμές</h2><small>{moments.length}</small></div>{moments.length===0?<p className="muted">Πάτησε M ή το κουμπί πάνω για να κρατήσεις ένα σημείο.</p>:moments.map(m=><article className="moment" key={m.id} onClick={()=>seek(m.time)}><time>{clock(m.time)}</time><div><strong>{m.note}</strong><p>{m.excerpt}</p></div><div className="moment-actions"><button onClick={e=>{e.stopPropagation();seek(m.time)}}>Αναπαραγωγή</button><button onClick={e=>{e.stopPropagation();void copyMoment(m)}}>Αντιγραφή συνδέσμου</button><button onClick={e=>{e.stopPropagation();navigator.share?.({title:m.note,url:`${location.origin}/?video=${m.videoId}&t=${Math.floor(m.time)}`})}}>Κοινοποίηση</button><button onClick={e=>{e.stopPropagation();setState(s=>({...s,moments:s.moments.filter(x=>x.id!==m.id)}))}}>Διαγραφή</button></div></article>)}</section>
           </div>
           {transcriptOpen&&<aside className="side-panel transcript-drawer">
@@ -576,9 +617,8 @@ export default function GreekTubePlayer() {
         </div>
       </section>}
       {state.settings.continueWatching&&continueVideos.length>0&&<section className="continue-section"><div className="continue-header"><div><span>ΣΥΝΕΧΙΣΗ ΠΡΟΒΟΛΗΣ</span><div className="continue-title-line"><h2>Συνέχισε την προβολή</h2><small>{continueVideos.length} {continueVideos.length===1?"βίντεο":"βίντεο"}</small></div><p>Συνέχισε από το σημείο που σταμάτησες.</p></div><button onClick={()=>document.querySelector(".library-tools")?.scrollIntoView({behavior:"smooth",block:"start"})}>Προβολή όλων</button></div><div className="continue-row">{continueVideos.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} edit={requestEdit} settings={state.settings} variant="continue"/>)}</div></section>}
-      <section className="library-tools"><div className="search"><span>⌕</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Αναζήτηση βίντεο, καναλιού ή ετικέτας"/></div><select aria-label="Ταξινόμηση" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Πρόσφατα</option><option value="title">Τίτλος</option><option value="progress">Πρόοδος</option></select><div className="quick-filters"><button className={filter==="all"?"active":""} onClick={()=>setFilter("all")}>Όλα</button><button className={filter==="favorites"?"active":""} onClick={()=>setFilter("favorites")}>♥ Αγαπημένα</button><button className={filter==="recent"?"active":""} onClick={()=>setFilter("recent")}>Πρόσφατη προβολή</button></div></section>
+      <section className="library-tools clean-library-tools"><div className="search"><span>⌕</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Αναζήτηση βίντεο, καναλιού ή ετικέτας"/></div><select aria-label="Ταξινόμηση" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Πρόσφατα</option><option value="title">Τίτλος</option><option value="progress">Πρόοδος</option></select><div className="quick-filters"><button className={filter==="all"?"active":""} onClick={()=>setFilter("all")}>Όλα</button><button className={filter==="new"?"active":""} onClick={()=>setFilter("new")}>Νέα</button><button className={filter==="favorites"?"active":""} onClick={()=>setFilter("favorites")}>♥ Αγαπημένα</button><button className={filter==="recent"?"active":""} onClick={()=>setFilter("recent")}>Πρόσφατη προβολή</button></div></section>
       <div className="category-row">{CATEGORIES.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{CATEGORY_LABELS[c]}</button>)}</div>
-      <div className="doctor-filter" aria-label="Φίλτρο ανά γιατρό"><span>ΓΙΑΤΡΟΙ</span><div>{doctors.map(name=><button key={name} className={doctor===name?"active":""} onClick={()=>setDoctor(name)}>{name}</button>)}</div></div>
       <section className={`video-grid ${state.settings.layout} ${state.settings.compact?"compact":""}`}>{filtered.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} edit={requestEdit} settings={state.settings}/>)}</section>
       {filtered.length===0&&<div className="empty"><h2>Δεν βρέθηκαν βίντεο</h2><p>Δοκίμασε διαφορετική κατηγορία ή αναζήτηση.</p></div>}
     </>}
@@ -588,7 +628,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.11</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.12</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");

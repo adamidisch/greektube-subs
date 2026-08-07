@@ -665,6 +665,7 @@ export async function POST(request: Request) {
     let player: PlayerResponse | null = null;
     let track: CaptionTrack | null = null;
     let rawSourceCues: CaptionCue[] = [];
+    let selectedUserAgent = "";
     const captionErrors: string[] = [];
 
     for (const candidate of players) {
@@ -679,6 +680,7 @@ export async function POST(request: Request) {
           player = candidate.player;
           track = candidateTrack;
           rawSourceCues = candidateCues;
+          selectedUserAgent = candidate.userAgent;
           break;
         } catch (error) {
           captionErrors.push(
@@ -705,14 +707,28 @@ export async function POST(request: Request) {
     let sourceCues: CaptionCue[] = [];
     let translationMethod = "original_greek";
 
-    if (track.languageCode === "el") {
+    const sourceLanguage = track.languageCode?.toLowerCase() || "unknown";
+    if (sourceLanguage === "el") {
       cues = rawSourceCues;
     } else {
       if (!rawSourceCues.length) throw new Error("Το αγγλικό caption track είναι κενό");
       sourceCues = createMeaningUnits(rawSourceCues);
       await updateProcessingProgress(videoId, lockToken, 48);
-      cues = await translateCuesToGreek(sourceCues);
-      translationMethod = "contextual_meaning_units_v3";
+      try {
+        const youtubeGreekCues = await fetchCaptionCues(track, selectedUserAgent, "el");
+        if (youtubeGreekCues.length && hasGreekText(youtubeGreekCues)) {
+          cues = youtubeGreekCues;
+          translationMethod = "youtube_timedtext_tlang_el";
+        }
+      } catch (error) {
+        captionErrors.push(
+          `YouTube el/${sourceLanguage}: ${error instanceof Error ? error.message : "failed"}`,
+        );
+      }
+      if (!cues.length) {
+        cues = await translateCuesToGreek(sourceCues);
+        translationMethod = "contextual_meaning_units_v3";
+      }
     }
 
     const videoDuration = Number(player.videoDetails?.lengthSeconds || 0);
@@ -732,7 +748,7 @@ export async function POST(request: Request) {
       channel: player.videoDetails?.author || "YouTube",
       thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
       duration,
-      originalLanguage: track.languageCode || "unknown",
+      originalLanguage: sourceLanguage,
       englishTranscript: sourceCues,
       greekTranscript: cues,
       timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
@@ -752,7 +768,7 @@ export async function POST(request: Request) {
       originalTitle,
       channel: player.videoDetails?.author || "YouTube",
       duration,
-      sourceLanguage: track.languageCode || "unknown",
+      sourceLanguage,
       sourceType: track.kind === "asr" ? "automatic" : "manual",
       translationMethod,
       cues,
