@@ -4798,4 +4798,22 @@ body{background:
   .watch-layout.player-only .next-videos{order:7!important}
   .watch-layout.player-only .video-frame:has(.player-cover) iframe{opacity:0!important}
   .watch-layout.player-only .video-frame:not(:has(.player-cover)) iframe{opacity:1!important}
+  .video-tap-toggle{
+    position:absolute!important;
+    inset:0!important;
+    z-index:4!important;
+    width:100%!important;
+    height:100%!important;
+    border:0!important;
+    border-radius:inherit!important;
+    background:transparent!important;
+    color:transparent!important;
+    -webkit-tap-highlight-color:transparent!important;
+  }
+  .video-frame .subtitles{
+    z-index:5!important;
+  }
+  .video-frame .custom-fullscreen{
+    z-index:6!important;
+  }
 }
