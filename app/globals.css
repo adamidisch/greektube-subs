@@ -3707,4 +3707,21 @@ body{background:
   .watch-layout.player-only .moment p{
     font-size:13px;
   }
+  .watch-layout.player-only .player-greek-title{
+    font-size:22px!important;
+    line-height:1.28!important;
+  }
+}
+
+/* YouTube chrome suppression and final sizing — ver 5.21 */
+.video-frame iframe{
+  pointer-events:none;
+}
+.player-cover{
+  pointer-events:auto;
+}
+@media(max-width:620px){
+  .watch-layout.player-only .player-greek-title{
+    font-size:21px!important;
+  }
 }
