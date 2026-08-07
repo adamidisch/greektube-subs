@@ -103,6 +103,9 @@ const ENGLISH_TITLES:Record<string,string>={
   D2RjneeG_xA:"#1 Absolute Easiest Way to Reverse Metabolic Issues",
 };
 function englishTitle(video:Video){return video.originalTitle||ENGLISH_TITLES[video.id]||"";}
+function upperGreekLabel(value:string){
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR");
+}
 
 const uid = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 function extractId(value:string) {
@@ -559,7 +562,7 @@ export default function GreekTubePlayer() {
           <div className="featured-progress"><i style={{width:`${featured.progress}%`}}/></div>
         </button>
         <div className="featured-panel">
-          <div className="featured-meta"><span>{`${CATEGORY_LABELS[featured.category]} · Προβολές: ${featured.views||0}`.toLocaleUpperCase("el-GR")}</span><button aria-label="Αγαπημένο" className={`featured-favorite ${featured.favorite?"active":""}`} onClick={()=>patchVideo(featured.id,{favorite:!featured.favorite})}>♥</button></div>
+          <div className="featured-meta"><span>{upperGreekLabel(`${CATEGORY_LABELS[featured.category]} · Προβολές: ${featured.views||0}`)}</span><button aria-label="Αγαπημένο" className={`featured-favorite ${featured.favorite?"active":""}`} onClick={()=>patchVideo(featured.id,{favorite:!featured.favorite})}>♥</button></div>
           <h2>{greekTitle(featured)}</h2>
           {englishTitle(featured)&&<p className="featured-original-title">{englishTitle(featured)}</p>}
           <small className="featured-speaker">{featured.speakerName||speakerForVideo(featured.id,featured.channel).name}</small>
@@ -585,7 +588,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.9</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.10</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
