@@ -100,7 +100,21 @@ function speakerProfile(videoId: string, description = "", channel = ""): Speake
 
 const API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const PLAYER_URL = `https://www.youtube.com/youtubei/v1/player?key=${API_KEY}&prettyPrint=false`;
-const CLIENTS = [
+type ClientProfile = {
+  clientName: string;
+  clientVersion: string;
+  userAgent: string;
+  androidSdkVersion?: number;
+  deviceModel?: string;
+};
+
+type PlayerCandidate = {
+  player: PlayerResponse;
+  clientName: string;
+  userAgent: string;
+};
+
+const CLIENTS: ClientProfile[] = [
   {
     clientName: "WEB",
     clientVersion: "2.20260723.00.00",
@@ -145,8 +159,9 @@ function extractVideoId(value: string) {
   return null;
 }
 
-async function fetchPlayer(videoId: string) {
+async function fetchPlayers(videoId: string) {
   const errors: string[] = [];
+  const candidates: PlayerCandidate[] = [];
   for (const profile of CLIENTS) {
     try {
       const client = {
@@ -179,8 +194,11 @@ async function fetchPlayer(videoId: string) {
       }
       const player = (await response.json()) as PlayerResponse;
       const tracks = player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-      if (player.playabilityStatus?.status === "OK" && tracks.length) return player;
-      errors.push(`${profile.clientName}: ${player.playabilityStatus?.reason || "χωρίς captions"}`);
+      if (player.playabilityStatus?.status === "OK" && tracks.length) {
+        candidates.push({ player, clientName: profile.clientName, userAgent: profile.userAgent });
+      } else {
+        errors.push(`${profile.clientName}: ${player.playabilityStatus?.reason || "χωρίς captions"}`);
+      }
     } catch (error) {
       errors.push(`${profile.clientName}: ${error instanceof Error ? error.message : "failed"}`);
     }
@@ -222,7 +240,13 @@ async function fetchPlayer(videoId: string) {
               const player = JSON.parse(html.slice(objectStart, index + 1)) as PlayerResponse;
               const tracks =
                 player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-              if (tracks.length) return player;
+              if (tracks.length) {
+                candidates.push({
+                  player,
+                  clientName: "WEB_PAGE",
+                  userAgent: CLIENTS[0].userAgent,
+                });
+              }
               break;
             }
           }
@@ -233,10 +257,11 @@ async function fetchPlayer(videoId: string) {
   } catch (error) {
     errors.push(`WEB page: ${error instanceof Error ? error.message : "failed"}`);
   }
+  if (candidates.length) return candidates;
   throw new Error(errors.join(" · "));
 }
 
-function chooseTrack(tracks: CaptionTrack[]) {
+function orderedTracks(tracks: CaptionTrack[]) {
   return [...tracks].sort((a, b) => {
     const score = (track: CaptionTrack) => {
       const language = track.languageCode?.toLowerCase() || "";
@@ -245,7 +270,7 @@ function chooseTrack(tracks: CaptionTrack[]) {
       return english * 10 + automatic;
     };
     return score(a) - score(b);
-  })[0];
+  });
 }
 
 function decodeEntities(value: string) {
@@ -343,30 +368,38 @@ function hasGreekText(cues: CaptionCue[]) {
   return letters > 0 && greek / letters > 0.22;
 }
 
-async function fetchCaptionCues(track: CaptionTrack, targetLanguage?: string) {
+async function fetchCaptionCues(track: CaptionTrack, userAgent: string, targetLanguage?: string) {
   if (!track.baseUrl) return [];
-  const captionUrl = new URL(track.baseUrl);
-  captionUrl.searchParams.set("fmt", "json3");
-  if (targetLanguage) {
-    captionUrl.searchParams.set("tlang", targetLanguage);
-  } else {
-    captionUrl.searchParams.delete("tlang");
+  const formats = ["json3", "srv3", null] as const;
+  const failures: string[] = [];
+
+  for (const format of formats) {
+    const captionUrl = new URL(track.baseUrl);
+    if (format) captionUrl.searchParams.set("fmt", format);
+    else captionUrl.searchParams.delete("fmt");
+    if (targetLanguage) captionUrl.searchParams.set("tlang", targetLanguage);
+    else captionUrl.searchParams.delete("tlang");
+
+    try {
+      const response = await fetch(captionUrl.toString(), {
+        headers: {
+          "User-Agent": userAgent,
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+      });
+      if (!response.ok) {
+        failures.push(`${format || "default"}: ${response.status}`);
+        continue;
+      }
+      const cues = parseTimedText(await response.text());
+      if (cues.length) return cues;
+      failures.push(`${format || "default"}: κενό`);
+    } catch (error) {
+      failures.push(`${format || "default"}: ${error instanceof Error ? error.message : "failed"}`);
+    }
   }
 
-  const response = await fetch(captionUrl.toString(), {
-    headers: { "User-Agent": CLIENTS[0].userAgent },
-  });
-  if (!response.ok) throw new Error(`Captions ${response.status}`);
-  const body = await response.text();
-  const cues = parseTimedText(body);
-  if (cues.length) return cues;
-
-  captionUrl.searchParams.set("fmt", "srv3");
-  const xmlResponse = await fetch(captionUrl.toString(), {
-    headers: { "User-Agent": CLIENTS[0].userAgent },
-  });
-  if (!xmlResponse.ok) throw new Error(`Captions ${xmlResponse.status}`);
-  return parseTimedText(await xmlResponse.text());
+  throw new Error(failures.join(" · "));
 }
 
 function createMeaningUnits(cues: CaptionCue[]) {
@@ -628,13 +661,43 @@ export async function POST(request: Request) {
     }
     await updateProcessingProgress(videoId, lockToken, 12);
 
-    const player = await fetchPlayer(videoId);
-    const tracks = player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-    const track = chooseTrack(tracks);
-    if (!track?.baseUrl) {
-      await failTranscript(videoId, lockToken, "Το video δεν διαθέτει captions.");
+    const players = await fetchPlayers(videoId);
+    let player: PlayerResponse | null = null;
+    let track: CaptionTrack | null = null;
+    let rawSourceCues: CaptionCue[] = [];
+    const captionErrors: string[] = [];
+
+    for (const candidate of players) {
+      const tracks = orderedTracks(
+        candidate.player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [],
+      );
+      for (const candidateTrack of tracks) {
+        if (!candidateTrack.baseUrl) continue;
+        try {
+          const candidateCues = await fetchCaptionCues(candidateTrack, candidate.userAgent);
+          if (!candidateCues.length) continue;
+          player = candidate.player;
+          track = candidateTrack;
+          rawSourceCues = candidateCues;
+          break;
+        } catch (error) {
+          captionErrors.push(
+            `${candidate.clientName}/${candidateTrack.languageCode || "unknown"}: ${error instanceof Error ? error.message : "failed"}`,
+          );
+        }
+      }
+      if (player && track) break;
+    }
+
+    if (!player || !track) {
+      const detail = captionErrors.length ? captionErrors.join(" · ") : "Δεν βρέθηκε έγκυρο caption track";
+      console.error(`[captions:${videoId}] ${detail}`);
+      await failTranscript(videoId, lockToken, detail);
       lockToken = null;
-      return NextResponse.json({ error: "Το video δεν διαθέτει captions." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Οι υπότιτλοι δεν ήταν προσωρινά διαθέσιμοι. Δοκίμασε ξανά σε λίγο." },
+        { status: 502 },
+      );
     }
 
     await updateProcessingProgress(videoId, lockToken, 28);
@@ -643,9 +706,8 @@ export async function POST(request: Request) {
     let translationMethod = "original_greek";
 
     if (track.languageCode === "el") {
-      cues = await fetchCaptionCues(track);
+      cues = rawSourceCues;
     } else {
-      const rawSourceCues = await fetchCaptionCues(track);
       if (!rawSourceCues.length) throw new Error("Το αγγλικό caption track είναι κενό");
       sourceCues = createMeaningUnits(rawSourceCues);
       await updateProcessingProgress(videoId, lockToken, 48);

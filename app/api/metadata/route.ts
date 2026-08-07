@@ -49,23 +49,86 @@ async function greekTitle(value: string) {
 }
 
 async function playerDetails(id: string) {
+  const clients = [
+    {
+      clientName: "ANDROID",
+      clientVersion: "20.10.38",
+      androidSdkVersion: 30,
+      userAgent: "com.google.android.youtube/20.10.38 (Linux; U; Android 11)",
+    },
+    {
+      clientName: "WEB",
+      clientVersion: "2.20260723.00.00",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0.0.0 Safari/537.36",
+    },
+    {
+      clientName: "IOS",
+      clientVersion: "20.10.4",
+      deviceModel: "iPhone16,2",
+      userAgent: "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3 like Mac OS X)",
+    },
+  ];
+
+  for (const profile of clients) {
+    try {
+      const response = await fetch("https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&prettyPrint=false", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": profile.userAgent,
+          Origin: "https://www.youtube.com",
+          "X-Youtube-Client-Name": profile.clientName,
+          "X-Youtube-Client-Version": profile.clientVersion,
+        },
+        body: JSON.stringify({
+          videoId: id,
+          context: {
+            client: {
+              clientName: profile.clientName,
+              clientVersion: profile.clientVersion,
+              hl: "en",
+              gl: "US",
+              ...(profile.androidSdkVersion ? { androidSdkVersion: profile.androidSdkVersion } : {}),
+              ...(profile.deviceModel ? { deviceModel: profile.deviceModel } : {}),
+            },
+          },
+          contentCheckOk: true,
+          racyCheckOk: true,
+        }),
+      });
+      if (!response.ok) continue;
+      const payload = (await response.json()) as {
+        videoDetails?: {
+          title?: string;
+          author?: string;
+          lengthSeconds?: string;
+          shortDescription?: string;
+        };
+      };
+      if (!payload.videoDetails?.title) continue;
+      return {
+        title: payload.videoDetails.title,
+        author: payload.videoDetails.author || "",
+        duration: Number(payload.videoDetails.lengthSeconds || 0),
+        description: payload.videoDetails.shortDescription || "",
+      };
+    } catch {
+      // Continue with the next YouTube player profile.
+    }
+  }
+  return { title: "", author: "", duration: 0, description: "" };
+}
+
+async function oEmbedDetails(id: string) {
   try {
-    const response = await fetch("https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&prettyPrint=false", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        videoId: id,
-        context: { client: { clientName: "ANDROID", clientVersion: "20.10.38", androidSdkVersion: 30, hl: "en", gl: "US" } },
-      }),
-    });
-    if (!response.ok) return { duration: 0, description: "" };
-    const payload = (await response.json()) as { videoDetails?: { lengthSeconds?: string; shortDescription?: string } };
-    return {
-      duration: Number(payload.videoDetails?.lengthSeconds || 0),
-      description: payload.videoDetails?.shortDescription || "",
-    };
+    const response = await fetch(
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`,
+    );
+    if (!response.ok) return { title: "", author: "" };
+    const metadata = (await response.json()) as { title?: string; author_name?: string };
+    return { title: metadata.title || "", author: metadata.author_name || "" };
   } catch {
-    return { duration: 0, description: "" };
+    return { title: "", author: "" };
   }
 }
 
@@ -92,20 +155,31 @@ export async function POST(request: Request) {
     if (typeof body.url !== "string") throw new Error();
     const id = extractVideoId(body.url);
     if (!id) return NextResponse.json({ error: "Μη έγκυρο YouTube link." }, { status: 400 });
-    const response = await fetch(
-      `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`,
-    );
-    if (!response.ok) throw new Error();
-    const metadata = (await response.json()) as { title?: string; author_name?: string };
-    const originalTitle = metadata.title || "YouTube video";
-    const [title, details] = await Promise.all([greekTitle(originalTitle), playerDetails(id)]);
+    const [details, metadata] = await Promise.all([playerDetails(id), oEmbedDetails(id)]);
+    const originalTitle = metadata.title || details.title;
+    if (!originalTitle) {
+      return NextResponse.json({
+        id,
+        title: "Νέο YouTube video",
+        originalTitle: "",
+        channel: "YouTube",
+        duration: 0,
+        description: "Τα στοιχεία του video θα συμπληρωθούν κατά την προετοιμασία των υποτίτλων.",
+        speakerName: "",
+        category: "Other",
+        tags: [],
+        thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+        metadataPending: true,
+      });
+    }
+    const title = await greekTitle(originalTitle);
     const speakerName = doctorName(originalTitle, details.description);
     const category = categoryFor(originalTitle, details.description, speakerName);
     return NextResponse.json({
       id,
       title,
       originalTitle,
-      channel: metadata.author_name || "YouTube",
+      channel: metadata.author || details.author || "YouTube",
       duration: details.duration,
       description: details.description,
       speakerName,
