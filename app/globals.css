@@ -3743,3 +3743,51 @@ body{background:
 .brand-mark i{
   display:none!important;
 }
+
+/* Mobile featured resume CTA — ver 5.23 */
+.featured-resume{
+  position:relative;
+  overflow:hidden;
+  display:flex!important;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+}
+.featured-resume span,
+.featured-resume small{
+  position:relative;
+  z-index:1;
+}
+.featured-resume small{
+  color:rgba(255,255,255,.78);
+  font-size:11px;
+  font-weight:800;
+}
+.featured-resume i{
+  position:absolute;
+  left:0;
+  bottom:0;
+  height:3px;
+  border-radius:0 99px 99px 0;
+  background:rgba(255,255,255,.55);
+}
+@media(max-width:620px){
+  .featured-details{
+    display:none!important;
+  }
+  .featured-actions{
+    margin-top:18px!important;
+  }
+  .featured-actions .featured-resume{
+    grid-column:1/-1!important;
+    min-height:56px!important;
+    border-radius:16px!important;
+    flex-direction:column!important;
+    gap:3px!important;
+    font-size:15px!important;
+    box-shadow:0 14px 34px rgba(117,101,217,.28)!important;
+  }
+  .featured-actions .featured-resume small{
+    font-size:12px!important;
+  }
+}
