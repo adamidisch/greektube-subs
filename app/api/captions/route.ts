@@ -31,6 +31,19 @@ type CaptionCue = {
   text: string;
 };
 
+type ClientCachedTranscript = {
+  videoId?: unknown;
+  title?: unknown;
+  originalTitle?: unknown;
+  channel?: unknown;
+  duration?: unknown;
+  cues?: CaptionCue[];
+  englishCues?: CaptionCue[];
+  keyPoints?: string[];
+  topics?: string[];
+  transcriptVersion?: unknown;
+};
+
 type SpeakerProfile = {
   name: string;
   role: string;
@@ -629,7 +642,7 @@ export async function POST(request: Request) {
   let lockToken: string | null = null;
   let lockedVideoId: string | null = null;
   try {
-    const body = (await request.json()) as { url?: unknown; force?: unknown };
+    const body = (await request.json()) as { url?: unknown; force?: unknown; cachedTranscript?: ClientCachedTranscript };
     if (typeof body.url !== "string" || body.url.length > 500) {
       return NextResponse.json({ error: "Βάλε ένα έγκυρο YouTube link." }, { status: 400 });
     }
@@ -647,6 +660,37 @@ export async function POST(request: Request) {
         return NextResponse.json(await cachedResponse(cached));
       } catch {
         // Rebuild stale or incomplete cached subtitles under the video lock.
+      }
+    }
+    if (!force && body.cachedTranscript && body.cachedTranscript.videoId === videoId && body.cachedTranscript.transcriptVersion === TRANSCRIPT_VERSION) {
+      const clientCues = Array.isArray(body.cachedTranscript.cues) ? body.cachedTranscript.cues : [];
+      const duration = Number(body.cachedTranscript.duration || 0);
+      validateCompleteGreekTranscript(clientCues, duration);
+      lockToken = crypto.randomUUID();
+      const acquired = await acquireProcessingLock(videoId, lockToken, true);
+      if (acquired) {
+        const now = new Date().toISOString();
+        await completeTranscript({
+          videoId,
+          title: String(body.cachedTranscript.originalTitle || body.cachedTranscript.title || "YouTube video"),
+          channel: String(body.cachedTranscript.channel || "YouTube"),
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          duration: duration || clientCues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0),
+          originalLanguage: "client_seed",
+          englishTranscript: Array.isArray(body.cachedTranscript.englishCues) ? body.cachedTranscript.englishCues : [],
+          greekTranscript: clientCues,
+          timestamps: clientCues.map(cue => ({ start: cue.start, duration: cue.duration })),
+          topics: Array.isArray(body.cachedTranscript.topics) ? body.cachedTranscript.topics : [],
+          keyPoints: Array.isArray(body.cachedTranscript.keyPoints) ? body.cachedTranscript.keyPoints : keyPoints(clientCues),
+          status: "ready",
+          progress: 100,
+          transcriptVersion: TRANSCRIPT_VERSION,
+          createdAt: cached?.createdAt || now,
+          updatedAt: now,
+        }, lockToken);
+        const seeded = await getTranscript(videoId);
+        lockToken = null;
+        return NextResponse.json(await cachedResponse(seeded));
       }
     }
     if (!force && cached?.status === "processing" && cached.transcriptVersion === TRANSCRIPT_VERSION && cached.lockExpiresAt && cached.lockExpiresAt > new Date().toISOString()) {

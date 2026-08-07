@@ -366,7 +366,7 @@ export default function GreekTubePlayer() {
           setProgress(100);setCaptions(cached);setLoading(false);
           patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:cached.title,originalTitle:video.originalTitle||cached.originalTitle||englishTitle(video),channel:video.channel||cached.channel,captions:cached.cues,speakerName:video.speakerName||cached.speaker?.name,lastWatched:new Date().toISOString()});
           window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),80);
-          void fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url})}).then(async response=>{
+          void fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,cachedTranscript:cached})}).then(async response=>{
             if(!response.ok)return;
             const refreshed=await response.json() as Captions;
             if(!isCompleteGreekTranscript(refreshed,video.duration))return;
@@ -458,7 +458,7 @@ export default function GreekTubePlayer() {
           if(isCompleteGreekTranscript(fallback,video.duration)){
             setCaptions(fallback);setLoading(false);patchVideo(video.id,{lastWatched:new Date().toISOString()});
             window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),120);
-            window.setTimeout(()=>{void fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url})}).catch(()=>undefined)},10000);
+            window.setTimeout(()=>{void fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,cachedTranscript:fallback})}).catch(()=>undefined)},10000);
             return;
           }
         }catch{}
