@@ -751,19 +751,7 @@ body{font-size:13px}
 }
 
 /* Doctor filters and visible video duration — ver 4.3 */
-.doctor-filter{display:flex;align-items:center;gap:10px;min-width:0;margin:-8px 0 20px}
-.doctor-filter>span{flex:0 0 auto;color:var(--soft);font-size:10px;font-weight:650;text-transform:uppercase;letter-spacing:.08em}
-.doctor-filter>div{display:flex;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:none}
-.doctor-filter>div::-webkit-scrollbar{display:none}
-.doctor-filter button{height:31px;padding:0 11px;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--muted);font-size:11px;white-space:nowrap}
-.doctor-filter button:hover{color:var(--text);background:rgba(255,255,255,.04)}
-.doctor-filter button.active{border-color:rgba(213,169,111,.48);background:rgba(213,169,111,.11);color:var(--text)}
 .duration{font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.01em}
-@media(max-width:620px){
-  .doctor-filter{display:block;margin-top:-7px;margin-right:-12px}
-  .doctor-filter>span{display:block;margin-bottom:8px}
-  .doctor-filter>div{padding-right:12px}
-}
 
 /* Complete import metadata and bilingual card titles — ver 4.4 */
 .card-info .card-original-title{display:-webkit-box;margin:5px 0 0;overflow:hidden;color:var(--soft);font-size:10px;line-height:1.35;font-weight:500;-webkit-box-orient:vertical;-webkit-line-clamp:2}
@@ -1178,7 +1166,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .search input,.library-tools select{font-size:13px}
 .quick-filters{height:44px;padding:4px;border-radius:12px}
 .quick-filters button{height:34px;padding-inline:13px;font-size:12px}
-.category-row button,.doctor-filter button{min-height:34px;font-size:11.5px}
+.category-row button{min-height:34px;font-size:11.5px}
 .card-info{padding:13px 13px 15px}
 .card-info strong{font-size:14.5px;line-height:1.4}
 .card-info span,.card-info small{font-size:11.5px}
@@ -1372,7 +1360,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 
 /* Permanent readability contract — ver 5.7 */
 .brand-version{font-size:12px}
-.category-row button,.doctor-filter button{font-size:12px}
+.category-row button{font-size:12px}
 .card-info span,.card-info small,.card-info .card-original-title{font-size:12px}
 .video-heading small,.player-original-title{font-size:12px}
 .speaker-row span{font-size:11px}
@@ -1385,7 +1373,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 
 @media(max-width:620px){
   .brand-version{font-size:11px}
-  .category-row button,.doctor-filter button{min-height:44px;padding-inline:14px;font-size:13px}
+  .category-row button{min-height:44px;padding-inline:14px;font-size:13px}
   .card-info span,.card-info small,.card-info .card-original-title{font-size:12.5px}
   .video-heading small,.player-original-title{font-size:12.5px}
   .speaker-row span{font-size:11px}
@@ -1639,11 +1627,11 @@ body{background:
 .home-intro h1{
   text-wrap:balance;
 }
-.search,.library-tools select,.quick-filters,.category-row button,.doctor-filter button{
+.search,.library-tools select,.quick-filters,.category-row button{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
 }
 .search input::placeholder{color:#858b96;opacity:1}
-.quick-filters button.active,.category-row button.active,.doctor-filter button.active{
+.quick-filters button.active,.category-row button.active{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 8px 22px rgba(0,0,0,.12);
 }
 .featured{
@@ -1664,7 +1652,7 @@ body{background:
   border-color:rgba(255,255,255,.1);
   background:linear-gradient(180deg,#14161c,#101217);
 }
-.video-card:active,.featured-media:active,.category-row button:active,.doctor-filter button:active{
+.video-card:active,.featured-media:active,.category-row button:active{
   transform:scale(.99);
 }
 
@@ -1932,21 +1920,10 @@ body{background:
     overflow-x:auto;
     overscroll-behavior-x:contain;
   }
-  .category-row button,.doctor-filter button{
+  .category-row button{
     min-height:44px;
     border-radius:13px;
     background:#141720;
-  }
-  .doctor-filter{
-    margin:0 calc(-1 * max(14px,env(safe-area-inset-right))) 18px 0;
-  }
-  .doctor-filter>span{
-    margin-bottom:8px;
-    font-size:11px;
-    letter-spacing:.1em;
-  }
-  .doctor-filter>div{
-    padding-right:max(14px,env(safe-area-inset-right));
   }
   .video-grid{
     width:100%;
