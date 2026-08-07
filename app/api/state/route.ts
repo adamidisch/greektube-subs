@@ -203,9 +203,18 @@ export async function PUT(request: Request) {
   try {
     const identity = await ownerKey(request);
     const incoming = await request.json();
-    if (incoming && typeof incoming === "object" && Array.isArray((incoming as PersonalState).videos) && await isAdminRequest(request)) {
+    const wantsSharedWrite = request.headers.get("x-greektube-shared-write") === "1";
+    const canWriteShared = await isAdminRequest(request);
+    let sharedSaved = false;
+    let sharedVideoCount = 0;
+    if (incoming && typeof incoming === "object" && Array.isArray((incoming as PersonalState).videos) && wantsSharedWrite && !canWriteShared) {
+      return NextResponse.json({ error: "Απαιτείται κωδικός για συγχρονισμό της κοινής βιβλιοθήκης." }, { status: 401 });
+    }
+    if (incoming && typeof incoming === "object" && Array.isArray((incoming as PersonalState).videos) && canWriteShared) {
       await ensureTable();
       await saveSharedVideos((incoming as PersonalState).videos!);
+      sharedSaved = true;
+      sharedVideoCount = (incoming as PersonalState).videos!.length;
     }
     const body = sanitizePersonalState(incoming);
     const serialized = JSON.stringify(body);
@@ -217,7 +226,7 @@ export async function PUT(request: Request) {
       `INSERT INTO personal_states (owner_key, value, created_at, updated_at) VALUES (?, ?, ?, ?)
        ON CONFLICT(owner_key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     ).bind(identity.key, serialized, now, now).run();
-    return withIdentityCookie(NextResponse.json({ ok: true }), identity.cookie);
+    return withIdentityCookie(NextResponse.json({ ok: true, sharedSaved, sharedVideoCount }), identity.cookie);
   } catch {
     return NextResponse.json({ error: "Δεν ήταν δυνατή η αποθήκευση." }, { status: 500 });
   }

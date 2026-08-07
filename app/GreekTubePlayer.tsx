@@ -48,6 +48,7 @@ const DEFAULT_SETTINGS: Settings = {
   theme: "dark", descriptions: true, continueWatching: true,
 };
 const PERSONAL_CACHE_KEY="greektube-personal-state:v1";
+type SaveStateResult = { ok?: boolean; sharedSaved?: boolean; sharedVideoCount?: number; error?: string };
 function personalStatePayload(state:AppState):AppState{
   return {...state,videos:state.videos.map(video=>{
     const personalVideo={...video};
@@ -55,10 +56,15 @@ function personalStatePayload(state:AppState):AppState{
     return personalVideo;
   })};
 }
-function saveStateToServer(state:AppState,keepalive=false) {
+async function saveStateToServer(state:AppState,keepalive=false,requireShared=false):Promise<SaveStateResult|null> {
   const payload=JSON.stringify(personalStatePayload(state));
   try{localStorage.setItem(PERSONAL_CACHE_KEY,payload);}catch{}
-  return fetch("/api/state",{method:"PUT",credentials:"same-origin",cache:"no-store",keepalive,headers:{"Content-Type":"application/json"},body:payload}).catch(()=>undefined);
+  try{
+    const response=await fetch("/api/state",{method:"PUT",credentials:"same-origin",cache:"no-store",keepalive,headers:{"Content-Type":"application/json","X-GreekTube-Shared-Write":requireShared?"1":"0"},body:payload});
+    const result=await response.json().catch(()=>({})) as SaveStateResult;
+    if(!response.ok)return {...result,ok:false};
+    return result;
+  }catch{return null;}
 }
 function mergeAppStates(base:AppState,incoming:AppState):AppState{
   const videos=new Map(base.videos.map(video=>[video.id,video]));
@@ -259,6 +265,9 @@ export default function GreekTubePlayer() {
   const [filter,setFilter]=useState<"all"|"new"|"favorites"|"recent">("all");
   const [modal,setModal]=useState(false);
   const [addRequest,setAddRequest]=useState(false);
+  const [syncRequest,setSyncRequest]=useState(false);
+  const [syncing,setSyncing]=useState(false);
+  const [syncMessage,setSyncMessage]=useState("");
   const [editingVideo,setEditingVideo]=useState<Video|null>(null);
   const [editRequest,setEditRequest]=useState<Video|null>(null);
   const [mobileMenu,setMobileMenu]=useState(false);
@@ -399,6 +408,42 @@ export default function GreekTubePlayer() {
       if(response.ok&&result.authorized){setModal(true);return;}
     }catch{}
     setAddRequest(true);
+  }
+  async function syncLocalTranscripts(videos:Video[]){
+    let synced=0;
+    for(const video of videos){
+      try{
+        const raw=localStorage.getItem(`greektube-transcript:${video.id}:v4`);
+        if(!raw)continue;
+        const cached=JSON.parse(raw) as Captions;
+        if(!isCompleteGreekTranscript(cached,video.duration))continue;
+        const response=await fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,cachedTranscript:cached})});
+        if(response.ok)synced+=1;
+      }catch{}
+    }
+    return synced;
+  }
+  async function syncLibraryToServer(){
+    if(syncing)return;
+    setSyncing(true);setSyncMessage("Συγχρονισμός σε εξέλιξη…");
+    try{
+      await new Promise(resolve=>window.setTimeout(resolve,350));
+      const result=await saveStateToServer(stateRef.current,false,true);
+      if(!result?.ok||!result.sharedSaved)throw new Error(result?.error||"sync-denied");
+      const transcriptCount=await syncLocalTranscripts(stateRef.current.videos);
+      setSyncMessage(`Συγχρονίστηκαν ${result.sharedVideoCount||stateRef.current.videos.length} βίντεο και ${transcriptCount} μεταγραφές.`);
+    }catch{
+      setSyncMessage("Ο συγχρονισμός χρειάζεται ξανά τον κωδικό.");
+      setSyncRequest(true);
+    }finally{setSyncing(false);}
+  }
+  async function requestSync(){
+    try{
+      const response=await fetch("/api/admin-auth",{cache:"no-store"});
+      const result=await response.json() as {authorized?:boolean};
+      if(response.ok&&result.authorized){await syncLibraryToServer();return;}
+    }catch{}
+    setSyncRequest(true);
   }
   async function openVideo(video:Video,start?:number,showTranscript=false,forceTranslation=false){
     const knownPoints=transcriptHighlights(video.captions||[]);
@@ -665,19 +710,20 @@ export default function GreekTubePlayer() {
       </section>}
       {state.settings.continueWatching&&continueVideos.length>0&&<section className="continue-section"><div className="continue-header"><div><span>ΣΥΝΕΧΙΣΗ ΠΡΟΒΟΛΗΣ</span><div className="continue-title-line"><h2>Συνέχισε την προβολή</h2><small>{continueVideos.length} {continueVideos.length===1?"βίντεο":"βίντεο"}</small></div><p>Συνέχισε από το σημείο που σταμάτησες.</p></div><button onClick={()=>document.querySelector(".library-tools")?.scrollIntoView({behavior:"smooth",block:"start"})}>Προβολή όλων</button></div><div className="continue-row">{continueVideos.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} edit={requestEdit} settings={state.settings} variant="continue" isNew={newVideoIds.has(v.id)}/>)}</div></section>}
       <section className="library-tools clean-library-tools"><div className="search"><span>⌕</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Αναζήτηση σε ελληνικό ή αγγλικό τίτλο"/>{search&&<button type="button" aria-label="Καθαρισμός αναζήτησης" onClick={()=>setSearch("")}>×</button>}</div><select aria-label="Ταξινόμηση" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Πρόσφατα</option><option value="title">Τίτλος</option><option value="progress">Πρόοδος</option></select><div className="quick-filters"><button className={filter==="all"?"active":""} onClick={()=>setFilter("all")}>Όλα</button><button className={filter==="new"?"active":""} onClick={()=>setFilter("new")}>Νέα</button><button className={filter==="favorites"?"active":""} onClick={()=>setFilter("favorites")}>♥ Αγαπημένα</button><button className={filter==="recent"?"active":""} onClick={()=>setFilter("recent")}>Πρόσφατη προβολή</button></div></section>
-      <div className="library-result-line"><span>{filtered.length} {filtered.length===1?"βίντεο":"βίντεο"}</span>{search&&<b>Αναζήτηση: {search}</b>}</div>
+      <div className="library-result-line"><span>{filtered.length} {filtered.length===1?"βίντεο":"βίντεο"}</span>{search&&<b>Αναζήτηση: {search}</b>}{syncMessage&&<b>{syncMessage}</b>}<button type="button" className="sync-library" disabled={syncing} onClick={()=>void requestSync()}>{syncing?"Συγχρονισμός…":"Συγχρονισμός"}</button></div>
       <div className="category-row">{CATEGORIES.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{CATEGORY_LABELS[c]}</button>)}</div>
       <section className={`video-grid ${state.settings.layout} ${state.settings.compact?"compact":""}`}>{filtered.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} edit={requestEdit} settings={state.settings} isNew={newVideoIds.has(v.id)}/>)}</section>
       {filtered.length===0&&<div className="empty"><h2>Δεν βρέθηκαν βίντεο</h2><p>Δοκίμασε διαφορετική κατηγορία ή αναζήτηση.</p></div>}
     </>}
-    {modal&&<AddVideo existingIds={state.videos.map(video=>video.id)} close={()=>setModal(false)} add={async(video,translate)=>{const next={...stateRef.current,videos:[video,...stateRef.current.videos.filter(item=>item.id!==video.id)]};setState(next);setModal(false);void saveStateToServer(next);if(translate)await openVideo(video);}}/>}
-    {addRequest&&<EditPassword close={()=>setAddRequest(false)} authorized={()=>{setAddRequest(false);void saveStateToServer(stateRef.current);setModal(true);}}/>}
+    {modal&&<AddVideo existingIds={state.videos.map(video=>video.id)} close={()=>setModal(false)} add={async(video,translate)=>{const next={...stateRef.current,videos:[video,...stateRef.current.videos.filter(item=>item.id!==video.id)]};setState(next);setModal(false);void saveStateToServer(next,false,true);if(translate)await openVideo(video);}}/>}
+    {addRequest&&<EditPassword close={()=>setAddRequest(false)} authorized={()=>{setAddRequest(false);window.setTimeout(()=>void syncLibraryToServer(),350);setModal(true);}}/>}
+    {syncRequest&&<EditPassword close={()=>setSyncRequest(false)} authorized={()=>{setSyncRequest(false);window.setTimeout(()=>void syncLibraryToServer(),350);}}/>}
     {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
     {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:3});setEditingVideo(null);}}/>}
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={()=>{home();window.location.assign("/");}}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.17</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={()=>{home();window.location.assign("/");}}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.18</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
