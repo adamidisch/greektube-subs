@@ -3725,3 +3725,21 @@ body{background:
     font-size:21px!important;
   }
 }
+
+/* Brand mark cleanup — ver 5.22 */
+.brand-mark{
+  width:38px!important;
+  height:28px!important;
+  display:grid!important;
+  place-items:center!important;
+  padding-left:2px!important;
+  border-radius:10px!important;
+  background:linear-gradient(145deg,#8d80ee,#5c50b2)!important;
+  color:#fff!important;
+  font-size:12px!important;
+  line-height:1!important;
+  box-shadow:0 10px 26px rgba(112,99,207,.28)!important;
+}
+.brand-mark i{
+  display:none!important;
+}
