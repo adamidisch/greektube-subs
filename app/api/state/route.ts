@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 const LEGACY_KEY = "greektube-library-v2";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
 const COOKIE = "greektube-user";
+const ADMIN_COOKIE = "greektube-admin";
+const ADMIN_SESSION_MESSAGE = "greektube-edit-authorized";
 type VideoRecord = Record<string, unknown> & { id?: unknown };
 type PersonalState = { videos?: VideoRecord[]; moments?: unknown[]; settings?: Record<string, unknown> };
 
@@ -41,6 +43,40 @@ async function ownerKey(request: Request) {
   const cookie = request.headers.get("cookie")?.split(";").map(x=>x.trim()).find(x=>x.startsWith(`${COOKIE}=`))?.slice(COOKIE.length+1);
   const id = cookie && /^[a-zA-Z0-9-]{12,80}$/.test(cookie) ? cookie : crypto.randomUUID();
   return { key: `anon:${id}`, cookie: cookie ? null : id };
+}
+
+async function adminSecret() {
+  const workers = await import("cloudflare:workers");
+  return String(workers.env.ADMIN_EDIT_PASSWORD || "");
+}
+
+async function adminSessionToken(password: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(ADMIN_SESSION_MESSAGE));
+  return Array.from(new Uint8Array(signature)).map(value => value.toString(16).padStart(2, "0")).join("");
+}
+
+function safeEqual(left: string, right: string) {
+  const a = new TextEncoder().encode(left);
+  const b = new TextEncoder().encode(right);
+  if (a.length !== b.length) return false;
+  let difference = 0;
+  for (let index = 0; index < a.length; index += 1) difference |= a[index] ^ b[index];
+  return difference === 0;
+}
+
+async function isAdminRequest(request: Request) {
+  const password = await adminSecret();
+  if (!password) return false;
+  const cookie = request.headers.get("cookie")?.split(";").map(value => value.trim())
+    .find(value => value.startsWith(`${ADMIN_COOKIE}=`))?.slice(ADMIN_COOKIE.length + 1) || "";
+  return safeEqual(cookie, await adminSessionToken(password));
 }
 
 function sanitizePersonalState(input: unknown) {
@@ -167,7 +203,7 @@ export async function PUT(request: Request) {
   try {
     const identity = await ownerKey(request);
     const incoming = await request.json();
-    if (incoming && typeof incoming === "object" && Array.isArray((incoming as PersonalState).videos)) {
+    if (incoming && typeof incoming === "object" && Array.isArray((incoming as PersonalState).videos) && await isAdminRequest(request)) {
       await ensureTable();
       await saveSharedVideos((incoming as PersonalState).videos!);
     }

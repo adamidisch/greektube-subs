@@ -55,6 +55,11 @@ function personalStatePayload(state:AppState):AppState{
     return personalVideo;
   })};
 }
+function saveStateToServer(state:AppState,keepalive=false) {
+  const payload=JSON.stringify(personalStatePayload(state));
+  try{localStorage.setItem(PERSONAL_CACHE_KEY,payload);}catch{}
+  return fetch("/api/state",{method:"PUT",credentials:"same-origin",cache:"no-store",keepalive,headers:{"Content-Type":"application/json"},body:payload}).catch(()=>undefined);
+}
 function mergeAppStates(base:AppState,incoming:AppState):AppState{
   const videos=new Map(base.videos.map(video=>[video.id,video]));
   incoming.videos.forEach(video=>videos.set(video.id,{...(videos.get(video.id)||{}),...video}));
@@ -115,6 +120,29 @@ const ENGLISH_TITLES:Record<string,string>={
 function englishTitle(video:Video){return video.originalTitle||ENGLISH_TITLES[video.id]||"";}
 function upperGreekLabel(value:string){
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleUpperCase("el-GR");
+}
+function searchText(value:string){
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+}
+function searchHaystack(video:Video){
+  return [
+    greekTitle(video),
+    englishTitle(video),
+    video.title,
+    video.originalTitle||"",
+    video.channel,
+    video.speakerName||"",
+    video.tags.join(" "),
+    video.description,
+    video.notes,
+  ].map(searchText).join(" ");
+}
+function searchScore(video:Video,terms:string[]){
+  if(!terms.length)return 0;
+  const titleText=searchText(`${greekTitle(video)} ${englishTitle(video)} ${video.title} ${video.originalTitle||""}`);
+  const speakerText=searchText(`${video.channel} ${video.speakerName||""}`);
+  const tagText=searchText(video.tags.join(" "));
+  return terms.reduce((score,term)=>score+(titleText.includes(term)?8:0)+(speakerText.includes(term)?4:0)+(tagText.includes(term)?3:0),0);
 }
 
 const uid = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`;
@@ -230,6 +258,7 @@ export default function GreekTubePlayer() {
   const [sort,setSort]=useState("recent");
   const [filter,setFilter]=useState<"all"|"new"|"favorites"|"recent">("all");
   const [modal,setModal]=useState(false);
+  const [addRequest,setAddRequest]=useState(false);
   const [editingVideo,setEditingVideo]=useState<Video|null>(null);
   const [editRequest,setEditRequest]=useState<Video|null>(null);
   const [mobileMenu,setMobileMenu]=useState(false);
@@ -251,7 +280,11 @@ export default function GreekTubePlayer() {
   useEffect(()=>{ void (async()=>{
     let fallback:AppState|null=null;
     try{const raw=localStorage.getItem(PERSONAL_CACHE_KEY);if(raw)fallback=JSON.parse(raw) as AppState;}catch{}
-    if(fallback?.videos)setState(current=>mergeAppStates(current,{settings:normalizedSettings(fallback.settings),videos:fallback.videos,moments:fallback.moments||[]}));
+    if(fallback?.videos){
+      const fallbackState={settings:normalizedSettings(fallback.settings),videos:fallback.videos,moments:fallback.moments||[]};
+      setState(current=>mergeAppStates(current,fallbackState));
+      void saveStateToServer(fallbackState);
+    }
     try{
       const r=await fetch("/api/state",{credentials:"same-origin",cache:"no-store"});
       if(r.ok){
@@ -274,8 +307,7 @@ export default function GreekTubePlayer() {
   useEffect(()=>{
     if(!hydrated)return;
     const saveBeforeLeaving=()=>{
-      const payload=JSON.stringify(personalStatePayload(stateRef.current));
-      void fetch("/api/state",{method:"PUT",credentials:"same-origin",cache:"no-store",keepalive:true,headers:{"Content-Type":"application/json"},body:payload}).catch(()=>undefined);
+      void saveStateToServer(stateRef.current,true);
     };
     window.addEventListener("pagehide",saveBeforeLeaving);
     return()=>window.removeEventListener("pagehide",saveBeforeLeaving);
@@ -325,11 +357,18 @@ export default function GreekTubePlayer() {
 
   const newVideoIds=useMemo(()=>new Set([...state.videos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt)).slice(0,10).map(video=>video.id)),[state.videos]);
   const filtered=useMemo(()=> {
-    let list=state.videos.filter(v=>(category==="Όλα"||v.category===category)&&(`${v.title} ${v.channel} ${v.tags.join(" ")}`.toLowerCase().includes(search.toLowerCase())));
+    const terms=searchText(search).split(/\s+/).filter(Boolean);
+    let list=state.videos.filter(v=>(category==="Όλα"||v.category===category)&&terms.every(term=>searchHaystack(v).includes(term)));
     if(filter==="new") list=list.filter(v=>newVideoIds.has(v.id));
     if(filter==="favorites") list=list.filter(v=>v.favorite);
     if(filter==="recent") list=list.filter(v=>v.lastWatched);
-    return [...list].sort((a,b)=>sort==="title"?a.title.localeCompare(b.title):sort==="progress"?b.progress-a.progress:b.addedAt.localeCompare(a.addedAt));
+    return [...list].sort((a,b)=>{
+      if(terms.length){
+        const score=searchScore(b,terms)-searchScore(a,terms);
+        if(score!==0)return score;
+      }
+      return sort==="title"?greekTitle(a).localeCompare(greekTitle(b),"el"):sort==="progress"?b.progress-a.progress:b.addedAt.localeCompare(a.addedAt);
+    });
   },[state.videos,category,search,sort,filter,newVideoIds]);
   const continueVideos=state.videos.filter(v=>v.progress>0&&v.progress<96).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||"")).slice(0,5);
   const featured=useMemo(()=>{
@@ -352,6 +391,14 @@ export default function GreekTubePlayer() {
       if(response.ok&&result.authorized){setEditingVideo(video);return;}
     }catch{}
     setEditRequest(video);
+  }
+  async function requestAdd(){
+    try{
+      const response=await fetch("/api/admin-auth",{cache:"no-store"});
+      const result=await response.json() as {authorized?:boolean};
+      if(response.ok&&result.authorized){setModal(true);return;}
+    }catch{}
+    setAddRequest(true);
   }
   async function openVideo(video:Video,start?:number,showTranscript=false,forceTranslation=false){
     const knownPoints=transcriptHighlights(video.captions||[]);
@@ -592,7 +639,7 @@ export default function GreekTubePlayer() {
   }
 
   return <main className="app-shell">
-    <header className="app-header"><Brand home={goHome}/><nav className="desktop-nav"><button className={view==="library"?"active":""} onClick={()=>setView("library")}>Βιβλιοθήκη</button><button className={view==="settings"?"active":""} onClick={()=>setView("settings")}>Ρυθμίσεις</button></nav><button className="primary compact add-top" onClick={()=>setModal(true)}>＋ Προσθήκη βίντεο</button><button className={`mobile-menu-toggle ${mobileMenu?"active":""}`} aria-label={mobileMenu?"Κλείσιμο μενού":"Άνοιγμα μενού"} aria-expanded={mobileMenu} onClick={()=>setMobileMenu(value=>!value)}><i/><i/><i/></button>{mobileMenu&&<div className="mobile-menu"><button className={view==="library"?"active":""} onClick={goHome}>Βιβλιοθήκη</button><button className={view==="settings"?"active":""} onClick={()=>{setView("settings");setMobileMenu(false)}}>Ρυθμίσεις</button><button className="primary mobile-add" onClick={()=>{setModal(true);setMobileMenu(false)}}>＋ Προσθήκη βίντεο</button></div>}</header>
+    <header className="app-header"><Brand home={goHome}/><nav className="desktop-nav"><button className={view==="library"?"active":""} onClick={()=>setView("library")}>Βιβλιοθήκη</button><button className={view==="settings"?"active":""} onClick={()=>setView("settings")}>Ρυθμίσεις</button></nav><button className="primary compact add-top" onClick={()=>void requestAdd()}>＋ Προσθήκη βίντεο</button><button className={`mobile-menu-toggle ${mobileMenu?"active":""}`} aria-label={mobileMenu?"Κλείσιμο μενού":"Άνοιγμα μενού"} aria-expanded={mobileMenu} onClick={()=>setMobileMenu(value=>!value)}><i/><i/><i/></button>{mobileMenu&&<div className="mobile-menu"><button className={view==="library"?"active":""} onClick={goHome}>Βιβλιοθήκη</button><button className={view==="settings"?"active":""} onClick={()=>{setView("settings");setMobileMenu(false)}}>Ρυθμίσεις</button><button className="primary mobile-add" onClick={()=>{setMobileMenu(false);void requestAdd();}}>＋ Προσθήκη βίντεο</button></div>}</header>
     {view==="settings"?<SettingsPage settings={state.settings} update={patch=>setState(s=>({...s,settings:{...s.settings,...patch}}))}/>:<>
       <section className="home-intro"><span>ΒΙΝΤΕΟ ΒΙΒΛΙΟΘΗΚΗ</span><h1>Αυτόματοι ελληνικοί υπότιτλοι</h1></section>
       {featured&&<section className="featured" aria-label="Προτεινόμενο βίντεο">
@@ -622,13 +669,14 @@ export default function GreekTubePlayer() {
       <section className={`video-grid ${state.settings.layout} ${state.settings.compact?"compact":""}`}>{filtered.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} edit={requestEdit} settings={state.settings}/>)}</section>
       {filtered.length===0&&<div className="empty"><h2>Δεν βρέθηκαν βίντεο</h2><p>Δοκίμασε διαφορετική κατηγορία ή αναζήτηση.</p></div>}
     </>}
-    {modal&&<AddVideo existingIds={state.videos.map(video=>video.id)} close={()=>setModal(false)} add={async(video,translate)=>{setState(s=>({...s,videos:[video,...s.videos]}));setModal(false);if(translate)await openVideo(video);}}/>}
+    {modal&&<AddVideo existingIds={state.videos.map(video=>video.id)} close={()=>setModal(false)} add={async(video,translate)=>{const next={...stateRef.current,videos:[video,...stateRef.current.videos.filter(item=>item.id!==video.id)]};setState(next);setModal(false);void saveStateToServer(next);if(translate)await openVideo(video);}}/>}
+    {addRequest&&<EditPassword close={()=>setAddRequest(false)} authorized={()=>{setAddRequest(false);setModal(true);}}/>}
     {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
     {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:3});setEditingVideo(null);}}/>}
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.12</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i>≡</i>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.13</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");

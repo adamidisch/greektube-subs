@@ -18,11 +18,11 @@ export const metadata: Metadata = {
     "Παίξε δημόσια YouTube videos με αυτόματα μεταφρασμένους ελληνικούς υπότιτλους και συγχρονισμένο transcript.",
   other: {
     "codex-preview": "development",
-    "app-version": "5.12",
+    "app-version": "5.13",
   },
   icons: {
-    icon: "/favicon.svg?v=512",
-    shortcut: "/favicon.svg?v=512",
+    icon: "/favicon.svg?v=513",
+    shortcut: "/favicon.svg?v=513",
   },
 };
 
