@@ -2121,3 +2121,239 @@ body{background:
     flex-direction:row;
   }
 }
+
+/* Player and subtitle polish — ver 5.11 */
+.video-frame{
+  overflow:hidden;
+}
+.video-frame:after{
+  content:"";
+  position:absolute;
+  inset:auto 0 0;
+  height:28%;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.28));
+}
+.subtitles{
+  z-index:4;
+  padding:7px 12px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(10px) saturate(1.15);
+  text-shadow:0 1px 2px rgba(0,0,0,.72);
+}
+.subtitles small{
+  display:block;
+  margin-top:4px;
+  color:#d2d5dc;
+  font-size:.72em;
+  font-weight:560;
+  line-height:1.35;
+}
+.player-actions.player-tools{
+  gap:11px;
+  padding:13px;
+  border-top-color:rgba(255,255,255,.11);
+  background:linear-gradient(180deg,#1a1d24 0%,#14161c 100%);
+}
+.player-actions .primary-control-section{
+  padding:7px;
+  border:1px solid rgba(255,255,255,.085);
+  border-radius:17px;
+  background:rgba(255,255,255,.028);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+.player-actions .primary-control-row{
+  gap:10px;
+}
+.player-actions .playback-controls{
+  grid-template-columns:58px 62px 58px;
+  gap:6px;
+  padding:5px;
+  border-radius:16px;
+  background:#242832;
+}
+.player-actions .playback-controls button{
+  height:48px;
+  min-height:48px;
+  border-radius:12px;
+}
+.player-actions .playback-controls .play-toggle{
+  font-size:19px;
+  background:linear-gradient(145deg,#8b7cf2,#675ac2);
+}
+.player-actions .cc-toggle{
+  width:98px;
+  height:58px;
+  border-radius:15px;
+  background:#242832;
+}
+.player-actions .cc-toggle>span{
+  color:#f0f2f6;
+}
+.player-actions .cc-toggle>small{
+  color:#a1a7b2;
+}
+.player-actions .cc-toggle.active{
+  border-color:rgba(230,184,89,.56);
+  background:linear-gradient(145deg,rgba(230,184,89,.14),rgba(255,255,255,.035));
+}
+.subtitle-cc-menu{
+  width:206px;
+  padding:7px;
+  border-radius:16px;
+  background:rgba(28,31,39,.96);
+  backdrop-filter:blur(20px) saturate(1.2);
+}
+.subtitle-cc-menu button{
+  min-height:46px;
+  border-radius:12px;
+  font-size:14px;
+}
+.player-actions .action-section{
+  padding-top:11px!important;
+}
+.player-actions .player-secondary-actions{
+  gap:9px;
+}
+.player-actions .player-secondary-actions button{
+  min-height:50px!important;
+  border-radius:14px!important;
+  background:linear-gradient(180deg,#222630,#1c2028)!important;
+}
+.player-actions .player-secondary-actions button:hover,
+.player-actions .player-secondary-actions button:focus-visible{
+  transform:translateY(-1px);
+}
+.player-actions .player-secondary-actions .tool-icon{
+  border-radius:9px;
+  background:rgba(255,255,255,.065);
+}
+.custom-fullscreen{
+  border-radius:14px;
+  background:rgba(18,20,27,.78);
+  backdrop-filter:blur(14px);
+}
+.video-heading{
+  gap:18px;
+}
+.speaker-row{
+  border-color:rgba(255,255,255,.09);
+  background:rgba(255,255,255,.025);
+}
+:root[data-theme="light"] .video-frame:after{background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.2))}
+:root[data-theme="light"] .subtitles{border-color:rgba(255,255,255,.22)}
+:root[data-theme="light"] .player-actions.player-tools{background:#fffdf9}
+:root[data-theme="light"] .player-actions .primary-control-section{background:#f6f1ea;border-color:rgba(67,55,42,.12)}
+:root[data-theme="light"] .player-actions .playback-controls,
+:root[data-theme="light"] .player-actions .cc-toggle{background:#eee6dc}
+:root[data-theme="light"] .subtitle-cc-menu{background:#fffdf9}
+
+@media(max-width:760px){
+  .watch-layout{
+    width:100%;
+    min-width:0;
+  }
+  .video-frame:after{
+    height:34%;
+  }
+  .subtitles{
+    left:5%;
+    right:5%;
+    max-width:90%;
+    padding:7px 10px;
+    border-radius:9px;
+    line-height:1.38;
+  }
+  .subtitles.bottom{
+    bottom:max(7%,calc(env(safe-area-inset-bottom) + 18px));
+  }
+  .subtitles.top{
+    top:max(7%,calc(env(safe-area-inset-top) + 14px));
+  }
+  .player-actions.player-tools{
+    gap:10px;
+    padding:12px;
+  }
+  .player-actions .primary-control-section{
+    padding:8px;
+    border-radius:18px;
+  }
+  div.player-actions>div.player-toolbar .primary-control-row{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 92px!important;
+    gap:9px!important;
+  }
+  div.player-actions>div.player-toolbar .primary-control-row .playback-controls{
+    height:56px!important;
+    grid-template-columns:minmax(44px,1fr) 52px minmax(44px,1fr)!important;
+    gap:5px!important;
+    padding:5px!important;
+    border-radius:16px!important;
+  }
+  div.player-actions>div.player-toolbar .primary-control-row .playback-controls button{
+    height:46px!important;
+    min-height:46px!important;
+  }
+  .player-actions .subtitle-cc-control,
+  .player-actions .cc-toggle{
+    width:92px;
+  }
+  .player-actions .cc-toggle{
+    height:56px;
+    border-radius:16px;
+  }
+  .subtitle-cc-menu{
+    right:0;
+    bottom:calc(100% + 10px);
+    width:min(226px,calc(100vw - 30px));
+  }
+  div.player-actions>section.action-section .player-secondary-actions{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  div.player-actions>section.action-section .player-secondary-actions button{
+    height:62px!important;
+    min-height:62px!important;
+    padding:7px 4px!important;
+    border-radius:15px!important;
+  }
+  div.player-actions>section.action-section .player-secondary-actions button b{
+    font-size:12px!important;
+    line-height:1.12;
+  }
+  .video-heading{
+    grid-template-columns:1fr;
+  }
+  .heading-actions{
+    width:100%;
+    display:grid;
+    grid-template-columns:1fr 46px;
+  }
+  .edit-video{
+    width:100%;
+    min-height:44px;
+    border-radius:14px;
+  }
+  .favorite{
+    width:46px;
+    height:44px;
+    border-radius:14px;
+  }
+}
+
+@media(max-width:390px){
+  div.player-actions>div.player-toolbar .primary-control-row{
+    grid-template-columns:1fr!important;
+  }
+  .player-actions .subtitle-cc-control,
+  .player-actions .cc-toggle{
+    width:100%;
+  }
+  .player-actions .cc-toggle{
+    height:48px;
+    flex-direction:row;
+    gap:7px;
+  }
+}
