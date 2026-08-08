@@ -1,3 +1,5 @@
+import { database } from "@/db/postgres";
+
 export const TRANSCRIPT_VERSION = 4;
 
 export type CachedCue = { start: number; duration: number; text: string };
@@ -22,14 +24,9 @@ export type TranscriptRecord = {
   updatedAt: string;
 };
 
-async function db() {
-  const workers = await import("cloudflare:workers");
-  return workers.env.DB;
-}
-
 export async function ensureTranscriptTable() {
-  const database = await db();
-  await database.prepare(
+  const db = database();
+  await db.query(
     `CREATE TABLE IF NOT EXISTS video_transcripts (
       video_id TEXT PRIMARY KEY,
       title TEXT NOT NULL DEFAULT '',
@@ -51,10 +48,10 @@ export async function ensureTranscriptTable() {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
-  ).run();
-  await database.prepare(
+  );
+  await db.query(
     "CREATE INDEX IF NOT EXISTS video_transcripts_status_idx ON video_transcripts (status, updated_at)",
-  ).run();
+  );
 }
 
 type Row = {
@@ -66,9 +63,9 @@ type Row = {
 
 export async function getTranscript(videoId: string) {
   await ensureTranscriptTable();
-  const database = await db();
-  const row = await database.prepare("SELECT * FROM video_transcripts WHERE video_id = ?")
-    .bind(videoId).first<Row>();
+  const db = database();
+  const rows = await db.query("SELECT * FROM video_transcripts WHERE video_id = $1 LIMIT 1", [videoId]) as Row[];
+  const row = rows[0];
   if (!row) return null;
   return {
     videoId: row.video_id,
@@ -93,55 +90,58 @@ export async function getTranscript(videoId: string) {
 
 export async function acquireProcessingLock(videoId: string, token: string, force = false) {
   await ensureTranscriptTable();
-  const database = await db();
+  const db = database();
   const now = new Date();
   const expires = new Date(now.getTime() + 600_000).toISOString();
-  const result = await database.prepare(
+  const rows = await db.query(
     `INSERT INTO video_transcripts (
       video_id, status, progress, lock_token, lock_expires_at, transcript_version, created_at, updated_at
-    ) VALUES (?, 'processing', 3, ?, ?, ?, ?, ?)
+    ) VALUES ($1, 'processing', 3, $2, $3, $4, $5, $6)
     ON CONFLICT(video_id) DO UPDATE SET
-      status = 'processing', progress = 3, lock_token = excluded.lock_token,
-      lock_expires_at = excluded.lock_expires_at, error = NULL,
-      transcript_version = excluded.transcript_version, updated_at = excluded.updated_at
-    WHERE ? = 1
-       OR video_transcripts.transcript_version != excluded.transcript_version
+      status = 'processing', progress = 3, lock_token = EXCLUDED.lock_token,
+      lock_expires_at = EXCLUDED.lock_expires_at, error = NULL,
+      transcript_version = EXCLUDED.transcript_version, updated_at = EXCLUDED.updated_at
+    WHERE $7 = 1
+       OR video_transcripts.transcript_version != EXCLUDED.transcript_version
        OR video_transcripts.status = 'failed'
        OR video_transcripts.lock_expires_at IS NULL
-       OR video_transcripts.lock_expires_at < excluded.updated_at`,
-  ).bind(videoId, token, expires, TRANSCRIPT_VERSION, now.toISOString(), now.toISOString(), force ? 1 : 0).run();
-  return Number(result.meta?.changes || 0) > 0;
+       OR video_transcripts.lock_expires_at < EXCLUDED.updated_at
+    RETURNING video_id`,
+    [videoId, token, expires, TRANSCRIPT_VERSION, now.toISOString(), now.toISOString(), force ? 1 : 0],
+  ) as { video_id: string }[];
+  return rows.length > 0;
 }
 
 export async function updateProcessingProgress(videoId: string, token: string, progress: number) {
-  const database = await db();
-  await database.prepare(
-    "UPDATE video_transcripts SET progress = ?, lock_expires_at = ?, updated_at = ? WHERE video_id = ? AND lock_token = ?",
-  ).bind(progress, new Date(Date.now()+600_000).toISOString(), new Date().toISOString(), videoId, token).run();
+  const db = database();
+  await db.query(
+    "UPDATE video_transcripts SET progress = $1, lock_expires_at = $2, updated_at = $3 WHERE video_id = $4 AND lock_token = $5",
+    [progress, new Date(Date.now()+600_000).toISOString(), new Date().toISOString(), videoId, token],
+  );
 }
 
 export async function completeTranscript(record: TranscriptRecord, token: string) {
-  const database = await db();
-  await database.prepare(
+  const db = database();
+  await db.query(
     `UPDATE video_transcripts SET
-      title = ?, channel = ?, thumbnail = ?, duration = ?, original_language = ?,
-      english_transcript = ?, greek_transcript = ?, timestamps = ?, topics = ?, key_points = ?,
+      title = $1, channel = $2, thumbnail = $3, duration = $4, original_language = $5,
+      english_transcript = $6, greek_transcript = $7, timestamps = $8, topics = $9, key_points = $10,
       status = 'ready', progress = 100, lock_token = NULL, lock_expires_at = NULL, error = NULL,
-      transcript_version = ?, updated_at = ?
-    WHERE video_id = ? AND lock_token = ?`,
-  ).bind(
-    record.title, record.channel, record.thumbnail, record.duration, record.originalLanguage,
-    JSON.stringify(record.englishTranscript), JSON.stringify(record.greekTranscript),
-    JSON.stringify(record.timestamps), JSON.stringify(record.topics), JSON.stringify(record.keyPoints),
-    record.transcriptVersion, record.updatedAt, record.videoId, token,
-  ).run();
+      transcript_version = $11, updated_at = $12
+    WHERE video_id = $13 AND lock_token = $14`,
+    [record.title, record.channel, record.thumbnail, record.duration, record.originalLanguage,
+      JSON.stringify(record.englishTranscript), JSON.stringify(record.greekTranscript),
+      JSON.stringify(record.timestamps), JSON.stringify(record.topics), JSON.stringify(record.keyPoints),
+      record.transcriptVersion, record.updatedAt, record.videoId, token],
+  );
 }
 
 export async function failTranscript(videoId: string, token: string, message: string) {
-  const database = await db();
-  await database.prepare(
-    `UPDATE video_transcripts SET status = 'failed', progress = 0, error = ?,
-      lock_token = NULL, lock_expires_at = NULL, updated_at = ?
-     WHERE video_id = ? AND lock_token = ?`,
-  ).bind(message.slice(0, 500), new Date().toISOString(), videoId, token).run();
+  const db = database();
+  await db.query(
+    `UPDATE video_transcripts SET status = 'failed', progress = 0, error = $1,
+      lock_token = NULL, lock_expires_at = NULL, updated_at = $2
+     WHERE video_id = $3 AND lock_token = $4`,
+    [message.slice(0, 500), new Date().toISOString(), videoId, token],
+  );
 }
