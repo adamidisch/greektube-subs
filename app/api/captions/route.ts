@@ -791,6 +791,7 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!lockToken) throw new Error("Transcript processing lock was lost");
     const players = await fetchPlayers(videoId);
     let player: PlayerResponse | null = null;
     let track: CaptionTrack | null = null;
