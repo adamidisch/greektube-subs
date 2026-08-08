@@ -557,7 +557,7 @@ export default function GreekTubePlayer() {
           }
           break;
         }
-        if(!isCompleteGreekTranscript(sharedData,video.duration))throw new Error(failureMessage||"incomplete-transcript");
+        if(!sharedData||!isCompleteGreekTranscript(sharedData,video.duration))throw new Error(failureMessage||"incomplete-transcript");
         data=sharedData;
         localStorage.setItem(`greektube-transcript:${video.id}:v4`,JSON.stringify(sharedData));
         patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:sharedData.title,originalTitle:video.originalTitle||sharedData.originalTitle||englishTitle(video),channel:video.channel||sharedData.channel,captions:sharedData.cues,speakerName:video.speakerName||sharedData.speaker?.name});
