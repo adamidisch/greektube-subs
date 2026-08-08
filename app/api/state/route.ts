@@ -6,7 +6,7 @@ const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
 const COOKIE = "greektube-user";
 const ADMIN_COOKIE = "greektube-admin";
 const ADMIN_SESSION_MESSAGE = "greektube-edit-authorized";
-type VideoRecord = Record<string, unknown> & { id?: unknown };
+type VideoRecord = Record<string, unknown> & { id?: unknown; addedAt?: unknown };
 type PersonalState = { videos?: VideoRecord[]; moments?: unknown[]; settings?: Record<string, unknown> };
 
 async function ensureTable() {
