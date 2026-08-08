@@ -21,8 +21,8 @@ export const metadata: Metadata = {
     "app-version": "6.0",
   },
   icons: {
-    icon: "/favicon.svg?v=600",
-    shortcut: "/favicon.svg?v=600",
+    icon: "/favicon.svg?v=601",
+    shortcut: "/favicon.svg?v=601",
   },
 };
 
