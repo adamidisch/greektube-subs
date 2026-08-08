@@ -26,18 +26,27 @@ jobs:
           set -euo pipefail
           base64 -d .migration/vercel-files.b64 > /tmp/vercel-files.tgz
           tar -xzf /tmp/vercel-files.tgz
-      - name: Apply native Next.js type narrowing fix
+      - name: Apply native Next.js typing fixes
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          path = Path('app/GreekTubePlayer.tsx')
-          text = path.read_text()
+
+          player = Path('app/GreekTubePlayer.tsx')
+          text = player.read_text()
           old = 'function isCompleteGreekTranscript(data:Captions|null|undefined,duration=0) {'
           new = 'function isCompleteGreekTranscript(data:Captions|null|undefined,duration=0): data is Captions {'
           if old not in text:
               raise SystemExit('Expected type-narrowing function signature not found')
-          path.write_text(text.replace(old, new, 1))
+          player.write_text(text.replace(old, new, 1))
+
+          state = Path('app/api/state/route.ts')
+          text = state.read_text()
+          old = '}).sort((a, b) => String(b.addedAt || "").localeCompare(String(a.addedAt || "")));'
+          new = '}).sort((a: VideoRecord, b: VideoRecord) => String(b.addedAt || "").localeCompare(String(a.addedAt || "")));'
+          if old not in text:
+              raise SystemExit('Expected state sort expression not found')
+          state.write_text(text.replace(old, new, 1))
           PY
       - name: Install dependencies
         run: npm install
