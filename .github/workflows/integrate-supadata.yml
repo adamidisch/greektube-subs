@@ -1,0 +1,47 @@
+name: One-time Supadata Integration
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch captions route
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/api/captions/route.ts')
+          s = p.read_text()
+
+          import_line = 'import { fetchSupadataTranscript, fetchYouTubeOEmbed } from "../supadata";\n'
+          if import_line not in s:
+              marker = '} from "../shared-cache";\n'
+              if marker not in s:
+                  raise SystemExit('shared-cache import marker not found')
+              s = s.replace(marker, marker + import_line, 1)
+
+          marker = '    await updateProcessingProgress(videoId, lockToken, 12);\n\n    const players = await fetchPlayers(videoId);'
+          if 'translationMethod = "supadata_native_contextual_meaning_units_v3"' not in s:
+              if marker not in s:
+                  raise SystemExit('processing marker not found')
+              block = '''    await updateProcessingProgress(videoId, lockToken, 12);\n\n    // Prefer Supadata for native YouTube transcripts. Vercel-origin requests\n    // to YouTube can be challenged with \"Sign in to confirm you're not a bot\".\n    // Native mode keeps usage predictable: existing transcripts only.\n    try {\n      const supadata = await fetchSupadataTranscript(videoId);\n      const sourceLanguage = supadata.lang.toLowerCase() || "unknown";\n      if (!(sourceLanguage === "el" || sourceLanguage === "en" || sourceLanguage.startsWith("en-"))) {\n        throw new Error(`Supadata returned unsupported source language: ${sourceLanguage}`);\n      }\n\n      await updateProcessingProgress(videoId, lockToken, 28);\n      let cues: CaptionCue[] = [];\n      let sourceCues: CaptionCue[] = [];\n      let translationMethod = "supadata_native_original_greek";\n\n      if (sourceLanguage === "el") {\n        cues = supadata.cues;\n      } else {\n        sourceCues = createMeaningUnits(supadata.cues);\n        if (!sourceCues.length) throw new Error("Supadata returned an empty English transcript");\n        await updateProcessingProgress(videoId, lockToken, 48);\n        cues = await translateCuesToGreek(sourceCues);\n        translationMethod = "supadata_native_contextual_meaning_units_v3";\n      }\n\n      const duration = supadata.cues.reduce(\n        (max, cue) => Math.max(max, cue.start + cue.duration),\n        0,\n      );\n      validateCompleteGreekTranscript(cues, duration);\n      await updateProcessingProgress(videoId, lockToken, 88);\n\n      const metadata = await fetchYouTubeOEmbed(videoId);\n      const originalTitle = metadata.title || cached?.title || "YouTube video";\n      const channel = metadata.authorName || cached?.channel || "YouTube";\n      const translatedTitle = await translateTitleToGreek(originalTitle);\n      const speaker = speakerProfile(videoId, "", channel);\n      const points = keyPoints(cues);\n      const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\\p{L}]{6,}/gu) || []))].slice(0, 6);\n      const now = new Date().toISOString();\n\n      await completeTranscript({\n        videoId,\n        title: originalTitle,\n        channel,\n        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,\n        duration,\n        originalLanguage: sourceLanguage,\n        englishTranscript: sourceCues,\n        greekTranscript: cues,\n        timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),\n        topics,\n        keyPoints: points,\n        status: "ready",\n        progress: 100,\n        transcriptVersion: TRANSCRIPT_VERSION,\n        createdAt: cached?.createdAt || now,\n        updatedAt: now,\n      }, lockToken);\n\n      lockToken = null;\n      return NextResponse.json({\n        status: "ready",\n        videoId,\n        title: translatedTitle,\n        originalTitle,\n        channel,\n        duration,\n        sourceLanguage,\n        sourceType: "supadata_native",\n        translationMethod,\n        cues,\n        englishCues: sourceCues,\n        topics,\n        keyPoints: points,\n        speaker,\n        transcriptVersion: TRANSCRIPT_VERSION,\n        cached: false,\n      });\n    } catch (error) {\n      console.warn(\n        `[captions:${videoId}] Supadata native transcript failed; trying direct YouTube fallback: ${error instanceof Error ? error.message : "failed"}`,\n      );\n    }\n\n    const players = await fetchPlayers(videoId);'''
+              s = s.replace(marker, block, 1)
+
+          p.write_text(s)
+          PY
+      - name: Commit integration
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "adamidisch"
+          git config user.email "136883594+adamidisch@users.noreply.github.com"
+          git add app/api/captions/route.ts
+          git commit -m "Use Supadata native transcripts before YouTube fallback"
+          git push
