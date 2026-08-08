@@ -5616,3 +5616,70 @@ body{background:
   .viewer .watch-layout.player-only .player-greek-title{display:-webkit-box!important;overflow:hidden!important;font-size:20px!important;line-height:1.35!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:3!important}
   .viewer .watch-layout.player-only .mobile-video-description{display:-webkit-box!important;overflow:hidden!important;font-size:13px!important;line-height:1.5!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important}
 }
+
+/* GreekTube 6.2: compact default controls and inline mobile transcript. */
+@media(max-width:620px){
+  .viewer .watch-layout.player-only .player-actions.player-tools{display:block!important;padding:14px!important;border-radius:16px!important}
+  .viewer .watch-layout.player-only .player-tools-label{display:block!important;margin:0 0 11px!important}
+  .viewer .watch-layout.player-only .player-toolbar{display:block!important;width:100%!important}
+  .viewer .watch-layout.player-only .primary-control-row{height:64px!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid var(--v6-line)!important;border-radius:13px!important;background:var(--v6-panel-2)!important}
+  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls{height:50px!important;grid-template-columns:40px 48px 40px!important;gap:10px!important;padding:0!important}
+  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls button{width:40px!important;height:40px!important;min-height:40px!important;font-size:14px!important}
+  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls .play-toggle{width:48px!important;height:48px!important;min-height:48px!important;font-size:16px!important}
+  .viewer .watch-layout.player-only .action-section{display:block!important;margin-top:12px!important;padding-top:12px!important;border-top:1px solid var(--v6-line)!important}
+  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important}
+  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions>.fullscreen-primary{grid-column:1!important;grid-row:1!important}
+  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions>.subtitle-cc-control{grid-column:2!important;grid-row:1!important;width:100%!important}
+  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions>.moment-save{grid-column:1/-1!important;grid-row:2!important}
+  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions>.transcript-toggle{display:flex!important;grid-column:1/-1!important;grid-row:3!important}
+  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions button,.viewer .watch-layout.player-only .cc-toggle{height:54px!important;min-height:54px!important;padding:0 12px!important;border-radius:12px!important;font-size:13px!important}
+  .viewer .watch-layout.player-only .moment-save,.viewer .watch-layout.player-only .transcript-toggle{flex-direction:row!important;gap:8px!important}
+  .viewer .watch-layout.player-only .moment-save b,.viewer .watch-layout.player-only .transcript-toggle b,.viewer .watch-layout.player-only .cc-toggle>span{font-size:13px!important;line-height:1.25!important;white-space:normal!important}
+  .viewer .watch-layout.player-only .cc-toggle{flex-direction:column!important;gap:3px!important}
+  .viewer .watch-layout.transcript-open{display:flex!important;flex-direction:column!important;gap:0!important}
+  .viewer .watch-layout.transcript-open .watch-main{display:contents!important}
+  .viewer .watch-layout.transcript-open .sticky-player{order:1!important}
+  .viewer .watch-layout.transcript-open .transcript-drawer{order:2!important;display:block!important;height:min(480px,62dvh)!important;margin:16px 0 0!important;border-radius:16px!important}
+  .viewer .watch-layout.transcript-open .mobile-watch-summary{order:3!important}
+  .viewer .watch-layout.transcript-open .video-heading{order:4!important}
+  .viewer .watch-layout.transcript-open .moments{order:5!important}
+  .viewer .watch-layout.transcript-open .video-guide{order:6!important}
+  .viewer .watch-layout.transcript-open .next-videos{order:7!important}
+}
+
+/* Keep the same controls while the inline transcript is open. */
+@media(max-width:620px){
+  .viewer .watch-layout.transcript-open .sticky-player{position:relative!important;top:auto!important}
+  .viewer .watch-layout.transcript-open .player-actions.player-tools{display:block!important;padding:14px!important;border-radius:16px!important}
+  .viewer .watch-layout.transcript-open .player-tools-label{display:block!important;margin:0 0 11px!important}
+  .viewer .watch-layout.transcript-open .player-toolbar{display:block!important;width:100%!important}
+  .viewer .watch-layout.transcript-open .primary-control-row{height:64px!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid var(--v6-line)!important;border-radius:13px!important;background:var(--v6-panel-2)!important}
+  .viewer .watch-layout.transcript-open div.player-actions>div.player-toolbar .playback-controls{height:50px!important;grid-template-columns:40px 48px 40px!important;gap:10px!important;padding:0!important}
+  .viewer .watch-layout.transcript-open div.player-actions>div.player-toolbar .playback-controls button{width:40px!important;height:40px!important;min-height:40px!important;font-size:14px!important}
+  .viewer .watch-layout.transcript-open div.player-actions>div.player-toolbar .playback-controls .play-toggle{width:48px!important;height:48px!important;min-height:48px!important;font-size:16px!important}
+  .viewer .watch-layout.transcript-open .action-section{display:block!important;margin-top:12px!important;padding-top:12px!important;border-top:1px solid var(--v6-line)!important}
+  .viewer .watch-layout.transcript-open div.player-actions>section.action-section .player-secondary-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important}
+  .viewer .watch-layout.transcript-open div.player-actions>section.action-section .player-secondary-actions>.fullscreen-primary{grid-column:1!important;grid-row:1!important}
+  .viewer .watch-layout.transcript-open div.player-actions>section.action-section .player-secondary-actions>.subtitle-cc-control{grid-column:2!important;grid-row:1!important;width:100%!important}
+  .viewer .watch-layout.transcript-open div.player-actions>section.action-section .player-secondary-actions>.moment-save{grid-column:1/-1!important;grid-row:2!important}
+  .viewer .watch-layout.transcript-open div.player-actions>section.action-section .player-secondary-actions>.transcript-toggle{display:flex!important;grid-column:1/-1!important;grid-row:3!important}
+  .viewer .watch-layout.transcript-open div.player-actions>section.action-section .player-secondary-actions button,.viewer .watch-layout.transcript-open .cc-toggle{height:54px!important;min-height:54px!important;padding:0 12px!important;border-radius:12px!important;font-size:13px!important}
+  .viewer .watch-layout.transcript-open .moment-save,.viewer .watch-layout.transcript-open .transcript-toggle{flex-direction:row!important;gap:8px!important}
+  .viewer .watch-layout.transcript-open .cc-toggle{flex-direction:column!important;gap:3px!important}
+}
+
+/* Keep the speaker and its two actions in one restrained line above the player. */
+.viewer .mobile-video-byline{min-height:38px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;padding:0 2px}
+.viewer .mobile-video-byline strong{overflow:hidden;color:var(--v6-paper);font-size:14px;font-weight:600;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+.viewer .mobile-video-byline>span{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.viewer .mobile-video-byline button{width:30px;height:30px;display:grid;place-items:center;padding:0;border:1px solid var(--v6-line);border-radius:9px;background:var(--v6-panel);color:var(--v6-paper);font-size:14px}
+.viewer .mobile-video-byline button.active{color:var(--v6-saffron)}
+.viewer .speaker-row,.viewer .heading-actions{display:none!important}
+@media(max-width:620px){
+  .viewer .mobile-video-byline{order:0!important;min-height:42px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;margin:0 0 8px!important;padding:0 2px!important}
+  .viewer .mobile-video-byline strong{overflow:hidden!important;color:var(--v6-paper)!important;font-size:13px!important;font-weight:600!important;line-height:1.2!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  .viewer .mobile-video-byline>span{display:flex!important;align-items:center!important;gap:8px!important;flex:0 0 auto!important}
+  .viewer .mobile-video-byline button{width:32px!important;height:32px!important;display:grid!important;place-items:center!important;padding:0!important;border:1px solid var(--v6-line)!important;border-radius:9px!important;background:var(--v6-panel)!important;color:var(--v6-paper)!important;font-size:14px!important}
+  .viewer .mobile-video-byline button.active{color:var(--v6-saffron)!important}
+  .viewer.app-shell .watch-layout.player-only .mobile-watch-summary,.viewer.app-shell .watch-layout.transcript-open .mobile-watch-summary{display:none!important}
+}
