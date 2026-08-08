@@ -1,0 +1,24 @@
+name: Apply Controls 6.5.0
+
+on:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - run: python scripts/apply_controls_650.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/GreekTubePlayer.tsx app/mobile-controls-fix.css app/layout.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "[controls-650] Redesign mobile controls as v6.5.0 DEV"
+          git push origin HEAD:dev
