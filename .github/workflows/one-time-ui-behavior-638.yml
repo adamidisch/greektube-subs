@@ -1,0 +1,86 @@
+name: One-time 6.3.8 UI behavior patch
+
+on:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[ui-behavior-638]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - name: Apply UI behavior fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/GreekTubePlayer.tsx')
+          text = p.read_text()
+
+          anchor = '''  useEffect(()=>{\n    if(!isPseudoFullscreen)return;\n    const previousOverflow=document.body.style.overflow;\n    document.body.style.overflow="hidden";\n    return()=>{document.body.style.overflow=previousOverflow;};\n  },[isPseudoFullscreen]);\n\n  const newVideoIds='''
+          replacement = '''  useEffect(()=>{\n    if(!isPseudoFullscreen)return;\n    const previousOverflow=document.body.style.overflow;\n    document.body.style.overflow="hidden";\n    return()=>{document.body.style.overflow=previousOverflow;};\n  },[isPseudoFullscreen]);\n  useEffect(()=>{\n    if(!mobileMenu&&!subtitleMenuOpen)return;\n    const closeFloating=(event:PointerEvent)=>{\n      const target=event.target as Element|null;\n      if(!target)return;\n      if(mobileMenu&&!target.closest(".mobile-menu")&&!target.closest(".mobile-menu-toggle"))setMobileMenu(false);\n      if(subtitleMenuOpen&&!target.closest(".subtitle-cc-control"))setSubtitleMenuOpen(false);\n    };\n    const closeOnEscape=(event:KeyboardEvent)=>{\n      if(event.key!=="Escape")return;\n      setMobileMenu(false);\n      setSubtitleMenuOpen(false);\n    };\n    document.addEventListener("pointerdown",closeFloating);\n    document.addEventListener("keydown",closeOnEscape);\n    return()=>{\n      document.removeEventListener("pointerdown",closeFloating);\n      document.removeEventListener("keydown",closeOnEscape);\n    };\n  },[mobileMenu,subtitleMenuOpen]);\n\n  const newVideoIds='''
+          if anchor not in text:
+              raise SystemExit('outside-click anchor not found')
+          text = text.replace(anchor, replacement, 1)
+
+          old = '    const showPlayerCover=!isPlaying&&playhead<1;\n'
+          new = '    const showPlayerCover=!isPlaying&&playhead<1;\n    const seekDuration=Math.max(selected.duration||0,captions?.duration||0);\n'
+          if old not in text:
+              raise SystemExit('seek duration anchor not found')
+          text = text.replace(old, new, 1)
+
+          old = '                <i className="player-watch-progress" style={{width:`${selected.duration>0?Math.min(100,(playhead/selected.duration)*100):0}%`}} aria-hidden="true"/>\n'
+          new = '                <input className="player-seek-bar" type="range" min={0} max={Math.max(1,seekDuration)} step="0.1" value={Math.min(playhead,Math.max(1,seekDuration))} disabled={seekDuration<=0} aria-label="Μετακίνηση στο βίντεο" style={{"--seek-progress":`${seekDuration>0?Math.min(100,(playhead/seekDuration)*100):0}%`} as CSSProperties} onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()} onChange={event=>{const nextTime=Number(event.currentTarget.value);setPlayhead(nextTime);currentPlayer()?.seekTo(nextTime,true);}}/>\n'
+          if old not in text:
+              raise SystemExit('old progress bar not found')
+          text = text.replace(old, new, 1)
+
+          old = '<SettingsPage settings={state.settings} update={patch=>setState(current=>({...current,settings:{...current.settings,...patch}}))}/>'
+          new = '<SettingsPage settings={state.settings} update={patch=>setState(current=>({...current,settings:{...current.settings,...patch}}))} close={returnToVideo}/>'
+          if old not in text:
+              raise SystemExit('player settings call not found')
+          text = text.replace(old, new, 1)
+
+          old = '<SettingsPage settings={state.settings} update={patch=>setState(s=>({...s,settings:{...s.settings,...patch}}))}/>'
+          new = '<SettingsPage settings={state.settings} update={patch=>setState(s=>({...s,settings:{...s.settings,...patch}}))} close={()=>setView("library")}/>'
+          if old not in text:
+              raise SystemExit('library settings call not found')
+          text = text.replace(old, new, 1)
+
+          old = 'function SettingsPage({settings,update}:{settings:Settings;update:(p:Partial<Settings>)=>void}) {'
+          new = 'function SettingsPage({settings,update,close}:{settings:Settings;update:(p:Partial<Settings>)=>void;close:()=>void}) {'
+          if old not in text:
+              raise SystemExit('settings signature not found')
+          text = text.replace(old, new, 1)
+
+          old = '  return <section className="settings-page"><header><span>ΠΡΟΤΙΜΗΣΕΙΣ ΕΦΑΡΜΟΓΗΣ</span>'
+          new = '  return <section className="settings-page"><header className="settings-page-header"><button type="button" className="settings-close" aria-label="Κλείσιμο ρυθμίσεων" onClick={close}>×</button><span>ΠΡΟΤΙΜΗΣΕΙΣ ΕΦΑΡΜΟΓΗΣ</span>'
+          if old not in text:
+              raise SystemExit('settings header not found')
+          text = text.replace(old, new, 1)
+
+          p.write_text(text)
+
+          css_path = Path('app/mobile-controls-fix.css')
+          css = css_path.read_text()
+          css = css.replace('6.3.7 DEV', '6.3.8 DEV')
+          css += '''\n\n/* GreekTube 6.3.8 DEV — dismissible overlays, seek drag and lower mobile subtitles. */\n.settings-page-header{position:relative}\n.settings-close{position:absolute;top:0;right:0;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);font-size:20px;line-height:1}\n.settings-close:hover{color:var(--text);background:var(--raised)}\n\n.player-seek-bar{\n  --seek-progress:0%;\n  position:absolute;left:0;right:0;bottom:0;z-index:12;\n  width:100%;height:20px;margin:0;padding:0;\n  appearance:none;-webkit-appearance:none;\n  background:transparent;cursor:pointer;touch-action:none;\n}\n.player-seek-bar::-webkit-slider-runnable-track{height:3px;border-radius:99px;background:linear-gradient(90deg,#e3a23c 0 var(--seek-progress),rgba(255,255,255,.22) var(--seek-progress) 100%)}\n.player-seek-bar::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;margin-top:-5px;border:2px solid #e3a23c;border-radius:50%;background:#12151a;box-shadow:0 0 0 2px rgba(0,0,0,.25)}\n.player-seek-bar::-moz-range-track{height:3px;border:0;border-radius:99px;background:rgba(255,255,255,.22)}\n.player-seek-bar::-moz-range-progress{height:3px;border-radius:99px;background:#e3a23c}\n.player-seek-bar::-moz-range-thumb{width:11px;height:11px;border:2px solid #e3a23c;border-radius:50%;background:#12151a}\n.player-seek-bar:disabled{pointer-events:none;opacity:.35}\n\n@media(max-width:620px){\n  html body .viewer .video-frame .subtitles.bottom{bottom:4.5%!important}\n  html body .settings-page{padding-top:28px!important}\n  html body .settings-page-header{padding-right:46px!important}\n  html body .settings-close{top:0;right:0}\n  html body .player-seek-bar{height:24px}\n  html body .player-seek-bar::-webkit-slider-thumb{width:15px;height:15px;margin-top:-6px}\n  html body .player-seek-bar::-moz-range-thumb{width:13px;height:13px}\n}\n'''
+          css_path.write_text(css)
+
+          layout = Path('app/layout.tsx')
+          ltext = layout.read_text().replace('6.3.7 DEV','6.3.8 DEV').replace('637dev','638dev')
+          layout.write_text(ltext)
+          PY
+      - name: Commit UI behavior fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/GreekTubePlayer.tsx app/mobile-controls-fix.css app/layout.tsx
+          git commit -m "[ui-behavior-638] Add dismissible menus, seek drag and lower subtitles"
+          git push origin HEAD:dev
