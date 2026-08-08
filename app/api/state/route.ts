@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { database } from "@/db/postgres";
 
 const LEGACY_KEY = "greektube-library-v2";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
@@ -8,29 +9,20 @@ const ADMIN_SESSION_MESSAGE = "greektube-edit-authorized";
 type VideoRecord = Record<string, unknown> & { id?: unknown };
 type PersonalState = { videos?: VideoRecord[]; moments?: unknown[]; settings?: Record<string, unknown> };
 
-async function database() {
-  const workers = await import("cloudflare:workers");
-  return workers.env.DB;
-}
-
 async function ensureTable() {
-  const db = await database();
-  await db.prepare(
-    `CREATE TABLE IF NOT EXISTS app_state (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )`,
-  ).run();
-  await db.prepare(
-    `CREATE TABLE IF NOT EXISTS personal_states (
-      owner_key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )`,
-  ).run();
+  const db = database();
+  await db.query(`CREATE TABLE IF NOT EXISTS app_state (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS personal_states (
+    owner_key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
 }
 
 async function ownerKey(request: Request) {
@@ -46,8 +38,7 @@ async function ownerKey(request: Request) {
 }
 
 async function adminSecret() {
-  const workers = await import("cloudflare:workers");
-  return String(workers.env.ADMIN_EDIT_PASSWORD || "");
+  return String(process.env.ADMIN_EDIT_PASSWORD || "");
 }
 
 async function adminSessionToken(password: string) {
@@ -125,9 +116,9 @@ function mergeState(personal: PersonalState | null, sharedVideos: VideoRecord[])
 }
 
 async function getSharedVideos() {
-  const db = await database();
-  const row = await db.prepare("SELECT value FROM app_state WHERE key = ?")
-    .bind(SHARED_LIBRARY_KEY).first<{ value: string }>();
+  const db = database();
+  const rows = await db.query("SELECT value FROM app_state WHERE key = $1 LIMIT 1", [SHARED_LIBRARY_KEY]) as { value: string }[];
+  const row = rows[0];
   if (!row) return [];
   try {
     const parsed = JSON.parse(row.value) as { videos?: VideoRecord[] };
@@ -138,25 +129,19 @@ async function getSharedVideos() {
 }
 
 async function saveSharedVideos(videos: VideoRecord[]) {
-  const db = await database();
+  const db = database();
   const existing = await getSharedVideos();
   const byId = new Map(existing.filter(video => typeof video.id === "string").map(video => [String(video.id), video]));
   videos.filter(video => typeof video.id === "string").forEach(video => {
     byId.set(String(video.id), sanitizeSharedVideo(video));
   });
   const value = JSON.stringify({ videos: Array.from(byId.values()) });
-  try {
-    const now = new Date().toISOString();
-    await db.prepare(
-      `INSERT INTO app_state (key, value, created_at, updated_at) VALUES (?, ?, ?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    ).bind(SHARED_LIBRARY_KEY, value, now, now).run();
-  } catch {
-    await db.prepare(
-      `INSERT INTO app_state (key, value) VALUES (?, ?)
-       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-    ).bind(SHARED_LIBRARY_KEY, value).run();
-  }
+  const now = new Date().toISOString();
+  await db.query(
+    `INSERT INTO app_state (key, value, created_at, updated_at) VALUES ($1, $2, $3, $4)
+     ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`,
+    [SHARED_LIBRARY_KEY, value, now, now],
+  );
 }
 
 function withIdentityCookie(response: NextResponse, value: string | null) {
@@ -169,25 +154,24 @@ export async function GET(request: Request) {
   try {
     await ensureTable();
     const identity = await ownerKey(request);
-    const db = await database();
-    const row = await db.prepare("SELECT value FROM personal_states WHERE owner_key = ?")
-      .bind(identity.key).first<{ value: string }>();
+    const db = database();
+    const personalRows = await db.query("SELECT value FROM personal_states WHERE owner_key = $1 LIMIT 1", [identity.key]) as { value: string }[];
+    const row = personalRows[0];
     const sharedVideos = await getSharedVideos();
     if (row) return withIdentityCookie(NextResponse.json({ state: mergeState(JSON.parse(row.value), sharedVideos) }), identity.cookie);
 
-    // One-time migration of the previous single-user state. The first real
-    // visitor receives it and it is then removed from the shared legacy key.
-    const legacy = await db.prepare("SELECT value FROM app_state WHERE key = ?")
-      .bind(LEGACY_KEY).first<{ value: string }>();
+    const legacyRows = await db.query("SELECT value FROM app_state WHERE key = $1 LIMIT 1", [LEGACY_KEY]) as { value: string }[];
+    const legacy = legacyRows[0];
     if (legacy) {
       const now = new Date().toISOString();
       const value = JSON.stringify(sanitizePersonalState(JSON.parse(legacy.value)));
       const legacyState = JSON.parse(value) as PersonalState;
       await saveSharedVideos(Array.isArray(legacyState.videos) ? legacyState.videos : []);
-      await db.batch([
-        db.prepare("INSERT OR IGNORE INTO personal_states (owner_key, value, created_at, updated_at) VALUES (?, ?, ?, ?)").bind(identity.key, value, now, now),
-        db.prepare("DELETE FROM app_state WHERE key = ?").bind(LEGACY_KEY),
-      ]);
+      await db.query(
+        "INSERT INTO personal_states (owner_key, value, created_at, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT(owner_key) DO NOTHING",
+        [identity.key, value, now, now],
+      );
+      await db.query("DELETE FROM app_state WHERE key = $1", [LEGACY_KEY]);
       return withIdentityCookie(NextResponse.json({ state: mergeState(legacyState, await getSharedVideos()) }), identity.cookie);
     }
     if (sharedVideos.length) {
@@ -220,12 +204,13 @@ export async function PUT(request: Request) {
     const serialized = JSON.stringify(body);
     if (serialized.length > 1_500_000) return NextResponse.json({ error: "Η προσωπική βιβλιοθήκη είναι πολύ μεγάλη." }, { status: 413 });
     await ensureTable();
-    const db = await database();
+    const db = database();
     const now = new Date().toISOString();
-    await db.prepare(
-      `INSERT INTO personal_states (owner_key, value, created_at, updated_at) VALUES (?, ?, ?, ?)
-       ON CONFLICT(owner_key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    ).bind(identity.key, serialized, now, now).run();
+    await db.query(
+      `INSERT INTO personal_states (owner_key, value, created_at, updated_at) VALUES ($1, $2, $3, $4)
+       ON CONFLICT(owner_key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`,
+      [identity.key, serialized, now, now],
+    );
     return withIdentityCookie(NextResponse.json({ ok: true, sharedSaved, sharedVideoCount }), identity.cookie);
   } catch {
     return NextResponse.json({ error: "Δεν ήταν δυνατή η αποθήκευση." }, { status: 500 });
