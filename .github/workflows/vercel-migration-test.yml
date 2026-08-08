@@ -1,0 +1,46 @@
+name: Validate Vercel migration
+
+on:
+  push:
+    branches:
+      - vercel-migration-test
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Apply Vercel migration files
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d .migration/vercel-files.b64 > /tmp/vercel-files.tgz
+          tar -xzf /tmp/vercel-files.tgz
+      - name: Install dependencies
+        run: npm install
+      - name: Build native Next.js app
+        run: npm run build
+      - name: Commit validated migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .migration
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Validate native Vercel migration"
+            git push origin HEAD:vercel-migration-test
+          fi
