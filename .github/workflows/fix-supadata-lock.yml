@@ -1,0 +1,37 @@
+name: One-time Supadata Lock Fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply lock guard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/api/captions/route.ts')
+          s = p.read_text()
+          old = '''    } catch (error) {\n      console.warn(\n        `[captions:${videoId}] Supadata native transcript failed; trying direct YouTube fallback: ${error instanceof Error ? error.message : "failed"}`,\n      );\n    }\n\n    const players = await fetchPlayers(videoId);'''
+          new = '''    } catch (error) {\n      console.warn(\n        `[captions:${videoId}] Supadata native transcript failed; trying direct YouTube fallback: ${error instanceof Error ? error.message : "failed"}`,\n      );\n    }\n\n    if (!lockToken) throw new Error("Transcript processing lock was lost");\n    const players = await fetchPlayers(videoId);'''
+          if old in s:
+              p.write_text(s.replace(old, new, 1))
+          elif 'Transcript processing lock was lost' not in s:
+              raise SystemExit('Supadata fallback marker not found')
+          PY
+      - name: Commit fix
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "adamidisch"
+          git config user.email "136883594+adamidisch@users.noreply.github.com"
+          git add app/api/captions/route.ts
+          git commit -m "Guard transcript lock after Supadata fallback"
+          git push
