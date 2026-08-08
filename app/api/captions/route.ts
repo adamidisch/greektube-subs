@@ -7,6 +7,7 @@ import {
   getTranscript,
   updateProcessingProgress,
 } from "../shared-cache";
+import { fetchSupadataTranscript, fetchYouTubeOEmbed } from "../supadata";
 
 type PlayerResponse = {
   playabilityStatus?: { status?: string; reason?: string };
@@ -704,6 +705,91 @@ export async function POST(request: Request) {
       return NextResponse.json(await cachedResponse(active), { status: 202, headers: { "Retry-After": "1" } });
     }
     await updateProcessingProgress(videoId, lockToken, 12);
+
+    // Prefer Supadata for native YouTube transcripts. Vercel-origin requests
+    // to YouTube can be challenged with "Sign in to confirm you're not a bot".
+    // Native mode keeps usage predictable: existing transcripts only.
+    try {
+      const supadata = await fetchSupadataTranscript(videoId);
+      const sourceLanguage = supadata.lang.toLowerCase() || "unknown";
+      if (!(sourceLanguage === "el" || sourceLanguage === "en" || sourceLanguage.startsWith("en-"))) {
+        throw new Error(`Supadata returned unsupported source language: ${sourceLanguage}`);
+      }
+
+      await updateProcessingProgress(videoId, lockToken, 28);
+      let cues: CaptionCue[] = [];
+      let sourceCues: CaptionCue[] = [];
+      let translationMethod = "supadata_native_original_greek";
+
+      if (sourceLanguage === "el") {
+        cues = supadata.cues;
+      } else {
+        sourceCues = createMeaningUnits(supadata.cues);
+        if (!sourceCues.length) throw new Error("Supadata returned an empty English transcript");
+        await updateProcessingProgress(videoId, lockToken, 48);
+        cues = await translateCuesToGreek(sourceCues);
+        translationMethod = "supadata_native_contextual_meaning_units_v3";
+      }
+
+      const duration = supadata.cues.reduce(
+        (max, cue) => Math.max(max, cue.start + cue.duration),
+        0,
+      );
+      validateCompleteGreekTranscript(cues, duration);
+      await updateProcessingProgress(videoId, lockToken, 88);
+
+      const metadata = await fetchYouTubeOEmbed(videoId);
+      const originalTitle = metadata.title || cached?.title || "YouTube video";
+      const channel = metadata.authorName || cached?.channel || "YouTube";
+      const translatedTitle = await translateTitleToGreek(originalTitle);
+      const speaker = speakerProfile(videoId, "", channel);
+      const points = keyPoints(cues);
+      const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\p{L}]{6,}/gu) || []))].slice(0, 6);
+      const now = new Date().toISOString();
+
+      await completeTranscript({
+        videoId,
+        title: originalTitle,
+        channel,
+        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        duration,
+        originalLanguage: sourceLanguage,
+        englishTranscript: sourceCues,
+        greekTranscript: cues,
+        timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
+        topics,
+        keyPoints: points,
+        status: "ready",
+        progress: 100,
+        transcriptVersion: TRANSCRIPT_VERSION,
+        createdAt: cached?.createdAt || now,
+        updatedAt: now,
+      }, lockToken);
+
+      lockToken = null;
+      return NextResponse.json({
+        status: "ready",
+        videoId,
+        title: translatedTitle,
+        originalTitle,
+        channel,
+        duration,
+        sourceLanguage,
+        sourceType: "supadata_native",
+        translationMethod,
+        cues,
+        englishCues: sourceCues,
+        topics,
+        keyPoints: points,
+        speaker,
+        transcriptVersion: TRANSCRIPT_VERSION,
+        cached: false,
+      });
+    } catch (error) {
+      console.warn(
+        `[captions:${videoId}] Supadata native transcript failed; trying direct YouTube fallback: ${error instanceof Error ? error.message : "failed"}`,
+      );
+    }
 
     const players = await fetchPlayers(videoId);
     let player: PlayerResponse | null = null;
