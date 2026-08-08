@@ -5686,3 +5686,53 @@ body{background:
   .viewer .mobile-video-byline button.active{color:var(--v6-saffron)!important}
   .viewer.app-shell .watch-layout.player-only .mobile-watch-summary,.viewer.app-shell .watch-layout.transcript-open .mobile-watch-summary{display:none!important}
 }
+
+/* GreekTube 6.3.2: stable player tap layer and two-row mobile controls. */
+.viewer .player-cover{z-index:7!important}
+.viewer .video-tap-toggle{z-index:5!important}
+.viewer .subtitles{z-index:8!important;pointer-events:none!important}
+.viewer .player-cover-badges{z-index:9!important}
+@media(max-width:620px){
+  .viewer .watch-layout.player-only .player-actions.player-tools,
+  .viewer .watch-layout.transcript-open .player-actions.player-tools{position:relative!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding:14px!important}
+  .viewer .watch-layout.player-only .player-actions.player-tools:before,
+  .viewer .watch-layout.transcript-open .player-actions.player-tools:before{position:absolute!important;top:-8px!important;right:18px!important;left:18px!important;height:1px!important;background:rgba(157,166,183,.18)!important;content:""!important}
+  .viewer .watch-layout.player-only .player-tools-label,
+  .viewer .watch-layout.transcript-open .player-tools-label{display:none!important}
+  .viewer .watch-layout.player-only .player-toolbar,
+  .viewer .watch-layout.transcript-open .player-toolbar{grid-column:1/3!important;grid-row:1!important;display:block!important;width:100%!important}
+  .viewer .watch-layout.player-only .primary-control-row,
+  .viewer .watch-layout.transcript-open .primary-control-row{height:58px!important;border:1px solid var(--v6-line)!important;border-radius:12px!important;background:var(--v6-panel-2)!important}
+  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls,
+  .viewer .watch-layout.transcript-open div.player-actions>div.player-toolbar .playback-controls{height:44px!important;grid-template-columns:30px 42px 30px!important;gap:6px!important}
+  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls button,
+  .viewer .watch-layout.transcript-open div.player-actions>div.player-toolbar .playback-controls button{width:30px!important;height:34px!important;min-height:34px!important}
+  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls .play-toggle,
+  .viewer .watch-layout.transcript-open div.player-actions>div.player-toolbar .playback-controls .play-toggle{width:42px!important;height:42px!important;min-height:42px!important}
+  .viewer .watch-layout.player-only .action-section,
+  .viewer .watch-layout.transcript-open .action-section{display:contents!important;margin:0!important;padding:0!important;border:0!important}
+  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions,
+  .viewer .watch-layout.transcript-open div.player-actions>section.action-section .player-secondary-actions{display:contents!important}
+  .viewer .watch-layout.player-only .fullscreen-primary,
+  .viewer .watch-layout.transcript-open .fullscreen-primary{grid-column:3!important;grid-row:1!important;width:100%!important;height:58px!important;min-height:58px!important;padding:0 6px!important;border-radius:12px!important}
+  .viewer .watch-layout.player-only .moment-save,
+  .viewer .watch-layout.transcript-open .moment-save{grid-column:1!important;grid-row:2!important}
+  .viewer .watch-layout.player-only .transcript-toggle,
+  .viewer .watch-layout.transcript-open .transcript-toggle{grid-column:2!important;grid-row:2!important}
+  .viewer .watch-layout.player-only .subtitle-cc-control,
+  .viewer .watch-layout.transcript-open .subtitle-cc-control{grid-column:3!important;grid-row:2!important;width:100%!important}
+  .viewer .watch-layout.player-only .moment-save,
+  .viewer .watch-layout.player-only .transcript-toggle,
+  .viewer .watch-layout.player-only .cc-toggle,
+  .viewer .watch-layout.transcript-open .moment-save,
+  .viewer .watch-layout.transcript-open .transcript-toggle,
+  .viewer .watch-layout.transcript-open .cc-toggle{height:46px!important;min-height:46px!important;padding:0 8px!important;border-radius:10px!important}
+  .viewer .watch-layout.player-only .moment-save b,
+  .viewer .watch-layout.player-only .transcript-toggle b,
+  .viewer .watch-layout.transcript-open .moment-save b,
+  .viewer .watch-layout.transcript-open .transcript-toggle b{font-size:11.5px!important;white-space:normal!important}
+  .viewer .watch-layout.player-only .cc-toggle,
+  .viewer .watch-layout.transcript-open .cc-toggle{flex-direction:row!important;gap:7px!important}
+  .viewer .watch-layout.player-only .fullscreen-primary b,
+  .viewer .watch-layout.transcript-open .fullscreen-primary b{font-size:11.5px!important;line-height:1.15!important;white-space:normal!important}
+}
