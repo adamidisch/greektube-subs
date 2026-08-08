@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./mobile-controls-fix.css";
+import "./ui-651.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,11 +20,11 @@ export const metadata: Metadata = {
     "Παίξε δημόσια YouTube videos με αυτόματα μεταφρασμένους ελληνικούς υπότιτλους και συγχρονισμένο transcript.",
   other: {
     "codex-preview": "development",
-    "app-version": "6.5.0 DEV",
+    "app-version": "6.5.1 DEV",
   },
   icons: {
-    icon: "/favicon.svg?v=650dev",
-    shortcut: "/favicon.svg?v=650dev",
+    icon: "/favicon.svg?v=651dev",
+    shortcut: "/favicon.svg?v=651dev",
   },
 };
 

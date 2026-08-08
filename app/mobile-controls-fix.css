@@ -1,7 +1,6 @@
-/* GreekTube 6.5.0 DEV — Claude-inspired mobile controls. */
-html body .brand-version{font-size:0!important}
-html body .brand-version::after{display:none!important;content:none!important}
-html body .brand-version::before{content:"ver 6.5.0 DEV"!important;font-size:9px!important;line-height:1!important}
+/* GreekTube 6.5.1 DEV — refined mobile controls. */
+html body .brand-version{font-size:9px!important;line-height:1!important}
+html body .brand-version::before,html body .brand-version::after{display:none!important;content:none!important}
 .settings-page-header{position:relative}
 .settings-close{position:absolute;top:0;right:0;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);font-size:20px;line-height:1}
 .settings-close:hover{color:var(--text);background:var(--raised)}
