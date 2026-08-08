@@ -1,0 +1,43 @@
+name: Materialize GreekTube v5.27 source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backup/greektube-v5.27-clean-source.zip'
+      - '.github/workflows/materialize-v527.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ !contains(github.event.head_commit.message, '[materialized-v5.27]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract v5.27 source into repository root
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          unzip -q backup/greektube-v5.27-clean-source.zip -d "$tmp"
+          rsync -a --delete \
+            --exclude '.git/' \
+            --exclude 'backup/' \
+            --exclude 'MIGRATION-AUDIT.md' \
+            --exclude '.github/' \
+            "$tmp/" ./
+      - name: Commit exact v5.27 source baseline
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- . ':!backup/greektube-v5.27-clean-source.zip' ':!MIGRATION-AUDIT.md' ':!.github/workflows/materialize-v527.yml'
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git commit -m "Import exact GreekTube v5.27 source [materialized-v5.27]"
+          git push origin HEAD:main
