@@ -1,51 +1,83 @@
-/* GreekTube 6.3.5 DEV — mobile player controls layout lock.
-   Approved layout: transport 2/3 + fullscreen 1/3, then three equal compact actions. */
+/* GreekTube 6.3.6 DEV — final mobile controls lock */
 
-/* Make the current development build unmistakable in every preview. */
+/* Always expose the DEV build number on mobile previews. */
 .brand-version{font-size:0!important}
-.brand-version::after{content:"ver 6.3.5 DEV";font-size:9px;line-height:1}
+.brand-version::after{content:"ver 6.3.6 DEV";font-size:9px;line-height:1}
 
-@media (max-width: 620px) {
-  .viewer .watch-layout .player-actions.player-tools,
-  .viewer .watch-layout.player-only .player-actions.player-tools,
-  .viewer .watch-layout.transcript-open .player-actions.player-tools {
+@media (max-width:620px){
+  .viewer .app-header .brand .brand-version{
+    display:inline-flex!important;
+    align-items:center!important;
+    height:19px!important;
+    margin-left:6px!important;
+    padding:0 6px!important;
+    border:1px solid rgba(255,255,255,.12)!important;
+    border-radius:6px!important;
+    background:#171a20!important;
+    color:#aeb4c0!important;
+    font-weight:700!important;
+    letter-spacing:.02em!important;
+    white-space:nowrap!important;
+  }
+
+  /* 3 equal columns: transport spans 2 columns, fullscreen 1 column. */
+  body .viewer .watch-layout .sticky-player .player-actions.player-tools,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions.player-tools,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions.player-tools{
     display:grid!important;
-    grid-template-columns:minmax(0,2fr) minmax(0,1fr)!important;
-    grid-template-rows:58px 54px!important;
-    column-gap:8px!important;
-    row-gap:8px!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:58px 52px!important;
+    gap:8px!important;
     width:100%!important;
     min-width:0!important;
+    height:auto!important;
+    min-height:0!important;
     padding:12px!important;
     overflow:visible!important;
   }
 
-  .viewer .watch-layout .player-tools-label,
-  .viewer .watch-layout.player-only .player-tools-label,
-  .viewer .watch-layout.transcript-open .player-tools-label {
+  body .viewer .watch-layout .sticky-player .player-actions .player-tools-label,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-tools-label,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-tools-label{
     display:none!important;
   }
 
-  .viewer .watch-layout .player-toolbar,
-  .viewer .watch-layout.player-only .player-toolbar,
-  .viewer .watch-layout.transcript-open .player-toolbar {
-    grid-column:1!important;
-    grid-row:1!important;
+  body .viewer .watch-layout .sticky-player .player-actions.player-tools .player-toolbar,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions.player-tools .player-toolbar,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions.player-tools .player-toolbar{
     display:block!important;
-    width:100%!important;
-    min-width:0!important;
-    margin:0!important;
-  }
-
-  .viewer .watch-layout .primary-control-row,
-  .viewer .watch-layout.player-only .primary-control-row,
-  .viewer .watch-layout.transcript-open .primary-control-row {
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:1 / 3!important;
+    grid-row:1!important;
     width:100%!important;
     min-width:0!important;
     height:58px!important;
+    margin:0!important;
+  }
+
+  body .viewer .watch-layout .sticky-player .player-actions .primary-control-section,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .primary-control-section,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .primary-control-section{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    width:100%!important;
+    height:58px!important;
+    margin:0!important;
+    padding:0!important;
+  }
+
+  body .viewer .watch-layout .sticky-player .player-actions .primary-control-row,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .primary-control-row,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .primary-control-row{
     display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
     align-items:center!important;
     justify-content:center!important;
+    width:100%!important;
+    height:58px!important;
     margin:0!important;
     padding:0!important;
     border:1px solid #2b313b!important;
@@ -54,18 +86,19 @@
     overflow:hidden!important;
   }
 
-  .viewer .watch-layout div.player-actions>div.player-toolbar .playback-controls,
-  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls,
-  .viewer .watch-layout.transcript-open div.player-actions>div.player-toolbar .playback-controls {
-    width:auto!important;
-    min-width:0!important;
-    height:48px!important;
+  body .viewer .watch-layout .sticky-player .player-actions .playback-controls,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .playback-controls,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .playback-controls{
     display:grid!important;
-    grid-template-columns:42px 48px 42px!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-template-columns:40px 48px 40px!important;
     align-items:center!important;
     justify-content:center!important;
     justify-items:center!important;
-    gap:8px!important;
+    gap:10px!important;
+    width:auto!important;
+    height:48px!important;
     margin:0!important;
     padding:0!important;
     border:0!important;
@@ -73,42 +106,46 @@
     box-shadow:none!important;
   }
 
-  .viewer .watch-layout div.player-actions>div.player-toolbar .playback-controls button,
-  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls button,
-  .viewer .watch-layout.transcript-open div.player-actions>div.player-toolbar .playback-controls button {
-    width:42px!important;
-    min-width:42px!important;
+  body .viewer .watch-layout .sticky-player .player-actions .playback-controls button,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .playback-controls button,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .playback-controls button{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    width:40px!important;
+    min-width:40px!important;
     height:42px!important;
     min-height:42px!important;
     margin:0!important;
     padding:0!important;
   }
 
-  .viewer .watch-layout div.player-actions>div.player-toolbar .playback-controls .play-toggle,
-  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls .play-toggle,
-  .viewer .watch-layout.transcript-open div.player-actions>div.player-toolbar .playback-controls .play-toggle {
+  body .viewer .watch-layout .sticky-player .player-actions .playback-controls .play-toggle,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .playback-controls .play-toggle,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .playback-controls .play-toggle{
     width:48px!important;
     min-width:48px!important;
     height:48px!important;
     min-height:48px!important;
   }
 
-  .viewer .watch-layout .action-section,
-  .viewer .watch-layout.player-only .action-section,
-  .viewer .watch-layout.transcript-open .action-section,
-  .viewer .watch-layout div.player-actions>section.action-section .player-secondary-actions,
-  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions,
-  .viewer .watch-layout.transcript-open div.player-actions>section.action-section .player-secondary-actions {
+  /* Flatten the action wrappers so each button can occupy the parent grid directly. */
+  body .viewer .watch-layout .sticky-player .player-actions.player-tools>section.action-section,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions.player-tools>section.action-section,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions.player-tools>section.action-section,
+  body .viewer .watch-layout .sticky-player .player-actions.player-tools>section.action-section>.player-secondary-actions,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions.player-tools>section.action-section>.player-secondary-actions,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions.player-tools>section.action-section>.player-secondary-actions{
     display:contents!important;
     margin:0!important;
     padding:0!important;
     border:0!important;
   }
 
-  .viewer .watch-layout .fullscreen-primary,
-  .viewer .watch-layout.player-only .fullscreen-primary,
-  .viewer .watch-layout.transcript-open .fullscreen-primary {
-    grid-column:2!important;
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.fullscreen-primary,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.fullscreen-primary,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.fullscreen-primary{
+    grid-column:3!important;
     grid-row:1!important;
     width:100%!important;
     min-width:0!important;
@@ -119,142 +156,105 @@
     flex-direction:column!important;
     align-items:center!important;
     justify-content:center!important;
-    gap:4px!important;
+    gap:3px!important;
     margin:0!important;
     padding:5px 6px!important;
     border:1px solid #2b313b!important;
     border-radius:12px!important;
     background:#20252d!important;
-    overflow:hidden!important;
   }
 
-  .viewer .watch-layout .fullscreen-primary .tool-icon,
-  .viewer .watch-layout.player-only .fullscreen-primary .tool-icon,
-  .viewer .watch-layout.transcript-open .fullscreen-primary .tool-icon {
-    width:auto!important;
-    height:auto!important;
-    flex:0 0 auto!important;
-    font-size:15px!important;
-    line-height:1!important;
-  }
-
-  .viewer .watch-layout .fullscreen-primary b,
-  .viewer .watch-layout.player-only .fullscreen-primary b,
-  .viewer .watch-layout.transcript-open .fullscreen-primary b {
-    min-width:0!important;
-    max-width:100%!important;
-    margin:0!important;
-    font-size:10.5px!important;
-    font-weight:700!important;
-    line-height:1.08!important;
-    text-align:center!important;
-    white-space:normal!important;
-  }
-
-  /* Bottom row is a three-column sub-grid spanning the full player width. */
-  .viewer .watch-layout .moment-save,
-  .viewer .watch-layout.player-only .moment-save,
-  .viewer .watch-layout.transcript-open .moment-save {
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.moment-save,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.moment-save,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.moment-save{
     grid-column:1!important;
     grid-row:2!important;
-    width:calc((100% - 16px) / 3)!important;
-    justify-self:start!important;
   }
 
-  .viewer .watch-layout .transcript-toggle,
-  .viewer .watch-layout.player-only .transcript-toggle,
-  .viewer .watch-layout.transcript-open .transcript-toggle {
-    grid-column:1!important;
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.transcript-toggle,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.transcript-toggle,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.transcript-toggle{
+    grid-column:2!important;
     grid-row:2!important;
-    width:calc((100% - 16px) / 3)!important;
-    justify-self:center!important;
     display:flex!important;
   }
 
-  .viewer .watch-layout .subtitle-cc-control,
-  .viewer .watch-layout.player-only .subtitle-cc-control,
-  .viewer .watch-layout.transcript-open .subtitle-cc-control {
-    grid-column:1 / 3!important;
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.subtitle-cc-control,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.subtitle-cc-control,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.subtitle-cc-control{
+    grid-column:3!important;
     grid-row:2!important;
-    width:calc((100% - 16px) / 3)!important;
+    width:100%!important;
     min-width:0!important;
-    justify-self:end!important;
     margin:0!important;
     position:relative!important;
   }
 
-  .viewer .watch-layout .moment-save,
-  .viewer .watch-layout .transcript-toggle,
-  .viewer .watch-layout .cc-toggle,
-  .viewer .watch-layout.player-only .moment-save,
-  .viewer .watch-layout.player-only .transcript-toggle,
-  .viewer .watch-layout.player-only .cc-toggle,
-  .viewer .watch-layout.transcript-open .moment-save,
-  .viewer .watch-layout.transcript-open .transcript-toggle,
-  .viewer .watch-layout.transcript-open .cc-toggle {
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.moment-save,
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.transcript-toggle,
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.subtitle-cc-control>.cc-toggle,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.moment-save,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.transcript-toggle,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.subtitle-cc-control>.cc-toggle,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.moment-save,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.transcript-toggle,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.subtitle-cc-control>.cc-toggle{
+    width:100%!important;
     min-width:0!important;
-    height:54px!important;
-    min-height:54px!important;
+    height:52px!important;
+    min-height:52px!important;
     margin:0!important;
-    padding:5px 7px!important;
+    padding:4px 5px!important;
     border:1px solid #2b313b!important;
     border-radius:10px!important;
     background:#20252d!important;
     color:#f6f3ec!important;
-    overflow:hidden!important;
     box-shadow:none!important;
+    overflow:hidden!important;
   }
 
-  .viewer .watch-layout .moment-save,
-  .viewer .watch-layout .transcript-toggle,
-  .viewer .watch-layout.player-only .moment-save,
-  .viewer .watch-layout.player-only .transcript-toggle,
-  .viewer .watch-layout.transcript-open .moment-save,
-  .viewer .watch-layout.transcript-open .transcript-toggle {
-    display:flex!important;
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.moment-save,
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.transcript-toggle,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.moment-save,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.transcript-toggle,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.moment-save,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.transcript-toggle{
     flex-direction:row!important;
     align-items:center!important;
     justify-content:center!important;
-    gap:5px!important;
+    gap:4px!important;
   }
 
-  .viewer .watch-layout .moment-save .tool-icon,
-  .viewer .watch-layout .transcript-toggle .tool-icon,
-  .viewer .watch-layout.player-only .moment-save .tool-icon,
-  .viewer .watch-layout.player-only .transcript-toggle .tool-icon,
-  .viewer .watch-layout.transcript-open .moment-save .tool-icon,
-  .viewer .watch-layout.transcript-open .transcript-toggle .tool-icon {
-    width:14px!important;
-    height:14px!important;
-    flex:0 0 14px!important;
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions .tool-icon,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions .tool-icon,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions .tool-icon{
+    width:13px!important;
+    height:13px!important;
+    flex:0 0 13px!important;
     display:grid!important;
     place-items:center!important;
-    font-size:12px!important;
+    font-size:11px!important;
     line-height:1!important;
   }
 
-  .viewer .watch-layout .moment-save b,
-  .viewer .watch-layout .transcript-toggle b,
-  .viewer .watch-layout.player-only .moment-save b,
-  .viewer .watch-layout.player-only .transcript-toggle b,
-  .viewer .watch-layout.transcript-open .moment-save b,
-  .viewer .watch-layout.transcript-open .transcript-toggle b {
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions button b,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions button b,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions button b{
     min-width:0!important;
-    max-width:78px!important;
+    max-width:74px!important;
     margin:0!important;
     font-size:9.5px!important;
     font-weight:700!important;
-    line-height:1.12!important;
+    line-height:1.08!important;
     text-align:center!important;
     white-space:normal!important;
-    overflow-wrap:normal!important;
     word-break:normal!important;
+    overflow-wrap:normal!important;
   }
 
-  .viewer .watch-layout .cc-toggle,
-  .viewer .watch-layout.player-only .cc-toggle,
-  .viewer .watch-layout.transcript-open .cc-toggle {
-    width:100%!important;
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions>.subtitle-cc-control>.cc-toggle,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions>.subtitle-cc-control>.cc-toggle,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions>.subtitle-cc-control>.cc-toggle{
     display:flex!important;
     flex-direction:column!important;
     align-items:center!important;
@@ -262,27 +262,27 @@
     gap:2px!important;
   }
 
-  .viewer .watch-layout .cc-toggle>span,
-  .viewer .watch-layout.player-only .cc-toggle>span,
-  .viewer .watch-layout.transcript-open .cc-toggle>span {
-    max-width:100%!important;
-    font-size:10px!important;
+  body .viewer .watch-layout .sticky-player .player-actions .cc-toggle>span,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .cc-toggle>span,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .cc-toggle>span{
+    font-size:9.5px!important;
     font-weight:700!important;
-    line-height:1.08!important;
+    line-height:1.05!important;
     white-space:nowrap!important;
   }
 
-  .viewer .watch-layout .cc-toggle>small,
-  .viewer .watch-layout.player-only .cc-toggle>small,
-  .viewer .watch-layout.transcript-open .cc-toggle>small {
-    max-width:100%!important;
-    font-size:9px!important;
+  body .viewer .watch-layout .sticky-player .player-actions .cc-toggle>small,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .cc-toggle>small,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .cc-toggle>small{
+    font-size:8.5px!important;
     font-weight:700!important;
-    line-height:1.08!important;
+    line-height:1.05!important;
     white-space:nowrap!important;
   }
 
-  .viewer .subtitle-cc-menu {
+  body .viewer .watch-layout .sticky-player .player-actions .subtitle-cc-menu,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .subtitle-cc-menu,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .subtitle-cc-menu{
     right:0!important;
     left:auto!important;
     bottom:calc(100% + 8px)!important;
@@ -290,29 +290,17 @@
   }
 }
 
-@media (max-width: 360px) {
-  .viewer .watch-layout .player-actions.player-tools,
-  .viewer .watch-layout.player-only .player-actions.player-tools,
-  .viewer .watch-layout.transcript-open .player-actions.player-tools {
-    grid-template-columns:minmax(0,2fr) minmax(0,1fr)!important;
-    column-gap:6px!important;
-    row-gap:6px!important;
+@media (max-width:360px){
+  body .viewer .watch-layout .sticky-player .player-actions.player-tools,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions.player-tools,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions.player-tools{
+    gap:6px!important;
     padding:10px!important;
   }
-
-  .viewer .watch-layout .moment-save b,
-  .viewer .watch-layout .transcript-toggle b,
-  .viewer .watch-layout.player-only .moment-save b,
-  .viewer .watch-layout.player-only .transcript-toggle b,
-  .viewer .watch-layout.transcript-open .moment-save b,
-  .viewer .watch-layout.transcript-open .transcript-toggle b {
-    max-width:68px!important;
+  body .viewer .watch-layout .sticky-player .player-actions .player-secondary-actions button b,
+  body .viewer .watch-layout.player-only .sticky-player .player-actions .player-secondary-actions button b,
+  body .viewer .watch-layout.transcript-open .sticky-player .player-actions .player-secondary-actions button b{
     font-size:9px!important;
-  }
-
-  .viewer .watch-layout .cc-toggle>span,
-  .viewer .watch-layout.player-only .cc-toggle>span,
-  .viewer .watch-layout.transcript-open .cc-toggle>span {
-    font-size:9.5px!important;
+    max-width:66px!important;
   }
 }
