@@ -5544,5 +5544,17 @@ body{background:
 }
 @media(max-width:620px){
   .viewer .brand-mark{width:35px!important;height:25px!important;border-radius:8px!important}
+  .viewer .watch-layout.player-only .player-actions.player-tools{gap:0!important;padding:12px!important;border-radius:14px!important}
+  .viewer .watch-layout.player-only .player-tools-label{margin:0 0 8px!important;font-size:10px!important;letter-spacing:.1em!important}
+  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls{height:36px!important;grid-template-columns:28px 36px 28px!important;gap:6px!important;padding:0!important}
+  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls button{width:28px!important;height:28px!important;min-height:28px!important;font-size:12px!important}
+  .viewer .watch-layout.player-only div.player-actions>div.player-toolbar .playback-controls .play-toggle{width:36px!important;height:36px!important;min-height:36px!important;font-size:12px!important}
+  .viewer .watch-layout.player-only .action-section{margin-top:9px!important;padding-top:9px!important}
+  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions{gap:6px!important}
+  .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions button,.viewer .watch-layout.player-only .cc-toggle{height:36px!important;min-height:36px!important;padding:0 8px!important;border-radius:9px!important;font-size:11px!important}
+  .viewer .watch-layout.player-only .player-secondary-actions button b,.viewer .watch-layout.player-only .cc-toggle>span{font-size:11px!important;font-weight:600!important}
+  .viewer .watch-layout.player-only .cc-toggle>small{font-size:10px!important}
+  .viewer .watch-layout.player-only .player-greek-title{font-family:"Inter",Arial,sans-serif!important;font-size:20px!important;font-weight:600!important;line-height:1.35!important;letter-spacing:0!important}
+  .viewer .watch-layout.player-only .mobile-video-description{display:block!important;margin:7px 0 0!important;color:var(--v6-muted)!important;font-size:13px!important;line-height:1.5!important;-webkit-line-clamp:3!important}
   .viewer .watch-layout.player-only div.player-actions>section.action-section .player-secondary-actions .transcript-toggle{display:flex!important;grid-column:1/-1!important;grid-row:3!important}
 }
