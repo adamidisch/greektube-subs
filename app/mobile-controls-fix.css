@@ -1,4 +1,4 @@
-/* GreekTube 6.3.7 DEV — clean mobile controls rebuild.
+/* GreekTube 6.3.8 DEV — clean mobile controls rebuild.
    Reference layout: transport row, fullscreen + subtitles, save full width, transcript full width. */
 
 /* One unambiguous version badge everywhere. */
@@ -10,7 +10,7 @@ html body .brand-version::after{
   content:none!important;
 }
 html body .brand-version::before{
-  content:"ver 6.3.7 DEV"!important;
+  content:"ver 6.3.8 DEV"!important;
   font-size:9px!important;
   line-height:1!important;
 }
@@ -367,4 +367,34 @@ html body .brand-version::before{
   html body .viewer .watch-layout.transcript-open .cc-toggle > span{
     font-size:11px!important;
   }
+}
+
+
+/* GreekTube 6.3.8 DEV — dismissible overlays, seek drag and lower mobile subtitles. */
+.settings-page-header{position:relative}
+.settings-close{position:absolute;top:0;right:0;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);font-size:20px;line-height:1}
+.settings-close:hover{color:var(--text);background:var(--raised)}
+
+.player-seek-bar{
+  --seek-progress:0%;
+  position:absolute;left:0;right:0;bottom:0;z-index:12;
+  width:100%;height:20px;margin:0;padding:0;
+  appearance:none;-webkit-appearance:none;
+  background:transparent;cursor:pointer;touch-action:none;
+}
+.player-seek-bar::-webkit-slider-runnable-track{height:3px;border-radius:99px;background:linear-gradient(90deg,#e3a23c 0 var(--seek-progress),rgba(255,255,255,.22) var(--seek-progress) 100%)}
+.player-seek-bar::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;margin-top:-5px;border:2px solid #e3a23c;border-radius:50%;background:#12151a;box-shadow:0 0 0 2px rgba(0,0,0,.25)}
+.player-seek-bar::-moz-range-track{height:3px;border:0;border-radius:99px;background:rgba(255,255,255,.22)}
+.player-seek-bar::-moz-range-progress{height:3px;border-radius:99px;background:#e3a23c}
+.player-seek-bar::-moz-range-thumb{width:11px;height:11px;border:2px solid #e3a23c;border-radius:50%;background:#12151a}
+.player-seek-bar:disabled{pointer-events:none;opacity:.35}
+
+@media(max-width:620px){
+  html body .viewer .video-frame .subtitles.bottom{bottom:4.5%!important}
+  html body .settings-page{padding-top:28px!important}
+  html body .settings-page-header{padding-right:46px!important}
+  html body .settings-close{top:0;right:0}
+  html body .player-seek-bar{height:24px}
+  html body .player-seek-bar::-webkit-slider-thumb{width:15px;height:15px;margin-top:-6px}
+  html body .player-seek-bar::-moz-range-thumb{width:13px;height:13px}
 }
