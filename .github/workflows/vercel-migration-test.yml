@@ -26,7 +26,7 @@ jobs:
           set -euo pipefail
           base64 -d .migration/vercel-files.b64 > /tmp/vercel-files.tgz
           tar -xzf /tmp/vercel-files.tgz
-      - name: Apply native Next.js typing fixes
+      - name: Apply native Next.js compatibility fixes
         shell: bash
         run: |
           python - <<'PY'
@@ -47,6 +47,20 @@ jobs:
           if old not in text:
               raise SystemExit('Expected state sort expression not found')
           state.write_text(text.replace(old, new, 1))
+
+          db = Path('db/index.ts')
+          text = db.read_text()
+          text = text.replace(
+              'sql(postgresPlaceholders(query), params as any[])',
+              'sql.query(postgresPlaceholders(query), params as any[])',
+          )
+          text = text.replace(
+              'sql(postgresPlaceholders(query), params as any[], { fullResults: true })',
+              'sql.query(postgresPlaceholders(query), params as any[], { fullResults: true })',
+          )
+          if 'await sql(' in text:
+              raise SystemExit('Dynamic Neon SQL call still uses tagged-template function signature')
+          db.write_text(text)
           PY
       - name: Install dependencies
         run: npm install
