@@ -299,6 +299,7 @@ export default function GreekTubePlayer() {
   const playerHost=useRef<HTMLDivElement>(null);
   const fullscreenHost=useRef<HTMLDivElement>(null);
   const player=useRef<Player|null>(null);
+  const playWhenReady=useRef(false);
   const transcript=useRef<HTMLDivElement>(null);
   const saveTimer=useRef<number|undefined>(undefined);
   const stateRef=useRef(state);
@@ -586,7 +587,7 @@ export default function GreekTubePlayer() {
         target.unloadModule?.("captions");
       }
     };
-    const create=()=>{if(!window.YT||!playerHost.current)return; player.current?.destroy(); playerHost.current.innerHTML=""; player.current=new window.YT.Player(playerHost.current,{videoId:id,width:"100%",height:"100%",playerVars:{autoplay:state.settings.autoplay?1:0,controls:0,disablekb:1,modestbranding:1,rel:0,playsinline:1,fs:0,start:Math.floor(start),cc_load_policy:0,iv_load_policy:3,showinfo:0,hl:"el"},events:{onReady:({target}:{target:Player})=>{disableYouTubeCaptions(target);window.setTimeout(()=>disableYouTubeCaptions(target),350);target.setPlaybackRate(state.settings.speed);if(state.settings.autoplay)target.playVideo();},onApiChange:({target}:{target:Player})=>disableYouTubeCaptions(target),onStateChange:({target,data}:{target:Player;data:number})=>{disableYouTubeCaptions(target);setIsPlaying(data===1);}}});};
+    const create=()=>{if(!window.YT||!playerHost.current)return; player.current?.destroy(); playerHost.current.innerHTML=""; player.current=new window.YT.Player(playerHost.current,{videoId:id,width:"100%",height:"100%",playerVars:{autoplay:state.settings.autoplay?1:0,controls:0,disablekb:1,modestbranding:1,rel:0,playsinline:1,fs:0,start:Math.floor(start),cc_load_policy:0,iv_load_policy:3,showinfo:0,hl:"el"},events:{onReady:({target}:{target:Player})=>{disableYouTubeCaptions(target);window.setTimeout(()=>disableYouTubeCaptions(target),350);target.setPlaybackRate(state.settings.speed);if(state.settings.autoplay||playWhenReady.current){playWhenReady.current=false;target.playVideo();}},onApiChange:({target}:{target:Player})=>disableYouTubeCaptions(target),onStateChange:({target,data}:{target:Player;data:number})=>{disableYouTubeCaptions(target);setIsPlaying(data===1);}}});};
     if(window.YT?.Player)create(); else{if(!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')){const s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);}window.onYouTubeIframeAPIReady=create;}
   }
   function currentPlayer(){
@@ -612,7 +613,7 @@ export default function GreekTubePlayer() {
     target.seekTo(Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,target.getCurrentTime()+seconds)),true);
   }
   function togglePlayback(){
-    const target=currentPlayer();if(!target||typeof target.getPlayerState!=="function")return;
+    const target=currentPlayer();if(!target||typeof target.getPlayerState!=="function"){playWhenReady.current=true;return;}
     if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();
   }
   async function toggleFullscreen(){
@@ -759,7 +760,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 5.27</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 6.0</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
