@@ -4,8 +4,7 @@ const COOKIE = "greektube-admin";
 const SESSION_MESSAGE = "greektube-edit-authorized";
 
 async function secret() {
-  const workers = await import("cloudflare:workers");
-  return String(workers.env.ADMIN_EDIT_PASSWORD || "");
+  return String(process.env.ADMIN_EDIT_PASSWORD || "");
 }
 
 async function sessionToken(password: string) {
