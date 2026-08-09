@@ -51,7 +51,7 @@
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.player-toolbar{grid-column:1!important;grid-row:1!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.fullscreen-primary{grid-column:2!important;grid-row:1!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-toolbar,
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .primary-control-section,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-section,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-row{
     width:100%!important;height:100%!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;
   }
