@@ -65,7 +65,7 @@
     overflow:visible!important;
   }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls button{border:0!important;background:transparent!important;box-shadow:none!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button{
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .playback-controls .skip-button{
     width:32px!important;min-width:32px!important;height:40px!important;flex:0 0 32px!important;
     display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;
     padding:0!important;margin:0!important;color:#8b9099!important;position:static!important;
@@ -102,7 +102,7 @@
     position:relative!important;width:100%!important;min-width:0!important;margin:0!important;display:block!important;
   }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .player-secondary-actions>.transcript-toggle,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control>.cc-toggle{
     width:100%!important;height:64px!important;min-height:64px!important;
     display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;
@@ -124,23 +124,33 @@
     font-size:9px!important;font-weight:700!important;line-height:1!important;
   }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .transcript-toggle.active{background:#1b1930!important;border-color:rgba(124,116,224,.35)!important;color:#c9c4f5!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control{position:relative!important;margin:0!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .subtitle-cc-control{position:relative!important;margin:0!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control.active>.cc-toggle{background:#1b1930!important;border-color:rgba(124,116,224,.4)!important;color:#c9c4f5!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-active-tag{
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .cc-active-tag{
     position:absolute!important;top:8px!important;right:8px!important;left:auto!important;transform:none!important;
     color:#7c74e0!important;font-size:9.5px!important;font-weight:700!important;line-height:1!important;
   }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-card-icon{color:#c9c4f5!important;margin:0!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-label{color:#c9c4f5!important;font-size:11.5px!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-toggle>small{font-size:9.5px!important;font-weight:650!important;line-height:1!important;color:#7fa37a!important;white-space:nowrap!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .cc-card-icon{color:#c9c4f5!important;margin:0!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .cc-label{color:#c9c4f5!important;font-size:11.5px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .cc-toggle>small{font-size:9.5px!important;font-weight:650!important;line-height:1!important;color:#7fa37a!important;white-space:nowrap!important}
   html body .viewer.viewer.viewer .subtitle-cc-menu{right:0!important;left:auto!important;bottom:calc(100% + 8px)!important;width:min(220px,78vw)!important;z-index:30!important}
+
+  /* Keep the default player-only state on the exact same control geometry as
+     the already-correct transcript-open state. These are the same placements
+     used by transcript-open: Save | Transcript | Subtitles. */
+  html body .viewer.viewer.viewer .watch-layout.player-only .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
+  html body .viewer.viewer.viewer .watch-layout.transcript-open .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save{grid-column:1!important;grid-row:1!important}
+  html body .viewer.viewer.viewer .watch-layout.player-only .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
+  html body .viewer.viewer.viewer .watch-layout.transcript-open .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle{grid-column:2!important;grid-row:1!important}
+  html body .viewer.viewer.viewer .watch-layout.player-only .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.subtitle-cc-control,
+  html body .viewer.viewer.viewer .watch-layout.transcript-open .player-actions.player-actions.player-tools.player-tools-player-tools .player-secondary-actions>.subtitle-cc-control{grid-column:3!important;grid-row:1!important}
 }
 
 @media(max-width:360px){
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools{padding-left:10px!important;padding-right:10px!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row,
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions{gap:7px!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{gap:13px!important;padding-left:6px!important;padding-right:6px!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>span:not(.moment-count):not(.cc-active-tag){font-size:10.5px!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary span{font-size:11px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .player-secondary-actions{gap:7px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .playback-controls{gap:13px!important;padding-left:6px!important;padding-right:6px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .player-secondary-actions button>span:not(.moment-count):not(.cc-active-tag){font-size:10.5px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools-player-tools .fullscreen-primary span{font-size:11px!important}
 }
