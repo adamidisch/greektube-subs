@@ -723,10 +723,6 @@ export default function GreekTubePlayer() {
               </div>
               <div className="player-actions player-tools">
                 <small className="player-tools-label">ΧΕΙΡΙΣΤΗΡΙΑ</small>
-                <div className="controls-position-row">
-                  <span className="position-time"><b>{clock(playhead)}</b> / {clock(seekDuration)}</span>
-                  <span className="speed-chip">{state.settings.speed.toFixed(2).replace(/0$/,"")}×</span>
-                </div>
                 <div className="controls-top-row">
                   <div className="player-toolbar">
                     <section className="control-section primary-control-section">
@@ -811,7 +807,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 6.5.1 DEV</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 6.5.2 DEV</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");

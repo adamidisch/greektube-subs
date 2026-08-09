@@ -556,3 +556,11 @@ html body .brand-version::before,html body .brand-version::after{display:none!im
   .quick-filters button{padding-inline:9px;font-size:10px}
   .modal-actions{grid-template-columns:1fr}
 }
+
+
+/* 6.5.2 DEV — requested micro-adjustment only: remove time/speed and center existing mobile button rows. */
+.controls-position-row{display:none!important}
+@media(max-width:620px){
+  html body .viewer .controls-top-row,
+  html body .viewer .player-secondary-actions{margin-left:auto!important;margin-right:auto!important;justify-content:center!important}
+}
