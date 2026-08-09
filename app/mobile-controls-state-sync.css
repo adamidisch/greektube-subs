@@ -1,0 +1,21 @@
+/* Keep the default player-only controls in the exact same three-card order
+   already used by the correct transcript-open state. No visual values change. */
+@media(max-width:620px){
+  html body .viewer.viewer.viewer .watch-layout.player-only .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
+  html body .viewer.viewer.viewer .watch-layout.transcript-open .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save{
+    grid-column:1!important;
+    grid-row:1!important;
+  }
+
+  html body .viewer.viewer.viewer .watch-layout.player-only .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
+  html body .viewer.viewer.viewer .watch-layout.transcript-open .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle{
+    grid-column:2!important;
+    grid-row:1!important;
+  }
+
+  html body .viewer.viewer.viewer .watch-layout.player-only .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.subtitle-cc-control,
+  html body .viewer.viewer.viewer .watch-layout.transcript-open .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.subtitle-cc-control{
+    grid-column:3!important;
+    grid-row:1!important;
+  }
+}
