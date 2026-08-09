@@ -21,10 +21,10 @@
     grid-template-columns:none!important;
     width:100%!important;
     margin:0!important;
-    padding:16px 14px 18px!important;
+    padding:12px 12px 14px!important;
     border:1px solid #2b313b!important;
     border-top:1px solid #2b313b!important;
-    border-radius:16px!important;
+    border-radius:14px!important;
     background:#12151a!important;
     overflow:visible!important;
   }
@@ -42,11 +42,14 @@
 
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row{
     display:grid!important;
-    grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)!important;
+    grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)!important;
     grid-template-rows:none!important;
-    gap:10px!important;
-    margin:0 0 10px!important;
+    grid-auto-flow:column!important;
+    gap:8px!important;
+    margin:0 0 8px!important;
   }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.player-toolbar{grid-column:1!important;grid-row:1!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.fullscreen-primary{grid-column:2!important;grid-row:1!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-toolbar,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-section,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-row{
@@ -55,42 +58,42 @@
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-row{display:block!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{
     grid-column:auto!important;grid-row:auto!important;
-    width:100%!important;height:100%!important;min-height:68px!important;
-    display:flex!important;align-items:center!important;justify-content:center!important;gap:18px!important;
-    margin:0!important;padding:12px 10px!important;
-    border:1px solid #2b313b!important;border-radius:16px!important;background:#1b1f26!important;
+    width:100%!important;height:100%!important;min-height:52px!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;gap:14px!important;
+    margin:0!important;padding:8px 10px!important;
+    border:1px solid #2b313b!important;border-radius:14px!important;background:#1b1f26!important;
     overflow:visible!important;
   }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls button{border:0!important;background:transparent!important;box-shadow:none!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button{
-    width:38px!important;min-width:38px!important;height:52px!important;flex:0 0 38px!important;
-    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;
+    width:32px!important;min-width:32px!important;height:40px!important;flex:0 0 32px!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;
     padding:0!important;margin:0!important;color:#8b9099!important;position:static!important;
   }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button svg{width:19px!important;height:19px!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button small{font-size:11px!important;line-height:1!important;color:#8b9099!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button svg{width:16px!important;height:16px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button small{font-size:9.5px!important;line-height:1!important;color:#8b9099!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .play-toggle{
-    width:52px!important;min-width:52px!important;height:52px!important;min-height:52px!important;flex:0 0 52px!important;
+    width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important;flex:0 0 40px!important;
     display:grid!important;place-items:center!important;padding:0!important;margin:0!important;
-    border-radius:50%!important;background:#7c74e0!important;color:#fff!important;font-size:16px!important;position:static!important;
-    box-shadow:0 8px 22px rgba(124,116,224,.25)!important;
+    border-radius:50%!important;background:#7c74e0!important;color:#fff!important;font-size:14px!important;position:static!important;
+    box-shadow:0 6px 16px rgba(124,116,224,.25)!important;
   }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary{
     grid-column:auto!important;grid-row:auto!important;
-    width:100%!important;min-height:68px!important;
-    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:6px!important;
-    margin:0!important;padding:12px 8px!important;
-    border:1px solid #2b313b!important;border-radius:16px!important;background:#1b1f26!important;color:#f6f3ec!important;
+    width:100%!important;min-height:52px!important;
+    display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;gap:6px!important;
+    margin:0!important;padding:8px 8px!important;
+    border:1px solid #2b313b!important;border-radius:14px!important;background:#1b1f26!important;color:#f6f3ec!important;
   }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary svg{width:19px!important;height:19px!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary span{font-size:11.5px!important;line-height:1.2!important;color:#f6f3ec!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary svg{width:16px!important;height:16px!important;flex:0 0 16px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary span{font-size:10.5px!important;line-height:1.15!important;color:#f6f3ec!important;white-space:normal!important}
 
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .action-section{width:100%!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions{
     display:grid!important;
     grid-template-columns:repeat(3,minmax(0,1fr))!important;
     grid-template-rows:none!important;
-    gap:8px!important;width:100%!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;
+    gap:6px!important;width:100%!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;
   }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
@@ -101,17 +104,17 @@
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control>.cc-toggle{
-    width:100%!important;height:88px!important;min-height:88px!important;
-    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:7px!important;
-    margin:0!important;padding:10px 6px!important;
-    border:1px solid #2b313b!important;border-radius:16px!important;background:#1b1f26!important;color:#f6f3ec!important;
+    width:100%!important;height:64px!important;min-height:64px!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;
+    margin:0!important;padding:8px 5px!important;
+    border:1px solid #2b313b!important;border-radius:14px!important;background:#1b1f26!important;color:#f6f3ec!important;
     text-align:center!important;overflow:hidden!important;white-space:normal!important;
   }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>svg,
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-card-icon{width:19px!important;height:19px!important;flex:0 0 19px!important;display:block!important;margin:0!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-card-icon{width:16px!important;height:16px!important;flex:0 0 16px!important;display:block!important;margin:0!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>span:not(.moment-count):not(.cc-active-tag),
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>b{
-    font-size:11.5px!important;font-weight:500!important;line-height:1.2!important;color:#f6f3ec!important;white-space:normal!important;
+    font-size:10.5px!important;font-weight:500!important;line-height:1.15!important;color:#f6f3ec!important;white-space:normal!important;
   }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save{background:#1b1930!important;border-color:rgba(124,116,224,.42)!important;color:#c9c4f5!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save>span:not(.moment-count){color:#c9c4f5!important}
