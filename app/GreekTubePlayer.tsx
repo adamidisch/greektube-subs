@@ -299,6 +299,8 @@ export default function GreekTubePlayer() {
   const [isFullscreen,setIsFullscreen]=useState(false);
   const [isPseudoFullscreen,setIsPseudoFullscreen]=useState(false);
   const [isPlaying,setIsPlaying]=useState(false);
+  const [showFsExit,setShowFsExit]=useState(true);
+  const fsExitTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [subtitleMenuOpen,setSubtitleMenuOpen]=useState(false);
   const playerHost=useRef<HTMLDivElement>(null);
   const fullscreenHost=useRef<HTMLDivElement>(null);
@@ -388,6 +390,20 @@ export default function GreekTubePlayer() {
     document.body.style.overflow="hidden";
     return()=>{document.body.style.overflow=previousOverflow;};
   },[isPseudoFullscreen]);
+  useEffect(()=>{
+    if(!isFullscreen&&!isPseudoFullscreen){
+      if(fsExitTimer.current)clearTimeout(fsExitTimer.current);
+      setShowFsExit(true);
+      return;
+    }
+    if(isPlaying){
+      fsExitTimer.current=setTimeout(()=>setShowFsExit(false),2200);
+    }else{
+      if(fsExitTimer.current)clearTimeout(fsExitTimer.current);
+      setShowFsExit(true);
+    }
+    return()=>{if(fsExitTimer.current)clearTimeout(fsExitTimer.current);};
+  },[isFullscreen,isPseudoFullscreen,isPlaying]);
   useEffect(()=>{
     if(!mobileMenu&&!subtitleMenuOpen)return;
     const closeFloating=(event:PointerEvent)=>{
@@ -640,6 +656,12 @@ export default function GreekTubePlayer() {
   function togglePlayback(){
     const target=currentPlayer();if(!target||typeof target.getPlayerState!=="function"){playWhenReady.current=true;return;}
     if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();
+    revealFsExit();
+  }
+  function revealFsExit(){
+    setShowFsExit(true);
+    if(fsExitTimer.current)clearTimeout(fsExitTimer.current);
+    if(isPlaying)fsExitTimer.current=setTimeout(()=>setShowFsExit(false),2200);
   }
   async function toggleFullscreen(){
     if(isPseudoFullscreen){setIsPseudoFullscreen(false);return;}
@@ -718,8 +740,8 @@ export default function GreekTubePlayer() {
                 <div className="player-cover-badges" aria-hidden="true"><span>{CATEGORY_LABELS[selected.category]}</span>{selected.duration>0&&<time>{clock(selected.duration)}</time>}</div>
                 <input className="player-seek-bar" type="range" min={0} max={Math.max(1,seekDuration)} step="0.1" value={Math.min(playhead,Math.max(1,seekDuration))} disabled={seekDuration<=0} aria-label="Μετακίνηση στο βίντεο" style={{"--seek-progress":`${seekDuration>0?Math.min(100,(playhead/seekDuration)*100):0}%`} as CSSProperties} onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()} onChange={event=>{const nextTime=Number(event.currentTarget.value);setPlayhead(nextTime);currentPlayer()?.seekTo(nextTime,true);}}/>
                 {state.settings.subtitles&&active>=0&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{"--subtitle-size":`${state.settings.subtitleSize}px`,background:`rgba(0,0,0,${state.settings.opacity})`} as CSSProperties}>{state.settings.subtitleMode==="en"?subtitleWindow(captions.englishCues?.[active]||captions.cues[active],playhead):state.settings.subtitleMode==="dual"?<><span>{subtitleWindow(captions.cues[active],playhead)}</span>{captions.englishCues?.[active]?.text&&<small>{subtitleWindow(captions.englishCues[active],playhead)}</small>}</>:subtitleWindow(captions.cues[active],playhead)}</div>}
-                <button className="video-tap-toggle" aria-label={isPlaying?"Παύση βίντεο":"Αναπαραγωγή βίντεο"} onClick={togglePlayback}/>
-                {(isFullscreen||isPseudoFullscreen)&&<button className="custom-fullscreen" title="Έξοδος από πλήρη οθόνη" aria-label="Έξοδος από πλήρη οθόνη" onClick={()=>void toggleFullscreen()}>↙</button>}
+                <button className="video-tap-toggle" aria-label={isPlaying?"Παύση βίντεο":"Αναπαραγωγή βίντεο"} onClick={()=>{togglePlayback();revealFsExit();}}/>
+                {(isFullscreen||isPseudoFullscreen)&&<button className={`custom-fullscreen${showFsExit?"":" fs-exit-hidden"}`} title="Έξοδος από πλήρη οθόνη" aria-label="Έξοδος από πλήρη οθόνη" onClick={()=>void toggleFullscreen()}>↙</button>}
               </div>
               <div className="player-actions player-tools">
                 <small className="player-tools-label">ΧΕΙΡΙΣΤΗΡΙΑ</small>
@@ -807,7 +829,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 6.5.13 DEV</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 6.6.0</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
