@@ -343,3 +343,39 @@ html body .viewer.viewer.viewer .brand-mark{
   background:linear-gradient(135deg,#776bd1,#49435f)!important;color:#fff!important;font-size:9px!important;
   box-shadow:0 7px 22px rgba(119,107,209,.24)!important;
 }
+
+/* ---- back-library / back-to-video nav buttons: height set 3-4 times
+   (36/40/44px) and font-size 3 times (13/13.5/14px) ---- */
+html body .viewer.viewer.viewer .back-library,
+html body .viewer.viewer.viewer .back-to-video{
+  height:40px!important;min-width:0!important;padding:0 10px!important;
+  border:0!important;border-radius:10px!important;background:transparent!important;
+  color:#9a9fa8!important;font-size:13.5px!important;font-weight:600!important;
+}
+html body .viewer.viewer.viewer .back-library:hover,
+html body .viewer.viewer.viewer .back-to-video:hover{background:rgba(255,255,255,.05)!important;color:#f6f3ec!important}
+
+/* ---- icon-button (settings gear ⚙): width set 4-5 times (32-40px),
+   font-size flip-flopped between 0 (hidden, mobile) and 16-17px ---- */
+html body .viewer.viewer.viewer .icon-button{
+  width:36px!important;height:36px!important;display:grid!important;place-items:center!important;
+  border:1px solid rgba(255,255,255,.1)!important;border-radius:10px!important;
+  background:#171a20!important;color:#f6f3ec!important;font-size:16px!important;padding:0!important;
+}
+html body .viewer.viewer.viewer .icon-button:hover{border-color:rgba(255,255,255,.2)!important}
+html body .viewer.viewer.viewer .icon-button.active{border-color:rgba(124,116,224,.4)!important;background:#1b1930!important;color:#c9c4f5!important}
+
+/* ---- video card edit/favorite buttons: card-edit shape conflicted
+   between a 27px circle and a 34px rounded-square ---- */
+html body .viewer.viewer.viewer .card-edit{
+  position:absolute!important;top:8px!important;left:8px!important;z-index:2!important;
+  width:30px!important;height:30px!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:10px!important;
+  background:rgba(5,6,9,.72)!important;color:#d8d3ff!important;font-size:13px!important;backdrop-filter:blur(8px)!important;
+}
+html body .viewer.viewer.viewer .heart{
+  position:absolute!important;top:8px!important;right:8px!important;z-index:2!important;
+  width:30px!important;height:30px!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:50%!important;
+  background:rgba(5,6,9,.72)!important;color:#aaa!important;font-size:13px!important;backdrop-filter:blur(8px)!important;
+}
+html body .viewer.viewer.viewer .heart.active,
+html body .viewer.viewer.viewer .favorite.active{color:#f4847b!important}
