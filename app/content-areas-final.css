@@ -209,6 +209,19 @@ html body .viewer.viewer.viewer .home-intro h1:after{
   html body .viewer.viewer.viewer .home-intro h1{font-size:clamp(22px,7vw,27px)!important}
 }
 
+/* ---- featured card action buttons: an unscoped rule forced a 2-column
+   grid at ALL widths (including desktop), squeezing "Συνέχεια προβολής"
+   and "Από την αρχή" into narrow columns with wrapped text ---- */
+html body .viewer.viewer.viewer .featured-actions{
+  display:flex!important;flex-direction:column!important;gap:9px!important;margin-top:auto!important;
+}
+html body .viewer.viewer.viewer .featured-actions .primary,
+html body .viewer.viewer.viewer .featured-actions .secondary{
+  width:100%!important;min-width:0!important;height:auto!important;min-height:48px!important;
+  padding:10px 16px!important;border-radius:14px!important;font-size:13px!important;line-height:1.25!important;
+  white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+}
+
 html body .viewer.viewer.viewer .speaker-row{
   display:flex!important;align-items:center!important;gap:9px!important;flex-wrap:wrap!important;
   margin:16px 0 0!important;padding:10px 14px!important;
