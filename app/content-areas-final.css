@@ -193,11 +193,11 @@ html body .viewer.viewer.viewer .home-intro span{
   font-size:10px!important;font-weight:700!important;letter-spacing:.13em!important;text-transform:uppercase!important;
 }
 html body .viewer.viewer.viewer .home-intro h1{
-  position:relative!important;display:inline-block!important;max-width:100%!important;
+  position:relative!important;display:block!important;width:100%!important;max-width:100%!important;
   margin:0!important;padding-bottom:8px!important;
-  font-size:clamp(24px,6.4vw,34px)!important;line-height:1.12!important;font-weight:680!important;letter-spacing:-.03em!important;
+  font-size:clamp(22px,6vw,34px)!important;line-height:1.15!important;font-weight:680!important;letter-spacing:-.03em!important;
   background:linear-gradient(105deg,#eef0f4 0%,#a7abb5 78%)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
-  white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;text-wrap:balance!important;
+  white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;
 }
 html body .viewer.viewer.viewer .home-intro h1:after{
   content:""!important;position:absolute!important;left:0!important;bottom:0!important;
@@ -223,34 +223,44 @@ html body .viewer.viewer.viewer .featured-actions .secondary{
 }
 
 /* ---- library toolbar (search, quick filters, category chips): heights/
-   radii were set 3-4 times with different values (28-44px) ---- */
+   radii were set 3-4 times with different values (28-44px). Search was
+   also too tall/dark and hard to notice; category-row active state used
+   a different treatment than quick-filters, making the two chip rows
+   look inconsistent. ---- */
 html body .viewer.viewer.viewer .search{
-  height:48px!important;display:flex!important;align-items:center!important;gap:9px!important;
-  padding:0 14px!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:14px!important;background:#171a20!important;
+  height:42px!important;display:flex!important;align-items:center!important;gap:9px!important;
+  padding:0 13px!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:12px!important;background:#1c2028!important;
 }
-html body .viewer.viewer.viewer .search span{color:#8b9099!important;font-size:16px!important}
+html body .viewer.viewer.viewer .search span{color:#9aa0ab!important;font-size:15px!important}
 html body .viewer.viewer.viewer .library-tools select{font-size:16px!important}
 html body .viewer.viewer.viewer .search input{width:100%!important;border:0!important;outline:0!important;background:transparent!important;font-size:16px!important;color:#f6f3ec!important}
+html body .viewer.viewer.viewer .search input::placeholder{color:#8b9099!important}
 html body .viewer.viewer.viewer .quick-filters{
   min-height:48px!important;display:flex!important;align-items:center!important;gap:5px!important;
   padding:4px!important;border-radius:14px!important;background:#171a20!important;border:1px solid rgba(255,255,255,.1)!important;
 }
-html body .viewer.viewer.viewer .quick-filters button{
+html body .viewer.viewer.viewer .quick-filters button,
+html body .viewer.viewer.viewer .category-row button{
   min-height:36px!important;padding:0 13px!important;border:1px solid transparent!important;border-radius:11px!important;
   background:transparent!important;color:#8b9099!important;font-size:12px!important;font-weight:650!important;white-space:nowrap!important;
 }
-html body .viewer.viewer.viewer .quick-filters button.active{
+html body .viewer.viewer.viewer .quick-filters button.active,
+html body .viewer.viewer.viewer .category-row button.active{
   border-color:rgba(174,162,255,.28)!important;
   background:linear-gradient(135deg,rgba(143,127,240,.22),rgba(143,127,240,.11))!important;color:#f0edff!important;
 }
 html body .viewer.viewer.viewer .category-row{display:flex!important;gap:8px!important;margin-bottom:18px!important;overflow-x:auto!important;scrollbar-width:none!important}
-html body .viewer.viewer.viewer .category-row button{
-  min-height:36px!important;padding-inline:14px!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:12px!important;
-  background:transparent!important;color:#8b9099!important;font-size:11px!important;font-weight:650!important;white-space:nowrap!important;
+html body .viewer.viewer.viewer .category-row button{border:1px solid rgba(255,255,255,.1)!important;padding-inline:14px!important}
+
+/* ---- featured-resume button: progress subtext sat too tight against
+   the main label ---- */
+html body .viewer.viewer.viewer .featured-actions .featured-resume{
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;
 }
-html body .viewer.viewer.viewer .category-row button.active{
-  border-color:rgba(143,127,240,.45)!important;background:rgba(143,127,240,.12)!important;color:#c6bfff!important;
-}
+html body .viewer.viewer.viewer .featured-actions .featured-resume>span{font-size:14px!important;font-weight:650!important}
+html body .viewer.viewer.viewer .featured-actions .featured-resume>small{font-size:11px!important;font-weight:500!important;opacity:.85!important}
+
+
 
 /* ---- section-title: h2 size was set 3 times (14/17/18px) ---- */
 html body .viewer.viewer.viewer .section-title{display:flex!important;align-items:center!important;gap:9px!important;margin:14px 0!important}
