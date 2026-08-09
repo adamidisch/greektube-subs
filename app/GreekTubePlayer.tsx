@@ -690,7 +690,7 @@ export default function GreekTubePlayer() {
     const guideItems=videoGuide(captions);
     const preparingGuide=loadingGuide(loadingPoints);
     const nextVideos=state.videos.filter(video=>video.id!==selected.id&&video.progress<96).sort((a,b)=>b.addedAt.localeCompare(a.addedAt)).slice(0,4);
-    const showPlayerCover=!isPlaying&&playhead<1;
+    const showPlayerCover=false;
     const seekDuration=Math.max(selected.duration||0,captions?.duration||0);
     if(view==="settings")return <main className="app-shell viewer settings-from-player"><header className="app-header"><button className="ghost back-to-video" onClick={returnToVideo}>← Πίσω στο βίντεο</button><Brand home={goHome}/><button className="icon-button active" aria-label="Ρυθμίσεις">⚙</button></header><SettingsPage settings={state.settings} update={patch=>setState(current=>({...current,settings:{...current.settings,...patch}}))} close={returnToVideo}/></main>;
     return <main className="app-shell viewer">
@@ -807,7 +807,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 6.5.6 DEV</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 6.5.7 DEV</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
