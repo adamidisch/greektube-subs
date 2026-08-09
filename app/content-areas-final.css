@@ -1,0 +1,102 @@
+/* GreekTube Subs — final styles for video-frame, video-card info, the
+   mobile "watch summary" panel, speaker-row and brand-mark.
+
+   Same root cause as the player controls: many generations of patches in
+   globals.css redefine these with different values (e.g. video-frame
+   aspect-ratio fights between 16/9, 16/10 and 1.45/1; card-info title
+   font-size is set 5 separate times outside any media query; brand-mark
+   has 6+ different sizes). This file is the single source of truth,
+   loaded last with boosted specificity, using one consistent set of
+   values everywhere instead of whichever old rule happens to win.
+*/
+
+/* ---- video-frame: one consistent shape everywhere (not fullscreen) ---- */
+html body .viewer.viewer.viewer .video-frame:not(:fullscreen):not(.pseudo-fullscreen){
+  width:100%!important;aspect-ratio:16/9!important;
+  border:1px solid rgba(255,255,255,.1)!important;border-radius:16px!important;
+  background:#08090c!important;overflow:hidden!important;
+}
+html body .viewer.viewer.viewer .sticky-player .video-frame:not(:fullscreen):not(.pseudo-fullscreen){
+  border-radius:16px 16px 0 0!important;
+}
+
+/* ---- card-info: one set of sizes, same for library grid and continue row ---- */
+html body .viewer.viewer.viewer .card-info{padding:12px 12px 14px!important}
+html body .viewer.viewer.viewer .card-info strong{
+  display:-webkit-box!important;min-height:38px!important;overflow:hidden!important;
+  font-size:14px!important;line-height:1.35!important;font-weight:630!important;
+  -webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
+}
+html body .viewer.viewer.viewer .card-info span,
+html body .viewer.viewer.viewer .card-info small{
+  display:block!important;margin-top:5px!important;font-size:11.5px!important;
+}
+html body .viewer.viewer.viewer .card-info .card-original-title{
+  display:-webkit-box!important;margin:5px 0 0!important;overflow:hidden!important;
+  font-size:11px!important;line-height:1.35!important;font-weight:500!important;
+  -webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
+}
+html body .viewer.viewer.viewer .card-info>p:not(.card-original-title){
+  display:-webkit-box!important;margin:7px 0 0!important;overflow:hidden!important;
+  font-size:12px!important;line-height:1.45!important;
+  -webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
+}
+@media(max-width:620px){
+  html body .viewer.viewer.viewer .card-info{padding:10px!important}
+  html body .viewer.viewer.viewer .card-info strong{font-size:12.5px!important;min-height:34px!important}
+  html body .viewer.viewer.viewer .card-info span,
+  html body .viewer.viewer.viewer .card-info small{font-size:11px!important}
+  html body .viewer.viewer.viewer .card-info>p:not(.card-original-title){display:none!important}
+}
+
+/* ---- mobile watch-summary panel: one consistent card style ---- */
+@media(max-width:620px){
+  html body .viewer.viewer.viewer .mobile-watch-summary{
+    order:3!important;display:block!important;margin:16px 0 0!important;padding:0!important;background:transparent!important;
+  }
+  html body .viewer.viewer.viewer .mobile-watch-summary>p{display:none!important}
+  html body .viewer.viewer.viewer .mobile-watch-summary section{
+    display:grid!important;grid-template-columns:42px minmax(0,1fr) 36px 36px!important;gap:10px!important;
+    align-items:center!important;min-height:70px!important;padding:12px 14px!important;
+    border:1px solid #2b313b!important;border-radius:14px!important;background:#1b1f26!important;
+  }
+  html body .viewer.viewer.viewer .mobile-watch-summary section>span{
+    width:42px!important;height:42px!important;display:grid!important;place-items:center!important;
+    border-radius:50%!important;background:#1b1930!important;color:#c9c4f5!important;font-size:16px!important;font-weight:700!important;
+  }
+  html body .viewer.viewer.viewer .mobile-watch-summary strong{
+    display:block!important;overflow:hidden!important;color:#f6f3ec!important;
+    font-size:13.5px!important;font-weight:600!important;line-height:1.25!important;
+    text-overflow:ellipsis!important;white-space:nowrap!important;
+  }
+  html body .viewer.viewer.viewer .mobile-watch-summary small{
+    display:-webkit-box!important;overflow:hidden!important;margin-top:2px!important;color:#8b9099!important;
+    font-size:11.5px!important;line-height:1.3!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
+  }
+  html body .viewer.viewer.viewer .mobile-watch-summary button{
+    width:36px!important;height:36px!important;border:1px solid #2b313b!important;border-radius:10px!important;
+    background:#20252d!important;color:#f6f3ec!important;font-size:14px!important;
+  }
+  html body .viewer.viewer.viewer .mobile-watch-summary button.active{color:#7c74e0!important}
+}
+
+/* ---- speaker-row: one consistent style ---- */
+html body .viewer.viewer.viewer .speaker-row{
+  display:flex!important;align-items:center!important;gap:9px!important;flex-wrap:wrap!important;
+  margin:16px 0 0!important;padding:10px 14px!important;
+  border:1px solid rgba(255,255,255,.1)!important;border-radius:11px!important;background:#1b1f26!important;
+}
+html body .viewer.viewer.viewer .speaker-row span{
+  padding:4px 7px!important;border-radius:6px!important;background:rgba(124,116,224,.14)!important;
+  color:#c9c4f5!important;font-size:9.5px!important;font-weight:700!important;text-transform:uppercase!important;letter-spacing:.06em!important;
+}
+html body .viewer.viewer.viewer .speaker-row strong{font-size:12px!important;font-weight:650!important;color:#f6f3ec!important}
+html body .viewer.viewer.viewer .speaker-row i{font-size:10.5px!important;font-style:normal!important;color:#8b9099!important}
+
+/* ---- brand-mark: one consistent size everywhere ---- */
+html body .viewer.viewer.viewer .brand-mark{
+  width:32px!important;height:28px!important;display:flex!important;align-items:center!important;justify-content:center!important;
+  gap:2px!important;padding:0!important;border:1px solid rgba(255,255,255,.14)!important;border-radius:8px!important;
+  background:linear-gradient(135deg,#776bd1,#49435f)!important;color:#fff!important;font-size:9px!important;
+  box-shadow:0 7px 22px rgba(119,107,209,.24)!important;
+}
