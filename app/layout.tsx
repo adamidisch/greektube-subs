@@ -5,6 +5,7 @@ import "./mobile-controls-fix.css";
 import "./ui-651.css";
 import "./ui-653.css";
 import "./ui-654.css";
+import "./mobile-controls-final.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
