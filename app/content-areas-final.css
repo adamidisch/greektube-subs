@@ -276,6 +276,53 @@ html body .viewer.viewer.viewer .form select{
 }
 html body .viewer.viewer.viewer .form label{gap:8px!important;color:#8b9099!important;font-size:12.5px!important;font-weight:590!important}
 
+/* ---- video cards: background was almost the same shade as the page
+   background (#141c vs #08090c) with a very faint 10% border, so cards
+   barely stood out from each other in the stacked mobile list ---- */
+html body .viewer.viewer.viewer .video-card{
+  border:1px solid rgba(255,255,255,.13)!important;border-radius:16px!important;
+  background:#181c24!important;box-shadow:0 8px 24px rgba(0,0,0,.28)!important;
+  overflow:hidden!important;transition:transform .18s,border-color .18s,box-shadow .18s!important;
+}
+html body .viewer.viewer.viewer .video-card:hover{
+  transform:translateY(-2px)!important;border-color:rgba(255,255,255,.22)!important;box-shadow:0 14px 34px rgba(0,0,0,.36)!important;
+}
+@media(max-width:620px){
+  html body .viewer.viewer.viewer .video-grid{gap:14px!important}
+}
+
+/* ---- featured-panel heading: font-size set 6 times (18-26px) ---- */
+html body .viewer.viewer.viewer .featured-panel{padding:22px 21px!important}
+html body .viewer.viewer.viewer .featured-panel h2{
+  margin:10px 0 4px!important;font-size:clamp(20px,1.8vw,26px)!important;line-height:1.2!important;
+  font-weight:700!important;letter-spacing:-.03em!important;color:#f6f3ec!important;
+}
+html body .viewer.viewer.viewer .featured-speaker{color:#c7c9d1!important;font-size:11px!important;font-weight:620!important}
+html body .viewer.viewer.viewer .featured-details{
+  display:flex!important;flex-wrap:wrap!important;gap:5px 12px!important;margin:15px 0 17px!important;
+  padding:9px 0!important;border-top:1px solid rgba(255,255,255,.1)!important;border-bottom:1px solid rgba(255,255,255,.1)!important;
+}
+html body .viewer.viewer.viewer .featured-details span{color:#8b9099!important;font-size:10px!important;font-variant-numeric:tabular-nums!important}
+@media(max-width:620px){
+  html body .viewer.viewer.viewer .featured-panel{padding:16px!important}
+  html body .viewer.viewer.viewer .featured-panel h2{font-size:20px!important}
+}
+
+/* ---- tool-icon: accent color mixed saffron/orange with the app's indigo
+   language (only matters where .tool-icon isn't already covered by the
+   controls override, e.g. inside .moment-save) ---- */
+html body .viewer.viewer.viewer .tool-icon{color:inherit!important}
+
+/* ---- subtitle-size-picker: button size set 3 times (26-29px) ---- */
+html body .viewer.viewer.viewer .subtitle-size-picker button{
+  width:27px!important;height:24px!important;display:grid!important;place-items:center!important;padding:0!important;
+  border:0!important;border-radius:6px!important;background:transparent!important;color:#8f94a0!important;font-weight:700!important;line-height:1!important;
+}
+html body .viewer.viewer.viewer .subtitle-size-picker button:hover{color:#d7d9df!important;background:rgba(255,255,255,.05)!important}
+html body .viewer.viewer.viewer .subtitle-size-picker button.active{
+  color:#fff!important;background:rgba(124,116,224,.76)!important;box-shadow:0 3px 10px rgba(105,90,195,.24)!important;
+}
+
 html body .viewer.viewer.viewer .speaker-row{
   display:flex!important;align-items:center!important;gap:9px!important;flex-wrap:wrap!important;
   margin:16px 0 0!important;padding:10px 14px!important;
