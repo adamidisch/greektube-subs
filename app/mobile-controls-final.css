@@ -126,6 +126,7 @@
     display:grid!important;place-items:center!important;border-radius:50%!important;background:#7c74e0!important;color:#fff!important;
     font-size:9px!important;font-weight:700!important;line-height:1!important;
   }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .transcript-toggle{background:#1b1930!important;border-color:rgba(124,116,224,.35)!important;color:#c9c4f5!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .transcript-toggle.active{background:#1b1930!important;border-color:rgba(124,116,224,.35)!important;color:#c9c4f5!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control{position:relative!important;margin:0!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control.active>.cc-toggle{background:#1b1930!important;border-color:rgba(124,116,224,.4)!important;color:#c9c4f5!important}
