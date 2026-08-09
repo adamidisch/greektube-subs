@@ -126,8 +126,14 @@
     display:grid!important;place-items:center!important;border-radius:50%!important;background:#7c74e0!important;color:#fff!important;
     font-size:9px!important;font-weight:700!important;line-height:1!important;
   }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .transcript-toggle{background:#1b1930!important;border-color:rgba(124,116,224,.35)!important;color:#c9c4f5!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .transcript-toggle.active{background:#1b1930!important;border-color:rgba(124,116,224,.35)!important;color:#c9c4f5!important}
+  html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions.player-secondary-actions>button.transcript-toggle,
+  html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions.player-secondary-actions>button.transcript-toggle.active{
+    background:#1b1930!important;border-color:rgba(124,116,224,.42)!important;color:#c9c4f5!important;
+  }
+  html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions.player-secondary-actions>button.transcript-toggle>svg,
+  html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions.player-secondary-actions>button.transcript-toggle>span:not(.moment-count):not(.cc-active-tag){
+    color:#c9c4f5!important;stroke:#c9c4f5!important;
+  }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control{position:relative!important;margin:0!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control.active>.cc-toggle{background:#1b1930!important;border-color:rgba(124,116,224,.4)!important;color:#c9c4f5!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-active-tag{
