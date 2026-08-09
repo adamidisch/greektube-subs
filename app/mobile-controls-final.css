@@ -1,0 +1,143 @@
+/* GreekTube Subs — final mobile controls layout.
+
+   globals.css contains many generations of overlapping mobile control-layout
+   rules for these same classes (some scoped to .watch-layout.player-only /
+   .watch-layout.transcript-open, some using `div.player-actions>section...`
+   chains with 6-7 classes of specificity). Rather than hunt down every one by
+   hand, this file wins deterministically: it loads last AND its selectors
+   are deliberately boosted past the highest specificity found in this
+   codebase (repeating real classes is valid CSS and doesn't change what
+   matches — only how strongly it wins ties). This is the single source of
+   truth for mobile control layout going forward.
+
+   Row 1: [ -10s ] [ play/pause ] [ +10s ]   |   [ Πλήρης οθόνη ]
+   Row 2: [ Αποθήκευση στιγμής ] [ Κείμενο μεταγραφής ] [ Υπότιτλοι ]
+*/
+@media(max-width:620px){
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools{
+    display:block!important;
+    height:auto!important;
+    min-height:0!important;
+    grid-template-columns:none!important;
+    width:100%!important;
+    margin:0!important;
+    padding:16px 14px 18px!important;
+    border:1px solid #2b313b!important;
+    border-top:1px solid #2b313b!important;
+    border-radius:16px!important;
+    background:#12151a!important;
+    overflow:visible!important;
+  }
+
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-toolbar,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-section,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-row,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .action-section,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions{
+    display:revert!important;
+  }
+
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-tools-label{margin:0 0 14px!important}
+
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row{
+    display:grid!important;
+    grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)!important;
+    grid-template-rows:none!important;
+    gap:10px!important;
+    margin:0 0 10px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-toolbar,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-section,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-row{
+    width:100%!important;height:100%!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .primary-control-row{display:block!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{
+    grid-column:auto!important;grid-row:auto!important;
+    width:100%!important;height:100%!important;min-height:68px!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;gap:18px!important;
+    margin:0!important;padding:12px 10px!important;
+    border:1px solid #2b313b!important;border-radius:16px!important;background:#1b1f26!important;
+    overflow:visible!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls button{border:0!important;background:transparent!important;box-shadow:none!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button{
+    width:38px!important;min-width:38px!important;height:52px!important;flex:0 0 38px!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:4px!important;
+    padding:0!important;margin:0!important;color:#8b9099!important;position:static!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button svg{width:19px!important;height:19px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button small{font-size:11px!important;line-height:1!important;color:#8b9099!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .play-toggle{
+    width:52px!important;min-width:52px!important;height:52px!important;min-height:52px!important;flex:0 0 52px!important;
+    display:grid!important;place-items:center!important;padding:0!important;margin:0!important;
+    border-radius:50%!important;background:#7c74e0!important;color:#fff!important;font-size:16px!important;position:static!important;
+    box-shadow:0 8px 22px rgba(124,116,224,.25)!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary{
+    grid-column:auto!important;grid-row:auto!important;
+    width:100%!important;min-height:68px!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:6px!important;
+    margin:0!important;padding:12px 8px!important;
+    border:1px solid #2b313b!important;border-radius:16px!important;background:#1b1f26!important;color:#f6f3ec!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary svg{width:19px!important;height:19px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary span{font-size:11.5px!important;line-height:1.2!important;color:#f6f3ec!important}
+
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .action-section{width:100%!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    grid-template-rows:none!important;
+    gap:8px!important;width:100%!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.subtitle-cc-control{
+    grid-column:auto!important;grid-row:auto!important;
+    position:relative!important;width:100%!important;min-width:0!important;margin:0!important;display:block!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control>.cc-toggle{
+    width:100%!important;height:88px!important;min-height:88px!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:7px!important;
+    margin:0!important;padding:10px 6px!important;
+    border:1px solid #2b313b!important;border-radius:16px!important;background:#1b1f26!important;color:#f6f3ec!important;
+    text-align:center!important;overflow:hidden!important;white-space:normal!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>svg,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-card-icon{width:19px!important;height:19px!important;flex:0 0 19px!important;display:block!important;margin:0!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>span:not(.moment-count):not(.cc-active-tag),
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>b{
+    font-size:11.5px!important;font-weight:500!important;line-height:1.2!important;color:#f6f3ec!important;white-space:normal!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save{background:#1b1930!important;border-color:rgba(124,116,224,.42)!important;color:#c9c4f5!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save>span:not(.moment-count){color:#c9c4f5!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .moment-count{
+    position:absolute!important;top:8px!important;right:8px!important;width:17px!important;height:17px!important;
+    display:grid!important;place-items:center!important;border-radius:50%!important;background:#7c74e0!important;color:#fff!important;
+    font-size:9px!important;font-weight:700!important;line-height:1!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .transcript-toggle.active{background:#1b1930!important;border-color:rgba(124,116,224,.35)!important;color:#c9c4f5!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control{position:relative!important;margin:0!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control.active>.cc-toggle{background:#1b1930!important;border-color:rgba(124,116,224,.4)!important;color:#c9c4f5!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-active-tag{
+    position:absolute!important;top:8px!important;right:8px!important;left:auto!important;transform:none!important;
+    color:#7c74e0!important;font-size:9.5px!important;font-weight:700!important;line-height:1!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-card-icon{color:#c9c4f5!important;margin:0!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-label{color:#c9c4f5!important;font-size:11.5px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-toggle>small{font-size:9.5px!important;font-weight:650!important;line-height:1!important;color:#7fa37a!important;white-space:nowrap!important}
+  html body .viewer.viewer.viewer .subtitle-cc-menu{right:0!important;left:auto!important;bottom:calc(100% + 8px)!important;width:min(220px,78vw)!important;z-index:30!important}
+}
+
+@media(max-width:360px){
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools{padding-left:10px!important;padding-right:10px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions{gap:7px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{gap:13px!important;padding-left:6px!important;padding-right:6px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>span:not(.moment-count):not(.cc-active-tag){font-size:10.5px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary span{font-size:11px!important}
+}
