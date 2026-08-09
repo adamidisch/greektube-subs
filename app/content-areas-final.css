@@ -222,6 +222,60 @@ html body .viewer.viewer.viewer .featured-actions .secondary{
   white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
 }
 
+/* ---- library toolbar (search, quick filters, category chips): heights/
+   radii were set 3-4 times with different values (28-44px) ---- */
+html body .viewer.viewer.viewer .search{
+  height:48px!important;display:flex!important;align-items:center!important;gap:9px!important;
+  padding:0 14px!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:14px!important;background:#171a20!important;
+}
+html body .viewer.viewer.viewer .search span{color:#8b9099!important;font-size:16px!important}
+html body .viewer.viewer.viewer .search input{width:100%!important;border:0!important;outline:0!important;background:transparent!important;font-size:12px!important;color:#f6f3ec!important}
+html body .viewer.viewer.viewer .quick-filters{
+  min-height:48px!important;display:flex!important;align-items:center!important;gap:5px!important;
+  padding:4px!important;border-radius:14px!important;background:#171a20!important;border:1px solid rgba(255,255,255,.1)!important;
+}
+html body .viewer.viewer.viewer .quick-filters button{
+  min-height:36px!important;padding:0 13px!important;border:1px solid transparent!important;border-radius:11px!important;
+  background:transparent!important;color:#8b9099!important;font-size:12px!important;font-weight:650!important;white-space:nowrap!important;
+}
+html body .viewer.viewer.viewer .quick-filters button.active{
+  border-color:rgba(174,162,255,.28)!important;
+  background:linear-gradient(135deg,rgba(143,127,240,.22),rgba(143,127,240,.11))!important;color:#f0edff!important;
+}
+html body .viewer.viewer.viewer .category-row{display:flex!important;gap:8px!important;margin-bottom:18px!important;overflow-x:auto!important;scrollbar-width:none!important}
+html body .viewer.viewer.viewer .category-row button{
+  min-height:36px!important;padding-inline:14px!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:12px!important;
+  background:transparent!important;color:#8b9099!important;font-size:11px!important;font-weight:650!important;white-space:nowrap!important;
+}
+html body .viewer.viewer.viewer .category-row button.active{
+  border-color:rgba(143,127,240,.45)!important;background:rgba(143,127,240,.12)!important;color:#c6bfff!important;
+}
+
+/* ---- section-title: h2 size was set 3 times (14/17/18px) ---- */
+html body .viewer.viewer.viewer .section-title{display:flex!important;align-items:center!important;gap:9px!important;margin:14px 0!important}
+html body .viewer.viewer.viewer .section-title h2{margin:0!important;font-size:17px!important;line-height:1.25!important;font-weight:640!important;letter-spacing:-.02em!important;color:#f6f3ec!important}
+html body .viewer.viewer.viewer .section-title small{
+  min-width:22px!important;height:19px!important;display:grid!important;place-items:center!important;
+  border-radius:99px!important;background:rgba(255,255,255,.06)!important;color:#8b9099!important;font-size:10px!important;
+}
+
+/* ---- video-heading title above the player ---- */
+html body .viewer.viewer.viewer .video-heading{padding:16px 3px!important}
+html body .viewer.viewer.viewer .video-heading small{color:#8b9099!important;font-size:10px!important}
+html body .viewer.viewer.viewer .video-heading h1{margin:5px 0 0!important;font-size:20px!important;line-height:1.35!important;font-weight:640!important;color:#f6f3ec!important}
+
+/* ---- form inputs (edit video / save moment modals): height set both
+   41px and 48px in different places ---- */
+html body .viewer.viewer.viewer .form input,
+html body .viewer.viewer.viewer .form select{height:48px!important;padding:0 14px!important}
+html body .viewer.viewer.viewer .form input,
+html body .viewer.viewer.viewer .form textarea,
+html body .viewer.viewer.viewer .form select{
+  border:1px solid rgba(255,255,255,.1)!important;border-radius:12px!important;background:rgba(255,255,255,.04)!important;
+  color:#f6f3ec!important;font-size:13px!important;
+}
+html body .viewer.viewer.viewer .form label{gap:8px!important;color:#8b9099!important;font-size:12.5px!important;font-weight:590!important}
+
 html body .viewer.viewer.viewer .speaker-row{
   display:flex!important;align-items:center!important;gap:9px!important;flex-wrap:wrap!important;
   margin:16px 0 0!important;padding:10px 14px!important;
