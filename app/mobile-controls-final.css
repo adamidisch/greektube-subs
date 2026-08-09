@@ -101,6 +101,9 @@
     grid-column:auto!important;grid-row:auto!important;
     position:relative!important;width:100%!important;min-width:0!important;margin:0!important;display:block!important;
   }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save{grid-column:1!important;grid-row:1!important;order:1!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle{grid-column:2!important;grid-row:1!important;order:2!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.subtitle-cc-control{grid-column:3!important;grid-row:1!important;order:3!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control>.cc-toggle{
