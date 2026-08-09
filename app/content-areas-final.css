@@ -185,6 +185,30 @@ html body .viewer.viewer.viewer .transcript>button.active i{opacity:1!important}
 }
 
 
+/* ---- home-intro title: font-size was set 8+ times (21px-38px), winning
+   value on some viewports was too wide and got clipped instead of wrapping ---- */
+html body .viewer.viewer.viewer .home-intro{max-width:100%!important;overflow:visible!important}
+html body .viewer.viewer.viewer .home-intro span{
+  display:block!important;margin-bottom:6px!important;color:#aaa1ef!important;
+  font-size:10px!important;font-weight:700!important;letter-spacing:.13em!important;text-transform:uppercase!important;
+}
+html body .viewer.viewer.viewer .home-intro h1{
+  position:relative!important;display:inline-block!important;max-width:100%!important;
+  margin:0!important;padding-bottom:8px!important;
+  font-size:clamp(24px,6.4vw,34px)!important;line-height:1.12!important;font-weight:680!important;letter-spacing:-.03em!important;
+  background:linear-gradient(105deg,#eef0f4 0%,#a7abb5 78%)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
+  white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;text-wrap:balance!important;
+}
+html body .viewer.viewer.viewer .home-intro h1:after{
+  content:""!important;position:absolute!important;left:0!important;bottom:0!important;
+  width:36px!important;height:2px!important;border-radius:99px!important;
+  background:linear-gradient(90deg,#8f7ff0,rgba(143,127,240,.12))!important;
+}
+@media(max-width:620px){
+  html body .viewer.viewer.viewer .home-intro{padding:18px 0 14px!important}
+  html body .viewer.viewer.viewer .home-intro h1{font-size:clamp(22px,7vw,27px)!important}
+}
+
 html body .viewer.viewer.viewer .speaker-row{
   display:flex!important;align-items:center!important;gap:9px!important;flex-wrap:wrap!important;
   margin:16px 0 0!important;padding:10px 14px!important;
