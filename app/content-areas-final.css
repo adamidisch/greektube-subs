@@ -255,10 +255,11 @@ html body .viewer.viewer.viewer .category-row button{border:1px solid rgba(255,2
 /* ---- featured-resume button: progress subtext sat too tight against
    the main label ---- */
 html body .viewer.viewer.viewer .featured-actions .featured-resume{
-  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:6px!important;
+  min-height:56px!important;padding:12px 16px!important;
 }
-html body .viewer.viewer.viewer .featured-actions .featured-resume>span{font-size:14px!important;font-weight:650!important}
-html body .viewer.viewer.viewer .featured-actions .featured-resume>small{font-size:11px!important;font-weight:500!important;opacity:.85!important}
+html body .viewer.viewer.viewer .featured-actions .featured-resume>span{font-size:14px!important;font-weight:650!important;line-height:1!important}
+html body .viewer.viewer.viewer .featured-actions .featured-resume>small{font-size:11px!important;font-weight:500!important;opacity:.85!important;line-height:1!important}
 
 
 
@@ -289,17 +290,20 @@ html body .viewer.viewer.viewer .form label{gap:8px!important;color:#8b9099!impo
 
 /* ---- video cards: background was almost the same shade as the page
    background (#141c vs #08090c) with a very faint 10% border, so cards
-   barely stood out from each other in the stacked mobile list ---- */
+   barely stood out from each other in the stacked mobile list. Strengthened
+   further (lighter fill, more visible border, bigger gap between cards). ---- */
 html body .viewer.viewer.viewer .video-card{
-  border:1px solid rgba(255,255,255,.13)!important;border-radius:16px!important;
-  background:#181c24!important;box-shadow:0 8px 24px rgba(0,0,0,.28)!important;
-  overflow:hidden!important;transition:transform .18s,border-color .18s,box-shadow .18s!important;
+  border:1px solid rgba(255,255,255,.16)!important;border-radius:16px!important;
+  background:#1c212a!important;box-shadow:0 10px 26px rgba(0,0,0,.32)!important;
+  overflow:hidden!important;transition:transform .18s,border-color .18s,box-shadow .18s,background .18s!important;
 }
 html body .viewer.viewer.viewer .video-card:hover{
-  transform:translateY(-2px)!important;border-color:rgba(255,255,255,.22)!important;box-shadow:0 14px 34px rgba(0,0,0,.36)!important;
+  transform:translateY(-2px)!important;border-color:rgba(255,255,255,.26)!important;
+  background:#20262f!important;box-shadow:0 16px 38px rgba(0,0,0,.4)!important;
 }
+html body .viewer.viewer.viewer .video-grid{gap:16px!important}
 @media(max-width:620px){
-  html body .viewer.viewer.viewer .video-grid{gap:14px!important}
+  html body .viewer.viewer.viewer .video-grid{gap:16px!important}
 }
 
 /* ---- featured-panel heading: font-size set 6 times (18-26px) ---- */
@@ -389,3 +393,19 @@ html body .viewer.viewer.viewer .heart{
 }
 html body .viewer.viewer.viewer .heart.active,
 html body .viewer.viewer.viewer .favorite.active{color:#f4847b!important}
+
+/* ---- app footer ---- */
+html body .viewer.viewer.viewer .app-footer{
+  display:flex!important;flex-direction:column!important;align-items:center!important;gap:10px!important;
+  margin:48px 0 12px!important;padding:28px 20px 22px!important;
+  border-top:1px solid rgba(255,255,255,.08)!important;text-align:center!important;
+}
+html body .viewer.viewer.viewer .app-footer-brand{
+  display:flex!important;align-items:center!important;gap:9px!important;font-size:13px!important;font-weight:650!important;color:#f6f3ec!important;
+}
+html body .viewer.viewer.viewer .app-footer-brand .brand-mark{
+  width:26px!important;height:22px!important;font-size:8px!important;box-shadow:0 6px 18px rgba(119,107,209,.24)!important;
+}
+html body .viewer.viewer.viewer .app-footer-brand b{color:#8b9099!important;font-weight:520!important}
+html body .viewer.viewer.viewer .app-footer>p{margin:0!important;max-width:360px!important;color:#8b9099!important;font-size:12px!important;line-height:1.5!important}
+html body .viewer.viewer.viewer .app-footer-note{color:#5f6570!important;font-size:11px!important}
