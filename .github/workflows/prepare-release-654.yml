@@ -1,0 +1,23 @@
+name: Prepare release 6.5.4
+on:
+  push:
+    branches: [release-v6.5.4]
+    paths:
+      - 'scripts/prepare_release_654.py'
+      - '.github/workflows/prepare-release-654.yml'
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release-v6.5.4
+      - run: python scripts/prepare_release_654.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "[release] Prepare GreekTube Subs 6.5.4"
+          git push origin release-v6.5.4
