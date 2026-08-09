@@ -11,78 +11,78 @@
 */
 
 /* ---- video-frame: one consistent shape everywhere (not fullscreen) ---- */
-html body .viewer.viewer.viewer .video-frame:not(:fullscreen):not(.pseudo-fullscreen){
+html body .app-shell.app-shell.app-shell .video-frame:not(:fullscreen):not(.pseudo-fullscreen){
   width:100%!important;aspect-ratio:16/9!important;
   border:1px solid rgba(255,255,255,.1)!important;border-radius:16px!important;
   background:#08090c!important;overflow:hidden!important;
 }
-html body .viewer.viewer.viewer .sticky-player .video-frame:not(:fullscreen):not(.pseudo-fullscreen){
+html body .app-shell.app-shell.app-shell .sticky-player .video-frame:not(:fullscreen):not(.pseudo-fullscreen){
   border-radius:16px 16px 0 0!important;
 }
 
 /* ---- card-info: one set of sizes, same for library grid and continue row ---- */
-html body .viewer.viewer.viewer .card-info{padding:12px 12px 14px!important}
-html body .viewer.viewer.viewer .card-info strong{
+html body .app-shell.app-shell.app-shell .card-info{padding:12px 12px 14px!important}
+html body .app-shell.app-shell.app-shell .card-info strong{
   display:-webkit-box!important;min-height:38px!important;overflow:hidden!important;
   font-size:14px!important;line-height:1.35!important;font-weight:630!important;
   -webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
 }
-html body .viewer.viewer.viewer .card-info span,
-html body .viewer.viewer.viewer .card-info small{
+html body .app-shell.app-shell.app-shell .card-info span,
+html body .app-shell.app-shell.app-shell .card-info small{
   display:block!important;margin-top:5px!important;font-size:11.5px!important;
 }
-html body .viewer.viewer.viewer .card-info .card-original-title{
+html body .app-shell.app-shell.app-shell .card-info .card-original-title{
   display:-webkit-box!important;margin:5px 0 0!important;overflow:hidden!important;
   font-size:11px!important;line-height:1.35!important;font-weight:500!important;
   -webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
 }
-html body .viewer.viewer.viewer .card-info>p:not(.card-original-title){
+html body .app-shell.app-shell.app-shell .card-info>p:not(.card-original-title){
   display:-webkit-box!important;margin:7px 0 0!important;overflow:hidden!important;
   font-size:12px!important;line-height:1.45!important;
   -webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
 }
 @media(max-width:620px){
-  html body .viewer.viewer.viewer .card-info{padding:10px!important}
-  html body .viewer.viewer.viewer .card-info strong{font-size:12.5px!important;min-height:34px!important}
-  html body .viewer.viewer.viewer .card-info span,
-  html body .viewer.viewer.viewer .card-info small{font-size:11px!important}
-  html body .viewer.viewer.viewer .card-info>p:not(.card-original-title){display:none!important}
+  html body .app-shell.app-shell.app-shell .card-info{padding:10px!important}
+  html body .app-shell.app-shell.app-shell .card-info strong{font-size:12.5px!important;min-height:34px!important}
+  html body .app-shell.app-shell.app-shell .card-info span,
+  html body .app-shell.app-shell.app-shell .card-info small{font-size:11px!important}
+  html body .app-shell.app-shell.app-shell .card-info>p:not(.card-original-title){display:none!important}
 }
 
 /* ---- mobile watch-summary panel: one consistent card style ---- */
 @media(max-width:620px){
-  html body .viewer.viewer.viewer .mobile-watch-summary{
+  html body .app-shell.app-shell.app-shell .mobile-watch-summary{
     order:3!important;display:block!important;margin:16px 0 0!important;padding:0!important;background:transparent!important;
   }
-  html body .viewer.viewer.viewer .mobile-watch-summary>p{display:none!important}
-  html body .viewer.viewer.viewer .mobile-watch-summary section{
+  html body .app-shell.app-shell.app-shell .mobile-watch-summary>p{display:none!important}
+  html body .app-shell.app-shell.app-shell .mobile-watch-summary section{
     display:grid!important;grid-template-columns:42px minmax(0,1fr) 36px 36px!important;gap:10px!important;
     align-items:center!important;min-height:70px!important;padding:12px 14px!important;
     border:1px solid #2b313b!important;border-radius:14px!important;background:#1b1f26!important;
   }
-  html body .viewer.viewer.viewer .mobile-watch-summary section>span{
+  html body .app-shell.app-shell.app-shell .mobile-watch-summary section>span{
     width:42px!important;height:42px!important;display:grid!important;place-items:center!important;
     border-radius:50%!important;background:#1b1930!important;color:#c9c4f5!important;font-size:16px!important;font-weight:700!important;
   }
-  html body .viewer.viewer.viewer .mobile-watch-summary strong{
+  html body .app-shell.app-shell.app-shell .mobile-watch-summary strong{
     display:block!important;overflow:hidden!important;color:#f6f3ec!important;
     font-size:13.5px!important;font-weight:600!important;line-height:1.25!important;
     text-overflow:ellipsis!important;white-space:nowrap!important;
   }
-  html body .viewer.viewer.viewer .mobile-watch-summary small{
+  html body .app-shell.app-shell.app-shell .mobile-watch-summary small{
     display:-webkit-box!important;overflow:hidden!important;margin-top:2px!important;color:#8b9099!important;
     font-size:11.5px!important;line-height:1.3!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
   }
-  html body .viewer.viewer.viewer .mobile-watch-summary button{
+  html body .app-shell.app-shell.app-shell .mobile-watch-summary button{
     width:36px!important;height:36px!important;border:1px solid #2b313b!important;border-radius:10px!important;
     background:#20252d!important;color:#f6f3ec!important;font-size:14px!important;
   }
-  html body .viewer.viewer.viewer .mobile-watch-summary button.active{color:#7c74e0!important}
+  html body .app-shell.app-shell.app-shell .mobile-watch-summary button.active{color:#7c74e0!important}
 }
 
 /* ---- subtitles: one consistent box style everywhere (z-index was flip-flopping
    between 3/4/5/6/8 across breakpoints — could hide behind other elements) ---- */
-html body .viewer.viewer.viewer .subtitles{
+html body .app-shell.app-shell.app-shell .subtitles{
   z-index:6!important;
   border:1px solid rgba(255,255,255,.14)!important;
   border-radius:10px!important;
@@ -95,128 +95,128 @@ html body .viewer.viewer.viewer .subtitles{
   padding:7px 12px!important;
   pointer-events:none!important;
 }
-html body .viewer.viewer.viewer .subtitles small{
+html body .app-shell.app-shell.app-shell .subtitles small{
   display:block!important;margin-top:4px!important;color:#d2d5dc!important;font-size:.72em!important;font-weight:560!important;line-height:1.35!important;
 }
-html body .viewer.viewer.viewer .video-frame:fullscreen .subtitles,
-html body .viewer.viewer.viewer .video-frame.pseudo-fullscreen .subtitles{
+html body .app-shell.app-shell.app-shell .video-frame:fullscreen .subtitles,
+html body .app-shell.app-shell.app-shell .video-frame.pseudo-fullscreen .subtitles{
   padding:8px 14px!important;border-radius:10px!important;
 }
 
 
 /* ---- transcript panel: one consistent design (font-size for .transcript
    span/time was set 4-5 different times across the file: 9-14px) ---- */
-html body .viewer.viewer.viewer .transcript{padding:8px!important}
-html body .viewer.viewer.viewer .transcript>button{
+html body .app-shell.app-shell.app-shell .transcript{padding:8px!important}
+html body .app-shell.app-shell.app-shell .transcript>button{
   position:relative!important;grid-template-columns:56px minmax(0,1fr) 34px!important;
   align-items:start!important;gap:10px!important;min-height:66px!important;
   margin:0 0 6px!important;padding:13px 12px!important;
   border:1px solid transparent!important;border-radius:15px!important;background:transparent!important;
 }
-html body .viewer.viewer.viewer .transcript>button:hover{
+html body .app-shell.app-shell.app-shell .transcript>button:hover{
   border-color:rgba(255,255,255,.08)!important;background:rgba(255,255,255,.035)!important;
 }
-html body .viewer.viewer.viewer .transcript>button.active{
+html body .app-shell.app-shell.app-shell .transcript>button.active{
   border-color:rgba(174,162,255,.36)!important;
   background:linear-gradient(135deg,rgba(143,127,240,.2),rgba(143,127,240,.08))!important;
   box-shadow:0 10px 30px rgba(80,70,150,.16)!important;
 }
-html body .viewer.viewer.viewer .transcript time{
+html body .app-shell.app-shell.app-shell .transcript time{
   width:50px!important;min-height:28px!important;display:grid!important;place-items:center!important;padding:0!important;
   border:1px solid rgba(255,255,255,.08)!important;border-radius:10px!important;background:rgba(255,255,255,.035)!important;
   color:#b9b0ff!important;font-size:11px!important;font-weight:700!important;font-family:inherit!important;
 }
-html body .viewer.viewer.viewer .transcript span{
+html body .app-shell.app-shell.app-shell .transcript span{
   color:#d8dbe2!important;font-size:13.5px!important;line-height:1.58!important;
 }
-html body .viewer.viewer.viewer .transcript i{
+html body .app-shell.app-shell.app-shell .transcript i{
   width:32px!important;height:32px!important;display:grid!important;place-items:center!important;
   border:1px solid rgba(174,162,255,.22)!important;border-radius:11px!important;background:rgba(143,127,240,.09)!important;
   opacity:.72!important;color:#c9c1ff!important;font-size:16px!important;font-style:normal!important;
 }
-html body .viewer.viewer.viewer .transcript>button:hover i,
-html body .viewer.viewer.viewer .transcript>button.active i{opacity:1!important}
+html body .app-shell.app-shell.app-shell .transcript>button:hover i,
+html body .app-shell.app-shell.app-shell .transcript>button.active i{opacity:1!important}
 
 /* ---- saved moments list: two desktop rule-sets fought over the layout
    (3-column grid vs single stacked column) ---- */
 @media(min-width:621px){
-  html body .viewer.viewer.viewer .moment{
+  html body .app-shell.app-shell.app-shell .moment{
     display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:16px!important;
     align-items:center!important;margin:0!important;padding:14px 16px!important;
     border:1px solid rgba(127,163,122,.28)!important;border-radius:13px!important;background:rgba(127,163,122,.08)!important;
   }
-  html body .viewer.viewer.viewer .moment>time{
+  html body .app-shell.app-shell.app-shell .moment>time{
     width:max-content!important;padding:4px 9px!important;border-radius:7px!important;background:rgba(127,163,122,.18)!important;
     color:#8fbf86!important;font-family:inherit!important;font-size:12.5px!important;font-weight:600!important;
   }
-  html body .viewer.viewer.viewer .moment strong{color:#d9e5d6!important;font-size:13px!important;font-weight:500!important}
-  html body .viewer.viewer.viewer .moment p{display:none!important}
-  html body .viewer.viewer.viewer .moment-actions{display:flex!important;gap:16px!important;overflow:visible!important}
-  html body .viewer.viewer.viewer .moment-actions button{
+  html body .app-shell.app-shell.app-shell .moment strong{color:#d9e5d6!important;font-size:13px!important;font-weight:500!important}
+  html body .app-shell.app-shell.app-shell .moment p{display:none!important}
+  html body .app-shell.app-shell.app-shell .moment-actions{display:flex!important;gap:16px!important;overflow:visible!important}
+  html body .app-shell.app-shell.app-shell .moment-actions button{
     width:auto!important;height:auto!important;min-height:0!important;padding:0!important;border:0!important;
     background:transparent!important;color:#8fbf86!important;font-size:12px!important;white-space:nowrap!important;
   }
 
   /* video guide (chapters) */
-  html body .viewer.viewer.viewer .guide-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;padding:0!important}
-  html body .viewer.viewer.viewer .guide-list button{
+  html body .app-shell.app-shell.app-shell .guide-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;padding:0!important}
+  html body .app-shell.app-shell.app-shell .guide-list button{
     min-height:0!important;display:flex!important;align-items:center!important;gap:13px!important;padding:13px 15px!important;
     border:1px solid rgba(227,162,60,.22)!important;border-radius:12px!important;background:rgba(227,162,60,.07)!important;text-align:left!important;
   }
-  html body .viewer.viewer.viewer .guide-list time{
+  html body .app-shell.app-shell.app-shell .guide-list time{
     min-width:0!important;padding:4px 9px!important;border-radius:7px!important;background:rgba(227,162,60,.15)!important;
     color:#e3a23c!important;font-family:inherit!important;font-size:12.5px!important;font-weight:600!important;
   }
-  html body .viewer.viewer.viewer .guide-list span{color:#ede2cc!important;font-size:13px!important;line-height:1.4!important}
+  html body .app-shell.app-shell.app-shell .guide-list span{color:#ede2cc!important;font-size:13px!important;line-height:1.4!important}
 
   /* next videos row */
-  html body .viewer.viewer.viewer .next-video-row{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
-  html body .viewer.viewer.viewer .next-video-row button{
+  html body .app-shell.app-shell.app-shell .next-video-row{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
+  html body .app-shell.app-shell.app-shell .next-video-row button{
     min-height:0!important;display:block!important;padding:0!important;border:1px solid rgba(255,255,255,.1)!important;
     border-radius:12px!important;background:#1b1f26!important;overflow:hidden!important;text-align:left!important;
   }
-  html body .viewer.viewer.viewer .next-video-row img{width:100%!important;height:78px!important;display:block!important;object-fit:cover!important;filter:brightness(.78) saturate(.88)!important}
-  html body .viewer.viewer.viewer .next-video-row button>span{display:block!important;padding:10px 12px!important}
-  html body .viewer.viewer.viewer .next-video-row strong{
+  html body .app-shell.app-shell.app-shell .next-video-row img{width:100%!important;height:78px!important;display:block!important;object-fit:cover!important;filter:brightness(.78) saturate(.88)!important}
+  html body .app-shell.app-shell.app-shell .next-video-row button>span{display:block!important;padding:10px 12px!important}
+  html body .app-shell.app-shell.app-shell .next-video-row strong{
     display:block!important;overflow:hidden!important;color:#f6f3ec!important;font-size:12.5px!important;font-weight:500!important;
     line-height:1.35!important;-webkit-line-clamp:2!important;
   }
-  html body .viewer.viewer.viewer .next-video-row small{display:block!important;margin-top:4px!important;color:#8b9099!important;font-size:11px!important}
+  html body .app-shell.app-shell.app-shell .next-video-row small{display:block!important;margin-top:4px!important;color:#8b9099!important;font-size:11px!important}
 }
 
 
 /* ---- home-intro title: font-size was set 8+ times (21px-38px), winning
    value on some viewports was too wide and got clipped instead of wrapping ---- */
-html body .viewer.viewer.viewer .home-intro{max-width:100%!important;overflow:visible!important}
-html body .viewer.viewer.viewer .home-intro span{
+html body .app-shell.app-shell.app-shell .home-intro{max-width:100%!important;overflow:visible!important}
+html body .app-shell.app-shell.app-shell .home-intro span{
   display:block!important;margin-bottom:6px!important;color:#aaa1ef!important;
   font-size:10px!important;font-weight:700!important;letter-spacing:.13em!important;text-transform:uppercase!important;
 }
-html body .viewer.viewer.viewer .home-intro h1{
+html body .app-shell.app-shell.app-shell .home-intro h1{
   position:relative!important;display:block!important;width:100%!important;max-width:100%!important;
   margin:0!important;padding-bottom:8px!important;
   font-size:clamp(22px,6vw,34px)!important;line-height:1.15!important;font-weight:680!important;letter-spacing:-.03em!important;
   background:linear-gradient(105deg,#eef0f4 0%,#a7abb5 78%)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
   white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;
 }
-html body .viewer.viewer.viewer .home-intro h1:after{
+html body .app-shell.app-shell.app-shell .home-intro h1:after{
   content:""!important;position:absolute!important;left:0!important;bottom:0!important;
   width:36px!important;height:2px!important;border-radius:99px!important;
   background:linear-gradient(90deg,#7c74e0,rgba(124,116,224,.12))!important;
 }
 @media(max-width:620px){
-  html body .viewer.viewer.viewer .home-intro{padding:18px 0 14px!important}
-  html body .viewer.viewer.viewer .home-intro h1{font-size:clamp(22px,7vw,27px)!important}
+  html body .app-shell.app-shell.app-shell .home-intro{padding:18px 0 14px!important}
+  html body .app-shell.app-shell.app-shell .home-intro h1{font-size:clamp(22px,7vw,27px)!important}
 }
 
 /* ---- featured card action buttons: an unscoped rule forced a 2-column
    grid at ALL widths (including desktop), squeezing "Συνέχεια προβολής"
    and "Από την αρχή" into narrow columns with wrapped text ---- */
-html body .viewer.viewer.viewer .featured-actions{
+html body .app-shell.app-shell.app-shell .featured-actions{
   display:flex!important;flex-direction:column!important;gap:9px!important;margin-top:auto!important;
 }
-html body .viewer.viewer.viewer .featured-actions .primary,
-html body .viewer.viewer.viewer .featured-actions .secondary{
+html body .app-shell.app-shell.app-shell .featured-actions .primary,
+html body .app-shell.app-shell.app-shell .featured-actions .secondary{
   width:100%!important;min-width:0!important;height:auto!important;min-height:48px!important;
   padding:10px 16px!important;border-radius:14px!important;font-size:13px!important;line-height:1.25!important;
   white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
@@ -227,131 +227,131 @@ html body .viewer.viewer.viewer .featured-actions .secondary{
    also too tall/dark and hard to notice; category-row active state used
    a different treatment than quick-filters, making the two chip rows
    look inconsistent. ---- */
-html body .viewer.viewer.viewer .search{
+html body .app-shell.app-shell.app-shell .search{
   height:42px!important;display:flex!important;align-items:center!important;gap:9px!important;
   padding:0 13px!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:12px!important;background:#1c2028!important;
 }
-html body .viewer.viewer.viewer .search span{color:#9aa0ab!important;font-size:15px!important}
-html body .viewer.viewer.viewer .library-tools select{font-size:16px!important}
-html body .viewer.viewer.viewer .search input{width:100%!important;border:0!important;outline:0!important;background:transparent!important;font-size:16px!important;color:#f6f3ec!important}
-html body .viewer.viewer.viewer .search input::placeholder{color:#8b9099!important}
-html body .viewer.viewer.viewer .quick-filters{
+html body .app-shell.app-shell.app-shell .search span{color:#9aa0ab!important;font-size:15px!important}
+html body .app-shell.app-shell.app-shell .library-tools select{font-size:16px!important}
+html body .app-shell.app-shell.app-shell .search input{width:100%!important;border:0!important;outline:0!important;background:transparent!important;font-size:16px!important;color:#f6f3ec!important}
+html body .app-shell.app-shell.app-shell .search input::placeholder{color:#8b9099!important}
+html body .app-shell.app-shell.app-shell .quick-filters{
   min-height:48px!important;display:flex!important;align-items:center!important;gap:5px!important;
   padding:4px!important;border-radius:14px!important;background:#171a20!important;border:1px solid rgba(255,255,255,.1)!important;
 }
-html body .viewer.viewer.viewer .quick-filters button,
-html body .viewer.viewer.viewer .category-row button{
+html body .app-shell.app-shell.app-shell .quick-filters button,
+html body .app-shell.app-shell.app-shell .category-row button{
   min-height:36px!important;padding:0 13px!important;border:1px solid transparent!important;border-radius:11px!important;
   background:transparent!important;color:#8b9099!important;font-size:12px!important;font-weight:650!important;white-space:nowrap!important;
 }
-html body .viewer.viewer.viewer .quick-filters button.active,
-html body .viewer.viewer.viewer .category-row button.active{
+html body .app-shell.app-shell.app-shell .quick-filters button.active,
+html body .app-shell.app-shell.app-shell .category-row button.active{
   border-color:rgba(124,116,224,.4)!important;
   background:linear-gradient(135deg,rgba(124,116,224,.28),rgba(124,116,224,.12))!important;color:#f0edff!important;
 }
-html body .viewer.viewer.viewer .category-row{display:flex!important;gap:8px!important;margin-bottom:18px!important;overflow-x:auto!important;scrollbar-width:none!important}
-html body .viewer.viewer.viewer .category-row button{border:1px solid rgba(255,255,255,.1)!important;padding-inline:14px!important}
+html body .app-shell.app-shell.app-shell .category-row{display:flex!important;gap:8px!important;margin-bottom:18px!important;overflow-x:auto!important;scrollbar-width:none!important}
+html body .app-shell.app-shell.app-shell .category-row button{border:1px solid rgba(255,255,255,.1)!important;padding-inline:14px!important}
 
 /* ---- featured-resume button: progress subtext sat too tight against
    the main label ---- */
-html body .viewer.viewer.viewer .featured-actions .featured-resume{
+html body .app-shell.app-shell.app-shell .featured-actions .featured-resume{
   display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:6px!important;
   min-height:56px!important;padding:12px 16px!important;
 }
-html body .viewer.viewer.viewer .featured-actions .featured-resume>span{font-size:14px!important;font-weight:650!important;line-height:1!important}
-html body .viewer.viewer.viewer .featured-actions .featured-resume>small{font-size:11px!important;font-weight:500!important;opacity:.85!important;line-height:1!important}
+html body .app-shell.app-shell.app-shell .featured-actions .featured-resume>span{font-size:14px!important;font-weight:650!important;line-height:1!important}
+html body .app-shell.app-shell.app-shell .featured-actions .featured-resume>small{font-size:11px!important;font-weight:500!important;opacity:.85!important;line-height:1!important}
 
 
 
 /* ---- section-title: h2 size was set 3 times (14/17/18px) ---- */
-html body .viewer.viewer.viewer .section-title{display:flex!important;align-items:center!important;gap:9px!important;margin:14px 0!important}
-html body .viewer.viewer.viewer .section-title h2{margin:0!important;font-size:17px!important;line-height:1.25!important;font-weight:640!important;letter-spacing:-.02em!important;color:#f6f3ec!important}
-html body .viewer.viewer.viewer .section-title small{
+html body .app-shell.app-shell.app-shell .section-title{display:flex!important;align-items:center!important;gap:9px!important;margin:14px 0!important}
+html body .app-shell.app-shell.app-shell .section-title h2{margin:0!important;font-size:17px!important;line-height:1.25!important;font-weight:640!important;letter-spacing:-.02em!important;color:#f6f3ec!important}
+html body .app-shell.app-shell.app-shell .section-title small{
   min-width:22px!important;height:19px!important;display:grid!important;place-items:center!important;
   border-radius:99px!important;background:rgba(255,255,255,.06)!important;color:#8b9099!important;font-size:10px!important;
 }
 
 /* ---- video-heading title above the player ---- */
-html body .viewer.viewer.viewer .video-heading{padding:16px 3px!important}
-html body .viewer.viewer.viewer .video-heading small{color:#8b9099!important;font-size:10px!important}
-html body .viewer.viewer.viewer .video-heading h1{margin:5px 0 0!important;font-size:20px!important;line-height:1.35!important;font-weight:640!important;color:#f6f3ec!important}
+html body .app-shell.app-shell.app-shell .video-heading{padding:16px 3px!important}
+html body .app-shell.app-shell.app-shell .video-heading small{color:#8b9099!important;font-size:10px!important}
+html body .app-shell.app-shell.app-shell .video-heading h1{margin:5px 0 0!important;font-size:20px!important;line-height:1.35!important;font-weight:640!important;color:#f6f3ec!important}
 
 /* ---- form inputs (edit video / save moment modals): height set both
    41px and 48px in different places ---- */
-html body .viewer.viewer.viewer .form input,
-html body .viewer.viewer.viewer .form select{height:48px!important;padding:0 14px!important}
-html body .viewer.viewer.viewer .form input,
-html body .viewer.viewer.viewer .form textarea,
-html body .viewer.viewer.viewer .form select{
+html body .app-shell.app-shell.app-shell .form input,
+html body .app-shell.app-shell.app-shell .form select{height:48px!important;padding:0 14px!important}
+html body .app-shell.app-shell.app-shell .form input,
+html body .app-shell.app-shell.app-shell .form textarea,
+html body .app-shell.app-shell.app-shell .form select{
   border:1px solid rgba(255,255,255,.1)!important;border-radius:12px!important;background:rgba(255,255,255,.04)!important;
   color:#f6f3ec!important;font-size:16px!important;
 }
-html body .viewer.viewer.viewer .form label{gap:8px!important;color:#8b9099!important;font-size:12.5px!important;font-weight:590!important}
+html body .app-shell.app-shell.app-shell .form label{gap:8px!important;color:#8b9099!important;font-size:12.5px!important;font-weight:590!important}
 
 /* ---- video cards: background was almost the same shade as the page
    background (#141c vs #08090c) with a very faint 10% border, so cards
    barely stood out from each other in the stacked mobile list. Strengthened
    further (lighter fill, more visible border, bigger gap between cards). ---- */
-html body .viewer.viewer.viewer .video-card{
+html body .app-shell.app-shell.app-shell .video-card{
   border:1px solid rgba(255,255,255,.16)!important;border-radius:16px!important;
   background:#1c212a!important;box-shadow:0 10px 26px rgba(0,0,0,.32)!important;
   overflow:hidden!important;transition:transform .18s,border-color .18s,box-shadow .18s,background .18s!important;
 }
-html body .viewer.viewer.viewer .video-card:hover{
+html body .app-shell.app-shell.app-shell .video-card:hover{
   transform:translateY(-2px)!important;border-color:rgba(255,255,255,.26)!important;
   background:#20262f!important;box-shadow:0 16px 38px rgba(0,0,0,.4)!important;
 }
-html body .viewer.viewer.viewer .video-grid{gap:16px!important}
+html body .app-shell.app-shell.app-shell .video-grid{gap:16px!important}
 @media(max-width:620px){
-  html body .viewer.viewer.viewer .video-grid{gap:16px!important}
+  html body .app-shell.app-shell.app-shell .video-grid{gap:16px!important}
 }
 
 /* ---- featured-panel heading: font-size set 6 times (18-26px) ---- */
-html body .viewer.viewer.viewer .featured-panel{padding:22px 21px!important}
-html body .viewer.viewer.viewer .featured-panel h2{
+html body .app-shell.app-shell.app-shell .featured-panel{padding:22px 21px!important}
+html body .app-shell.app-shell.app-shell .featured-panel h2{
   margin:10px 0 4px!important;font-size:clamp(20px,1.8vw,26px)!important;line-height:1.2!important;
   font-weight:700!important;letter-spacing:-.03em!important;color:#f6f3ec!important;
 }
-html body .viewer.viewer.viewer .featured-speaker{color:#c7c9d1!important;font-size:11px!important;font-weight:620!important}
-html body .viewer.viewer.viewer .featured-details{
+html body .app-shell.app-shell.app-shell .featured-speaker{color:#c7c9d1!important;font-size:11px!important;font-weight:620!important}
+html body .app-shell.app-shell.app-shell .featured-details{
   display:flex!important;flex-wrap:wrap!important;gap:5px 12px!important;margin:15px 0 17px!important;
   padding:9px 0!important;border-top:1px solid rgba(255,255,255,.1)!important;border-bottom:1px solid rgba(255,255,255,.1)!important;
 }
-html body .viewer.viewer.viewer .featured-details span{color:#8b9099!important;font-size:10px!important;font-variant-numeric:tabular-nums!important}
+html body .app-shell.app-shell.app-shell .featured-details span{color:#8b9099!important;font-size:10px!important;font-variant-numeric:tabular-nums!important}
 @media(max-width:620px){
-  html body .viewer.viewer.viewer .featured-panel{padding:16px!important}
-  html body .viewer.viewer.viewer .featured-panel h2{font-size:20px!important}
+  html body .app-shell.app-shell.app-shell .featured-panel{padding:16px!important}
+  html body .app-shell.app-shell.app-shell .featured-panel h2{font-size:20px!important}
 }
 
 /* ---- tool-icon: accent color mixed saffron/orange with the app's indigo
    language (only matters where .tool-icon isn't already covered by the
    controls override, e.g. inside .moment-save) ---- */
-html body .viewer.viewer.viewer .tool-icon{color:inherit!important}
+html body .app-shell.app-shell.app-shell .tool-icon{color:inherit!important}
 
 /* ---- subtitle-size-picker: button size set 3 times (26-29px) ---- */
-html body .viewer.viewer.viewer .subtitle-size-picker button{
+html body .app-shell.app-shell.app-shell .subtitle-size-picker button{
   width:27px!important;height:24px!important;display:grid!important;place-items:center!important;padding:0!important;
   border:0!important;border-radius:6px!important;background:transparent!important;color:#8f94a0!important;font-weight:700!important;line-height:1!important;
 }
-html body .viewer.viewer.viewer .subtitle-size-picker button:hover{color:#d7d9df!important;background:rgba(255,255,255,.05)!important}
-html body .viewer.viewer.viewer .subtitle-size-picker button.active{
+html body .app-shell.app-shell.app-shell .subtitle-size-picker button:hover{color:#d7d9df!important;background:rgba(255,255,255,.05)!important}
+html body .app-shell.app-shell.app-shell .subtitle-size-picker button.active{
   color:#fff!important;background:rgba(124,116,224,.76)!important;box-shadow:0 3px 10px rgba(105,90,195,.24)!important;
 }
 
-html body .viewer.viewer.viewer .speaker-row{
+html body .app-shell.app-shell.app-shell .speaker-row{
   display:flex!important;align-items:center!important;gap:9px!important;flex-wrap:wrap!important;
   margin:16px 0 0!important;padding:10px 14px!important;
   border:1px solid rgba(255,255,255,.1)!important;border-radius:11px!important;background:#1b1f26!important;
 }
-html body .viewer.viewer.viewer .speaker-row span{
+html body .app-shell.app-shell.app-shell .speaker-row span{
   padding:4px 7px!important;border-radius:6px!important;background:rgba(124,116,224,.14)!important;
   color:#c9c4f5!important;font-size:9.5px!important;font-weight:700!important;text-transform:uppercase!important;letter-spacing:.06em!important;
 }
-html body .viewer.viewer.viewer .speaker-row strong{font-size:12px!important;font-weight:650!important;color:#f6f3ec!important}
-html body .viewer.viewer.viewer .speaker-row i{font-size:10.5px!important;font-style:normal!important;color:#8b9099!important}
+html body .app-shell.app-shell.app-shell .speaker-row strong{font-size:12px!important;font-weight:650!important;color:#f6f3ec!important}
+html body .app-shell.app-shell.app-shell .speaker-row i{font-size:10.5px!important;font-style:normal!important;color:#8b9099!important}
 
 /* ---- brand-mark: one consistent size everywhere ---- */
-html body .viewer.viewer.viewer .brand-mark{
+html body .app-shell.app-shell.app-shell .brand-mark{
   width:32px!important;height:28px!important;display:flex!important;align-items:center!important;justify-content:center!important;
   gap:2px!important;padding:0!important;border:1px solid rgba(255,255,255,.14)!important;border-radius:8px!important;
   background:linear-gradient(135deg,#776bd1,#49435f)!important;color:#fff!important;font-size:9px!important;
@@ -360,55 +360,55 @@ html body .viewer.viewer.viewer .brand-mark{
 
 /* ---- back-library / back-to-video nav buttons: height set 3-4 times
    (36/40/44px) and font-size 3 times (13/13.5/14px) ---- */
-html body .viewer.viewer.viewer .back-library,
-html body .viewer.viewer.viewer .back-to-video{
+html body .app-shell.app-shell.app-shell .back-library,
+html body .app-shell.app-shell.app-shell .back-to-video{
   height:40px!important;min-width:0!important;padding:0 10px!important;
   border:0!important;border-radius:10px!important;background:transparent!important;
   color:#9a9fa8!important;font-size:13.5px!important;font-weight:600!important;
 }
-html body .viewer.viewer.viewer .back-library:hover,
-html body .viewer.viewer.viewer .back-to-video:hover{background:rgba(255,255,255,.05)!important;color:#f6f3ec!important}
+html body .app-shell.app-shell.app-shell .back-library:hover,
+html body .app-shell.app-shell.app-shell .back-to-video:hover{background:rgba(255,255,255,.05)!important;color:#f6f3ec!important}
 
 /* ---- icon-button (settings gear ⚙): width set 4-5 times (32-40px),
    font-size flip-flopped between 0 (hidden, mobile) and 16-17px ---- */
-html body .viewer.viewer.viewer .icon-button{
+html body .app-shell.app-shell.app-shell .icon-button{
   width:36px!important;height:36px!important;display:grid!important;place-items:center!important;
   border:1px solid rgba(255,255,255,.1)!important;border-radius:10px!important;
   background:#171a20!important;color:#f6f3ec!important;font-size:16px!important;padding:0!important;
 }
-html body .viewer.viewer.viewer .icon-button:hover{border-color:rgba(255,255,255,.2)!important}
-html body .viewer.viewer.viewer .icon-button.active{border-color:rgba(124,116,224,.4)!important;background:#1b1930!important;color:#c9c4f5!important}
+html body .app-shell.app-shell.app-shell .icon-button:hover{border-color:rgba(255,255,255,.2)!important}
+html body .app-shell.app-shell.app-shell .icon-button.active{border-color:rgba(124,116,224,.4)!important;background:#1b1930!important;color:#c9c4f5!important}
 
 /* ---- video card edit/favorite buttons: card-edit shape conflicted
    between a 27px circle and a 34px rounded-square ---- */
-html body .viewer.viewer.viewer .card-edit{
+html body .app-shell.app-shell.app-shell .card-edit{
   position:absolute!important;top:8px!important;left:8px!important;z-index:2!important;
   width:30px!important;height:30px!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:10px!important;
   background:rgba(5,6,9,.72)!important;color:#d8d3ff!important;font-size:13px!important;backdrop-filter:blur(8px)!important;
 }
-html body .viewer.viewer.viewer .heart{
+html body .app-shell.app-shell.app-shell .heart{
   position:absolute!important;top:8px!important;right:8px!important;z-index:2!important;
   width:30px!important;height:30px!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:50%!important;
   background:rgba(5,6,9,.72)!important;color:#aaa!important;font-size:13px!important;backdrop-filter:blur(8px)!important;
 }
-html body .viewer.viewer.viewer .heart.active,
-html body .viewer.viewer.viewer .favorite.active{color:#f4847b!important}
+html body .app-shell.app-shell.app-shell .heart.active,
+html body .app-shell.app-shell.app-shell .favorite.active{color:#f4847b!important}
 
 /* ---- app footer ---- */
-html body .viewer.viewer.viewer .app-footer{
+html body .app-shell.app-shell.app-shell .app-footer{
   display:flex!important;flex-direction:column!important;align-items:center!important;gap:10px!important;
   margin:48px 0 12px!important;padding:28px 20px 22px!important;
   border-top:1px solid rgba(255,255,255,.08)!important;text-align:center!important;
 }
-html body .viewer.viewer.viewer .app-footer-brand{
+html body .app-shell.app-shell.app-shell .app-footer-brand{
   display:flex!important;align-items:center!important;gap:9px!important;font-size:13px!important;font-weight:650!important;color:#f6f3ec!important;
 }
-html body .viewer.viewer.viewer .app-footer-brand .brand-mark{
+html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
   width:26px!important;height:22px!important;font-size:8px!important;box-shadow:0 6px 18px rgba(119,107,209,.24)!important;
 }
-html body .viewer.viewer.viewer .app-footer-brand b{color:#8b9099!important;font-weight:520!important}
-html body .viewer.viewer.viewer .app-footer>p{margin:0!important;max-width:360px!important;color:#8b9099!important;font-size:12px!important;line-height:1.5!important}
-html body .viewer.viewer.viewer .app-footer-note{color:#5f6570!important;font-size:11px!important}
+html body .app-shell.app-shell.app-shell .app-footer-brand b{color:#8b9099!important;font-weight:520!important}
+html body .app-shell.app-shell.app-shell .app-footer>p{margin:0!important;max-width:360px!important;color:#8b9099!important;font-size:12px!important;line-height:1.5!important}
+html body .app-shell.app-shell.app-shell .app-footer-note{color:#5f6570!important;font-size:11px!important}
 
 /* ---- brand consistency pass: unify every accent color site-wide to the
    exact indigo used in the player controls (#7c74e0), which is now the
@@ -416,16 +416,16 @@ html body .viewer.viewer.viewer .app-footer-note{color:#5f6570!important;font-si
    shades scattered across primary buttons, filter chips, toggles, the
    home-intro underline and the brand mark. ---- */
 html body{--accent2:#7c74e0!important}
-html body .viewer.viewer.viewer .primary{
+html body .app-shell.app-shell.app-shell .primary{
   background:linear-gradient(135deg,#8f86e8,#6a62cc)!important;color:#fff!important;
   box-shadow:0 9px 26px rgba(124,116,224,.28)!important;border:0!important;
 }
-html body .viewer.viewer.viewer .secondary{
+html body .app-shell.app-shell.app-shell .secondary{
   background:#1b1f26!important;border:1px solid rgba(255,255,255,.1)!important;color:#f6f3ec!important;
 }
-html body .viewer.viewer.viewer .secondary:hover{border-color:rgba(255,255,255,.2)!important}
-html body .viewer.viewer.viewer .setting-row input:checked{background:#7c74e0!important}
-html body .viewer.viewer.viewer .brand-mark{background:linear-gradient(135deg,#8f86e8,#5d54b8)!important}
-html body .viewer.viewer.viewer .tabs button.active{background:#1b1930!important;color:#c9c4f5!important}
-html body .viewer.viewer.viewer .category-row button.active,
-html body .viewer.viewer.viewer .quick-filters button.active{color:#c9c4f5!important}
+html body .app-shell.app-shell.app-shell .secondary:hover{border-color:rgba(255,255,255,.2)!important}
+html body .app-shell.app-shell.app-shell .setting-row input:checked{background:#7c74e0!important}
+html body .app-shell.app-shell.app-shell .brand-mark{background:linear-gradient(135deg,#8f86e8,#5d54b8)!important}
+html body .app-shell.app-shell.app-shell .tabs button.active{background:#1b1930!important;color:#c9c4f5!important}
+html body .app-shell.app-shell.app-shell .category-row button.active,
+html body .app-shell.app-shell.app-shell .quick-filters button.active{color:#c9c4f5!important}
