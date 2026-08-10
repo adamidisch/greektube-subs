@@ -23,6 +23,24 @@ jobs:
         with:
           node-version: 24
       - run: python scripts/apply-v7.1.8-resumable.py
+      - name: Normalize generated TypeScript newlines
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('app/api/captions/route.ts')
+          s=p.read_text()
+          marker='\\nasync function prepareEnglishTimedChunk'
+          if marker in s:
+              a=s.index(marker)
+              b=s.index('\nfunction validateCompleteGreekTranscript', a)
+              segment=s[a:b].replace('\\n','\n')
+              s=s[:a]+segment+s[b:]
+          marker='export async function POST(request: Request) {\\n'
+          if marker in s:
+              a=s.index(marker)
+              s=s[:a]+s[a:].replace('\\n','\n')
+          p.write_text(s)
+          PY
       - run: npm install --package-lock=false --no-audit --no-fund
       - run: npx tsc --noEmit
       - run: npm run lint
