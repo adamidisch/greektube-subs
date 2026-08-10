@@ -205,7 +205,13 @@ function subtitleWindow(cue:Cue|undefined,currentTime:number){
   if(parts.length<=1)return parts[0]||"";
   const elapsed=Math.max(0,currentTime-cue.start);
   const ratio=cue.duration>0?Math.min(.999,elapsed/cue.duration):0;
-  return parts[Math.floor(ratio*parts.length)]||parts[0];
+  const totalChars=parts.reduce((sum,part)=>sum+part.length,0)||1;
+  let cumulative=0;
+  for(let i=0;i<parts.length;i++){
+    cumulative+=parts[i].length;
+    if(ratio<=cumulative/totalChars)return parts[i];
+  }
+  return parts[parts.length-1];
 }
 function isCompleteGreekTranscript(data:Captions|null|undefined,duration=0) {
   if(!data?.cues?.length||data.transcriptVersion!==4)return false;
@@ -902,7 +908,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.0</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.1</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
