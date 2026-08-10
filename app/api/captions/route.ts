@@ -5,6 +5,9 @@ import {
   completeTranscript,
   failTranscript,
   getTranscript,
+  releaseProcessingLock,
+  resetProcessingForTranslation,
+  saveProcessingCheckpoint,
   updateProcessingProgress,
 } from "../shared-cache";
 import { fetchSupadataTranscript, fetchYouTubeOEmbed } from "../supadata";
@@ -887,6 +890,59 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
   return cues.map((cue, index) => ({ ...cue, text: translated.get(index) as string }));
 }
 
+async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count: number) {
+  const slice = raw.slice(start, start + count);
+  if (!slice.length) return [] as CaptionCue[];
+  const batch = slice.map((cue, offset) => ({ index: start + offset, text: cue.text.replace(/\\s+/g, " ").trim() }));
+  const repaired = await repairEnglishBatchWithGroq(batch);
+  const normalized = slice.flatMap((cue, offset) => {
+    const absolute = start + offset;
+    return splitEnglishCueAtSentenceBoundaries({
+      ...cue,
+      text: repaired?.get(absolute) || cue.text.replace(/\\s+/g, " ").trim(),
+    });
+  });
+  return clampTimedCueWindows(normalized);
+}
+
+async function translateCheckpointBatch(cues: CaptionCue[], start: number, count: number) {
+  const slice = cues.slice(start, start + count);
+  if (!slice.length) return [] as CaptionCue[];
+  const numbered = slice.map((cue, offset) => ({ index: start + offset, text: cue.text }));
+  const output = new Map<number, string>();
+  if (process.env.GROQ_API_KEY) {
+    try {
+      const result = await translateBatchWithGroq(numbered);
+      if (result) {
+        for (const item of numbered) {
+          const text = result.get(item.index);
+          if (text && translationIntegrityOK(item.text, text)) output.set(item.index, text);
+        }
+      }
+    } catch {}
+  }
+  for (const item of numbered) {
+    if (output.has(item.index)) continue;
+    const fallback = await translateSingleCue(item.index, item.text);
+    if (fallback?.text && translationIntegrityOK(item.text, fallback.text)) output.set(item.index, fallback.text);
+  }
+  const missing = numbered.filter(item => !output.has(item.index));
+  if (missing.length) throw new Error(`Η μετάφραση απέτυχε προσωρινά σε ${missing.length} cues`);
+  return slice.map((cue, offset) => ({ ...cue, text: output.get(start + offset) as string }));
+}
+
+function processingResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
+  return {
+    status: "processing",
+    progress: record?.progress || 3,
+    videoId: record?.videoId || "",
+    stage: record?.processingStage || "source",
+    cursor: record?.processingCursor || 0,
+    keyPoints: record?.keyPoints || [],
+    transcriptVersion: TRANSCRIPT_VERSION,
+  };
+}
+
 function validateCompleteGreekTranscript(cues: CaptionCue[], duration: number) {
   if (cues.length < 3 || !hasGreekText(cues)) {
     throw new Error("Οι ελληνικοί υπότιτλοι δεν ολοκληρώθηκαν");
@@ -976,7 +1032,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ ready: false }, { status: 404, headers: { "Cache-Control": "no-store" } });
     }
     if (cached.status === "processing") {
-      return NextResponse.json(await cachedResponse(cached), {
+      return NextResponse.json(processingResponse(cached), {
         status: 202,
         headers: { "Cache-Control": "no-store", "Retry-After": "1" },
       });
@@ -1003,365 +1059,160 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Βάλε ένα έγκυρο YouTube link." }, { status: 400 });
     }
     const videoId = extractVideoId(body.url);
-    if (!videoId) {
-      return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
-    }
+    if (!videoId) return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
     lockedVideoId = videoId;
-
     const force = body.force === true;
-    const cached = await getTranscript(videoId);
+    let cached = await getTranscript(videoId);
+
     if (!force && cached?.status === "ready" && cached.transcriptVersion === TRANSCRIPT_VERSION) {
-      try {
-        validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
-        return NextResponse.json(await cachedResponse(cached));
-      } catch {
-        // Rebuild stale or incomplete cached subtitles under the video lock.
-      }
+      validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
+      return NextResponse.json(await cachedResponse(cached));
     }
-    if (!force && body.cachedTranscript && body.cachedTranscript.videoId === videoId && body.cachedTranscript.transcriptVersion === TRANSCRIPT_VERSION) {
-      const clientCues = Array.isArray(body.cachedTranscript.cues) ? body.cachedTranscript.cues : [];
-      const duration = Number(body.cachedTranscript.duration || 0);
-      validateCompleteGreekTranscript(clientCues, duration);
-      lockToken = crypto.randomUUID();
-      const acquired = await acquireProcessingLock(videoId, lockToken, true);
-      if (acquired) {
-        const now = new Date().toISOString();
-        await completeTranscript({
-          videoId,
-          title: String(body.cachedTranscript.originalTitle || body.cachedTranscript.title || "YouTube video"),
-          channel: String(body.cachedTranscript.channel || "YouTube"),
-          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-          duration: duration || clientCues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0),
-          originalLanguage: "client_seed",
-          rawEnglishTranscript: Array.isArray(body.cachedTranscript.englishCues) ? body.cachedTranscript.englishCues : [],
-          englishTranscript: Array.isArray(body.cachedTranscript.englishCues) ? body.cachedTranscript.englishCues : [],
-          greekTranscript: clientCues,
-          timestamps: clientCues.map(cue => ({ start: cue.start, duration: cue.duration })),
-          topics: Array.isArray(body.cachedTranscript.topics) ? body.cachedTranscript.topics : [],
-          keyPoints: Array.isArray(body.cachedTranscript.keyPoints) ? body.cachedTranscript.keyPoints : keyPoints(clientCues),
-          status: "ready",
-          progress: 100,
-          transcriptVersion: TRANSCRIPT_VERSION,
-          createdAt: cached?.createdAt || now,
-          updatedAt: now,
-        }, lockToken as string);
-        const seeded = await getTranscript(videoId);
-        lockToken = null;
-        return NextResponse.json(await cachedResponse(seeded));
-      }
-    }
-    if (!force && cached?.status === "processing" && cached.transcriptVersion === TRANSCRIPT_VERSION && cached.lockExpiresAt && cached.lockExpiresAt > new Date().toISOString()) {
-      return NextResponse.json(await cachedResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
+
+    // If another short processing slice owns the lease, only report status.
+    if (!force && cached?.status === "processing" && cached.transcriptVersion === TRANSCRIPT_VERSION &&
+        cached.lockExpiresAt && cached.lockExpiresAt > new Date().toISOString()) {
+      return NextResponse.json(processingResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
     }
 
     lockToken = crypto.randomUUID();
     const acquired = await acquireProcessingLock(videoId, lockToken, force);
     if (!acquired) {
-      const active = await getTranscript(videoId);
-      return NextResponse.json(await cachedResponse(active), { status: 202, headers: { "Retry-After": "1" } });
-    }
-    await updateProcessingProgress(videoId, lockToken as string, 12);
-
-    // First choice: the actual native English timed-text track from YouTube.
-    // This is the closest source to what the viewer sees in YouTube's own
-    // transcript UI, including punctuation and sentence boundaries. Supadata is
-    // retained as a resilience fallback for Vercel environments where YouTube
-    // challenges the request.
-    try {
-      const direct = await fetchDirectNativeEnglish(videoId);
-      await updateProcessingProgress(videoId, lockToken as string, 28);
-      const sourceCues = await prepareEnglishTimedCues(direct.cues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-      if (!sourceCues.length) throw new Error("Direct YouTube English transcript was empty");
-
-      await updateProcessingProgress(videoId, lockToken as string, 48);
-      const cues = await translateCuesToGreek(
-        sourceCues,
-        progress => updateProcessingProgress(videoId, lockToken as string, progress),
-      );
-      const duration = direct.cues.reduce(
-        (max, cue) => Math.max(max, cue.start + cue.duration),
-        0,
-      );
-      validateAlignedTranscript(sourceCues, cues);
-      validateCompleteGreekTranscript(cues, duration);
-      await updateProcessingProgress(videoId, lockToken as string, 92);
-
-      const metadata = await fetchYouTubeOEmbed(videoId);
-      const originalTitle = metadata.title || direct.player.videoDetails?.title || cached?.title || "YouTube video";
-      const channel = metadata.authorName || direct.player.videoDetails?.author || cached?.channel || "YouTube";
-      const translatedTitle = await translateTitleToGreek(originalTitle);
-      const speaker = speakerProfile(videoId, direct.player.videoDetails?.shortDescription || "", channel);
-      const points = keyPoints(cues);
-      const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\\p{L}]{6,}/gu) || []))].slice(0, 6);
-      const now = new Date().toISOString();
-      await updateProcessingProgress(videoId, lockToken as string, 96);
-
-      await completeTranscript({
-        videoId,
-        title: originalTitle,
-        channel,
-        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-        duration,
-        originalLanguage: direct.track.languageCode?.toLowerCase() || "en",
-        rawEnglishTranscript: direct.cues,
-        englishTranscript: sourceCues,
-        greekTranscript: cues,
-        timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
-        topics,
-        keyPoints: points,
-        status: "ready",
-        progress: 100,
-        transcriptVersion: TRANSCRIPT_VERSION,
-        createdAt: cached?.createdAt || now,
-        updatedAt: now,
-      }, lockToken as string);
-
-      lockToken = null;
-      return NextResponse.json({
-        status: "ready",
-        videoId,
-        title: translatedTitle,
-        originalTitle,
-        channel,
-        duration,
-        sourceLanguage: direct.track.languageCode?.toLowerCase() || "en",
-        sourceType: "youtube_native_direct",
-        translationMethod: "youtube_native_repaired_timed_v7",
-        cues,
-        englishCues: sourceCues,
-        topics,
-        keyPoints: points,
-        speaker,
-        transcriptVersion: TRANSCRIPT_VERSION,
-        cached: false,
-      });
-    } catch (error) {
-      console.warn(
-        `[captions:${videoId}] Direct YouTube native transcript unavailable; using Supadata fallback: ${error instanceof Error ? error.message : "failed"}`,
-      );
+      cached = await getTranscript(videoId);
+      return NextResponse.json(processingResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
     }
 
-    // Prefer Supadata for native YouTube transcripts. Vercel-origin requests
-    // to YouTube can be challenged with "Sign in to confirm you're not a bot".
-    // Native mode keeps usage predictable: existing transcripts only.
-    try {
+    // A forced re-translation reuses the already-paid raw source whenever possible.
+    if (force) {
+      const keepRaw = Boolean(cached?.rawEnglishTranscript?.length);
+      await resetProcessingForTranslation(videoId, lockToken, keepRaw);
+      cached = await getTranscript(videoId);
+    }
+
+    let stage = cached?.processingStage || (cached?.rawEnglishTranscript?.length ? "repair" : "source");
+    let cursor = cached?.processingCursor || 0;
+
+    if (stage === "source") {
+      // Supadata first on Vercel: direct YouTube timed-text is consistently challenged.
+      // One successful fetch is persisted and never repeated during translation retries.
       const supadata = await fetchSupadataTranscript(videoId);
       const sourceLanguage = supadata.lang.toLowerCase() || "unknown";
       if (!(sourceLanguage === "el" || sourceLanguage === "en" || sourceLanguage.startsWith("en-"))) {
         throw new Error(`Supadata returned unsupported source language: ${sourceLanguage}`);
       }
-
-      await updateProcessingProgress(videoId, lockToken as string, 28);
-      let cues: CaptionCue[] = [];
-      let sourceCues: CaptionCue[] = [];
-      let translationMethod = "supadata_native_original_greek";
-
-      if (sourceLanguage === "el") {
-        cues = supadata.cues;
-      } else {
-        sourceCues = await prepareEnglishTimedCues(supadata.cues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-        if (!sourceCues.length) throw new Error("Supadata returned an empty English transcript");
-        await updateProcessingProgress(videoId, lockToken as string, 48);
-        cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-        translationMethod = "supadata_repaired_timed_v7";
-      }
-
-      const duration = supadata.cues.reduce(
-        (max, cue) => Math.max(max, cue.start + cue.duration),
-        0,
-      );
-      validateAlignedTranscript(sourceCues, cues);
-      validateCompleteGreekTranscript(cues, duration);
-      await updateProcessingProgress(videoId, lockToken as string, 92);
-
       const metadata = await fetchYouTubeOEmbed(videoId);
-      const originalTitle = metadata.title || cached?.title || "YouTube video";
-      const channel = metadata.authorName || cached?.channel || "YouTube";
-      const translatedTitle = await translateTitleToGreek(originalTitle);
-      const speaker = speakerProfile(videoId, "", channel);
-      const points = keyPoints(cues);
-      const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\p{L}]{6,}/gu) || []))].slice(0, 6);
-      const now = new Date().toISOString();
-      await updateProcessingProgress(videoId, lockToken as string, 96);
-
-      await completeTranscript({
-        videoId,
-        title: originalTitle,
-        channel,
-        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-        duration,
-        originalLanguage: sourceLanguage,
-        rawEnglishTranscript: supadata.cues,
-        englishTranscript: sourceCues,
-        greekTranscript: cues,
-        timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
-        topics,
-        keyPoints: points,
-        status: "ready",
-        progress: 100,
-        transcriptVersion: TRANSCRIPT_VERSION,
-        createdAt: cached?.createdAt || now,
-        updatedAt: now,
-      }, lockToken as string);
-
-      lockToken = null;
-      return NextResponse.json({
-        status: "ready",
-        videoId,
-        title: translatedTitle,
-        originalTitle,
-        channel,
-        duration,
-        sourceLanguage,
-        sourceType: "supadata_native",
-        translationMethod,
-        cues,
-        englishCues: sourceCues,
-        topics,
-        keyPoints: points,
-        speaker,
-        transcriptVersion: TRANSCRIPT_VERSION,
-        cached: false,
+      const duration = supadata.cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
+      if (sourceLanguage === "el") {
+        const now = new Date().toISOString();
+        const points = keyPoints(supadata.cues);
+        await completeTranscript({
+          videoId, title: metadata.title || "YouTube video", channel: metadata.authorName || "YouTube",
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, duration, originalLanguage: sourceLanguage,
+          rawEnglishTranscript: [], englishTranscript: [], greekTranscript: supadata.cues,
+          timestamps: supadata.cues.map(cue => ({ start: cue.start, duration: cue.duration })),
+          topics: [], keyPoints: points, status: "ready", progress: 100, transcriptVersion: TRANSCRIPT_VERSION,
+          createdAt: cached?.createdAt || now, updatedAt: now,
+        }, lockToken);
+        lockToken = null;
+        const ready = await getTranscript(videoId);
+        return NextResponse.json(await cachedResponse(ready));
+      }
+      await saveProcessingCheckpoint(videoId, lockToken, {
+        stage: "repair", cursor: 0, progress: 28, rawEnglishTranscript: supadata.cues,
+        englishTranscript: [], greekTranscript: [], title: metadata.title || cached?.title || "YouTube video",
+        channel: metadata.authorName || cached?.channel || "YouTube", duration, originalLanguage: sourceLanguage,
       });
-    } catch (error) {
-      console.warn(
-        `[captions:${videoId}] Supadata native transcript failed; trying direct YouTube fallback: ${error instanceof Error ? error.message : "failed"}`,
-      );
+      await releaseProcessingLock(videoId, lockToken); lockToken = null;
+      const next = await getTranscript(videoId);
+      return NextResponse.json(processingResponse(next), { status: 202, headers: { "Retry-After": "1" } });
     }
 
-    if (!lockToken) throw new Error("Transcript processing lock was lost");
-    const players = await fetchPlayers(videoId);
-    let player: PlayerResponse | null = null;
-    let track: CaptionTrack | null = null;
-    let rawSourceCues: CaptionCue[] = [];
-    let selectedUserAgent = "";
-    const captionErrors: string[] = [];
+    cached = await getTranscript(videoId);
+    if (!cached) throw new Error("Processing checkpoint missing");
 
-    for (const candidate of players) {
-      const tracks = orderedTracks(
-        candidate.player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [],
-      );
-      for (const candidateTrack of tracks) {
-        if (!candidateTrack.baseUrl) continue;
-        try {
-          const candidateCues = await fetchCaptionCues(candidateTrack, candidate.userAgent);
-          if (!candidateCues.length) continue;
-          player = candidate.player;
-          track = candidateTrack;
-          rawSourceCues = candidateCues;
-          selectedUserAgent = candidate.userAgent;
-          break;
-        } catch (error) {
-          captionErrors.push(
-            `${candidate.clientName}/${candidateTrack.languageCode || "unknown"}: ${error instanceof Error ? error.message : "failed"}`,
-          );
-        }
+    if (stage === "repair") {
+      const raw = cached.rawEnglishTranscript as CaptionCue[];
+      if (!raw.length) throw new Error("Raw English transcript checkpoint is empty");
+      const CHUNK = 24;
+      if (cursor < raw.length) {
+        const chunk = await prepareEnglishTimedChunk(raw, cursor, CHUNK);
+        const english = [...(cached.englishTranscript as CaptionCue[]), ...chunk];
+        const nextCursor = Math.min(raw.length, cursor + CHUNK);
+        const done = nextCursor >= raw.length;
+        const progress = done ? 48 : Math.round(28 + 20 * (nextCursor / raw.length));
+        await saveProcessingCheckpoint(videoId, lockToken, {
+          stage: done ? "translate" : "repair", cursor: done ? 0 : nextCursor, progress, englishTranscript: english,
+        });
+      } else {
+        await saveProcessingCheckpoint(videoId, lockToken, { stage: "translate", cursor: 0, progress: 48 });
       }
-      if (player && track) break;
+      await releaseProcessingLock(videoId, lockToken); lockToken = null;
+      const next = await getTranscript(videoId);
+      return NextResponse.json(processingResponse(next), { status: 202, headers: { "Retry-After": "1" } });
     }
 
-    if (!player || !track) {
-      const detail = captionErrors.length ? captionErrors.join(" · ") : "Δεν βρέθηκε έγκυρο caption track";
-      console.error(`[captions:${videoId}] ${detail}`);
-      await failTranscript(videoId, lockToken, detail);
+    cached = await getTranscript(videoId);
+    if (!cached) throw new Error("Processing checkpoint missing");
+    stage = cached.processingStage || stage; cursor = cached.processingCursor || 0;
+
+    if (stage === "translate") {
+      const english = cached.englishTranscript as CaptionCue[];
+      if (!english.length) throw new Error("Normalized English transcript checkpoint is empty");
+      const CHUNK = 12;
+      if (cursor < english.length) {
+        const translatedChunk = await translateCheckpointBatch(english, cursor, CHUNK);
+        const greek = [...(cached.greekTranscript as CaptionCue[]), ...translatedChunk];
+        const nextCursor = Math.min(english.length, cursor + CHUNK);
+        const done = nextCursor >= english.length;
+        const progress = done ? 90 : Math.round(48 + 42 * (nextCursor / english.length));
+        await saveProcessingCheckpoint(videoId, lockToken, {
+          stage: done ? "finalize" : "translate", cursor: done ? 0 : nextCursor, progress, greekTranscript: greek,
+        });
+      } else {
+        await saveProcessingCheckpoint(videoId, lockToken, { stage: "finalize", cursor: 0, progress: 90 });
+      }
+      await releaseProcessingLock(videoId, lockToken); lockToken = null;
+      const next = await getTranscript(videoId);
+      return NextResponse.json(processingResponse(next), { status: 202, headers: { "Retry-After": "1" } });
+    }
+
+    cached = await getTranscript(videoId);
+    if (!cached) throw new Error("Processing checkpoint missing");
+    if ((cached.processingStage || stage) === "finalize") {
+      const english = cached.englishTranscript as CaptionCue[];
+      const greek = cached.greekTranscript as CaptionCue[];
+      validateAlignedTranscript(english, greek);
+      validateCompleteGreekTranscript(greek, cached.duration);
+      await updateProcessingProgress(videoId, lockToken, 94);
+      const translatedTitle = await translateTitleToGreek(cached.title || "YouTube video");
+      const points = keyPoints(greek);
+      const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\\p{L}]{6,}/gu) || []))].slice(0, 6);
+      const now = new Date().toISOString();
+      await completeTranscript({
+        ...cached, title: cached.title || "YouTube video", channel: cached.channel || "YouTube",
+        rawEnglishTranscript: cached.rawEnglishTranscript, englishTranscript: english, greekTranscript: greek,
+        timestamps: greek.map(cue => ({ start: cue.start, duration: cue.duration })), topics, keyPoints: points,
+        status: "ready", progress: 100, transcriptVersion: TRANSCRIPT_VERSION, updatedAt: now,
+      }, lockToken);
       lockToken = null;
-      return NextResponse.json(
-        { error: "Οι υπότιτλοι δεν ήταν προσωρινά διαθέσιμοι. Δοκίμασε ξανά σε λίγο." },
-        { status: 502 },
-      );
+      const ready = await getTranscript(videoId);
+      const payload = await cachedResponse(ready);
+      return NextResponse.json({ ...payload, title: translatedTitle, translationMethod: "resumable_repaired_timed_v8", cached: false });
     }
 
-    await updateProcessingProgress(videoId, lockToken as string, 28);
-    let cues: CaptionCue[] = [];
-    let sourceCues: CaptionCue[] = [];
-    let translationMethod = "original_greek";
-
-    const sourceLanguage = track.languageCode?.toLowerCase() || "unknown";
-    if (sourceLanguage === "el") {
-      cues = rawSourceCues;
-    } else {
-      if (!rawSourceCues.length) throw new Error("Το αγγλικό caption track είναι κενό");
-      sourceCues = await prepareEnglishTimedCues(rawSourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-      await updateProcessingProgress(videoId, lockToken as string, 48);
-      try {
-        const youtubeGreekCues = await fetchCaptionCues(track, selectedUserAgent, "el");
-        if (youtubeGreekCues.length && hasGreekText(youtubeGreekCues)) {
-          cues = youtubeGreekCues;
-          translationMethod = "youtube_timedtext_tlang_el";
-        }
-      } catch (error) {
-        captionErrors.push(
-          `YouTube el/${sourceLanguage}: ${error instanceof Error ? error.message : "failed"}`,
-        );
-      }
-      if (!cues.length) {
-        cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-        translationMethod = "repaired_timed_v7";
-      }
-    }
-
-    const videoDuration = Number(player.videoDetails?.lengthSeconds || 0);
-    if (sourceCues.length) validateAlignedTranscript(sourceCues, cues);
-    validateCompleteGreekTranscript(cues, videoDuration);
-    await updateProcessingProgress(videoId, lockToken as string, 92);
-
-    const now = new Date().toISOString();
-    const originalTitle = player.videoDetails?.title || "YouTube video";
-    const translatedTitle = await translateTitleToGreek(originalTitle);
-    const speaker = speakerProfile(videoId, player.videoDetails?.shortDescription, player.videoDetails?.author);
-    const points = keyPoints(cues);
-    const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\p{L}]{6,}/gu) || []))].slice(0, 6);
-    const duration = videoDuration || cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
-    await completeTranscript({
-      videoId,
-      title: originalTitle,
-      channel: player.videoDetails?.author || "YouTube",
-      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      duration,
-      originalLanguage: sourceLanguage,
-      rawEnglishTranscript: rawSourceCues,
-      englishTranscript: sourceCues,
-      greekTranscript: cues,
-      timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
-      topics,
-      keyPoints: points,
-      status: "ready",
-      progress: 100,
-      transcriptVersion: TRANSCRIPT_VERSION,
-      createdAt: cached?.createdAt || now,
-      updatedAt: now,
-    }, lockToken as string);
-
-    return NextResponse.json({
-      status: "ready",
-      videoId,
-      title: translatedTitle,
-      originalTitle,
-      channel: player.videoDetails?.author || "YouTube",
-      duration,
-      sourceLanguage,
-      sourceType: track.kind === "asr" ? "automatic" : "manual",
-      translationMethod,
-      cues,
-      englishCues: sourceCues,
-      topics,
-      keyPoints: points,
-      speaker,
-      transcriptVersion: TRANSCRIPT_VERSION,
-      cached: false,
-    });
+    throw new Error(`Unknown processing stage: ${stage}`);
   } catch (error) {
+    // A failed slice is recoverable. Release the lease and preserve every completed checkpoint.
     if (lockedVideoId && lockToken) {
-      await failTranscript(lockedVideoId, lockToken, error instanceof Error ? error.message : "failed").catch(() => undefined);
+      await releaseProcessingLock(lockedVideoId, lockToken).catch(() => undefined);
     }
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error && error.message
-            ? `Δεν μπόρεσα να πάρω τα captions. ${error.message}`
-            : "Δεν μπόρεσα να πάρω τα captions.",
-      },
-      { status: 502 },
-    );
+    console.error(`[captions:${lockedVideoId || "unknown"}] resumable slice failed`, error);
+    const current = lockedVideoId ? await getTranscript(lockedVideoId).catch(() => null) : null;
+    if (current?.status === "processing") {
+      return NextResponse.json({ ...processingResponse(current), transientError: error instanceof Error ? error.message : "retry" },
+        { status: 202, headers: { "Retry-After": "2" } });
+    }
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Δεν μπόρεσα να ετοιμάσω τους υπότιτλους." }, { status: 502 });
   }
 }
+
