@@ -1,0 +1,40 @@
+name: Fix v7.1.2 translation progress
+
+on:
+  push:
+    branches: [v7.1.2]
+    paths:
+      - '.github/workflows/fix-v7.1.2-progress.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.1.2
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Apply progress fix
+        run: python3 scripts/fix-v7.1.2-progress.py
+      - name: Install dependencies
+        run: npm install --package-lock=false --no-audit --no-fund
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: ESLint
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Commit fix
+        run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/GreekTubePlayer.tsx app/api/captions/route.ts
+          git commit -m "GreekTube Subs 7.1.2: fix translation progress loop"
+          git push origin HEAD:v7.1.2
