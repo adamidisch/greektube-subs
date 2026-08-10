@@ -23,7 +23,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
       - name: Apply v7.1.5 changes
         run: python scripts/apply-v7.1.5.py
       - name: Install dependencies
