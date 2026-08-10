@@ -1,0 +1,44 @@
+name: Apply v7.1.9 progress fix
+
+on:
+  push:
+    branches: [v7.1.8]
+    paths:
+      - scripts/apply-v7.1.8-progress-fix.py
+      - .github/workflows/apply-v7.1.9-progress-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.1.8
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: python scripts/apply-v7.1.8-progress-fix.py
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+      - name: Verify progress invariants
+        run: |
+          grep -q 'ELSE GREATEST(video_transcripts.progress, 3)' app/api/shared-cache.ts
+          grep -q 'setProgress(current=>Math.max(current' app/GreekTubePlayer.tsx
+          grep -q 'step-mini-track' app/GreekTubePlayer.tsx
+          grep -q 'ver 7.1.9' app/GreekTubePlayer.tsx
+          grep -q '"version": "7.1.9"' package.json
+      - name: Commit functional changes
+        run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app package.json
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.1.9: preserve resumable progress and compact stepper"
+          git push origin HEAD:v7.1.8
