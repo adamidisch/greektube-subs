@@ -26,7 +26,7 @@ jobs:
         run: python scripts/apply-smart-subtitles-6.6.16.py
 
       - name: Build
-        run: npm ci && npm run build
+        run: npm install --no-audit --no-fund && npm run build
 
       - name: Remove one-shot helpers
         run: rm -f scripts/apply-smart-subtitles-6.6.16.py .github/workflows/apply-smart-subtitles-6.6.16.yml
