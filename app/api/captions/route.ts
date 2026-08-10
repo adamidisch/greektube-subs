@@ -1129,9 +1129,9 @@ export async function POST(request: Request) {
       if (!(sourceLanguage === "el" || sourceLanguage === "en" || sourceLanguage.startsWith("en-"))) {
         throw new Error(`Supadata returned unsupported source language: ${sourceLanguage}`);
       }
-      const metadata = await fetchYouTubeOEmbed(videoId);
       const duration = supadata.cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
       if (sourceLanguage === "el") {
+        const metadata = await fetchYouTubeOEmbed(videoId);
         const now = new Date().toISOString();
         const points = keyPoints(supadata.cues);
         if (!await completeTranscript({
@@ -1146,11 +1146,19 @@ export async function POST(request: Request) {
         const ready = await getTranscript(videoId);
         return NextResponse.json(await cachedResponse(ready));
       }
+      // Commit the paid Supadata response before any optional metadata work.
+      // If oEmbed is unavailable, the next slice starts at repair from this
+      // durable raw source and must not call Supadata again.
       if (!await saveProcessingCheckpoint(videoId, lockToken, {
         stage: "repair", cursor: 0, progress: 28, rawEnglishTranscript: supadata.cues,
-        englishTranscript: [], greekTranscript: [], title: metadata.title || cached?.title || "YouTube video",
-        channel: metadata.authorName || cached?.channel || "YouTube", duration, originalLanguage: sourceLanguage,
+        englishTranscript: [], greekTranscript: [], duration, originalLanguage: sourceLanguage,
       })) throw new Error("Processing lock was lost before source checkpoint persisted");
+      const metadata = await fetchYouTubeOEmbed(videoId).catch(() => ({ title: "", authorName: "" }));
+      if ((metadata.title || metadata.authorName) && !await saveProcessingCheckpoint(videoId, lockToken, {
+        stage: "repair", cursor: 0, progress: 28,
+        title: metadata.title || cached?.title || "YouTube video",
+        channel: metadata.authorName || cached?.channel || "YouTube",
+      })) throw new Error("Processing lock was lost before metadata checkpoint persisted");
       if (!await releaseProcessingLock(videoId, lockToken)) throw new Error("Processing lock was lost before source release"); lockToken = null;
       const next = await getTranscript(videoId);
       return NextResponse.json(processingResponse(next), { status: 202, headers: { "Retry-After": "1" } });
