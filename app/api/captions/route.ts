@@ -417,33 +417,32 @@ async function fetchCaptionCues(track: CaptionTrack, userAgent: string, targetLa
 }
 
 function createMeaningUnits(cues: CaptionCue[]) {
-  // Clean ASR hesitation/noise before grouping and translating so vocal fillers
-  // do not become long Greek strings such as "χμμμμμμ...".
+  // The English transcript is the source of truth. Clean only obvious ASR noise,
+  // preserve punctuation/numbers/technical terms, then build COMPLETE source
+  // sentences before translation. Timing is attached only after the sentence
+  // boundary is known; translation never decides sentence boundaries.
   const cleanedCues = cues
     .map(cue => ({ ...cue, text: cleanSubtitleText(cue.text) }))
     .filter(cue => cue.text.length > 0);
 
-  // YouTube can place more than one sentence inside a single timed cue.
-  // Split those internal sentence boundaries BEFORE grouping so punctuation
-  // from the English source remains authoritative (e.g. "poisoned. MSM...").
-  // Time is distributed proportionally across the source characters, while
-  // keeping the original cue start/end envelope unchanged.
+  // A single timed YouTube/Supadata cue may contain several punctuated sentences.
+  // Split those first while keeping every part inside the original cue envelope.
   const preparedCues: CaptionCue[] = cleanedCues.flatMap(cue => {
     const parts = cue.text.match(/[^.!?…]+[.!?…]+[\"')\]]*|[^.!?…]+$/g)?.map(part => part.trim()).filter(Boolean) || [cue.text];
     if (parts.length <= 1) return [cue];
-    const weights = parts.map(part => Math.max(1, part.replace(/\s+/g, '').length));
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    const weights = parts.map(part => Math.max(1, part.replace(/\s+/g, "").length));
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || 1;
     let elapsed = 0;
     return parts.map((part, index) => {
       const start = cue.start + elapsed;
-      const remaining = Math.max(0.12, cue.duration - elapsed);
       const duration = index === parts.length - 1
-        ? remaining
-        : Math.max(0.12, cue.duration * (weights[index] / totalWeight));
+        ? Math.max(0.05, cue.duration - elapsed)
+        : Math.max(0.05, cue.duration * (weights[index] / totalWeight));
       elapsed += duration;
       return { start, duration, text: part };
     });
   });
+
   const units: CaptionCue[] = [];
   let current: CaptionCue[] = [];
   let characters = 0;
@@ -451,13 +450,10 @@ function createMeaningUnits(cues: CaptionCue[]) {
   const flush = () => {
     if (!current.length) return;
     const start = current[0].start;
-    const end = current.reduce(
-      (latest, cue) => Math.max(latest, cue.start + cue.duration),
-      start,
-    );
+    const end = current.reduce((latest, cue) => Math.max(latest, cue.start + cue.duration), start);
     units.push({
       start,
-      duration: Math.max(0.8, end - start),
+      duration: Math.max(0.2, end - start),
       text: current.map(cue => cue.text).join(" ").replace(/\s+/g, " ").trim(),
     });
     current = [];
@@ -468,29 +464,26 @@ function createMeaningUnits(cues: CaptionCue[]) {
     const next = preparedCues[index + 1];
     current.push(cue);
     characters += cue.text.length;
-    const elapsed = cue.start + cue.duration - current[0].start;
-    const sentenceEnd = /[.!?…]["')\]]?$/.test(cue.text.trim());
-    const gap = next ? next.start - (cue.start + cue.duration) : Number.POSITIVE_INFINITY;
-    const naturalPause = gap >= 0.65;
-    const softPause = gap >= 0.25 && (elapsed >= 5.5 || characters >= 110);
-    const mustSplit = elapsed >= 8 || characters >= 160;
 
-    // The source punctuation is authoritative. If YouTube says a sentence has
-    // ended (for example "poisoned."), never merge words from the next thought
-    // into the same translation unit. A clear spoken pause is also a hard
-    // semantic boundary. Only merge fragments while the sentence is genuinely
-    // continuing.
-    if (sentenceEnd || naturalPause || softPause || mustSplit || !next) flush();
+    const sentenceEnd = /[.!?…][\"')\]]?$/.test(cue.text.trim());
+    const gap = next ? next.start - (cue.start + cue.duration) : Number.POSITIVE_INFINITY;
+    const elapsed = cue.start + cue.duration - current[0].start;
+
+    // Punctuation is authoritative. A clear acoustic gap is a fallback only for
+    // transcripts that omit punctuation. The emergency ceiling exists solely to
+    // protect malformed ASR streams; normal sentences are never split by size.
+    const clearUnpunctuatedPause = !sentenceEnd && gap >= 1.1;
+    const emergencyBoundary = elapsed >= 20 || characters >= 360;
+    if (sentenceEnd || clearUnpunctuatedPause || emergencyBoundary || !next) flush();
   });
 
-  // Source caption ranges can overlap. A displayed cue is only active until
-  // the next cue starts, so normalize its duration to that real window.
+  // Normalize display windows so one subtitle cannot visually overlap the next.
   return units.map((unit, index) => {
     const next = units[index + 1];
     if (!next || next.start <= unit.start) return unit;
     return {
       ...unit,
-      duration: Math.max(0.8, Math.min(unit.duration, next.start - unit.start)),
+      duration: Math.max(0.2, Math.min(unit.duration, next.start - unit.start)),
     };
   });
 }
@@ -684,6 +677,17 @@ function hasGreekNegation(text: string) {
   return /(?:^|[^\p{L}])(?:δεν|μην|μη|όχι|χωρίς|ούτε)(?=$|[^\p{L}])/iu.test(text);
 }
 
+function numericGuardTokens(text: string) {
+  const matches = text.match(/\b\d+(?:[.,]\d+)?\b/g) || [];
+  return new Set(matches.map(token => token.replace(",", ".")));
+}
+
+function sameTokenSet(a: Set<string>, b: Set<string>) {
+  if (a.size !== b.size) return false;
+  for (const token of a) if (!b.has(token)) return false;
+  return true;
+}
+
 function semanticRiskScore(text: string) {
   let score = technicalGuardTokens(text).size * 3;
   if (hasEnglishNegation(text)) score += 3;
@@ -716,6 +720,10 @@ function needsStrictSemanticRetry(cues: CaptionCue[], translated: Map<number, st
   // Added negation is another high-risk semantic change. Re-run only that cue
   // in complete isolation rather than penalising the whole transcript.
   if (!hasEnglishNegation(source) && hasGreekNegation(target)) return true;
+
+  // Numbers are never stylistic. A number that appears/disappears/changes in
+  // Greek (for example a stray "15") makes the cue objectively unfaithful.
+  if (!sameTokenSet(numericGuardTokens(source), numericGuardTokens(target))) return true;
   return false;
 }
 
@@ -804,18 +812,15 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
   if (useGroq) {
     // Sequential on purpose: Groq's free tier is rate-limited per minute (TPM),
     // not just per day, so batches are kept modest and run one at a time.
-    let precedingContext: string | undefined;
     let completedPrimary = 0;
     for (const batch of batches) {
       try {
-        const results = await translateBatchWithGroq(batch, precedingContext);
+        // Each complete English sentence is translated from its own source text.
+        // No previous translated prose is supplied, eliminating cross-sentence
+        // semantic borrowing such as "poisoned" + next sentence "MSM".
+        const results = await translateBatchWithGroq(batch);
         if (results) {
           results.forEach((text, index) => translated.set(index, text));
-          const tail = batch
-            .map(item => translated.get(item.index))
-            .filter((text): text is string => Boolean(text))
-            .slice(-3);
-          if (tail.length) precedingContext = tail.join(" ");
         }
       } catch {
         // fall through to Google Translate for this batch below
@@ -863,7 +868,7 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
       .map(item => item.index);
     const verificationCandidates = [...new Set([...deterministic, ...riskCandidates])].slice(0, 12);
     const semantic = await verifySemanticFidelity(cues, translated, verificationCandidates);
-    const suspicious = [...new Set([...deterministic, ...semantic])].slice(0, 4);
+    const suspicious = [...new Set([...deterministic.slice(0, 8), ...semantic])].slice(0, 8);
     let checked = 0;
     for (const index of suspicious) {
       try {
@@ -873,6 +878,10 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
         const strict = await translateBatchWithGroq([{ index, text: cues[index].text }]);
         const replacement = strict?.get(index);
         if (replacement) translated.set(index, replacement);
+        if (needsStrictSemanticRetry(cues, translated, index)) {
+          const literal = await translateSingleCue(index, cues[index].text);
+          if (literal?.text) translated.set(index, literal.text);
+        }
       } catch {
         // Keep the already valid mapped translation if strict verification is
         // temporarily unavailable. The original mapping/fallback safeguards
@@ -991,8 +1000,17 @@ export async function GET(request: Request) {
     }
 
     const cached = await getTranscript(videoId);
-    if (!cached || cached.status !== "ready" || cached.transcriptVersion !== TRANSCRIPT_VERSION) {
+    if (!cached || cached.transcriptVersion !== TRANSCRIPT_VERSION) {
       return NextResponse.json({ ready: false }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    }
+    if (cached.status === "processing") {
+      return NextResponse.json(await cachedResponse(cached), {
+        status: 202,
+        headers: { "Cache-Control": "no-store", "Retry-After": "1" },
+      });
+    }
+    if (cached.status !== "ready") {
+      return NextResponse.json({ ready: false, status: cached.status }, { status: 409, headers: { "Cache-Control": "no-store" } });
     }
 
     validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
@@ -1093,7 +1111,7 @@ export async function POST(request: Request) {
         if (!sourceCues.length) throw new Error("Supadata returned an empty English transcript");
         await updateProcessingProgress(videoId, lockToken, 48);
         cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-        translationMethod = "supadata_native_semantic_boundaries_v5";
+        translationMethod = "supadata_native_sentence_faithful_v6";
       }
 
       const duration = supadata.cues.reduce(
@@ -1111,6 +1129,7 @@ export async function POST(request: Request) {
       const points = keyPoints(cues);
       const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\p{L}]{6,}/gu) || []))].slice(0, 6);
       const now = new Date().toISOString();
+      await updateProcessingProgress(videoId, lockToken, 96);
 
       await completeTranscript({
         videoId,
@@ -1223,7 +1242,7 @@ export async function POST(request: Request) {
       }
       if (!cues.length) {
         cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-        translationMethod = "semantic_boundaries_v5";
+        translationMethod = "sentence_faithful_v6";
       }
     }
 
