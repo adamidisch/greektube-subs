@@ -23,6 +23,16 @@ jobs:
         with:
           node-version: 24
       - run: python scripts/apply-v7.1.6-direct-source.py
+      - name: Narrow processing lock for direct-source block
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('app/api/captions/route.ts')
+          s=p.read_text()
+          s=s.replace('updateProcessingProgress(videoId, lockToken,', 'updateProcessingProgress(videoId, lockToken as string,')
+          s=s.replace('}, lockToken);', '}, lockToken as string);')
+          p.write_text(s)
+          PY
       - run: npm install --no-audit --no-fund
       - run: npx tsc --noEmit
       - run: npm run lint
