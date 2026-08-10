@@ -417,6 +417,11 @@ async function fetchCaptionCues(track: CaptionTrack, userAgent: string, targetLa
 }
 
 function createMeaningUnits(cues: CaptionCue[]) {
+  // Clean ASR hesitation/noise before grouping and translating so vocal fillers
+  // do not become long Greek strings such as "χμμμμμμ...".
+  const preparedCues = cues
+    .map(cue => ({ ...cue, text: cleanSubtitleText(cue.text) }))
+    .filter(cue => cue.text.length > 0);
   const units: CaptionCue[] = [];
   let current: CaptionCue[] = [];
   let characters = 0;
@@ -437,8 +442,8 @@ function createMeaningUnits(cues: CaptionCue[]) {
     characters = 0;
   };
 
-  cues.forEach((cue, index) => {
-    const next = cues[index + 1];
+  preparedCues.forEach((cue, index) => {
+    const next = preparedCues[index + 1];
     current.push(cue);
     characters += cue.text.length;
     const elapsed = cue.start + cue.duration - current[0].start;
@@ -455,8 +460,13 @@ function createMeaningUnits(cues: CaptionCue[]) {
 
 function cleanSubtitleText(text: string) {
   return text
-    .replace(/\b([a-zα-ωάέήίόύώ])\1{3,}\b/giu, "")
-    .replace(/\b(?:um+|uh+|erm+|h+m+|μμ+|χ+μ+)\b/giu, "")
+    // JavaScript \b is ASCII-centric and was missing Greek filler tokens.
+    // Use Unicode letter/number boundaries instead and remove only clear
+    // hesitation noises, leaving meaningful words/interjections untouched.
+    .replace(/(^|[^\p{L}\p{N}])(?:u+m+|u+h+|e+r+m+|h+m{2,}|m{3,}|χ+μ{2,}|μ{3,})(?=$|[^\p{L}\p{N}])/giu, "$1")
+    // Collapse obvious ASR stutters only when the same 2+ letter word is
+    // repeated three or more times in a row.
+    .replace(/(^|[^\p{L}\p{N}])(\p{L}{2,})(?:\s+\2){2,}(?=$|[^\p{L}\p{N}])/giu, "$1$2")
     .replace(/\s+([,.;:!?…])/g, "$1")
     .replace(/([!?.,…])\1{2,}/g, "$1")
     .replace(/\s+/g, " ")
@@ -597,6 +607,22 @@ async function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>)
   if (!record) return null;
   const title = await translateTitleToGreek(record.title);
   const originalTitle = hasGreekText([{ start: 0, duration: 1, text: record.title }]) ? "" : record.title;
+
+  // Also clean already-cached transcripts so the improvement is visible
+  // immediately without forcing every existing video through re-translation.
+  // Keep Greek/English cue indexes paired when filler-only cues are removed.
+  const cleanedPairs = record.greekTranscript
+    .map((cue: CaptionCue, index: number) => ({ index, cue: { ...cue, text: cleanSubtitleText(cue.text) } }))
+    .filter((item: { index: number; cue: CaptionCue }) => item.cue.text.length > 0);
+  const greekTranscript = cleanedPairs.map((item: { index: number; cue: CaptionCue }) => item.cue);
+  const englishTranscript: CaptionCue[] = [];
+  for (const { index } of cleanedPairs) {
+    const cue = record.englishTranscript[index] as CaptionCue | undefined;
+    if (!cue) continue;
+    const cleaned = cleanSubtitleText(cue.text);
+    if (cleaned) englishTranscript.push({ ...cue, text: cleaned });
+  }
+
   return {
     status: record.status,
     progress: record.progress,
@@ -606,10 +632,10 @@ async function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>)
     channel: record.channel,
     duration: record.duration,
     sourceLanguage: record.originalLanguage,
-    cues: record.greekTranscript,
-    englishCues: record.englishTranscript,
+    cues: greekTranscript,
+    englishCues: englishTranscript,
     topics: record.topics,
-    keyPoints: record.keyPoints,
+    keyPoints: keyPoints(greekTranscript),
     speaker: speakerProfile(record.videoId, "", record.channel),
     transcriptVersion: record.transcriptVersion,
     cached: true,
