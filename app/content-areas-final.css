@@ -448,99 +448,16 @@ html body .app-shell.app-shell.app-shell .tabs button.active{background:#1b1930!
 html body .app-shell.app-shell.app-shell .category-row button.active,
 html body .app-shell.app-shell.app-shell .quick-filters button.active{color:#c9c4f5!important}
 
-
-/* ---- 6.6.17 speaker/source hierarchy: compact editorial metadata ---- */
-html body .app-shell.app-shell.app-shell .video-heading .video-meta-kicker{
-  display:block!important;margin:0 0 7px!important;color:#aeb3bd!important;
-  font-family:inherit!important;font-size:12px!important;line-height:1.4!important;font-weight:520!important;
-  letter-spacing:.01em!important;text-transform:none!important;
-}
-html body .app-shell.app-shell.app-shell .video-heading .video-meta-kicker strong{
-  color:#f1f2f5!important;font-weight:650!important;
-}
-html body .app-shell.app-shell.app-shell .video-heading .player-greek-title{
-  margin:0!important;max-width:980px!important;color:#f6f3ec!important;
-  font-family:inherit!important;font-size:24px!important;
-  font-weight:650!important;line-height:1.16!important;letter-spacing:-.028em!important;
-  text-wrap:balance!important;overflow-wrap:break-word!important;
-}
-html body .app-shell.app-shell.app-shell .video-source-row{
-  display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:6px 10px!important;
-  margin-top:12px!important;padding-top:10px!important;border-top:1px solid rgba(255,255,255,.08)!important;
-  color:#8f949e!important;font-family:inherit!important;font-size:11.5px!important;line-height:1.45!important;
-}
-html body .app-shell.app-shell.app-shell .video-source-row>span{
-  padding:3px 7px!important;border:1px solid rgba(124,116,224,.25)!important;border-radius:7px!important;
-  background:rgba(124,116,224,.08)!important;color:#b9b4ef!important;font-size:9.5px!important;
-  font-weight:700!important;letter-spacing:.08em!important;
-}
-html body .app-shell.app-shell.app-shell .video-source-row>a,
-html body .app-shell.app-shell.app-shell .video-source-row>strong{
-  min-width:0!important;color:#b9bdc6!important;font-weight:520!important;text-decoration:none!important;
-}
-html body .app-shell.app-shell.app-shell .video-source-row>a:last-child{
-  flex:1 1 360px!important;overflow:hidden!important;color:#8f949e!important;text-overflow:ellipsis!important;white-space:nowrap!important;
-}
-html body .app-shell.app-shell.app-shell .video-source-row>a:hover{color:#d7d4f5!important}
-html body .app-shell.app-shell.app-shell .speaker-row{display:none!important}
-
 @media(max-width:620px){
-  html body .app-shell.app-shell.app-shell .video-heading .video-meta-kicker{margin-bottom:6px!important;font-size:11.5px!important}
-  html body .app-shell.app-shell.app-shell .video-heading .player-greek-title{
-    font-size:clamp(21px,6.2vw,26px)!important;line-height:1.18!important;letter-spacing:-.022em!important;
-  }
-  html body .app-shell.app-shell.app-shell .video-source-row{gap:6px 8px!important;margin-top:10px!important;padding-top:9px!important;font-size:11px!important}
-  html body .app-shell.app-shell.app-shell .video-source-row>a:last-child{
-    flex-basis:100%!important;display:block!important;max-width:100%!important;
-  }
+  html body .app-shell.app-shell.app-shell .video-heading .video-meta-kicker{gap:5px 6px!important;margin-bottom:7px!important}
+  html body .app-shell.app-shell.app-shell .video-heading .video-category-label{min-height:20px!important;padding:3px 7px!important;font-size:9px!important}
 }
 
-
-/* ===== GreekTube Subs v7 final UX layer ===== */
-html body .app-shell.app-shell.app-shell .video-frame{position:relative!important}
-html body .app-shell.app-shell.app-shell .video-frame:after{
-  content:"";position:absolute;left:0;right:0;bottom:0;height:88px;z-index:5;pointer-events:none;
-  background:linear-gradient(to top,rgba(0,0,0,.46),rgba(0,0,0,0));
-  opacity:0;transition:opacity .24s ease;
-}
-html body .app-shell.app-shell.app-shell .video-frame.player-ui-visible:after{opacity:1}
-html body .app-shell.app-shell.app-shell .player-seek-ui{
-  position:absolute!important;left:0!important;right:0!important;bottom:0!important;z-index:8!important;
-  height:38px!important;display:flex!important;align-items:flex-end!important;padding:0 12px 7px!important;
-  transition:opacity .22s ease,transform .22s ease!important;
-}
-html body .app-shell.app-shell.app-shell .player-seek-ui.hidden{opacity:0!important;transform:translateY(5px)!important;pointer-events:none!important}
-html body .app-shell.app-shell.app-shell .player-seek-ui.visible{opacity:1!important;transform:none!important}
-html body .app-shell.app-shell.app-shell .player-time-label{
-  position:absolute!important;left:14px!important;bottom:17px!important;color:#fff!important;
-  font-size:11px!important;font-weight:650!important;line-height:1!important;font-variant-numeric:tabular-nums!important;
-  text-shadow:0 1px 5px rgba(0,0,0,.85)!important;pointer-events:none!important;
-}
-html body .app-shell.app-shell.app-shell .player-seek-ui .player-seek-bar{position:relative!important;left:auto!important;right:auto!important;bottom:auto!important;width:100%!important;z-index:2!important}
-html body .app-shell.app-shell.app-shell .seek-preview{
-  position:absolute!important;left:var(--seek-preview-position)!important;bottom:25px!important;z-index:10!important;
-  transform:translateX(-50%)!important;min-width:44px!important;padding:5px 7px!important;border-radius:7px!important;
-  background:rgba(8,9,13,.92)!important;border:1px solid rgba(255,255,255,.15)!important;color:#fff!important;
-  font-size:10.5px!important;font-weight:700!important;font-variant-numeric:tabular-nums!important;box-shadow:0 6px 18px rgba(0,0,0,.35)!important;
-}
-@media(max-width:620px){
-  html body .app-shell.app-shell.app-shell .player-seek-ui{height:42px!important;padding:0 10px 7px!important}
-  html body .app-shell.app-shell.app-shell .player-time-label{left:11px!important;bottom:18px!important;font-size:10.5px!important}
-  html body .app-shell.app-shell.app-shell .seek-preview{bottom:27px!important;min-width:50px!important;padding:6px 8px!important;font-size:11.5px!important}
-  html body .app-shell.app-shell.app-shell .video-heading .player-greek-title{font-size:22px!important;line-height:1.2!important}
-}
-
-/* Watched state + category system */
-html body .app-shell.app-shell.app-shell .watched-badge{
-  position:absolute!important;left:8px!important;bottom:8px!important;z-index:3!important;
-  padding:4px 7px!important;border-radius:7px!important;background:rgba(5,8,7,.82)!important;
-  border:1px solid rgba(143,191,134,.34)!important;color:#b9dfaF!important;font-size:9.5px!important;font-weight:700!important;
-  backdrop-filter:blur(8px)!important;
-}
-html body .app-shell.app-shell.app-shell .card-category[data-category="Medical"]{background:rgba(227,162,60,.18)!important;color:#efbd6d!important;border-color:rgba(227,162,60,.34)!important}
-html body .app-shell.app-shell.app-shell .card-category[data-category="Tech"]{background:rgba(80,159,225,.18)!important;color:#83bee9!important;border-color:rgba(80,159,225,.34)!important}
-html body .app-shell.app-shell.app-shell .card-category[data-category="Podcasts"]{background:rgba(143,127,240,.18)!important;color:#b9afff!important;border-color:rgba(143,127,240,.34)!important}
-html body .app-shell.app-shell.app-shell .card-category[data-category="Education"]{background:rgba(93,174,117,.18)!important;color:#8fd2a2!important;border-color:rgba(93,174,117,.34)!important}
+/* ---- icon-button (settings gear): a leftover mobile rule injected a
+   hamburger glyph via ::after (content:"☰") alongside the actual ⚙
+   character, making the single settings button look like two stacked
+   buttons. The button should only ever show the gear icon. ---- */
+html body .app-shell.app-shell.app-shell .icon-button:after{content:none!important;display:none!important}
 html body .app-shell.app-shell.app-shell .card-category[data-category="Documentaries"]{background:rgba(63,174,164,.18)!important;color:#7bd0c8!important;border-color:rgba(63,174,164,.34)!important}
 html body .app-shell.app-shell.app-shell .card-category[data-category="Comedy"]{background:rgba(231,117,105,.18)!important;color:#ef9b91!important;border-color:rgba(231,117,105,.34)!important}
 html body .app-shell.app-shell.app-shell .card-category[data-category="Other"]{background:rgba(150,157,169,.16)!important;color:#b8bdc7!important;border-color:rgba(150,157,169,.28)!important}
@@ -687,3 +604,8 @@ html body .app-shell.app-shell.app-shell .video-heading .video-category-label[da
   html body .app-shell.app-shell.app-shell .video-heading .video-meta-kicker{gap:5px 6px!important;margin-bottom:7px!important}
   html body .app-shell.app-shell.app-shell .video-heading .video-category-label{min-height:20px!important;padding:3px 7px!important;font-size:9px!important}
 }
+/* ---- icon-button (settings gear): a leftover mobile rule injected a
+   hamburger glyph via ::after (content:"☰") alongside the actual ⚙
+   character, making the single settings button look like two stacked
+   buttons. The button should only ever show the gear icon. ---- */
+html body .app-shell.app-shell.app-shell .icon-button:after{content:none!important;display:none!important}
