@@ -1,6 +1,6 @@
 import { database } from "@/db/postgres";
 
-export const TRANSCRIPT_VERSION = 6;
+export const TRANSCRIPT_VERSION = 7;
 
 export type CachedCue = { start: number; duration: number; text: string };
 

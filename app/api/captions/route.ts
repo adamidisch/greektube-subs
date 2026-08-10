@@ -448,11 +448,17 @@ function createMeaningUnits(cues: CaptionCue[]) {
     characters += cue.text.length;
     const elapsed = cue.start + cue.duration - current[0].start;
     const sentenceEnd = /[.!?…]["')\]]?$/.test(cue.text.trim());
-    const naturalPause = next ? next.start - (cue.start + cue.duration) >= 0.9 : true;
-    const longEnough = elapsed >= 4.5 || characters >= 90;
-    const mustSplit = elapsed >= 9 || characters >= 180;
+    const gap = next ? next.start - (cue.start + cue.duration) : Number.POSITIVE_INFINITY;
+    const naturalPause = gap >= 0.65;
+    const softPause = gap >= 0.25 && (elapsed >= 5.5 || characters >= 110);
+    const mustSplit = elapsed >= 8 || characters >= 160;
 
-    if (mustSplit || (longEnough && (sentenceEnd || naturalPause)) || !next) flush();
+    // The source punctuation is authoritative. If YouTube says a sentence has
+    // ended (for example "poisoned."), never merge words from the next thought
+    // into the same translation unit. A clear spoken pause is also a hard
+    // semantic boundary. Only merge fragments while the sentence is genuinely
+    // continuing.
+    if (sentenceEnd || naturalPause || softPause || mustSplit || !next) flush();
   });
 
   // Source caption ranges can overlap. A displayed cue is only active until
@@ -492,6 +498,8 @@ const GROQ_SYSTEM_PROMPT =
   "Κάθε δείκτης [[N]] είναι ανεξάρτητο timed cue και πρέπει να παραμείνει δεμένος με το δικό του χρονικό σημείο. " +
   "Μετέφρασε ΜΟΝΟ τις λέξεις που υπάρχουν μετά από κάθε [[N]] μέχρι τον επόμενο δείκτη. " +
   "Μην μεταφέρεις, ολοκληρώνεις ή δανείζεσαι λέξεις και νόημα από γειτονικό cue, ακόμη και αν μια πρόταση κόβεται στη μέση. " +
+  "Η τελεία, το ερωτηματικό, το θαυμαστικό και η σαφής παύση του πρωτοτύπου είναι οριστικά όρια νοήματος. Μην συνδέεις την επόμενη πρόταση με την προηγούμενη. " +
+  "Ουσία, φάρμακο, συμπλήρωμα, πρόσωπο ή τεχνικός όρος που εμφανίζεται στο επόμενο cue δεν επιτρέπεται να γίνει αιτία, αντικείμενο ή υποκείμενο του προηγούμενου cue αν αυτό δεν υπάρχει ρητά στο αγγλικό κείμενο. " +
   "Διατήρησε πιστά το νόημα και την ιατρική ή επιστημονική ορολογία, με φυσικά ελληνικά αντί για κατά λέξη απόδοση. " +
   "Χρησιμοποίησε συνεπή ορολογία σε όλα τα cues και αφαίρεσε μόνο προφανή λεκτικά fillers όπως um, uh, hmm, χμ και εε. " +
   "Μην προσθέτεις πληροφορίες που δεν υπάρχουν στο πρωτότυπο. " +
@@ -640,6 +648,44 @@ async function translateMeaningBatch(batch: { index: number; text: string }[]) {
   return results;
 }
 
+function technicalGuardTokens(text: string) {
+  const matches = text.match(/\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:\.\d+)?(?:mg|mcg|g|ml|iu|%)?)\b/g) || [];
+  return new Set(matches.map(token => token.toLowerCase()));
+}
+
+function hasEnglishNegation(text: string) {
+  return /\b(?:no|not|never|without|cannot|can't|won't|wouldn't|shouldn't|couldn't|isn't|aren't|wasn't|weren't|don't|doesn't|didn't)\b/i.test(text);
+}
+
+function hasGreekNegation(text: string) {
+  return /(?:^|[^\p{L}])(?:δεν|μην|μη|όχι|χωρίς|ούτε)(?=$|[^\p{L}])/iu.test(text);
+}
+
+function needsStrictSemanticRetry(cues: CaptionCue[], translated: Map<number, string>, index: number) {
+  const source = cues[index]?.text || "";
+  const target = translated.get(index) || "";
+  if (!source || !target) return false;
+
+  const ownTokens = technicalGuardTokens(source);
+  const targetTokens = technicalGuardTokens(target);
+  const neighbourTokens = new Set<string>();
+  for (const neighbourIndex of [index - 1, index + 1]) {
+    if (neighbourIndex < 0 || neighbourIndex >= cues.length) continue;
+    for (const token of technicalGuardTokens(cues[neighbourIndex].text)) neighbourTokens.add(token);
+  }
+
+  // Catch cross-boundary borrowing such as the next cue's "MSM" being turned
+  // into the cause of the previous cue's "poisoned." sentence.
+  for (const token of targetTokens) {
+    if (!ownTokens.has(token) && neighbourTokens.has(token)) return true;
+  }
+
+  // Added negation is another high-risk semantic change. Re-run only that cue
+  // in complete isolation rather than penalising the whole transcript.
+  if (!hasEnglishNegation(source) && hasGreekNegation(target)) return true;
+  return false;
+}
+
 async function translateTitleToGreek(title: string) {
   if (!title || hasGreekText([{ start: 0, duration: 1, text: title }])) return title;
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -718,6 +764,32 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
       completed += group.reduce((sum, batch) => sum + batch.length, 0);
       await reportProgress(completed, cues.length, 48, 84);
     }
+  }
+
+  if (useGroq) {
+    const suspicious = cues
+      .map((_, index) => index)
+      .filter(index => translated.has(index) && needsStrictSemanticRetry(cues, translated, index));
+    let checked = 0;
+    for (const index of suspicious) {
+      try {
+        // No preceding/next context on this retry: the model can only translate
+        // the exact source cue, which prevents semantic borrowing across a
+        // punctuation or pause boundary.
+        const strict = await translateBatchWithGroq([{ index, text: cues[index].text }]);
+        const replacement = strict?.get(index);
+        if (replacement) translated.set(index, replacement);
+      } catch {
+        // Keep the already valid mapped translation if strict verification is
+        // temporarily unavailable. The original mapping/fallback safeguards
+        // still apply below.
+      }
+      checked += 1;
+      if (onProgress && suspicious.length) {
+        await onProgress(Math.round(84 + (2 * checked / suspicious.length)));
+      }
+    }
+    if (onProgress && !suspicious.length) await onProgress(86);
   }
 
   for (let retry = 0; retry < 2; retry += 1) {
@@ -927,7 +999,7 @@ export async function POST(request: Request) {
         if (!sourceCues.length) throw new Error("Supadata returned an empty English transcript");
         await updateProcessingProgress(videoId, lockToken, 48);
         cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-        translationMethod = "supadata_native_contextual_meaning_units_v4";
+        translationMethod = "supadata_native_semantic_boundaries_v5";
       }
 
       const duration = supadata.cues.reduce(
@@ -1057,7 +1129,7 @@ export async function POST(request: Request) {
       }
       if (!cues.length) {
         cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-        translationMethod = "contextual_meaning_units_v3";
+        translationMethod = "semantic_boundaries_v5";
       }
     }
 
