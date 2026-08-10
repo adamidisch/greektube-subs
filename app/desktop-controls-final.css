@@ -51,6 +51,22 @@
     border-radius:50%!important;background:#7c74e0!important;color:#fff!important;font-size:13px!important;
     box-shadow:0 6px 16px rgba(124,116,224,.28)!important;
   }
+  html body .viewer.viewer.viewer .volume-control{position:relative!important;flex:0 0 auto!important}
+  html body .viewer.viewer.viewer .volume-toggle{
+    width:28px!important;min-width:28px!important;height:34px!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    padding:0!important;margin:0!important;border:0!important;background:transparent!important;color:#8b9099!important;
+  }
+  html body .viewer.viewer.viewer .volume-toggle:hover{color:#f6f3ec!important}
+  html body .viewer.viewer.viewer .volume-toggle svg{width:16px!important;height:16px!important}
+  html body .viewer.viewer.viewer .volume-popup{
+    position:absolute!important;bottom:calc(100% + 10px)!important;left:50%!important;transform:translateX(-50%)!important;
+    display:flex!important;align-items:center!important;gap:8px!important;padding:9px 12px!important;
+    border:1px solid rgba(255,255,255,.1)!important;border-radius:14px!important;background:#1b1f26!important;
+    box-shadow:0 14px 32px rgba(0,0,0,.4)!important;z-index:20!important;white-space:nowrap!important;
+  }
+  html body .viewer.viewer.viewer .volume-mute-btn{width:22px!important;height:22px!important;padding:0!important;border:0!important;background:transparent!important;font-size:13px!important;line-height:1!important}
+  html body .viewer.viewer.viewer .volume-popup input[type="range"]{width:100px!important;height:4px!important;margin:0!important;accent-color:#7c74e0!important}
 
   html body .viewer.viewer.viewer .fullscreen-primary,
   html body .viewer.viewer.viewer .player-secondary-actions>.moment-save,

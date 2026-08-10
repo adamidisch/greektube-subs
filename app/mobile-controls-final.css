@@ -78,6 +78,26 @@
     border-radius:50%!important;background:#7c74e0!important;color:#fff!important;font-size:14px!important;position:static!important;
     box-shadow:0 6px 16px rgba(124,116,224,.25)!important;
   }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{gap:9px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-control{position:relative!important;flex:0 0 30px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-toggle{
+    width:30px!important;min-width:30px!important;height:36px!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    padding:0!important;margin:0!important;color:#8b9099!important;position:static!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-toggle svg{width:17px!important;height:17px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-popup{
+    position:absolute!important;bottom:calc(100% + 10px)!important;left:50%!important;transform:translateX(-50%)!important;
+    display:flex!important;align-items:center!important;gap:8px!important;padding:9px 12px!important;
+    border:1px solid #2b313b!important;border-radius:14px!important;background:#1b1f26!important;
+    box-shadow:0 14px 32px rgba(0,0,0,.4)!important;z-index:20!important;white-space:nowrap!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-mute-btn{
+    width:24px!important;height:24px!important;padding:0!important;border:0!important;background:transparent!important;font-size:14px!important;line-height:1!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-popup input[type="range"]{
+    width:96px!important;height:4px!important;margin:0!important;accent-color:#7c74e0!important;
+  }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary{
     grid-column:auto!important;grid-row:auto!important;
     width:100%!important;min-width:0!important;max-width:none!important;min-height:52px!important;

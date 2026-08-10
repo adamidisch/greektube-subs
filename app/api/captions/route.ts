@@ -460,13 +460,14 @@ function createMeaningUnits(cues: CaptionCue[]) {
 
 function cleanSubtitleText(text: string) {
   return text
-    // JavaScript \b is ASCII-centric and was missing Greek filler tokens.
-    // Use Unicode letter/number boundaries instead and remove only clear
-    // hesitation noises, leaving meaningful words/interjections untouched.
-    .replace(/(^|[^\p{L}\p{N}])(?:u+m+|u+h+|e+r+m+|h+m{2,}|m{3,}|χ+μ{2,}|μ{3,})(?=$|[^\p{L}\p{N}])/giu, "$1")
+    // Unicode-aware filler cleanup. Keep it conservative: remove only clear
+    // hesitation noise, never ordinary Greek words or single-letter tokens.
+    .replace(/(^|[^\p{L}\p{N}])(?:u+m+|u+h+|e+r+m+|h+m{2,}|m{3,}|χ+μ{2,}|μ{3,}|ε{2,})(?=$|[^\p{L}\p{N}])/giu, "$1")
     // Collapse obvious ASR stutters only when the same 2+ letter word is
     // repeated three or more times in a row.
     .replace(/(^|[^\p{L}\p{N}])(\p{L}{2,})(?:\s+\2){2,}(?=$|[^\p{L}\p{N}])/giu, "$1$2")
+    .replace(/^[,;:]+\s*/, "")
+    .replace(/([,;:])\s*\1+/g, "$1")
     .replace(/\s+([,.;:!?…])/g, "$1")
     .replace(/([!?.,…])\1{2,}/g, "$1")
     .replace(/\s+/g, " ")
@@ -534,14 +535,14 @@ async function translateTitleToGreek(title: string) {
 async function translateCuesToGreek(cues: CaptionCue[]) {
   const translated = new Map<number, string>();
   const batches: { index: number; text: string }[][] = [];
-  for (let start = 0; start < cues.length; start += 10) {
-    batches.push(cues.slice(start, start + 10).map((cue, offset) => ({
+  for (let start = 0; start < cues.length; start += 25) {
+    batches.push(cues.slice(start, start + 25).map((cue, offset) => ({
       index: start + offset,
       text: cue.text,
     })));
   }
-  for (let start = 0; start < batches.length; start += 3) {
-    const results = await Promise.all(batches.slice(start, start + 3).map(translateMeaningBatch));
+  for (let start = 0; start < batches.length; start += 2) {
+    const results = await Promise.all(batches.slice(start, start + 2).map(translateMeaningBatch));
     results.forEach(batch => {
       batch.forEach((text, index) => translated.set(index, text));
     });

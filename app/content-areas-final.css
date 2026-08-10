@@ -221,6 +221,14 @@ html body .app-shell.app-shell.app-shell .featured-actions .secondary{
   padding:10px 16px!important;border-radius:14px!important;font-size:13px!important;line-height:1.25!important;
   white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
 }
+html body .app-shell.app-shell.app-shell .featured-actions .primary{
+  border:1px solid rgba(124,116,224,.4)!important;background:#7c74e0!important;color:#fff!important;
+  box-shadow:0 8px 22px rgba(124,116,224,.28)!important;
+}
+html body .app-shell.app-shell.app-shell .featured-actions .secondary{
+  border:1px solid rgba(255,255,255,.08)!important;background:#1b1f26!important;color:#f6f3ec!important;box-shadow:none!important;
+}
+html body .app-shell.app-shell.app-shell .featured-actions .secondary:hover{border-color:rgba(255,255,255,.18)!important}
 
 /* ---- library toolbar (search, quick filters, category chips): heights/
    radii were set 3-4 times with different values (28-44px). Search was
@@ -378,6 +386,7 @@ html body .app-shell.app-shell.app-shell .icon-button{
 }
 html body .app-shell.app-shell.app-shell .icon-button:hover{border-color:rgba(255,255,255,.2)!important}
 html body .app-shell.app-shell.app-shell .icon-button.active{border-color:rgba(124,116,224,.4)!important;background:#1b1930!important;color:#c9c4f5!important}
+html body .app-shell.app-shell.app-shell .icon-button:after{content:none!important;display:none!important}
 
 /* ---- video card edit/favorite buttons: card-edit shape conflicted
    between a 27px circle and a 34px rounded-square ---- */
@@ -386,8 +395,18 @@ html body .app-shell.app-shell.app-shell .card-edit{
   width:30px!important;height:30px!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:10px!important;
   background:rgba(5,6,9,.72)!important;color:#d8d3ff!important;font-size:13px!important;backdrop-filter:blur(8px)!important;
 }
-html body .app-shell.app-shell.app-shell .heart{
+html body .app-shell.app-shell.app-shell .thumb-top-right{
   position:absolute!important;top:8px!important;right:8px!important;z-index:2!important;
+  display:flex!important;align-items:center!important;gap:6px!important;
+}
+html body .app-shell.app-shell.app-shell .card-category{
+  height:30px!important;display:flex!important;align-items:center!important;padding:0 10px!important;
+  border:1px solid rgba(255,255,255,.2)!important;border-radius:99px!important;background:rgba(5,6,9,.72)!important;
+  color:#e2dcff!important;font-size:10px!important;font-weight:700!important;letter-spacing:.04em!important;text-transform:uppercase!important;
+  white-space:nowrap!important;backdrop-filter:blur(8px)!important;
+}
+html body .app-shell.app-shell.app-shell .heart{
+  position:static!important;flex:0 0 auto!important;z-index:2!important;
   width:30px!important;height:30px!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:50%!important;
   background:rgba(5,6,9,.72)!important;color:#aaa!important;font-size:13px!important;backdrop-filter:blur(8px)!important;
 }
