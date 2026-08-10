@@ -528,11 +528,12 @@ async function repairEnglishBatchWithGroq(batch: { index: number; text: string }
       if (!expectedIds.has(index) || results.has(index)) return null;
       const source = batch.find(item => item.index === index)?.text || "";
       const candidate = match[2].replace(/\s+/g, " ").trim();
-      if (!repairCandidateIsSafe(source, candidate)) return null;
-      results.set(index, candidate);
+      // Keep each independently safe repair. If one cue is over-edited, only
+      // that cue falls back to the untouched raw transcript instead of
+      // discarding valid punctuation/ASR fixes for the whole batch.
+      if (repairCandidateIsSafe(source, candidate)) results.set(index, candidate);
     }
-    if (results.size !== batch.length || batch.some(item => !results.has(item.index))) return null;
-    return results;
+    return results.size ? results : null;
   } catch {
     return null;
   } finally {
