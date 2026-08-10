@@ -124,18 +124,64 @@ async function oEmbedDetails(id: string) {
     const response = await fetch(
       `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`,
     );
-    if (!response.ok) return { title: "", author: "" };
-    const metadata = (await response.json()) as { title?: string; author_name?: string };
-    return { title: metadata.title || "", author: metadata.author_name || "" };
+    if (!response.ok) return { title: "", author: "", authorUrl: "" };
+    const metadata = (await response.json()) as { title?: string; author_name?: string; author_url?: string };
+    return {
+      title: metadata.title || "",
+      author: metadata.author_name || "",
+      authorUrl: metadata.author_url || "",
+    };
   } catch {
-    return { title: "", author: "" };
+    return { title: "", author: "", authorUrl: "" };
   }
 }
 
-function doctorName(title: string, description: string) {
-  const source = `${title}\n${description.slice(0, 1200)}`;
-  const match = source.match(/\b(?:Dr\.?|Doctor)\s+([A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+(?:\s+[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+){1,3})/);
-  return match ? `Dr ${match[1].replace(/[|:,\-–—]+$/g, "").trim()}` : "";
+function speakerNameFromMetadata(title: string, description: string) {
+  const source = `${title}\n${description.slice(0, 2600)}`;
+  const doctor = source.match(/\b(?:Dr\.?|Doctor)\s+([A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+(?:\s+[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+){1,3})/);
+  if (doctor) return `Dr ${doctor[1].replace(/[|:,\-–—]+$/g, "").trim()}`;
+
+  const credentialed = source.match(/\b([A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+(?:\s+[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+){1,3})\s*,\s*(?:M\.?D\.?|D\.?O\.?|Ph\.?D\.?|MBBS|MD|DO|PhD)\b/);
+  if (credentialed) return credentialed[1].trim();
+
+  const guest = source.match(/\b(?:guest|joined by|speaking with|conversation with|interview with|featuring)\s+(?:Dr\.?\s+)?([A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+(?:\s+[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+){1,3})/i);
+  return guest ? guest[1].replace(/[|:,\-–—]+$/g, "").trim() : "";
+}
+
+const ROLE_LABELS: Array<[RegExp, string]> = [
+  [/\bcardiothoracic surgeon\b/i, "Cardiothoracic Surgeon"],
+  [/\bneurosurgeon\b/i, "Neurosurgeon"],
+  [/\bneurologist\b/i, "Neurologist"],
+  [/\bcardiologist\b/i, "Cardiologist"],
+  [/\bendocrinologist\b/i, "Endocrinologist"],
+  [/\bgastroenterologist\b/i, "Gastroenterologist"],
+  [/\boncologist\b/i, "Oncologist"],
+  [/\bpsychiatrist\b/i, "Psychiatrist"],
+  [/\bpsychologist\b/i, "Psychologist"],
+  [/\bneuroscientist\b/i, "Neuroscientist"],
+  [/\b(?:medical )?doctor\b/i, "Doctor"],
+  [/\bphysician\b/i, "Physician"],
+  [/\bsurgeon\b/i, "Surgeon"],
+  [/\bdietitian\b/i, "Dietitian"],
+  [/\bnutritionist\b/i, "Nutritionist"],
+  [/\bbiochemist\b/i, "Biochemist"],
+  [/\bpharmacist\b/i, "Pharmacist"],
+  [/\bprofessor\b/i, "Professor"],
+  [/\bresearcher\b/i, "Researcher"],
+  [/\bscientist\b/i, "Scientist"],
+  [/\btherapist\b/i, "Therapist"],
+];
+
+function speakerRoleFromMetadata(description: string, speakerName: string) {
+  if (!description) return "";
+  const normalizedName = speakerName.replace(/^Dr\.?\s+/i, "").trim();
+  const lower = description.toLowerCase();
+  const nameIndex = normalizedName ? lower.indexOf(normalizedName.toLowerCase()) : -1;
+  const local = nameIndex >= 0
+    ? description.slice(Math.max(0, nameIndex - 180), nameIndex + normalizedName.length + 420)
+    : description.slice(0, 1600);
+  for (const [pattern, label] of ROLE_LABELS) if (pattern.test(local)) return label;
+  return "";
 }
 
 function categoryFor(title: string, description: string, speakerName: string) {
@@ -166,6 +212,9 @@ export async function POST(request: Request) {
         duration: 0,
         description: "Τα στοιχεία του video θα συμπληρωθούν κατά την προετοιμασία των υποτίτλων.",
         speakerName: "",
+        speakerRole: "",
+        channelUrl: "",
+        originalVideoUrl: `https://www.youtube.com/watch?v=${id}`,
         category: "Other",
         tags: [],
         thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
@@ -173,16 +222,20 @@ export async function POST(request: Request) {
       });
     }
     const title = await greekTitle(originalTitle);
-    const speakerName = doctorName(originalTitle, details.description);
+    const speakerName = speakerNameFromMetadata(originalTitle, details.description);
+    const speakerRole = speakerRoleFromMetadata(details.description, speakerName);
     const category = categoryFor(originalTitle, details.description, speakerName);
     return NextResponse.json({
       id,
       title,
       originalTitle,
       channel: metadata.author || details.author || "YouTube",
+      channelUrl: metadata.authorUrl || "",
+      originalVideoUrl: `https://www.youtube.com/watch?v=${id}`,
       duration: details.duration,
       description: details.description,
       speakerName,
+      speakerRole,
       category,
       tags: [category === "Medical" ? "υγεία" : category.toLowerCase(), speakerName].filter(Boolean),
       thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
