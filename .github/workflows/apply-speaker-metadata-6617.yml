@@ -1,0 +1,27 @@
+name: Apply speaker metadata 6.6.17
+on:
+  push:
+    branches: [speaker-metadata-6.6.17]
+    paths:
+      - scripts/apply_speaker_metadata_6617.py
+      - .github/workflows/apply-speaker-metadata-6617.yml
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: speaker-metadata-6.6.17
+      - run: python scripts/apply_speaker_metadata_6617.py
+      - run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/api/metadata/route.ts app/GreekTubePlayer.tsx app/content-areas-final.css
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Speaker metadata and source redesign 6.6.17 [speaker-metadata-applied]"
+            git push origin HEAD:speaker-metadata-6.6.17
+          fi
