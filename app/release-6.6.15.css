@@ -1,0 +1,192 @@
+/* GreekTube Subs 6.6.15 — release-specific overrides.
+   Loaded last so the approved 6.6.14 baseline stays intact and rollback remains trivial. */
+
+/* Featured actions use the same indigo/dark-card language as player controls. */
+html body .app-shell.app-shell.app-shell .featured-actions .primary{
+  border:1px solid rgba(124,116,224,.4)!important;
+  background:#7c74e0!important;
+  color:#fff!important;
+  box-shadow:0 8px 22px rgba(124,116,224,.28)!important;
+}
+html body .app-shell.app-shell.app-shell .featured-actions .secondary{
+  border:1px solid rgba(255,255,255,.08)!important;
+  background:#1b1f26!important;
+  color:#f6f3ec!important;
+  box-shadow:none!important;
+}
+html body .app-shell.app-shell.app-shell .featured-actions .secondary:hover{
+  border-color:rgba(255,255,255,.18)!important;
+}
+
+/* Category badge + favorite button live together at top-right of thumbnails. */
+html body .app-shell.app-shell.app-shell .thumb-top-right{
+  position:absolute!important;
+  top:8px!important;
+  right:8px!important;
+  z-index:2!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+}
+html body .app-shell.app-shell.app-shell .card-category{
+  height:30px!important;
+  display:flex!important;
+  align-items:center!important;
+  padding:0 10px!important;
+  border:1px solid rgba(255,255,255,.2)!important;
+  border-radius:99px!important;
+  background:rgba(5,6,9,.72)!important;
+  color:#e2dcff!important;
+  font-size:10px!important;
+  font-weight:700!important;
+  letter-spacing:.04em!important;
+  text-transform:uppercase!important;
+  white-space:nowrap!important;
+  backdrop-filter:blur(8px)!important;
+}
+html body .app-shell.app-shell.app-shell .heart{
+  position:static!important;
+  flex:0 0 auto!important;
+  z-index:2!important;
+  width:30px!important;
+  height:30px!important;
+  border:1px solid rgba(255,255,255,.2)!important;
+  border-radius:50%!important;
+  background:rgba(5,6,9,.72)!important;
+  color:#aaa!important;
+  font-size:13px!important;
+  backdrop-filter:blur(8px)!important;
+}
+
+/* Settings gear must not inherit the legacy injected hamburger glyph. */
+html body .app-shell.app-shell.app-shell .icon-button:after{
+  content:none!important;
+  display:none!important;
+}
+
+/* Pseudo-fullscreen exit: centered on the right edge and large enough for touch. */
+html body .app-shell.app-shell.app-shell .video-frame.pseudo-fullscreen .custom-fullscreen{
+  display:grid!important;
+  place-items:center!important;
+  position:fixed!important;
+  z-index:1003!important;
+  top:50%!important;
+  right:max(16px,env(safe-area-inset-right))!important;
+  bottom:auto!important;
+  left:auto!important;
+  transform:translateY(-50%)!important;
+  width:52px!important;
+  height:52px!important;
+  opacity:1!important;
+  touch-action:manipulation!important;
+}
+
+@media(min-width:621px){
+  html body .viewer.viewer.viewer .volume-control{
+    position:relative!important;
+    flex:0 0 auto!important;
+  }
+  html body .viewer.viewer.viewer .volume-toggle{
+    width:28px!important;
+    min-width:28px!important;
+    height:34px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:0!important;
+    margin:0!important;
+    border:0!important;
+    background:transparent!important;
+    color:#8b9099!important;
+  }
+  html body .viewer.viewer.viewer .volume-toggle:hover{color:#f6f3ec!important}
+  html body .viewer.viewer.viewer .volume-toggle svg{width:16px!important;height:16px!important}
+  html body .viewer.viewer.viewer .volume-popup{
+    position:absolute!important;
+    bottom:calc(100% + 10px)!important;
+    left:50%!important;
+    transform:translateX(-50%)!important;
+    display:flex!important;
+    align-items:center!important;
+    gap:8px!important;
+    padding:9px 12px!important;
+    border:1px solid rgba(255,255,255,.1)!important;
+    border-radius:14px!important;
+    background:#1b1f26!important;
+    box-shadow:0 14px 32px rgba(0,0,0,.4)!important;
+    z-index:20!important;
+    white-space:nowrap!important;
+  }
+  html body .viewer.viewer.viewer .volume-mute-btn{
+    width:22px!important;
+    height:22px!important;
+    padding:0!important;
+    border:0!important;
+    background:transparent!important;
+    font-size:13px!important;
+    line-height:1!important;
+  }
+  html body .viewer.viewer.viewer .volume-popup input[type="range"]{
+    width:100px!important;
+    height:4px!important;
+    margin:0!important;
+    accent-color:#7c74e0!important;
+  }
+}
+
+@media(max-width:620px){
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{
+    gap:9px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-control{
+    position:relative!important;
+    flex:0 0 30px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-toggle{
+    width:30px!important;
+    min-width:30px!important;
+    height:36px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:0!important;
+    margin:0!important;
+    color:#8b9099!important;
+    position:static!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-toggle svg{
+    width:17px!important;
+    height:17px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-popup{
+    position:absolute!important;
+    bottom:calc(100% + 10px)!important;
+    left:50%!important;
+    transform:translateX(-50%)!important;
+    display:flex!important;
+    align-items:center!important;
+    gap:8px!important;
+    padding:9px 12px!important;
+    border:1px solid #2b313b!important;
+    border-radius:14px!important;
+    background:#1b1f26!important;
+    box-shadow:0 14px 32px rgba(0,0,0,.4)!important;
+    z-index:20!important;
+    white-space:nowrap!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-mute-btn{
+    width:24px!important;
+    height:24px!important;
+    padding:0!important;
+    border:0!important;
+    background:transparent!important;
+    font-size:14px!important;
+    line-height:1!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-popup input[type="range"]{
+    width:96px!important;
+    height:4px!important;
+    margin:0!important;
+    accent-color:#7c74e0!important;
+  }
+}
