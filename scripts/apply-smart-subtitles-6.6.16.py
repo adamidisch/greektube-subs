@@ -74,12 +74,12 @@ new = '''async function cachedResponse(record: Awaited<ReturnType<typeof getTran
   // immediately without forcing every existing video through re-translation.
   // Keep Greek/English cue indexes paired when filler-only cues are removed.
   const cleanedPairs = record.greekTranscript
-    .map((cue, index) => ({ index, cue: { ...cue, text: cleanSubtitleText(cue.text) } }))
-    .filter(item => item.cue.text.length > 0);
-  const greekTranscript = cleanedPairs.map(item => item.cue);
+    .map((cue: CaptionCue, index: number) => ({ index, cue: { ...cue, text: cleanSubtitleText(cue.text) } }))
+    .filter((item: { index: number; cue: CaptionCue }) => item.cue.text.length > 0);
+  const greekTranscript = cleanedPairs.map((item: { index: number; cue: CaptionCue }) => item.cue);
   const englishTranscript: CaptionCue[] = [];
   for (const { index } of cleanedPairs) {
-    const cue = record.englishTranscript[index];
+    const cue = record.englishTranscript[index] as CaptionCue | undefined;
     if (!cue) continue;
     const cleaned = cleanSubtitleText(cue.text);
     if (cleaned) englishTranscript.push({ ...cue, text: cleaned });
