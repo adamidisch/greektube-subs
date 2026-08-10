@@ -1,0 +1,27 @@
+name: Apply GreekTube Subs v7.1.0
+on:
+  push:
+    branches: [v7.1.0]
+    paths:
+      - scripts/apply-v7.1.0-claude.py
+      - .github/workflows/apply-v7.1.0.yml
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.1.0
+      - run: python scripts/apply-v7.1.0-claude.py
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - run: npm run lint
+      - run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app package.json
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.1.0 Claude fixes [v7.1.0]"
+          git push origin HEAD:v7.1.0
