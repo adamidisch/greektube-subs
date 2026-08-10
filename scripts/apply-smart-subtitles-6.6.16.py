@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# One-shot patch for smart subtitle cleanup.
 path = Path("app/api/captions/route.ts")
 text = path.read_text()
 
