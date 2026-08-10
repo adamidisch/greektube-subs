@@ -5,6 +5,7 @@ on:
     branches: [v7.1.2]
     paths:
       - '.github/workflows/apply-v7.1.2.yml'
+      - 'scripts/apply-v7.1.2.py'
   workflow_dispatch:
 
 permissions:
