@@ -1,0 +1,27 @@
+name: Apply player title 24px
+on:
+  push:
+    branches: [speaker-metadata-6.6.17]
+    paths:
+      - scripts/set_player_title_24.py
+      - .github/workflows/apply-player-title-24.yml
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: speaker-metadata-6.6.17
+      - run: python scripts/set_player_title_24.py
+      - run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/content-areas-final.css
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Set player Greek title to 24px"
+            git push origin HEAD:speaker-metadata-6.6.17
+          fi
