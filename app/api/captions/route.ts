@@ -416,6 +416,36 @@ async function fetchCaptionCues(track: CaptionTrack, userAgent: string, targetLa
   throw new Error(failures.join(" · "));
 }
 
+
+async function fetchDirectNativeEnglish(videoId: string) {
+  const players = await fetchPlayers(videoId);
+  const failures: string[] = [];
+  for (const candidate of players) {
+    const tracks = orderedTracks(
+      candidate.player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [],
+    ).filter(track => {
+      const language = track.languageCode?.toLowerCase() || "";
+      return language === "en" || language.startsWith("en-");
+    });
+    for (const track of tracks) {
+      if (!track.baseUrl) continue;
+      try {
+        const cues = await fetchCaptionCues(track, candidate.userAgent);
+        if (!cues.length) continue;
+        return {
+          cues,
+          player: candidate.player,
+          track,
+          userAgent: candidate.userAgent,
+        };
+      } catch (error) {
+        failures.push(`${candidate.clientName}/${track.languageCode || "en"}: ${error instanceof Error ? error.message : "failed"}`);
+      }
+    }
+  }
+  throw new Error(failures.join(" · ") || "Direct YouTube English captions unavailable");
+}
+
 function createMeaningUnits(cues: CaptionCue[]) {
   // The English transcript is the source of truth. Clean only obvious ASR noise,
   // preserve punctuation/numbers/technical terms, then build COMPLETE source
@@ -1071,7 +1101,7 @@ export async function POST(request: Request) {
           transcriptVersion: TRANSCRIPT_VERSION,
           createdAt: cached?.createdAt || now,
           updatedAt: now,
-        }, lockToken);
+        }, lockToken as string);
         const seeded = await getTranscript(videoId);
         lockToken = null;
         return NextResponse.json(await cachedResponse(seeded));
@@ -1087,7 +1117,84 @@ export async function POST(request: Request) {
       const active = await getTranscript(videoId);
       return NextResponse.json(await cachedResponse(active), { status: 202, headers: { "Retry-After": "1" } });
     }
-    await updateProcessingProgress(videoId, lockToken, 12);
+    await updateProcessingProgress(videoId, lockToken as string, 12);
+
+    // First choice: the actual native English timed-text track from YouTube.
+    // This is the closest source to what the viewer sees in YouTube's own
+    // transcript UI, including punctuation and sentence boundaries. Supadata is
+    // retained as a resilience fallback for Vercel environments where YouTube
+    // challenges the request.
+    try {
+      const direct = await fetchDirectNativeEnglish(videoId);
+      await updateProcessingProgress(videoId, lockToken as string, 28);
+      const sourceCues = createMeaningUnits(direct.cues);
+      if (!sourceCues.length) throw new Error("Direct YouTube English transcript was empty");
+
+      await updateProcessingProgress(videoId, lockToken as string, 48);
+      const cues = await translateCuesToGreek(
+        sourceCues,
+        progress => updateProcessingProgress(videoId, lockToken as string, progress),
+      );
+      const duration = direct.cues.reduce(
+        (max, cue) => Math.max(max, cue.start + cue.duration),
+        0,
+      );
+      validateCompleteGreekTranscript(cues, duration);
+      await updateProcessingProgress(videoId, lockToken as string, 88);
+
+      const metadata = await fetchYouTubeOEmbed(videoId);
+      const originalTitle = metadata.title || direct.player.videoDetails?.title || cached?.title || "YouTube video";
+      const channel = metadata.authorName || direct.player.videoDetails?.author || cached?.channel || "YouTube";
+      const translatedTitle = await translateTitleToGreek(originalTitle);
+      const speaker = speakerProfile(videoId, direct.player.videoDetails?.shortDescription || "", channel);
+      const points = keyPoints(cues);
+      const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\\p{L}]{6,}/gu) || []))].slice(0, 6);
+      const now = new Date().toISOString();
+      await updateProcessingProgress(videoId, lockToken as string, 96);
+
+      await completeTranscript({
+        videoId,
+        title: originalTitle,
+        channel,
+        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        duration,
+        originalLanguage: direct.track.languageCode?.toLowerCase() || "en",
+        englishTranscript: sourceCues,
+        greekTranscript: cues,
+        timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
+        topics,
+        keyPoints: points,
+        status: "ready",
+        progress: 100,
+        transcriptVersion: TRANSCRIPT_VERSION,
+        createdAt: cached?.createdAt || now,
+        updatedAt: now,
+      }, lockToken as string);
+
+      lockToken = null;
+      return NextResponse.json({
+        status: "ready",
+        videoId,
+        title: translatedTitle,
+        originalTitle,
+        channel,
+        duration,
+        sourceLanguage: direct.track.languageCode?.toLowerCase() || "en",
+        sourceType: "youtube_native_direct",
+        translationMethod: "youtube_native_sentence_faithful_v6",
+        cues,
+        englishCues: sourceCues,
+        topics,
+        keyPoints: points,
+        speaker,
+        transcriptVersion: TRANSCRIPT_VERSION,
+        cached: false,
+      });
+    } catch (error) {
+      console.warn(
+        `[captions:${videoId}] Direct YouTube native transcript unavailable; using Supadata fallback: ${error instanceof Error ? error.message : "failed"}`,
+      );
+    }
 
     // Prefer Supadata for native YouTube transcripts. Vercel-origin requests
     // to YouTube can be challenged with "Sign in to confirm you're not a bot".
@@ -1099,7 +1206,7 @@ export async function POST(request: Request) {
         throw new Error(`Supadata returned unsupported source language: ${sourceLanguage}`);
       }
 
-      await updateProcessingProgress(videoId, lockToken, 28);
+      await updateProcessingProgress(videoId, lockToken as string, 28);
       let cues: CaptionCue[] = [];
       let sourceCues: CaptionCue[] = [];
       let translationMethod = "supadata_native_original_greek";
@@ -1109,7 +1216,7 @@ export async function POST(request: Request) {
       } else {
         sourceCues = createMeaningUnits(supadata.cues);
         if (!sourceCues.length) throw new Error("Supadata returned an empty English transcript");
-        await updateProcessingProgress(videoId, lockToken, 48);
+        await updateProcessingProgress(videoId, lockToken as string, 48);
         cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
         translationMethod = "supadata_native_sentence_faithful_v6";
       }
@@ -1119,7 +1226,7 @@ export async function POST(request: Request) {
         0,
       );
       validateCompleteGreekTranscript(cues, duration);
-      await updateProcessingProgress(videoId, lockToken, 88);
+      await updateProcessingProgress(videoId, lockToken as string, 88);
 
       const metadata = await fetchYouTubeOEmbed(videoId);
       const originalTitle = metadata.title || cached?.title || "YouTube video";
@@ -1129,7 +1236,7 @@ export async function POST(request: Request) {
       const points = keyPoints(cues);
       const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\p{L}]{6,}/gu) || []))].slice(0, 6);
       const now = new Date().toISOString();
-      await updateProcessingProgress(videoId, lockToken, 96);
+      await updateProcessingProgress(videoId, lockToken as string, 96);
 
       await completeTranscript({
         videoId,
@@ -1148,7 +1255,7 @@ export async function POST(request: Request) {
         transcriptVersion: TRANSCRIPT_VERSION,
         createdAt: cached?.createdAt || now,
         updatedAt: now,
-      }, lockToken);
+      }, lockToken as string);
 
       lockToken = null;
       return NextResponse.json({
@@ -1217,7 +1324,7 @@ export async function POST(request: Request) {
       );
     }
 
-    await updateProcessingProgress(videoId, lockToken, 28);
+    await updateProcessingProgress(videoId, lockToken as string, 28);
     let cues: CaptionCue[] = [];
     let sourceCues: CaptionCue[] = [];
     let translationMethod = "original_greek";
@@ -1228,7 +1335,7 @@ export async function POST(request: Request) {
     } else {
       if (!rawSourceCues.length) throw new Error("Το αγγλικό caption track είναι κενό");
       sourceCues = createMeaningUnits(rawSourceCues);
-      await updateProcessingProgress(videoId, lockToken, 48);
+      await updateProcessingProgress(videoId, lockToken as string, 48);
       try {
         const youtubeGreekCues = await fetchCaptionCues(track, selectedUserAgent, "el");
         if (youtubeGreekCues.length && hasGreekText(youtubeGreekCues)) {
@@ -1248,7 +1355,7 @@ export async function POST(request: Request) {
 
     const videoDuration = Number(player.videoDetails?.lengthSeconds || 0);
     validateCompleteGreekTranscript(cues, videoDuration);
-    await updateProcessingProgress(videoId, lockToken, 88);
+    await updateProcessingProgress(videoId, lockToken as string, 88);
 
     const now = new Date().toISOString();
     const originalTitle = player.videoDetails?.title || "YouTube video";
@@ -1274,7 +1381,7 @@ export async function POST(request: Request) {
       transcriptVersion: TRANSCRIPT_VERSION,
       createdAt: cached?.createdAt || now,
       updatedAt: now,
-    }, lockToken);
+    }, lockToken as string);
 
     return NextResponse.json({
       status: "ready",
