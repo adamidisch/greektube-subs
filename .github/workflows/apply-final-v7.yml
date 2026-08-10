@@ -4,6 +4,7 @@ on:
     branches: [final-v7]
     paths:
       - scripts/apply_final_v7.py
+      - scripts/fix_final_v7_lint.py
       - .github/workflows/apply-final-v7.yml
 permissions:
   contents: write
@@ -15,6 +16,7 @@ jobs:
         with:
           ref: final-v7
       - run: python scripts/apply_final_v7.py
+      - run: python scripts/fix_final_v7_lint.py
       - run: npm install --no-audit --no-fund
       - run: npm run build
       - run: npm run lint
