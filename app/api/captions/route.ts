@@ -446,76 +446,165 @@ async function fetchDirectNativeEnglish(videoId: string) {
   throw new Error(failures.join(" · ") || "Direct YouTube English captions unavailable");
 }
 
-function createMeaningUnits(cues: CaptionCue[]) {
-  // The English transcript is the source of truth. Clean only obvious ASR noise,
-  // preserve punctuation/numbers/technical terms, then build COMPLETE source
-  // sentences before translation. Timing is attached only after the sentence
-  // boundary is known; translation never decides sentence boundaries.
-  const cleanedCues = cues
-    .map(cue => ({ ...cue, text: cleanSubtitleText(cue.text) }))
-    .filter(cue => cue.text.length > 0);
+function englishWordTokens(text: string) {
+  return text.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu) || [];
+}
 
-  // A single timed YouTube/Supadata cue may contain several punctuated sentences.
-  // Split those first while keeping every part inside the original cue envelope.
-  const preparedCues: CaptionCue[] = cleanedCues.flatMap(cue => {
-    const parts = cue.text.match(/[^.!?…]+[.!?…]+[\"')\]]*|[^.!?…]+$/g)?.map(part => part.trim()).filter(Boolean) || [cue.text];
-    if (parts.length <= 1) return [cue];
-    const weights = parts.map(part => Math.max(1, part.replace(/\s+/g, "").length));
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || 1;
-    let elapsed = 0;
-    return parts.map((part, index) => {
-      const start = cue.start + elapsed;
-      const duration = index === parts.length - 1
-        ? Math.max(0.05, cue.duration - elapsed)
-        : Math.max(0.05, cue.duration * (weights[index] / totalWeight));
-      elapsed += duration;
-      return { start, duration, text: part };
+function canonicalNumberTokens(text: string) {
+  const matches = text.match(/\b\d+(?:[.,]\d+)*\b/g) || [];
+  return matches.map(token => {
+    const compactThousands = token.replace(/(?<=\d)[.,](?=\d{3}(?:\D|$))/g, "");
+    return compactThousands.replace(",", ".");
+  });
+}
+
+function protectedSourceTokens(text: string) {
+  const matches = text.match(/\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml|IU|iu|%)?)\b/g) || [];
+  return [...new Set(matches.map(token => token.replace(/\s+/g, "").toLowerCase()))];
+}
+
+function sameStringMultiset(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  const left = [...a].sort();
+  const right = [...b].sort();
+  return left.every((value, index) => value === right[index]);
+}
+
+function repairCandidateIsSafe(source: string, candidate: string) {
+  if (!candidate.trim() || /\[\[\s*\d+\s*\]\]/.test(candidate)) return false;
+  const sourceWords = englishWordTokens(source);
+  const candidateWords = englishWordTokens(candidate);
+  // ASR repair may replace a misheard word, but it may not insert/delete/move
+  // transcript material. Punctuation/casing changes do not affect token count.
+  if (sourceWords.length !== candidateWords.length) return false;
+  if (!sameStringMultiset(canonicalNumberTokens(source), canonicalNumberTokens(candidate))) return false;
+  const candidateLower = candidate.toLowerCase().replace(/\s+/g, "");
+  for (const token of protectedSourceTokens(source)) {
+    if (!candidateLower.includes(token)) return false;
+  }
+  return true;
+}
+
+const ENGLISH_REPAIR_SYSTEM_PROMPT =
+  "You repair automatically generated English captions before translation. " +
+  "Each [[N]] is one immutable timed cue. Return exactly one [[N]] for every input cue in the same order. " +
+  "NEVER move words from one cue to another. NEVER merge cues. NEVER add or delete meaning. " +
+  "You may add punctuation and capitalization. You may replace a word only when it is a highly certain speech-recognition error strongly supported by grammar, nearby context and domain terminology. " +
+  "Examples of allowed repair: an obvious medical ASR corruption such as collalation -> chelation when the context clearly refers to metal chelation. " +
+  "Preserve all numbers, doses, acronyms, names and technical tokens such as MSM, B3 and IU exactly unless a non-protected ordinary word is clearly misrecognized. " +
+  "If uncertain, keep the original wording unchanged. Do not paraphrase, summarize, simplify or translate. " +
+  "Your job is only English transcript repair and sentence punctuation. Answer only with [[N]] lines.";
+
+async function repairEnglishBatchWithGroq(batch: { index: number; text: string }[]) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || !batch.length) return null;
+  const expectedIds = new Set(batch.map(item => item.index));
+  const numbered = batch.map(item => `[[${item.index}]] ${item.text}`).join("\n");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 16000);
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0,
+        max_tokens: 3600,
+        messages: [
+          { role: "system", content: ENGLISH_REPAIR_SYSTEM_PROMPT },
+          { role: "user", content: numbered },
+        ],
+      }),
     });
+    if (!response.ok) return null;
+    const payload = await response.json() as { choices?: { message?: { content?: string } }[] };
+    const content = payload.choices?.[0]?.message?.content || "";
+    const results = new Map<number, string>();
+    const marker = /\[\[\s*(\d+)\s*\]\]\s*([\s\S]*?)(?=\n?\[\[\s*\d+\s*\]\]|$)/g;
+    let match: RegExpExecArray | null;
+    while ((match = marker.exec(content))) {
+      const index = Number(match[1]);
+      if (!expectedIds.has(index) || results.has(index)) return null;
+      const source = batch.find(item => item.index === index)?.text || "";
+      const candidate = match[2].replace(/\s+/g, " ").trim();
+      if (!repairCandidateIsSafe(source, candidate)) return null;
+      results.set(index, candidate);
+    }
+    if (results.size !== batch.length || batch.some(item => !results.has(item.index))) return null;
+    return results;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function splitEnglishCueAtSentenceBoundaries(cue: CaptionCue) {
+  const text = cue.text.replace(/\s+/g, " ").trim();
+  if (!text) return [] as CaptionCue[];
+  const matches = text.match(/[^.!?…]+[.!?…]+[\"')\]]*|[^.!?…]+$/g)?.map(part => part.trim()).filter(Boolean) || [text];
+  if (matches.length <= 1) return [{ ...cue, text }];
+
+  // Avoid treating common abbreviations as sentence endings.
+  const parts: string[] = [];
+  for (let index = 0; index < matches.length; index += 1) {
+    let part = matches[index];
+    while (/\b(?:Dr|Mr|Mrs|Ms|Prof|St|vs|e\.g|i\.e)\.$/i.test(part) && index + 1 < matches.length) {
+      part = `${part} ${matches[index + 1]}`.replace(/\s+/g, " ").trim();
+      index += 1;
+    }
+    parts.push(part);
+  }
+  if (parts.length <= 1) return [{ ...cue, text: parts[0] || text }];
+
+  const weights = parts.map(part => Math.max(1, englishWordTokens(part).length));
+  const total = weights.reduce((sum, value) => sum + value, 0) || 1;
+  let consumed = 0;
+  return parts.map((part, index) => {
+    const startRatio = consumed / total;
+    consumed += weights[index];
+    const endRatio = consumed / total;
+    const start = cue.start + cue.duration * startRatio;
+    const end = cue.start + cue.duration * endRatio;
+    return { start, duration: Math.max(0.001, end - start), text: part };
   });
+}
 
-  const units: CaptionCue[] = [];
-  let current: CaptionCue[] = [];
-  let characters = 0;
-
-  const flush = () => {
-    if (!current.length) return;
-    const start = current[0].start;
-    const end = current.reduce((latest, cue) => Math.max(latest, cue.start + cue.duration), start);
-    units.push({
-      start,
-      duration: Math.max(0.2, end - start),
-      text: current.map(cue => cue.text).join(" ").replace(/\s+/g, " ").trim(),
-    });
-    current = [];
-    characters = 0;
-  };
-
-  preparedCues.forEach((cue, index) => {
-    const next = preparedCues[index + 1];
-    current.push(cue);
-    characters += cue.text.length;
-
-    const sentenceEnd = /[.!?…][\"')\]]?$/.test(cue.text.trim());
-    const gap = next ? next.start - (cue.start + cue.duration) : Number.POSITIVE_INFINITY;
-    const elapsed = cue.start + cue.duration - current[0].start;
-
-    // Punctuation is authoritative. A clear acoustic gap is a fallback only for
-    // transcripts that omit punctuation. The emergency ceiling exists solely to
-    // protect malformed ASR streams; normal sentences are never split by size.
-    const clearUnpunctuatedPause = !sentenceEnd && gap >= 1.1;
-    const emergencyBoundary = elapsed >= 20 || characters >= 360;
-    if (sentenceEnd || clearUnpunctuatedPause || emergencyBoundary || !next) flush();
+function clampTimedCueWindows(cues: CaptionCue[]) {
+  return cues.map((cue, index) => {
+    const next = cues[index + 1];
+    if (!next || next.start <= cue.start) return cue;
+    return { ...cue, duration: Math.max(0.001, Math.min(cue.duration, next.start - cue.start)) };
   });
+}
 
-  // Normalize display windows so one subtitle cannot visually overlap the next.
-  return units.map((unit, index) => {
-    const next = units[index + 1];
-    if (!next || next.start <= unit.start) return unit;
-    return {
-      ...unit,
-      duration: Math.max(0.2, Math.min(unit.duration, next.start - unit.start)),
-    };
-  });
+async function prepareEnglishTimedCues(
+  cues: CaptionCue[],
+  onProgress?: (progress: number) => Promise<void>,
+) {
+  const raw = cues
+    .map(cue => ({ ...cue, text: cue.text.replace(/\s+/g, " ").trim() }))
+    .filter(cue => cue.text.length > 0)
+    .sort((a, b) => a.start - b.start);
+  if (!raw.length) return [] as CaptionCue[];
+
+  const repaired = new Map<number, string>();
+  const batchSize = 24;
+  for (let start = 0; start < raw.length; start += batchSize) {
+    const batch = raw.slice(start, start + batchSize).map((cue, offset) => ({ index: start + offset, text: cue.text }));
+    const result = await repairEnglishBatchWithGroq(batch);
+    if (result) result.forEach((text, index) => repaired.set(index, text));
+    if (onProgress) {
+      const completed = Math.min(raw.length, start + batch.length);
+      await onProgress(Math.round(28 + 16 * (completed / raw.length)));
+    }
+  }
+
+  const normalized = raw.flatMap((cue, index) =>
+    splitEnglishCueAtSentenceBoundaries({ ...cue, text: repaired.get(index) || cue.text }),
+  );
+  return clampTimedCueWindows(normalized);
 }
 
 function cleanSubtitleText(text: string) {
@@ -539,18 +628,14 @@ function cleanSubtitleText(text: string) {
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
 const GROQ_SYSTEM_PROMPT =
-  "Μετέφρασε φυσικά στα ελληνικά για υπότιτλους. " +
-  "Κάθε δείκτης [[N]] είναι ανεξάρτητο timed cue και πρέπει να παραμείνει δεμένος με το δικό του χρονικό σημείο. " +
-  "Μετέφρασε ΜΟΝΟ τις λέξεις που υπάρχουν μετά από κάθε [[N]] μέχρι τον επόμενο δείκτη. " +
-  "Μην μεταφέρεις, ολοκληρώνεις ή δανείζεσαι λέξεις και νόημα από γειτονικό cue, ακόμη και αν μια πρόταση κόβεται στη μέση. " +
-  "Η τελεία, το ερωτηματικό, το θαυμαστικό και η σαφής παύση του πρωτοτύπου είναι οριστικά όρια νοήματος. Μην συνδέεις την επόμενη πρόταση με την προηγούμενη. " +
-  "Ουσία, φάρμακο, συμπλήρωμα, πρόσωπο ή τεχνικός όρος που εμφανίζεται στο επόμενο cue δεν επιτρέπεται να γίνει αιτία, αντικείμενο ή υποκείμενο του προηγούμενου cue αν αυτό δεν υπάρχει ρητά στο αγγλικό κείμενο. " +
-  "Διατήρησε πιστά το νόημα και την ιατρική ή επιστημονική ορολογία, με φυσικά ελληνικά αντί για κατά λέξη απόδοση. " +
-  "Χρησιμοποίησε συνεπή ορολογία σε όλα τα cues και αφαίρεσε μόνο προφανή λεκτικά fillers όπως um, uh, hmm, χμ και εε. " +
-  "Μην προσθέτεις πληροφορίες που δεν υπάρχουν στο πρωτότυπο. Μην αλλάζεις ποιος κάνει τι σε ποιον, αιτία και αποτέλεσμα, άρνηση, ποσότητες, επιλογές ή τεχνικούς όρους. " +
-  "Η ελληνική απόδοση πρέπει να είναι πιστή στο συγκεκριμένο αγγλικό cue: πρώτα ακρίβεια νοήματος και μετά φυσικότητα ύφους. " +
+  "Μετέφρασε φυσικά και πιστά στα ελληνικά για υπότιτλους. " +
+  "Το αγγλικό κείμενο έχει ήδη διορθωθεί και χρονιστεί. ΜΗΝ διορθώνεις, συμπληρώνεις ή ερμηνεύεις το source. " +
+  "Κάθε [[N]] είναι ανεξάρτητο timed cue. Μετέφρασε μόνο τις λέξεις του συγκεκριμένου [[N]] και μην μεταφέρεις λέξεις ή νόημα από γειτονικό cue. " +
+  "Διατήρησε ακριβώς αριθμούς, δόσεις, ακρωνύμια και τεχνικά tokens όπως MSM, B3 και IU. " +
+  "Μην προσθέτεις πληροφορίες, αριθμούς, αιτίες, αρνήσεις, πρόσωπα ή τεχνικούς όρους που δεν υπάρχουν στο συγκεκριμένο αγγλικό cue. " +
+  "Η ιατρική και επιστημονική ορολογία πρέπει να αποδίδεται σωστά στα ελληνικά, αλλά η πιστότητα στο source έχει προτεραιότητα. " +
   "Επέστρεψε ακριβώς έναν δείκτη [[N]] για κάθε input cue, στην ίδια σειρά, χωρίς παραλείψεις, διπλασιασμούς ή νέους δείκτες. " +
-  "Απάντησε ΜΟΝΟ με τις μεταφρασμένες γραμμές και τους δείκτες, χωρίς εισαγωγή, σχόλια ή εξηγήσεις.";
+  "Απάντησε μόνο με τις μεταφρασμένες γραμμές και τους δείκτες.";
 
 async function translateBatchWithGroq(batch: { index: number; text: string }[], precedingContext?: string) {
   const apiKey = process.env.GROQ_API_KEY;
@@ -694,120 +779,39 @@ async function translateMeaningBatch(batch: { index: number; text: string }[]) {
   return results;
 }
 
-function technicalGuardTokens(text: string) {
-  const matches = text.match(/\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:\.\d+)?(?:mg|mcg|g|ml|iu|%)?)\b/g) || [];
-  return new Set(matches.map(token => token.toLowerCase()));
+function translationProtectedTokens(text: string) {
+  return protectedSourceTokens(text);
 }
 
-function hasEnglishNegation(text: string) {
-  return /\b(?:no|not|never|without|cannot|can't|won't|wouldn't|shouldn't|couldn't|isn't|aren't|wasn't|weren't|don't|doesn't|didn't)\b/i.test(text);
-}
-
-function hasGreekNegation(text: string) {
-  return /(?:^|[^\p{L}])(?:δεν|μην|μη|όχι|χωρίς|ούτε)(?=$|[^\p{L}])/iu.test(text);
-}
-
-function numericGuardTokens(text: string) {
-  const matches = text.match(/\b\d+(?:[.,]\d+)?\b/g) || [];
-  return new Set(matches.map(token => token.replace(",", ".")));
-}
-
-function sameTokenSet(a: Set<string>, b: Set<string>) {
-  if (a.size !== b.size) return false;
-  for (const token of a) if (!b.has(token)) return false;
+function translationIntegrityOK(source: string, target: string) {
+  if (!target.trim()) return false;
+  // Marker artefacts such as the stray [15] observed in v7.1.x are forbidden.
+  if (/\[\s*\d+\s*\]/.test(target)) return false;
+  if (!sameStringMultiset(canonicalNumberTokens(source), canonicalNumberTokens(target))) return false;
+  const compactTarget = target.toLowerCase().replace(/\s+/g, "");
+  for (const token of translationProtectedTokens(source)) {
+    if (!compactTarget.includes(token)) return false;
+  }
+  const ordinaryEnglish = englishWordTokens(source).filter(token => !translationProtectedTokens(source).includes(token.toLowerCase()));
+  if (ordinaryEnglish.length > 0 && !hasGreekText([{ start: 0, duration: 1, text: target }])) return false;
   return true;
 }
 
-function semanticRiskScore(text: string) {
-  let score = technicalGuardTokens(text).size * 3;
-  if (hasEnglishNegation(text)) score += 3;
-  if (/\b\d+(?:\.\d+)?\b/.test(text)) score += 2;
-  if (/\b(?:because|cause|causes|caused|due to|therefore|so that|from|by)\b/i.test(text)) score += 2;
-  if (/\b(?:or|either|instead|rather|versus|vs\.?)\b/i.test(text)) score += 2;
-  if (text.length >= 110) score += 1;
-  return score;
-}
-
-function needsStrictSemanticRetry(cues: CaptionCue[], translated: Map<number, string>, index: number) {
-  const source = cues[index]?.text || "";
-  const target = translated.get(index) || "";
-  if (!source || !target) return false;
-
-  const ownTokens = technicalGuardTokens(source);
-  const targetTokens = technicalGuardTokens(target);
-  const neighbourTokens = new Set<string>();
-  for (const neighbourIndex of [index - 1, index + 1]) {
-    if (neighbourIndex < 0 || neighbourIndex >= cues.length) continue;
-    for (const token of technicalGuardTokens(cues[neighbourIndex].text)) neighbourTokens.add(token);
+function validateAlignedTranscript(english: CaptionCue[], greek: CaptionCue[]) {
+  if (english.length !== greek.length) throw new Error("Ο συγχρονισμός αγγλικών και ελληνικών υποτίτλων δεν ολοκληρώθηκε");
+  for (let index = 0; index < english.length; index += 1) {
+    const source = english[index];
+    const target = greek[index];
+    if (Math.abs(source.start - target.start) > 0.002 || Math.abs(source.duration - target.duration) > 0.002) {
+      throw new Error("Οι ελληνικοί υπότιτλοι μετακινήθηκαν από τα αρχικά timestamps");
+    }
+    if (!translationIntegrityOK(source.text, target.text)) {
+      throw new Error(`Αποτυχία ελέγχου πιστότητας στο cue ${index + 1}`);
+    }
+    if (index > 0 && target.start < greek[index - 1].start) {
+      throw new Error("Οι χρονισμοί των ελληνικών υποτίτλων δεν είναι ταξινομημένοι");
+    }
   }
-
-  // Catch cross-boundary borrowing such as the next cue's "MSM" being turned
-  // into the cause of the previous cue's "poisoned." sentence.
-  for (const token of targetTokens) {
-    if (!ownTokens.has(token) && neighbourTokens.has(token)) return true;
-  }
-
-  // Added negation is another high-risk semantic change. Re-run only that cue
-  // in complete isolation rather than penalising the whole transcript.
-  if (!hasEnglishNegation(source) && hasGreekNegation(target)) return true;
-
-  // Numbers are never stylistic. A number that appears/disappears/changes in
-  // Greek (for example a stray "15") makes the cue objectively unfaithful.
-  if (!sameTokenSet(numericGuardTokens(source), numericGuardTokens(target))) return true;
-  return false;
-}
-
-async function verifySemanticFidelity(
-  cues: CaptionCue[],
-  translated: Map<number, string>,
-  candidateIndexes: number[],
-) {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey || !candidateIndexes.length) return [] as number[];
-
-  // Hard budget: never review the whole transcript with a second AI pass.
-  // Only the highest-risk cues are checked, in at most two small requests.
-  const candidates = [...new Set(candidateIndexes)]
-    .filter(index => index >= 0 && index < cues.length && translated.has(index))
-    .slice(0, 12);
-  const suspicious: number[] = [];
-  const size = 6;
-
-  for (let start = 0; start < candidates.length; start += size) {
-    const indexes = candidates.slice(start, start + size);
-    const pairs = indexes
-      .map(index => `[[${index}]]\nEN: ${cues[index].text}\nEL: ${translated.get(index)}`)
-      .join("\n\n");
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 9000);
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        signal: controller.signal,
-        headers: {"Content-Type":"application/json", Authorization:`Bearer ${apiKey}`},
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          temperature: 0,
-          max_tokens: 260,
-          messages: [
-            {role:"system",content:"Είσαι αυστηρός ελεγκτής πιστότητας υποτίτλων. Σύγκρινε ΚΑΘΕ αγγλικό cue μόνο με το δικό του ελληνικό. Σημείωσε cue ως λάθος μόνο αν αλλάζει ουσιαστικά το νόημα: λάθος υποκείμενο/αντικείμενο, αιτία-αποτέλεσμα, άρνηση, ποσότητα, επιλογή, τεχνικός όρος ή προσθήκη/αφαίρεση σημαντικής πληροφορίας. Μικρές φυσικές αναδιατυπώσεις είναι σωστές. Απάντησε μόνο JSON array με τα αριθμητικά ids που χρειάζονται νέα μετάφραση, π.χ. [4,7] ή []."},
-            {role:"user",content:pairs},
-          ],
-        }),
-      }).finally(() => clearTimeout(timeout));
-      if (!response.ok) continue;
-      const payload = await response.json() as {choices?:{message?:{content?:string}}[]};
-      const raw = payload.choices?.[0]?.message?.content || "";
-      const arrayText = raw.match(/\[[\s\S]*?\]/)?.[0];
-      if (!arrayText) continue;
-      const ids = JSON.parse(arrayText) as unknown;
-      if (!Array.isArray(ids)) continue;
-      for (const id of ids) {
-        if (Number.isInteger(id) && indexes.includes(id as number)) suspicious.push(id as number);
-      }
-    } catch {}
-  }
-  return [...new Set(suspicious)].slice(0, 4);
 }
 
 async function translateTitleToGreek(title: string) {
@@ -824,125 +828,62 @@ async function translateTitleToGreek(title: string) {
 async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: number) => Promise<void>) {
   const translated = new Map<number, string>();
   const useGroq = Boolean(process.env.GROQ_API_KEY);
-  const batchSize = useGroq ? 8 : 25;
+  const batchSize = useGroq ? 12 : 18;
   const batches: { index: number; text: string }[][] = [];
   for (let start = 0; start < cues.length; start += batchSize) {
-    batches.push(cues.slice(start, start + batchSize).map((cue, offset) => ({
-      index: start + offset,
-      text: cue.text,
-    })));
+    batches.push(cues.slice(start, start + batchSize).map((cue, offset) => ({ index: start + offset, text: cue.text })));
   }
 
   const reportProgress = async (completed: number, total: number, start: number, end: number) => {
     if (!onProgress || total <= 0) return;
-    const ratio = Math.max(0, Math.min(1, completed / total));
-    await onProgress(Math.round(start + (end - start) * ratio));
+    await onProgress(Math.round(start + (end - start) * Math.max(0, Math.min(1, completed / total))));
   };
 
+  let completedPrimary = 0;
   if (useGroq) {
-    // Sequential on purpose: Groq's free tier is rate-limited per minute (TPM),
-    // not just per day, so batches are kept modest and run one at a time.
-    let completedPrimary = 0;
     for (const batch of batches) {
       try {
-        // Each complete English sentence is translated from its own source text.
-        // No previous translated prose is supplied, eliminating cross-sentence
-        // semantic borrowing such as "poisoned" + next sentence "MSM".
         const results = await translateBatchWithGroq(batch);
         if (results) {
-          results.forEach((text, index) => translated.set(index, text));
+          for (const item of batch) {
+            const text = results.get(item.index);
+            if (text && translationIntegrityOK(item.text, text)) translated.set(item.index, text);
+          }
         }
-      } catch {
-        // fall through to Google Translate for this batch below
-      } finally {
-        completedPrimary += batch.length;
-        await reportProgress(completedPrimary, cues.length, 48, 78);
-      }
+      } catch {}
+      completedPrimary += batch.length;
+      await reportProgress(completedPrimary, cues.length, 48, 80);
     }
-    const remainingBatches = batches
-      .map(batch => batch.filter(item => !translated.has(item.index)))
-      .filter(batch => batch.length > 0);
-    const remainingTotal = remainingBatches.reduce((sum, batch) => sum + batch.length, 0);
-    let completedFallback = 0;
-    for (let start = 0; start < remainingBatches.length; start += 2) {
-      const group = remainingBatches.slice(start, start + 2);
-      const results = await Promise.all(group.map(translateMeaningBatch));
-      results.forEach(batch => {
-        batch.forEach((text, index) => translated.set(index, text));
-      });
-      completedFallback += group.reduce((sum, batch) => sum + batch.length, 0);
-      await reportProgress(completedFallback, remainingTotal, 78, 84);
-    }
-    if (!remainingTotal && onProgress) await onProgress(84);
-  } else {
-    let completed = 0;
-    for (let start = 0; start < batches.length; start += 2) {
-      const group = batches.slice(start, start + 2);
-      const results = await Promise.all(group.map(translateMeaningBatch));
-      results.forEach(batch => {
-        batch.forEach((text, index) => translated.set(index, text));
-      });
-      completed += group.reduce((sum, batch) => sum + batch.length, 0);
-      await reportProgress(completed, cues.length, 48, 84);
-    }
-  }
 
-  if (useGroq) {
-    const deterministic = cues
-      .map((_, index) => index)
-      .filter(index => translated.has(index) && needsStrictSemanticRetry(cues, translated, index));
-    const riskCandidates = cues
-      .map((cue, index) => ({ index, score: translated.has(index) ? semanticRiskScore(cue.text) : 0 }))
-      .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map(item => item.index);
-    const verificationCandidates = [...new Set([...deterministic, ...riskCandidates])].slice(0, 12);
-    const semantic = await verifySemanticFidelity(cues, translated, verificationCandidates);
-    const suspicious = [...new Set([...deterministic.slice(0, 8), ...semantic])].slice(0, 8);
-    let checked = 0;
-    for (const index of suspicious) {
+    // Bounded strict retry only for objectively invalid/missing cues.
+    const strict = cues.map((cue, index) => ({ cue, index })).filter(({ index }) => !translated.has(index)).slice(0, 8);
+    for (let position = 0; position < strict.length; position += 1) {
+      const { cue, index } = strict[position];
       try {
-        // No preceding/next context on this retry: the model can only translate
-        // the exact source cue, which prevents semantic borrowing across a
-        // punctuation or pause boundary.
-        const strict = await translateBatchWithGroq([{ index, text: cues[index].text }]);
-        const replacement = strict?.get(index);
-        if (replacement) translated.set(index, replacement);
-        if (needsStrictSemanticRetry(cues, translated, index)) {
-          const literal = await translateSingleCue(index, cues[index].text);
-          if (literal?.text) translated.set(index, literal.text);
-        }
-      } catch {
-        // Keep the already valid mapped translation if strict verification is
-        // temporarily unavailable. The original mapping/fallback safeguards
-        // still apply below.
-      }
-      checked += 1;
-      if (onProgress && suspicious.length) {
-        await onProgress(Math.round(84 + (2 * checked / suspicious.length)));
-      }
-    }
-    if (onProgress && !suspicious.length) await onProgress(86);
-  }
-
-  for (let retry = 0; retry < 2; retry += 1) {
-    const pending = cues.map((_, index) => index).filter(index => !translated.has(index));
-    if (!pending.length) break;
-    for (const index of pending) {
-      const result = await translateSingleCue(index, cues[index].text);
-      if (result) translated.set(result.index, result.text);
+        const result = await translateBatchWithGroq([{ index, text: cue.text }]);
+        const text = result?.get(index);
+        if (text && translationIntegrityOK(cue.text, text)) translated.set(index, text);
+      } catch {}
+      if (onProgress) await onProgress(Math.round(80 + 4 * ((position + 1) / Math.max(1, strict.length))));
     }
   }
 
-  const stillMissing = cues.filter((_, index) => !translated.has(index)).length;
-  if (stillMissing > 0) {
-    throw new Error("Η ελληνική μετάφραση δεν ολοκληρώθηκε");
+  const remaining = cues.map((cue, index) => ({ cue, index })).filter(({ index }) => !translated.has(index));
+  for (let start = 0; start < remaining.length; start += 6) {
+    const group = remaining.slice(start, start + 6);
+    const results = await Promise.all(group.map(({ cue, index }) => translateSingleCue(index, cue.text)));
+    results.forEach(result => {
+      if (!result) return;
+      const source = cues[result.index]?.text || "";
+      if (translationIntegrityOK(source, result.text)) translated.set(result.index, result.text);
+    });
+    await reportProgress(Math.min(remaining.length, start + group.length), remaining.length, useGroq ? 84 : 48, 88);
   }
 
-  return cues.map((cue, index) => ({
-    ...cue,
-    text: translated.get(index) as string,
-  }));
+  const missing = cues.map((_, index) => index).filter(index => !translated.has(index));
+  if (missing.length) throw new Error(`Η ελληνική μετάφραση απέτυχε σε ${missing.length} cues`);
+
+  return cues.map((cue, index) => ({ ...cue, text: translated.get(index) as string }));
 }
 
 function validateCompleteGreekTranscript(cues: CaptionCue[], duration: number) {
@@ -1091,6 +1032,7 @@ export async function POST(request: Request) {
           thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
           duration: duration || clientCues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0),
           originalLanguage: "client_seed",
+          rawEnglishTranscript: Array.isArray(body.cachedTranscript.englishCues) ? body.cachedTranscript.englishCues : [],
           englishTranscript: Array.isArray(body.cachedTranscript.englishCues) ? body.cachedTranscript.englishCues : [],
           greekTranscript: clientCues,
           timestamps: clientCues.map(cue => ({ start: cue.start, duration: cue.duration })),
@@ -1127,7 +1069,7 @@ export async function POST(request: Request) {
     try {
       const direct = await fetchDirectNativeEnglish(videoId);
       await updateProcessingProgress(videoId, lockToken as string, 28);
-      const sourceCues = createMeaningUnits(direct.cues);
+      const sourceCues = await prepareEnglishTimedCues(direct.cues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
       if (!sourceCues.length) throw new Error("Direct YouTube English transcript was empty");
 
       await updateProcessingProgress(videoId, lockToken as string, 48);
@@ -1139,8 +1081,9 @@ export async function POST(request: Request) {
         (max, cue) => Math.max(max, cue.start + cue.duration),
         0,
       );
+      validateAlignedTranscript(sourceCues, cues);
       validateCompleteGreekTranscript(cues, duration);
-      await updateProcessingProgress(videoId, lockToken as string, 88);
+      await updateProcessingProgress(videoId, lockToken as string, 92);
 
       const metadata = await fetchYouTubeOEmbed(videoId);
       const originalTitle = metadata.title || direct.player.videoDetails?.title || cached?.title || "YouTube video";
@@ -1159,6 +1102,7 @@ export async function POST(request: Request) {
         thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
         duration,
         originalLanguage: direct.track.languageCode?.toLowerCase() || "en",
+        rawEnglishTranscript: direct.cues,
         englishTranscript: sourceCues,
         greekTranscript: cues,
         timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
@@ -1181,7 +1125,7 @@ export async function POST(request: Request) {
         duration,
         sourceLanguage: direct.track.languageCode?.toLowerCase() || "en",
         sourceType: "youtube_native_direct",
-        translationMethod: "youtube_native_sentence_faithful_v6",
+        translationMethod: "youtube_native_repaired_timed_v7",
         cues,
         englishCues: sourceCues,
         topics,
@@ -1214,19 +1158,20 @@ export async function POST(request: Request) {
       if (sourceLanguage === "el") {
         cues = supadata.cues;
       } else {
-        sourceCues = createMeaningUnits(supadata.cues);
+        sourceCues = await prepareEnglishTimedCues(supadata.cues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
         if (!sourceCues.length) throw new Error("Supadata returned an empty English transcript");
         await updateProcessingProgress(videoId, lockToken as string, 48);
         cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-        translationMethod = "supadata_native_sentence_faithful_v6";
+        translationMethod = "supadata_repaired_timed_v7";
       }
 
       const duration = supadata.cues.reduce(
         (max, cue) => Math.max(max, cue.start + cue.duration),
         0,
       );
+      validateAlignedTranscript(sourceCues, cues);
       validateCompleteGreekTranscript(cues, duration);
-      await updateProcessingProgress(videoId, lockToken as string, 88);
+      await updateProcessingProgress(videoId, lockToken as string, 92);
 
       const metadata = await fetchYouTubeOEmbed(videoId);
       const originalTitle = metadata.title || cached?.title || "YouTube video";
@@ -1245,6 +1190,7 @@ export async function POST(request: Request) {
         thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
         duration,
         originalLanguage: sourceLanguage,
+        rawEnglishTranscript: supadata.cues,
         englishTranscript: sourceCues,
         greekTranscript: cues,
         timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
@@ -1334,7 +1280,7 @@ export async function POST(request: Request) {
       cues = rawSourceCues;
     } else {
       if (!rawSourceCues.length) throw new Error("Το αγγλικό caption track είναι κενό");
-      sourceCues = createMeaningUnits(rawSourceCues);
+      sourceCues = await prepareEnglishTimedCues(rawSourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
       await updateProcessingProgress(videoId, lockToken as string, 48);
       try {
         const youtubeGreekCues = await fetchCaptionCues(track, selectedUserAgent, "el");
@@ -1349,13 +1295,14 @@ export async function POST(request: Request) {
       }
       if (!cues.length) {
         cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
-        translationMethod = "sentence_faithful_v6";
+        translationMethod = "repaired_timed_v7";
       }
     }
 
     const videoDuration = Number(player.videoDetails?.lengthSeconds || 0);
+    if (sourceCues.length) validateAlignedTranscript(sourceCues, cues);
     validateCompleteGreekTranscript(cues, videoDuration);
-    await updateProcessingProgress(videoId, lockToken as string, 88);
+    await updateProcessingProgress(videoId, lockToken as string, 92);
 
     const now = new Date().toISOString();
     const originalTitle = player.videoDetails?.title || "YouTube video";
@@ -1371,6 +1318,7 @@ export async function POST(request: Request) {
       thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
       duration,
       originalLanguage: sourceLanguage,
+      rawEnglishTranscript: rawSourceCues,
       englishTranscript: sourceCues,
       greekTranscript: cues,
       timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),

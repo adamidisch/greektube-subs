@@ -1,6 +1,6 @@
 import { database } from "@/db/postgres";
 
-export const TRANSCRIPT_VERSION = 9;
+export const TRANSCRIPT_VERSION = 10;
 
 export type CachedCue = { start: number; duration: number; text: string };
 
@@ -11,6 +11,7 @@ export type TranscriptRecord = {
   thumbnail: string;
   duration: number;
   originalLanguage: string;
+  rawEnglishTranscript: CachedCue[];
   englishTranscript: CachedCue[];
   greekTranscript: CachedCue[];
   timestamps: { start: number; duration: number }[];
@@ -34,6 +35,7 @@ export async function ensureTranscriptTable() {
       thumbnail TEXT NOT NULL DEFAULT '',
       duration REAL NOT NULL DEFAULT 0,
       original_language TEXT NOT NULL DEFAULT 'unknown',
+      raw_english_transcript TEXT NOT NULL DEFAULT '[]',
       english_transcript TEXT NOT NULL DEFAULT '[]',
       greek_transcript TEXT NOT NULL DEFAULT '[]',
       timestamps TEXT NOT NULL DEFAULT '[]',
@@ -49,6 +51,7 @@ export async function ensureTranscriptTable() {
       updated_at TEXT NOT NULL
     )`,
   );
+  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS raw_english_transcript TEXT NOT NULL DEFAULT '[]'");
   await db.query(
     "CREATE INDEX IF NOT EXISTS video_transcripts_status_idx ON video_transcripts (status, updated_at)",
   );
@@ -56,7 +59,7 @@ export async function ensureTranscriptTable() {
 
 type Row = {
   video_id: string; title: string; channel: string; thumbnail: string; duration: number;
-  original_language: string; english_transcript: string; greek_transcript: string;
+  original_language: string; raw_english_transcript: string; english_transcript: string; greek_transcript: string;
   timestamps: string; topics: string; key_points: string; status: TranscriptRecord["status"];
   progress: number; lock_expires_at: string | null; transcript_version: number; created_at: string; updated_at: string;
 };
@@ -74,6 +77,7 @@ export async function getTranscript(videoId: string) {
     thumbnail: row.thumbnail,
     duration: row.duration,
     originalLanguage: row.original_language,
+    rawEnglishTranscript: JSON.parse(row.raw_english_transcript || "[]"),
     englishTranscript: JSON.parse(row.english_transcript || "[]"),
     greekTranscript: JSON.parse(row.greek_transcript || "[]"),
     timestamps: JSON.parse(row.timestamps || "[]"),
@@ -125,12 +129,12 @@ export async function completeTranscript(record: TranscriptRecord, token: string
   await db.query(
     `UPDATE video_transcripts SET
       title = $1, channel = $2, thumbnail = $3, duration = $4, original_language = $5,
-      english_transcript = $6, greek_transcript = $7, timestamps = $8, topics = $9, key_points = $10,
+      raw_english_transcript = $6, english_transcript = $7, greek_transcript = $8, timestamps = $9, topics = $10, key_points = $11,
       status = 'ready', progress = 100, lock_token = NULL, lock_expires_at = NULL, error = NULL,
-      transcript_version = $11, updated_at = $12
-    WHERE video_id = $13 AND lock_token = $14`,
+      transcript_version = $12, updated_at = $13
+    WHERE video_id = $14 AND lock_token = $15`,
     [record.title, record.channel, record.thumbnail, record.duration, record.originalLanguage,
-      JSON.stringify(record.englishTranscript), JSON.stringify(record.greekTranscript),
+      JSON.stringify(record.rawEnglishTranscript), JSON.stringify(record.englishTranscript), JSON.stringify(record.greekTranscript),
       JSON.stringify(record.timestamps), JSON.stringify(record.topics), JSON.stringify(record.keyPoints),
       record.transcriptVersion, record.updatedAt, record.videoId, token],
   );
