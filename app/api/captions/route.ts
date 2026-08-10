@@ -804,18 +804,119 @@ function translationProtectedTokens(text: string) {
   return protectedSourceTokens(text);
 }
 
-function translationIntegrityOK(source: string, target: string) {
-  if (!target.trim()) return false;
+function translationIntegrityFailure(source: string, target: string) {
+  if (!target.trim()) return "empty-output";
   // Marker artefacts such as the stray [15] observed in v7.1.x are forbidden.
-  if (/\[\s*\d+\s*\]/.test(target)) return false;
-  if (!sameStringMultiset(canonicalNumberTokens(source), canonicalNumberTokens(target))) return false;
+  if (/\[\s*\d+\s*\]/.test(target)) return "marker-artifact";
+  const sourceNumbers = canonicalNumberTokens(source);
+  const targetNumbers = canonicalNumberTokens(target);
+  if (!sameStringMultiset(sourceNumbers, targetNumbers)) {
+    return `number-mismatch source=${JSON.stringify(sourceNumbers)} target=${JSON.stringify(targetNumbers)}`;
+  }
   const compactTarget = target.toLowerCase().replace(/\s+/g, "");
   for (const token of translationProtectedTokens(source)) {
-    if (!compactTarget.includes(token)) return false;
+    if (!compactTarget.includes(token)) return `missing-protected-token:${token}`;
   }
   const ordinaryEnglish = englishWordTokens(source).filter(token => !translationProtectedTokens(source).includes(token.toLowerCase()));
-  if (ordinaryEnglish.length > 0 && !hasGreekText([{ start: 0, duration: 1, text: target }])) return false;
-  return true;
+  if (ordinaryEnglish.length > 0 && !hasGreekText([{ start: 0, duration: 1, text: target }])) return "non-greek-output";
+  return null;
+}
+
+function translationIntegrityOK(source: string, target: string) {
+  return translationIntegrityFailure(source, target) === null;
+}
+
+type ProtectedPlaceholder = { placeholder: string; token: string };
+
+function placeholderSuffix(index: number) {
+  let value = index;
+  let suffix = "";
+  do {
+    suffix = String.fromCharCode(65 + (value % 26)) + suffix;
+    value = Math.floor(value / 26) - 1;
+  } while (value >= 0);
+  return suffix;
+}
+
+function protectTranslationTokens(source: string) {
+  // Protect every value that the integrity guard requires verbatim. The
+  // deliberately non-numeric placeholders also cannot become subtitle marker
+  // artefacts while Google translates the surrounding natural language.
+  const protectedValue = /\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml|IU|iu|%)|\d+(?:[.,]\d+)*)\b/g;
+  const values: ProtectedPlaceholder[] = [];
+  const text = source.replace(protectedValue, (token) => {
+    const placeholder = `ZXQPROTECT${placeholderSuffix(values.length)}`;
+    values.push({ placeholder, token });
+    return placeholder;
+  });
+  return { text, values };
+}
+
+function restoreTranslationTokens(candidate: string, values: ProtectedPlaceholder[]) {
+  let restored = candidate;
+  for (const { placeholder, token } of values) {
+    const pattern = new RegExp(`\\b${placeholder}\\b`, "gi");
+    const matches = restored.match(pattern) || [];
+    if (matches.length !== 1) {
+      return { text: null, reason: `placeholder-restoration-failed:${placeholder}:count=${matches.length}` };
+    }
+    restored = restored.replace(pattern, token);
+  }
+  return { text: restored, reason: null };
+}
+
+function logRejectedTranslationCue(
+  videoId: string,
+  index: number,
+  source: string,
+  provider: string,
+  candidate: string | null,
+  reason: string,
+  restoredCandidate?: string | null,
+) {
+  console.warn("[captions:translation-rejected]", JSON.stringify({
+    videoId, cueIndex: index, source, provider, candidate, restoredCandidate: restoredCandidate ?? null, integrityFailure: reason,
+  }));
+}
+
+async function translateStrictSingleCueWithGroq(index: number, text: string) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+  const protectedTokens = [...new Set(protectTranslationTokens(text).values.map(({ token }) => token))];
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 16_000);
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0,
+        max_tokens: 600,
+        messages: [
+          { role: "system", content: `${GROQ_SYSTEM_PROMPT} This is one final strict retry for a single cue. These source tokens are immutable and must appear byte-for-byte in the answer: ${protectedTokens.join(", ") || "(none)"}.` },
+          { role: "user", content: `Return exactly [[${index}]] followed by the Greek translation of this one cue:\n[[${index}]] ${text}` },
+        ],
+      }),
+    });
+    if (!response.ok) throw new Error(`Groq ${response.status}`);
+    const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    const content = payload.choices?.[0]?.message?.content || "";
+    const marker = new RegExp(`\\[\\[\\s*${index}\\s*\\]\\]\\s*([\\s\\S]*?)\\s*$`);
+    const match = content.match(marker);
+    if (!match) throw new Error("Groq strict cue mapping invalid");
+    return cleanSubtitleText(match[1]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function translateSingleCueWithProtectedGoogleFallback(text: string) {
+  const protectedText = protectTranslationTokens(text);
+  const candidate = await translateText(protectedText.text);
+  const restored = restoreTranslationTokens(candidate, protectedText.values);
+  return { candidate, restoredCandidate: restored.text, restorationFailure: restored.reason };
 }
 
 function validateAlignedTranscript(english: CaptionCue[], greek: CaptionCue[]) {
@@ -922,33 +1023,74 @@ async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count:
   return clampTimedCueWindows(normalized);
 }
 
-async function translateCheckpointBatch(cues: CaptionCue[], start: number, count: number) {
+async function translateCheckpointBatch(videoId: string, cues: CaptionCue[], start: number, count: number) {
   const slice = cues.slice(start, start + count);
   if (!slice.length) return [] as CaptionCue[];
   const numbered = slice.map((cue, offset) => ({ index: start + offset, text: cue.text }));
   const output = new Map<number, string>();
+  let groqFailure: string | null = null;
+  let groqResults: Map<number, string> | null = null;
   if (process.env.GROQ_API_KEY) {
     try {
-      const result = await translateBatchWithGroq(numbered);
-      if (result) {
-        for (const item of numbered) {
-          const text = result.get(item.index);
-          if (text && translationIntegrityOK(item.text, text)) output.set(item.index, text);
-        }
-      }
-    } catch {}
+      groqResults = await translateBatchWithGroq(numbered);
+    } catch (error) {
+      groqFailure = error instanceof Error ? error.message : "Groq batch failed";
+    }
   }
-  const missingFromGroq = numbered.filter(item => !output.has(item.index));
-  for (let startIndex = 0; startIndex < missingFromGroq.length; startIndex += 3) {
-    const group = missingFromGroq.slice(startIndex, startIndex + 3);
-    const fallbacks = await Promise.all(group.map(item => translateSingleCue(item.index, item.text)));
-    for (const fallback of fallbacks) {
-      const source = numbered.find(item => item.index === fallback?.index);
-      if (source && fallback?.text && translationIntegrityOK(source.text, fallback.text)) output.set(source.index, fallback.text);
+
+  for (const item of numbered) {
+    const groqCandidate = groqResults?.get(item.index) || null;
+    const groqReason = groqCandidate
+      ? translationIntegrityFailure(item.text, groqCandidate)
+      : (groqFailure || (process.env.GROQ_API_KEY ? "groq-missing-cue" : "groq-not-configured"));
+    if (!groqReason) {
+      output.set(item.index, groqCandidate as string);
+      continue;
+    }
+    logRejectedTranslationCue(videoId, item.index, item.text, "groq-batch", groqCandidate, groqReason);
+
+    // A single rejected cue never retries the complete six-cue slice. Ask
+    // Groq once more with the exact immutable values spelled out explicitly.
+    let strictCandidate: string | null = null;
+    try {
+      strictCandidate = await translateStrictSingleCueWithGroq(item.index, item.text);
+    } catch (error) {
+      logRejectedTranslationCue(videoId, item.index, item.text, "groq-strict", null,
+        error instanceof Error ? error.message : "Groq strict retry failed");
+    }
+    if (strictCandidate) {
+      const strictReason = translationIntegrityFailure(item.text, strictCandidate);
+      if (!strictReason) {
+        output.set(item.index, strictCandidate);
+        console.info("[captions:translation-recovered]", JSON.stringify({ videoId, cueIndex: item.index, provider: "groq-strict" }));
+        continue;
+      }
+      logRejectedTranslationCue(videoId, item.index, item.text, "groq-strict", strictCandidate, strictReason);
+    }
+
+    // Google receives placeholders instead of protected tokens/numbers. They
+    // are restored verbatim before the same non-relaxed integrity validation.
+    try {
+      const google = await translateSingleCueWithProtectedGoogleFallback(item.text);
+      if (google.restorationFailure || !google.restoredCandidate) {
+        logRejectedTranslationCue(videoId, item.index, item.text, "google-placeholder", google.candidate,
+          google.restorationFailure || "placeholder-restoration-failed", google.restoredCandidate);
+        continue;
+      }
+      const googleReason = translationIntegrityFailure(item.text, google.restoredCandidate);
+      if (!googleReason) {
+        output.set(item.index, google.restoredCandidate);
+        console.info("[captions:translation-recovered]", JSON.stringify({ videoId, cueIndex: item.index, provider: "google-placeholder" }));
+        continue;
+      }
+      logRejectedTranslationCue(videoId, item.index, item.text, "google-placeholder", google.candidate, googleReason, google.restoredCandidate);
+    } catch (error) {
+      logRejectedTranslationCue(videoId, item.index, item.text, "google-placeholder", null,
+        error instanceof Error ? error.message : "Google fallback failed");
     }
   }
   const missing = numbered.filter(item => !output.has(item.index));
-  if (missing.length) throw new Error(`Η μετάφραση απέτυχε προσωρινά σε ${missing.length} cues`);
+  if (missing.length) throw new Error(`Η μετάφραση απέτυχε προσωρινά σε ${missing.length} cues: ${missing.map(item => item.index).join(",")}`);
   return slice.map((cue, offset) => ({ ...cue, text: output.get(start + offset) as string }));
 }
 
@@ -1214,9 +1356,11 @@ export async function POST(request: Request) {
     if (stage === "translate") {
       const english = cached.englishTranscript as CaptionCue[];
       if (!english.length) throw new Error("Normalized English transcript checkpoint is empty");
-      const CHUNK = 6;
+      // One durable translation slice is one cue. A rejected cue therefore
+      // cannot make the next lease repeat already-accepted neighbours.
+      const CHUNK = 1;
       if (cursor < english.length) {
-        const translatedChunk = await translateCheckpointBatch(english, cursor, CHUNK);
+        const translatedChunk = await translateCheckpointBatch(videoId, english, cursor, CHUNK);
         const greek = [...(cached.greekTranscript as CaptionCue[]), ...translatedChunk];
         const nextCursor = Math.min(english.length, cursor + CHUNK);
         const done = nextCursor >= english.length;
