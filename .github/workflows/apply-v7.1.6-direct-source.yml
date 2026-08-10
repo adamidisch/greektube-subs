@@ -1,0 +1,42 @@
+name: Apply v7.1.6 direct YouTube source
+
+on:
+  push:
+    branches: [v7.1.6]
+    paths:
+      - scripts/apply-v7.1.6-direct-source.py
+      - .github/workflows/apply-v7.1.6-direct-source.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.1.6
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: python scripts/apply-v7.1.6-direct-source.py
+      - run: npm install --no-audit --no-fund
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+      - name: Verify direct source priority
+        run: |
+          grep -q 'fetchDirectNativeEnglish' app/api/captions/route.ts
+          grep -q 'sourceType: "youtube_native_direct"' app/api/captions/route.ts
+          grep -q 'TRANSCRIPT_VERSION = 9' app/api/shared-cache.ts
+      - name: Commit
+        run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.1.6: prefer native YouTube English transcript"
+          git push origin HEAD:v7.1.6
