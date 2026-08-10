@@ -23,6 +23,37 @@ jobs:
         with:
           node-version: 24
       - run: python scripts/apply-v7.1.7-pipeline.py
+      - name: Fix raw English record wiring
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('app/api/captions/route.ts')
+          s=p.read_text()
+          s=s.replace(
+              'rawEnglishTranscript: direct.cues,\n        rawEnglishTranscript: supadata.cues,\n        englishTranscript: sourceCues,',
+              'rawEnglishTranscript: direct.cues,\n        englishTranscript: sourceCues,',
+          )
+          supadata_pos=s.index('const supadata = await fetchSupadataTranscript(videoId);')
+          target='originalLanguage: sourceLanguage,\n        englishTranscript: sourceCues,'
+          target_pos=s.find(target, supadata_pos)
+          if target_pos < 0:
+              raise SystemExit('Supadata completeTranscript marker missing')
+          s=s[:target_pos]+s[target_pos:].replace(
+              target,
+              'originalLanguage: sourceLanguage,\n        rawEnglishTranscript: supadata.cues,\n        englishTranscript: sourceCues,',
+              1,
+          )
+          fallback='originalLanguage: sourceLanguage,\n      englishTranscript: sourceCues,'
+          if fallback in s:
+              s=s.replace(
+                  fallback,
+                  'originalLanguage: sourceLanguage,\n      rawEnglishTranscript: rawSourceCues,\n      englishTranscript: sourceCues,',
+                  1,
+              )
+          if s.count('rawEnglishTranscript:') != s.count('await completeTranscript({'):
+              raise SystemExit(f"raw transcript wiring mismatch: raw={s.count('rawEnglishTranscript:')} complete={s.count('await completeTranscript({')}")
+          p.write_text(s)
+          PY
       - run: npm install --no-audit --no-fund
       - run: npx tsc --noEmit
       - run: npm run lint
