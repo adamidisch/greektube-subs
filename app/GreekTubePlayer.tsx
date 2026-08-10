@@ -599,7 +599,11 @@ export default function GreekTubePlayer() {
     }
     setLoading(false); setProgress(4); setCaptions(null);
     const loadingDelay=window.setTimeout(()=>setLoading(true),500);
-    const timer=window.setInterval(()=>setProgress(p=>Math.min(84,p+(p<28?2:p<60?1:.5))),1200);
+    let serverProgressSeen=false;
+    const timer=window.setInterval(()=>{
+      if(serverProgressSeen)return;
+      setProgress(p=>Math.min(28,p+2));
+    },1200);
     try{
       let data:Captions;
       {
@@ -619,10 +623,15 @@ export default function GreekTubePlayer() {
           }
           if(response?.status===202){
             setLoading(true);
+            serverProgressSeen=true;
             const processing=await response.json();
-            if(typeof processing.progress==="number")setProgress(Math.max(4,Math.min(96,processing.progress)));
+            if(typeof processing.progress==="number"){
+              const serverProgress=Math.max(4,Math.min(96,processing.progress));
+              setProgress(current=>Math.max(current,serverProgress));
+            }
             if(Array.isArray(processing.keyPoints)&&processing.keyPoints.length)setLoadingPoints(processing.keyPoints);
-            await new Promise(resolve=>window.setTimeout(resolve,1000));
+            const retryAfter=Math.max(1,Number(response.headers.get("Retry-After"))||1);
+            await new Promise(resolve=>window.setTimeout(resolve,retryAfter*1000));
             continue;
           }
           if(response?.ok){sharedData=await response.json();break;}

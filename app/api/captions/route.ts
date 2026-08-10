@@ -651,7 +651,7 @@ async function translateTitleToGreek(title: string) {
   return title;
 }
 
-async function translateCuesToGreek(cues: CaptionCue[]) {
+async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: number) => Promise<void>) {
   const translated = new Map<number, string>();
   const useGroq = Boolean(process.env.GROQ_API_KEY);
   const batchSize = useGroq ? 8 : 25;
@@ -663,10 +663,17 @@ async function translateCuesToGreek(cues: CaptionCue[]) {
     })));
   }
 
+  const reportProgress = async (completed: number, total: number, start: number, end: number) => {
+    if (!onProgress || total <= 0) return;
+    const ratio = Math.max(0, Math.min(1, completed / total));
+    await onProgress(Math.round(start + (end - start) * ratio));
+  };
+
   if (useGroq) {
     // Sequential on purpose: Groq's free tier is rate-limited per minute (TPM),
     // not just per day, so batches are kept modest and run one at a time.
     let precedingContext: string | undefined;
+    let completedPrimary = 0;
     for (const batch of batches) {
       try {
         const results = await translateBatchWithGroq(batch, precedingContext);
@@ -680,23 +687,36 @@ async function translateCuesToGreek(cues: CaptionCue[]) {
         }
       } catch {
         // fall through to Google Translate for this batch below
+      } finally {
+        completedPrimary += batch.length;
+        await reportProgress(completedPrimary, cues.length, 48, 78);
       }
     }
     const remainingBatches = batches
       .map(batch => batch.filter(item => !translated.has(item.index)))
       .filter(batch => batch.length > 0);
+    const remainingTotal = remainingBatches.reduce((sum, batch) => sum + batch.length, 0);
+    let completedFallback = 0;
     for (let start = 0; start < remainingBatches.length; start += 2) {
-      const results = await Promise.all(remainingBatches.slice(start, start + 2).map(translateMeaningBatch));
+      const group = remainingBatches.slice(start, start + 2);
+      const results = await Promise.all(group.map(translateMeaningBatch));
       results.forEach(batch => {
         batch.forEach((text, index) => translated.set(index, text));
       });
+      completedFallback += group.reduce((sum, batch) => sum + batch.length, 0);
+      await reportProgress(completedFallback, remainingTotal, 78, 84);
     }
+    if (!remainingTotal && onProgress) await onProgress(84);
   } else {
+    let completed = 0;
     for (let start = 0; start < batches.length; start += 2) {
-      const results = await Promise.all(batches.slice(start, start + 2).map(translateMeaningBatch));
+      const group = batches.slice(start, start + 2);
+      const results = await Promise.all(group.map(translateMeaningBatch));
       results.forEach(batch => {
         batch.forEach((text, index) => translated.set(index, text));
       });
+      completed += group.reduce((sum, batch) => sum + batch.length, 0);
+      await reportProgress(completed, cues.length, 48, 84);
     }
   }
 
@@ -906,7 +926,7 @@ export async function POST(request: Request) {
         sourceCues = createMeaningUnits(supadata.cues);
         if (!sourceCues.length) throw new Error("Supadata returned an empty English transcript");
         await updateProcessingProgress(videoId, lockToken, 48);
-        cues = await translateCuesToGreek(sourceCues);
+        cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
         translationMethod = "supadata_native_contextual_meaning_units_v4";
       }
 
@@ -1036,7 +1056,7 @@ export async function POST(request: Request) {
         );
       }
       if (!cues.length) {
-        cues = await translateCuesToGreek(sourceCues);
+        cues = await translateCuesToGreek(sourceCues, progress => updateProcessingProgress(videoId, lockToken as string, progress));
         translationMethod = "contextual_meaning_units_v3";
       }
     }
