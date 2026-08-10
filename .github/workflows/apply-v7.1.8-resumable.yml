@@ -1,0 +1,48 @@
+name: Apply v7.1.8 resumable pipeline
+
+on:
+  push:
+    branches: [v7.1.8]
+    paths:
+      - scripts/apply-v7.1.8-resumable.py
+      - .github/workflows/apply-v7.1.8-resumable.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.1.8
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: python scripts/apply-v7.1.8-resumable.py
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+      - name: Verify resumable invariants
+        run: |
+          grep -q 'TRANSCRIPT_VERSION = 11' app/api/shared-cache.ts
+          grep -q 'processing_stage' app/api/shared-cache.ts
+          grep -q 'saveProcessingCheckpoint' app/api/shared-cache.ts
+          grep -q 'releaseProcessingLock' app/api/shared-cache.ts
+          grep -q 'stage === "translate"' app/api/captions/route.ts
+          grep -q 'const CHUNK = 12' app/api/captions/route.ts
+          grep -q 'Supadata first on Vercel' app/api/captions/route.ts
+          grep -q 'greektube-transcript:${video.id}:v11' app/GreekTubePlayer.tsx
+          grep -q 'ver 7.1.8' app/GreekTubePlayer.tsx
+      - name: Commit functional changes
+        run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app package.json
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.1.8: make subtitle processing resumable"
+          git push origin HEAD:v7.1.8
