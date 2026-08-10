@@ -1,0 +1,46 @@
+name: Apply v7.1.7 subtitle pipeline
+
+on:
+  push:
+    branches: [v7.1.7]
+    paths:
+      - scripts/apply-v7.1.7-pipeline.py
+      - .github/workflows/apply-v7.1.7-pipeline.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.1.7
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: python scripts/apply-v7.1.7-pipeline.py
+      - run: npm install --no-audit --no-fund
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+      - name: Verify v7.1.7 invariants
+        run: |
+          grep -q 'TRANSCRIPT_VERSION = 10' app/api/shared-cache.ts
+          grep -q 'raw_english_transcript' app/api/shared-cache.ts
+          grep -q 'prepareEnglishTimedCues' app/api/captions/route.ts
+          grep -q 'validateAlignedTranscript' app/api/captions/route.ts
+          grep -q 'batchSize = useGroq ? 12' app/api/captions/route.ts
+          grep -q 'ver 7.1.7' app/GreekTubePlayer.tsx
+          grep -q 'greektube-transcript:${video.id}:v10' app/GreekTubePlayer.tsx
+      - name: Commit functional changes
+        run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app package.json package-lock.json
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.1.7: rebuild timed subtitle pipeline"
+          git push origin HEAD:v7.1.7
