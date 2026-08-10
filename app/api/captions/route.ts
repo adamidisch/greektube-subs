@@ -455,7 +455,16 @@ function createMeaningUnits(cues: CaptionCue[]) {
     if (mustSplit || (longEnough && (sentenceEnd || naturalPause)) || !next) flush();
   });
 
-  return units;
+  // Source caption ranges can overlap. A displayed cue is only active until
+  // the next cue starts, so normalize its duration to that real window.
+  return units.map((unit, index) => {
+    const next = units[index + 1];
+    if (!next || next.start <= unit.start) return unit;
+    return {
+      ...unit,
+      duration: Math.max(0.8, Math.min(unit.duration, next.start - unit.start)),
+    };
+  });
 }
 
 function cleanSubtitleText(text: string) {
