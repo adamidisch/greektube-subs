@@ -67,7 +67,7 @@ function subtitleWindow(cue:Cue|undefined,currentTime:number){
   return frames[frames.length-1];
 }
 '''
-player, count = subtitle_pattern.subn(subtitle_replacement, player, count=1)
+player, count = subtitle_pattern.subn(lambda _: subtitle_replacement, player, count=1)
 if count != 1:
     raise SystemExit(f"subtitle compositor: expected 1 block, found {count}")
 
@@ -97,7 +97,7 @@ prompt_replacement = '''const GROQ_SYSTEM_PROMPT =
   "Απάντησε ΜΟΝΟ με τις μεταφρασμένες γραμμές και τους δείκτες, χωρίς εισαγωγή, σχόλια ή εξηγήσεις.";
 
 '''
-route, count = prompt_pattern.subn(prompt_replacement, route, count=1)
+route, count = prompt_pattern.subn(lambda _: prompt_replacement, route, count=1)
 if count != 1:
     raise SystemExit(f"Groq prompt: expected 1 block, found {count}")
 
@@ -198,7 +198,7 @@ function_replacement = r'''async function translateBatchWithGroq(batch: { index:
 }
 
 '''
-route, count = function_pattern.subn(function_replacement, route, count=1)
+route, count = function_pattern.subn(lambda _: function_replacement, route, count=1)
 if count != 1:
     raise SystemExit(f"Groq function: expected 1 block, found {count}")
 
