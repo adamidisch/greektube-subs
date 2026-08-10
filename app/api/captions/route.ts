@@ -477,6 +477,69 @@ function cleanSubtitleText(text: string) {
     .trim();
 }
 
+const GROQ_MODEL = "openai/gpt-oss-120b";
+const GROQ_SYSTEM_PROMPT =
+  "Μετέφρασε φυσικά στα ελληνικά για υπότιτλους βίντεο υγείας/διατροφής. " +
+  "Διατήρησε πιστά το νόημα και την ιατρική/επιστημονική ορολογία. " +
+  "Μην κάνεις κατά λέξη μετάφραση όταν ακούγεται αφύσικη στα ελληνικά. " +
+  "Χρησιμοποίησε συνεπή ορολογία σε όλα τα segments — το ίδιο όρο μετάφρασέ τον πάντα με τον ίδιο τρόπο. " +
+  "Αφαίρεσε μόνο προφανή λεκτικά fillers (um, uh, hmm, χμ, εε). " +
+  "Μην προσθέτεις πληροφορίες που δεν υπάρχουν στο πρωτότυπο. " +
+  "Διατήρησε ακριβώς τους δείκτες [[N]], έναν στην αρχή κάθε μεταφρασμένης γραμμής, με την ίδια σειρά. " +
+  "Απάντησε ΜΟΝΟ με τις μεταφρασμένες γραμμές, χωρίς εισαγωγή, σχόλια ή εξηγήσεις.";
+
+async function translateBatchWithGroq(batch: { index: number; text: string }[], precedingContext?: string) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+  const numbered = batch.map(item => `[[${item.index}]] ${item.text}`).join("\n");
+  const userContent = precedingContext
+    ? `Προηγούμενες μεταφρασμένες γραμμές (μόνο για context/συνέπεια ορολογίας — ΜΗΝ τις συμπεριλάβεις στην απάντηση):\n${precedingContext}\n\nΝέες γραμμές προς μετάφραση:\n${numbered}`
+    : numbered;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0.2,
+        max_tokens: 4000,
+        messages: [
+          { role: "system", content: GROQ_SYSTEM_PROMPT },
+          { role: "user", content: userContent },
+        ],
+      }),
+    });
+
+    if (response.status === 429) {
+      if (attempt < 2) {
+        const retryAfterSeconds = Number(response.headers.get("retry-after")) || 5;
+        const waitMs = Math.min(retryAfterSeconds, 20) * 1000;
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+        continue;
+      }
+      throw new Error("Groq 429 after retries");
+    }
+    if (!response.ok) throw new Error(`Groq ${response.status}`);
+
+    const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    const content = payload.choices?.[0]?.message?.content;
+    if (!content) throw new Error("Groq response empty");
+    const results = new Map<number, string>();
+    const marker = /\[\[\s*(\d+)\s*\]\]\s*([\s\S]*?)(?=\n?\[\[\s*\d+\s*\]\]|$)/g;
+    let match: RegExpExecArray | null;
+    while ((match = marker.exec(content))) {
+      const text = cleanSubtitleText(match[2]);
+      if (text) results.set(Number(match[1]), text);
+    }
+    return results;
+  }
+  return null;
+}
+
 async function translateText(text: string) {
   const body = new URLSearchParams({
     client: "gtx",
@@ -537,18 +600,51 @@ async function translateTitleToGreek(title: string) {
 
 async function translateCuesToGreek(cues: CaptionCue[]) {
   const translated = new Map<number, string>();
+  const useGroq = Boolean(process.env.GROQ_API_KEY);
+  const batchSize = useGroq ? 32 : 25;
   const batches: { index: number; text: string }[][] = [];
-  for (let start = 0; start < cues.length; start += 25) {
-    batches.push(cues.slice(start, start + 25).map((cue, offset) => ({
+  for (let start = 0; start < cues.length; start += batchSize) {
+    batches.push(cues.slice(start, start + batchSize).map((cue, offset) => ({
       index: start + offset,
       text: cue.text,
     })));
   }
-  for (let start = 0; start < batches.length; start += 2) {
-    const results = await Promise.all(batches.slice(start, start + 2).map(translateMeaningBatch));
-    results.forEach(batch => {
-      batch.forEach((text, index) => translated.set(index, text));
-    });
+
+  if (useGroq) {
+    // Sequential on purpose: Groq's free tier is rate-limited per minute (TPM),
+    // not just per day, so batches are kept modest and run one at a time.
+    let precedingContext: string | undefined;
+    for (const batch of batches) {
+      try {
+        const results = await translateBatchWithGroq(batch, precedingContext);
+        if (results) {
+          results.forEach((text, index) => translated.set(index, text));
+          const tail = batch
+            .map(item => translated.get(item.index))
+            .filter((text): text is string => Boolean(text))
+            .slice(-3);
+          if (tail.length) precedingContext = tail.join(" ");
+        }
+      } catch {
+        // fall through to Google Translate for this batch below
+      }
+    }
+    const remainingBatches = batches
+      .map(batch => batch.filter(item => !translated.has(item.index)))
+      .filter(batch => batch.length > 0);
+    for (let start = 0; start < remainingBatches.length; start += 2) {
+      const results = await Promise.all(remainingBatches.slice(start, start + 2).map(translateMeaningBatch));
+      results.forEach(batch => {
+        batch.forEach((text, index) => translated.set(index, text));
+      });
+    }
+  } else {
+    for (let start = 0; start < batches.length; start += 2) {
+      const results = await Promise.all(batches.slice(start, start + 2).map(translateMeaningBatch));
+      results.forEach(batch => {
+        batch.forEach((text, index) => translated.set(index, text));
+      });
+    }
   }
 
   for (let retry = 0; retry < 2; retry += 1) {
