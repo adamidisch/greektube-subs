@@ -257,10 +257,12 @@ function transcriptHighlights(cues:Cue[]) {
   return cues.filter((_,index)=>index%step===0).map(c=>c.text.replace(/\s+/g," ").trim()).filter((text,index,list)=>text.length>18&&list.indexOf(text)===index).slice(0,10);
 }
 const PREPARATION_STAGES_EL=[
-  {at:4,label:"Ανάγνωση στοιχείων βίντεο"},
-  {at:12,label:"Εντοπισμός αρχικών υποτίτλων"},
-  {at:28,label:"Μετάφραση υποτίτλων στα ελληνικά"},
-  {at:88,label:"Έλεγχος συγχρονισμού και πληρότητας"},
+  {at:4,label:"Ανάκτηση στοιχείων βίντεο"},
+  {at:12,label:"Ανάκτηση αγγλικών υποτίτλων"},
+  {at:28,label:"Καθαρισμός και οργάνωση κειμένου"},
+  {at:48,label:"Μετάφραση στα ελληνικά"},
+  {at:84,label:"Έλεγχος νοήματος και συγχρονισμού"},
+  {at:96,label:"Ολοκλήρωση υποτίτλων"},
 ];
 function cleanGuideText(text:string) {
   return text.replace(/\s+/g," ").replace(/\bhttps?:\/\/\S+/gi,"").replace(/^[\d\s:.)-]+/,"").trim();
@@ -525,7 +527,7 @@ export default function GreekTubePlayer() {
     let synced=0;
     for(const video of videos){
       try{
-        const raw=localStorage.getItem(`greektube-transcript:${video.id}:v7`);
+        const raw=localStorage.getItem(`greektube-transcript:${video.id}:v8`);
         if(!raw)continue;
         const cached=JSON.parse(raw) as Captions;
         if(!isCompleteGreekTranscript(cached,video.duration))continue;
@@ -569,7 +571,7 @@ export default function GreekTubePlayer() {
         if(readyResponse.ok){
           const ready=await readyResponse.json() as Captions;
           if(isCompleteGreekTranscript(ready,video.duration)){
-            localStorage.setItem(`greektube-transcript:${video.id}:v7`,JSON.stringify(ready));
+            localStorage.setItem(`greektube-transcript:${video.id}:v8`,JSON.stringify(ready));
             setProgress(100);setCaptions(ready);setLoading(false);
             patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:ready.title,originalTitle:video.originalTitle||ready.originalTitle||englishTitle(video),channel:video.channel||ready.channel,captions:ready.cues,speakerName:video.speakerName||ready.speaker?.name,speakerRole:video.speakerRole||ready.speaker?.role,lastWatched:new Date().toISOString()});
             window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),80);
@@ -578,7 +580,7 @@ export default function GreekTubePlayer() {
         }
       }catch{}
     }
-    const localRecord=localStorage.getItem(`greektube-transcript:${video.id}:v7`);
+    const localRecord=localStorage.getItem(`greektube-transcript:${video.id}:v8`);
     if(localRecord&&!forceTranslation){
       try{
         const cached=JSON.parse(localRecord) as Captions;
@@ -590,7 +592,7 @@ export default function GreekTubePlayer() {
             if(!response.ok)return;
             const refreshed=await response.json() as Captions;
             if(!isCompleteGreekTranscript(refreshed,video.duration))return;
-            localStorage.setItem(`greektube-transcript:${video.id}:v7`,JSON.stringify(refreshed));
+            localStorage.setItem(`greektube-transcript:${video.id}:v8`,JSON.stringify(refreshed));
             setCaptions(refreshed);
           }).catch(()=>undefined);
           return;
@@ -655,7 +657,7 @@ export default function GreekTubePlayer() {
         }
         if(!sharedData||!isCompleteGreekTranscript(sharedData,video.duration))throw new Error(failureMessage||"incomplete-transcript");
         data=sharedData;
-        localStorage.setItem(`greektube-transcript:${video.id}:v7`,JSON.stringify(sharedData));
+        localStorage.setItem(`greektube-transcript:${video.id}:v8`,JSON.stringify(sharedData));
         patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:sharedData.title,originalTitle:video.originalTitle||sharedData.originalTitle||englishTitle(video),channel:video.channel||sharedData.channel,captions:sharedData.cues,speakerName:video.speakerName||sharedData.speaker?.name,speakerRole:video.speakerRole||sharedData.speaker?.role});
       }
       const points=data.keyPoints?.length?data.keyPoints:transcriptHighlights(data.cues);
@@ -664,7 +666,7 @@ export default function GreekTubePlayer() {
       window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),120);
     }catch(error){
       console.error("Caption preparation failed",error);
-      const local=localStorage.getItem(`greektube-transcript:${video.id}:v7`);
+      const local=localStorage.getItem(`greektube-transcript:${video.id}:v8`);
       if(local){
         try{
           const fallback=JSON.parse(local) as Captions;
@@ -781,7 +783,7 @@ export default function GreekTubePlayer() {
   function goHome(){close();setView("library");setMobileMenu(false);}
   async function rebuildTranslation(video:Video){
     localStorage.removeItem(`greektube-transcript:${video.id}:v3`);
-    localStorage.removeItem(`greektube-transcript:${video.id}:v7`);
+    localStorage.removeItem(`greektube-transcript:${video.id}:v8`);
     setEditingVideo(null);
     player.current?.destroy();
     player.current=null;
@@ -812,6 +814,7 @@ export default function GreekTubePlayer() {
           <div className="loading-progress-line"><span>ΠΡΟΕΤΟΙΜΑΣΙΑ ΥΠΟΤΙΤΛΩΝ</span></div>
           <div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div>
           <div className={`preparation-status ${progress>=100?"done":""}`} aria-live="polite"><i aria-hidden="true">{progress>=100?"✓":""}</i><span key={preparationStage}>{preparationStage}</span></div>
+          <ol className="preparation-steps" aria-label="Στάδια προετοιμασίας υποτίτλων">{PREPARATION_STAGES_EL.map((stage,index)=>{const next=PREPARATION_STAGES_EL[index+1];const done=progress>=100||Boolean(next&&progress>=next.at);const active=!done&&progress>=stage.at;return <li key={stage.at} className={`${done?"done":""} ${active?"active":""}`}><i aria-hidden="true">{done?"✓":String(index+1).padStart(2,"0")}</i><span>{stage.label}</span></li>})}</ol>
           <section className="speaker-loading-card"><h2>{speaker.name}</h2><strong>{speaker.role}</strong></section>
           <h2>Οδηγός βίντεο</h2>
           {preparingGuide.length>0?<ol className="loading-guide">{preparingGuide.map((point,index)=><li key={`${point}-${index}`}><i>{String(index+1).padStart(2,"0")}</i><span>{point}</span></li>)}</ol>:<div className="loading-description">Μόλις ετοιμαστούν οι ελληνικοί υπότιτλοι, εδώ θα εμφανιστούν 4-5 σημεία με timestamps για γρήγορη πλοήγηση.</div>}
@@ -931,7 +934,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.1.2</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.1.4</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");

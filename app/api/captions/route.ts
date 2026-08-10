@@ -419,9 +419,31 @@ async function fetchCaptionCues(track: CaptionTrack, userAgent: string, targetLa
 function createMeaningUnits(cues: CaptionCue[]) {
   // Clean ASR hesitation/noise before grouping and translating so vocal fillers
   // do not become long Greek strings such as "χμμμμμμ...".
-  const preparedCues = cues
+  const cleanedCues = cues
     .map(cue => ({ ...cue, text: cleanSubtitleText(cue.text) }))
     .filter(cue => cue.text.length > 0);
+
+  // YouTube can place more than one sentence inside a single timed cue.
+  // Split those internal sentence boundaries BEFORE grouping so punctuation
+  // from the English source remains authoritative (e.g. "poisoned. MSM...").
+  // Time is distributed proportionally across the source characters, while
+  // keeping the original cue start/end envelope unchanged.
+  const preparedCues: CaptionCue[] = cleanedCues.flatMap(cue => {
+    const parts = cue.text.match(/[^.!?…]+[.!?…]+[\"')\]]*|[^.!?…]+$/g)?.map(part => part.trim()).filter(Boolean) || [cue.text];
+    if (parts.length <= 1) return [cue];
+    const weights = parts.map(part => Math.max(1, part.replace(/\s+/g, '').length));
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    let elapsed = 0;
+    return parts.map((part, index) => {
+      const start = cue.start + elapsed;
+      const remaining = Math.max(0.12, cue.duration - elapsed);
+      const duration = index === parts.length - 1
+        ? remaining
+        : Math.max(0.12, cue.duration * (weights[index] / totalWeight));
+      elapsed += duration;
+      return { start, duration, text: part };
+    });
+  });
   const units: CaptionCue[] = [];
   let current: CaptionCue[] = [];
   let characters = 0;
@@ -502,7 +524,8 @@ const GROQ_SYSTEM_PROMPT =
   "Ουσία, φάρμακο, συμπλήρωμα, πρόσωπο ή τεχνικός όρος που εμφανίζεται στο επόμενο cue δεν επιτρέπεται να γίνει αιτία, αντικείμενο ή υποκείμενο του προηγούμενου cue αν αυτό δεν υπάρχει ρητά στο αγγλικό κείμενο. " +
   "Διατήρησε πιστά το νόημα και την ιατρική ή επιστημονική ορολογία, με φυσικά ελληνικά αντί για κατά λέξη απόδοση. " +
   "Χρησιμοποίησε συνεπή ορολογία σε όλα τα cues και αφαίρεσε μόνο προφανή λεκτικά fillers όπως um, uh, hmm, χμ και εε. " +
-  "Μην προσθέτεις πληροφορίες που δεν υπάρχουν στο πρωτότυπο. " +
+  "Μην προσθέτεις πληροφορίες που δεν υπάρχουν στο πρωτότυπο. Μην αλλάζεις ποιος κάνει τι σε ποιον, αιτία και αποτέλεσμα, άρνηση, ποσότητες, επιλογές ή τεχνικούς όρους. " +
+  "Η ελληνική απόδοση πρέπει να είναι πιστή στο συγκεκριμένο αγγλικό cue: πρώτα ακρίβεια νοήματος και μετά φυσικότητα ύφους. " +
   "Επέστρεψε ακριβώς έναν δείκτη [[N]] για κάθε input cue, στην ίδια σειρά, χωρίς παραλείψεις, διπλασιασμούς ή νέους δείκτες. " +
   "Απάντησε ΜΟΝΟ με τις μεταφρασμένες γραμμές και τους δείκτες, χωρίς εισαγωγή, σχόλια ή εξηγήσεις.";
 
@@ -686,6 +709,42 @@ function needsStrictSemanticRetry(cues: CaptionCue[], translated: Map<number, st
   return false;
 }
 
+async function verifySemanticFidelity(cues: CaptionCue[], translated: Map<number, string>) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return [] as number[];
+  const suspicious: number[] = [];
+  const size = 6;
+  for (let start = 0; start < cues.length; start += size) {
+    const indexes = cues.slice(start, start + size).map((_, offset) => start + offset).filter(index => translated.has(index));
+    if (!indexes.length) continue;
+    const pairs = indexes.map(index => `[[${index}]]\nEN: ${cues[index].text}\nEL: ${translated.get(index)}`).join("\n\n");
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {"Content-Type":"application/json", Authorization:`Bearer ${apiKey}`},
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          temperature: 0,
+          max_tokens: 350,
+          messages: [
+            {role:"system",content:"Είσαι αυστηρός ελεγκτής πιστότητας υποτίτλων. Σύγκρινε ΚΑΘΕ αγγλικό cue μόνο με το δικό του ελληνικό. Σημείωσε cue ως λάθος μόνο αν αλλάζει ουσιαστικά το νόημα: λάθος υποκείμενο/αντικείμενο, αιτία-αποτέλεσμα, άρνηση, ποσότητα, επιλογή, τεχνικός όρος ή προσθήκη/αφαίρεση σημαντικής πληροφορίας. Μικρές φυσικές αναδιατυπώσεις είναι σωστές. Απάντησε μόνο JSON array με τα αριθμητικά ids που χρειάζονται νέα μετάφραση, π.χ. [4,7] ή []."},
+            {role:"user",content:pairs},
+          ],
+        }),
+      });
+      if (!response.ok) continue;
+      const payload = await response.json() as {choices?:{message?:{content?:string}}[]};
+      const raw = payload.choices?.[0]?.message?.content || "";
+      const arrayText = raw.match(/\[[\s\S]*?\]/)?.[0];
+      if (!arrayText) continue;
+      const ids = JSON.parse(arrayText) as unknown;
+      if (!Array.isArray(ids)) continue;
+      for (const id of ids) if (Number.isInteger(id) && indexes.includes(id as number)) suspicious.push(id as number);
+    } catch {}
+  }
+  return [...new Set(suspicious)];
+}
+
 async function translateTitleToGreek(title: string) {
   if (!title || hasGreekText([{ start: 0, duration: 1, text: title }])) return title;
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -767,9 +826,11 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
   }
 
   if (useGroq) {
-    const suspicious = cues
+    const deterministic = cues
       .map((_, index) => index)
       .filter(index => translated.has(index) && needsStrictSemanticRetry(cues, translated, index));
+    const semantic = await verifySemanticFidelity(cues, translated);
+    const suspicious = [...new Set([...deterministic, ...semantic])];
     let checked = 0;
     for (const index of suspicious) {
       try {
