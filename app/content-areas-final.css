@@ -442,7 +442,7 @@ html body .app-shell.app-shell.app-shell .video-heading .video-meta-kicker stron
 }
 html body .app-shell.app-shell.app-shell .video-heading .player-greek-title{
   margin:0!important;max-width:980px!important;color:#f6f3ec!important;
-  font-family:inherit!important;font-size:clamp(24px,3vw,34px)!important;
+  font-family:inherit!important;font-size:24px!important;
   font-weight:650!important;line-height:1.16!important;letter-spacing:-.028em!important;
   text-wrap:balance!important;overflow-wrap:break-word!important;
 }
