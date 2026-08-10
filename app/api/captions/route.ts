@@ -459,7 +459,7 @@ function canonicalNumberTokens(text: string) {
 }
 
 function protectedSourceTokens(text: string) {
-  const matches = text.match(/\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml|IU|iu|%)?)\b/g) || [];
+  const matches = text.match(/\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml|IU|iu|%))\b/g) || [];
   return [...new Set(matches.map(token => token.replace(/\s+/g, "").toLowerCase()))];
 }
 
