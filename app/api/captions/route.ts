@@ -479,40 +479,54 @@ function cleanSubtitleText(text: string) {
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
 const GROQ_SYSTEM_PROMPT =
-  "Μετέφρασε φυσικά στα ελληνικά για υπότιτλους βίντεο υγείας/διατροφής. " +
-  "Διατήρησε πιστά το νόημα και την ιατρική/επιστημονική ορολογία. " +
-  "Μην κάνεις κατά λέξη μετάφραση όταν ακούγεται αφύσικη στα ελληνικά. " +
-  "Χρησιμοποίησε συνεπή ορολογία σε όλα τα segments — το ίδιο όρο μετάφρασέ τον πάντα με τον ίδιο τρόπο. " +
-  "Αφαίρεσε μόνο προφανή λεκτικά fillers (um, uh, hmm, χμ, εε). " +
+  "Μετέφρασε φυσικά στα ελληνικά για υπότιτλους. " +
+  "Κάθε δείκτης [[N]] είναι ανεξάρτητο timed cue και πρέπει να παραμείνει δεμένος με το δικό του χρονικό σημείο. " +
+  "Μετέφρασε ΜΟΝΟ τις λέξεις που υπάρχουν μετά από κάθε [[N]] μέχρι τον επόμενο δείκτη. " +
+  "Μην μεταφέρεις, ολοκληρώνεις ή δανείζεσαι λέξεις και νόημα από γειτονικό cue, ακόμη και αν μια πρόταση κόβεται στη μέση. " +
+  "Διατήρησε πιστά το νόημα και την ιατρική ή επιστημονική ορολογία, με φυσικά ελληνικά αντί για κατά λέξη απόδοση. " +
+  "Χρησιμοποίησε συνεπή ορολογία σε όλα τα cues και αφαίρεσε μόνο προφανή λεκτικά fillers όπως um, uh, hmm, χμ και εε. " +
   "Μην προσθέτεις πληροφορίες που δεν υπάρχουν στο πρωτότυπο. " +
-  "Διατήρησε ακριβώς τους δείκτες [[N]], έναν στην αρχή κάθε μεταφρασμένης γραμμής, με την ίδια σειρά. " +
-  "Απάντησε ΜΟΝΟ με τις μεταφρασμένες γραμμές, χωρίς εισαγωγή, σχόλια ή εξηγήσεις.";
+  "Επέστρεψε ακριβώς έναν δείκτη [[N]] για κάθε input cue, στην ίδια σειρά, χωρίς παραλείψεις, διπλασιασμούς ή νέους δείκτες. " +
+  "Απάντησε ΜΟΝΟ με τις μεταφρασμένες γραμμές και τους δείκτες, χωρίς εισαγωγή, σχόλια ή εξηγήσεις.";
 
 async function translateBatchWithGroq(batch: { index: number; text: string }[], precedingContext?: string) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return null;
+  const expectedIds = new Set(batch.map(item => item.index));
   const numbered = batch.map(item => `[[${item.index}]] ${item.text}`).join("\n");
   const userContent = precedingContext
-    ? `Προηγούμενες μεταφρασμένες γραμμές (μόνο για context/συνέπεια ορολογίας — ΜΗΝ τις συμπεριλάβεις στην απάντηση):\n${precedingContext}\n\nΝέες γραμμές προς μετάφραση:\n${numbered}`
-    : numbered;
+    ? `Προηγούμενες μεταφρασμένες γραμμές μόνο για ορολογία και ύφος. ΜΗΝ τις μεταφράσεις ξανά και ΜΗΝ μεταφέρεις λέξεις από αυτές στα νέα cues:\n${precedingContext}\n\nΝέα timed cues προς μετάφραση. Κάθε cue μένει αυστηρά στο δικό του [[N]]:\n${numbered}`
+    : `Timed cues προς μετάφραση. Κάθε cue μένει αυστηρά στο δικό του [[N]]:\n${numbered}`;
+  const removeMarkerArtifacts = (value: string) => value.replace(/\[{1,2}\s*(\d+)\s*\]{1,2}/g, (full, rawId) =>
+    expectedIds.has(Number(rawId)) ? "" : full,
+  );
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        temperature: 0.2,
-        max_tokens: 4000,
-        messages: [
-          { role: "system", content: GROQ_SYSTEM_PROMPT },
-          { role: "user", content: userContent },
-        ],
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: GROQ_MODEL,
+          temperature: 0.1,
+          max_tokens: 4000,
+          messages: [
+            { role: "system", content: GROQ_SYSTEM_PROMPT },
+            { role: "user", content: userContent },
+          ],
+        }),
+      });
+    } catch (error) {
+      if (attempt < 2) {
+        await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
+        continue;
+      }
+      throw error;
+    }
 
     if (response.status === 429) {
       if (attempt < 2) {
@@ -523,19 +537,49 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
       }
       throw new Error("Groq 429 after retries");
     }
-    if (!response.ok) throw new Error(`Groq ${response.status}`);
+    if (!response.ok) {
+      if (response.status >= 500 && attempt < 2) {
+        await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(`Groq ${response.status}`);
+    }
 
     const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
     const content = payload.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Groq response empty");
+    if (!content) {
+      if (attempt < 2) continue;
+      throw new Error("Groq response empty");
+    }
+
     const results = new Map<number, string>();
     const marker = /\[\[\s*(\d+)\s*\]\]\s*([\s\S]*?)(?=\n?\[\[\s*\d+\s*\]\]|$)/g;
     let match: RegExpExecArray | null;
+    let invalidMapping = false;
     while ((match = marker.exec(content))) {
-      const text = cleanSubtitleText(match[2]);
-      if (text) results.set(Number(match[1]), text);
+      const index = Number(match[1]);
+      if (!expectedIds.has(index) || results.has(index)) {
+        invalidMapping = true;
+        break;
+      }
+      const text = cleanSubtitleText(removeMarkerArtifacts(match[2]));
+      if (!text) {
+        invalidMapping = true;
+        break;
+      }
+      results.set(index, text);
     }
-    return results;
+
+    const completeMapping = !invalidMapping &&
+      results.size === batch.length &&
+      batch.every(item => results.has(item.index));
+    if (completeMapping) return results;
+
+    if (attempt < 2) {
+      await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+      continue;
+    }
+    throw new Error("Groq cue mapping invalid");
   }
   return null;
 }
@@ -601,7 +645,7 @@ async function translateTitleToGreek(title: string) {
 async function translateCuesToGreek(cues: CaptionCue[]) {
   const translated = new Map<number, string>();
   const useGroq = Boolean(process.env.GROQ_API_KEY);
-  const batchSize = useGroq ? 32 : 25;
+  const batchSize = useGroq ? 8 : 25;
   const batches: { index: number; text: string }[][] = [];
   for (let start = 0; start < cues.length; start += batchSize) {
     batches.push(cues.slice(start, start + batchSize).map((cue, offset) => ({
@@ -854,7 +898,7 @@ export async function POST(request: Request) {
         if (!sourceCues.length) throw new Error("Supadata returned an empty English transcript");
         await updateProcessingProgress(videoId, lockToken, 48);
         cues = await translateCuesToGreek(sourceCues);
-        translationMethod = "supadata_native_contextual_meaning_units_v3";
+        translationMethod = "supadata_native_contextual_meaning_units_v4";
       }
 
       const duration = supadata.cues.reduce(
