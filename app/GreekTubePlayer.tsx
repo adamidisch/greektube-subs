@@ -228,7 +228,7 @@ function subtitleWindow(cue:Cue|undefined,currentTime:number,nextCue?:Cue){
   return frames[frames.length-1];
 }
 function isCompleteGreekTranscript(data:Captions|null|undefined,duration=0) {
-  if(!data?.cues?.length||data.transcriptVersion!==11)return false;
+  if(!data?.cues?.length||data.transcriptVersion!==12)return false;
   const cues=data.cues;
   const ordered=cues.length>=3&&cues.every((cue,index)=>Number.isFinite(cue.start)&&Number.isFinite(cue.duration)&&cue.duration>0&&cue.text.trim().length>0&&(index===0||cue.start>=cues[index-1].start));
   if(!ordered)return false;
@@ -528,7 +528,7 @@ export default function GreekTubePlayer() {
     let synced=0;
     for(const video of videos){
       try{
-        const raw=localStorage.getItem(`greektube-transcript:${video.id}:v11`);
+        const raw=localStorage.getItem(`greektube-transcript:${video.id}:v12`);
         if(!raw)continue;
         const cached=JSON.parse(raw) as Captions;
         if(!isCompleteGreekTranscript(cached,video.duration))continue;
@@ -572,7 +572,7 @@ export default function GreekTubePlayer() {
         if(readyResponse.ok){
           const ready=await readyResponse.json() as Captions;
           if(isCompleteGreekTranscript(ready,video.duration)){
-            localStorage.setItem(`greektube-transcript:${video.id}:v11`,JSON.stringify(ready));
+            localStorage.setItem(`greektube-transcript:${video.id}:v12`,JSON.stringify(ready));
             setProgress(100);setCaptions(ready);setLoading(false);
             patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:ready.title,originalTitle:video.originalTitle||ready.originalTitle||englishTitle(video),channel:video.channel||ready.channel,captions:ready.cues,speakerName:video.speakerName||ready.speaker?.name,speakerRole:video.speakerRole||ready.speaker?.role,lastWatched:new Date().toISOString()});
             window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),80);
@@ -581,7 +581,7 @@ export default function GreekTubePlayer() {
         }
       }catch{}
     }
-    const localRecord=localStorage.getItem(`greektube-transcript:${video.id}:v11`);
+    const localRecord=localStorage.getItem(`greektube-transcript:${video.id}:v12`);
     if(localRecord&&!forceTranslation){
       try{
         const cached=JSON.parse(localRecord) as Captions;
@@ -593,7 +593,7 @@ export default function GreekTubePlayer() {
             if(!response.ok)return;
             const refreshed=await response.json() as Captions;
             if(!isCompleteGreekTranscript(refreshed,video.duration))return;
-            localStorage.setItem(`greektube-transcript:${video.id}:v11`,JSON.stringify(refreshed));
+            localStorage.setItem(`greektube-transcript:${video.id}:v12`,JSON.stringify(refreshed));
             setCaptions(refreshed);
           }).catch(()=>undefined);
           return;
@@ -611,8 +611,9 @@ export default function GreekTubePlayer() {
           const statusResponse=await fetch(`/api/captions?videoId=${encodeURIComponent(video.id)}`,{cache:"no-store"});
           if(statusResponse.status!==202&&!statusResponse.ok)continue;
           const statusData=await statusResponse.json() as Captions & {progress?:number;status?:string};
-          if(typeof statusData.progress==="number"){
-            setProgress(Math.max(3,Math.min(100,statusData.progress)));
+          const reportedProgress=statusData.progress;
+          if(typeof reportedProgress==="number"){
+            setProgress(current=>Math.max(current,Math.max(3,Math.min(100,reportedProgress))));
           }
           if(Array.isArray(statusData.keyPoints)&&statusData.keyPoints.length)setLoadingPoints(statusData.keyPoints);
         }catch{}
@@ -625,7 +626,7 @@ export default function GreekTubePlayer() {
         let sharedData:Captions|null=null;
         let transientFailures=0;
         let failureMessage="";
-        for(let attempt=0;attempt<120;attempt++){
+        for(let attempt=0;;attempt++){
           const controller=new AbortController();
           const timeout=window.setTimeout(()=>controller.abort(),300000);
           try{
@@ -639,7 +640,7 @@ export default function GreekTubePlayer() {
             setLoading(true);
             const processing=await response.json();
             if(typeof processing.progress==="number"){
-              setProgress(Math.max(3,Math.min(96,processing.progress)));
+              setProgress(current=>Math.max(current,Math.max(3,Math.min(96,processing.progress))));
             }
             if(Array.isArray(processing.keyPoints)&&processing.keyPoints.length)setLoadingPoints(processing.keyPoints);
             const retryAfter=Math.max(1,Number(response.headers.get("Retry-After"))||1);
@@ -667,7 +668,7 @@ export default function GreekTubePlayer() {
         }
         if(!sharedData||!isCompleteGreekTranscript(sharedData,video.duration))throw new Error(failureMessage||"incomplete-transcript");
         data=sharedData;
-        localStorage.setItem(`greektube-transcript:${video.id}:v11`,JSON.stringify(sharedData));
+        localStorage.setItem(`greektube-transcript:${video.id}:v12`,JSON.stringify(sharedData));
         patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:sharedData.title,originalTitle:video.originalTitle||sharedData.originalTitle||englishTitle(video),channel:video.channel||sharedData.channel,captions:sharedData.cues,speakerName:video.speakerName||sharedData.speaker?.name,speakerRole:video.speakerRole||sharedData.speaker?.role});
       }
       const points=data.keyPoints?.length?data.keyPoints:transcriptHighlights(data.cues);
@@ -676,7 +677,7 @@ export default function GreekTubePlayer() {
       window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),120);
     }catch(error){
       console.error("Caption preparation failed",error);
-      const local=localStorage.getItem(`greektube-transcript:${video.id}:v11`);
+      const local=localStorage.getItem(`greektube-transcript:${video.id}:v12`);
       if(local){
         try{
           const fallback=JSON.parse(local) as Captions;
@@ -797,7 +798,7 @@ export default function GreekTubePlayer() {
   function goHome(){close();setView("library");setMobileMenu(false);}
   async function rebuildTranslation(video:Video){
     localStorage.removeItem(`greektube-transcript:${video.id}:v3`);
-    localStorage.removeItem(`greektube-transcript:${video.id}:v11`);
+    localStorage.removeItem(`greektube-transcript:${video.id}:v12`);
     setEditingVideo(null);
     player.current?.destroy();
     player.current=null;
@@ -948,7 +949,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.1.8</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.1.10</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");

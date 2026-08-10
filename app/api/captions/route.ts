@@ -5,6 +5,8 @@ import {
   completeTranscript,
   failTranscript,
   getTranscript,
+  MAX_TRANSIENT_RETRIES,
+  recordTransientProcessingFailure,
   releaseProcessingLock,
   resetProcessingForTranslation,
   saveProcessingCheckpoint,
@@ -653,8 +655,10 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
     expectedIds.has(Number(rawId)) ? "" : full,
   );
 
-  for (let attempt = 0; attempt < 1; attempt += 1) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
     let response: Response;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 16_000);
     try {
       response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
@@ -671,6 +675,7 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
             { role: "user", content: userContent },
           ],
         }),
+        signal: controller.signal,
       });
     } catch (error) {
       if (attempt < 1) {
@@ -678,6 +683,8 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
         continue;
       }
       throw error;
+    } finally {
+      clearTimeout(timeout);
     }
 
     if (response.status === 429) {
@@ -744,11 +751,19 @@ async function translateText(text: string) {
     dt: "t",
     q: text,
   });
-  const response = await fetch("https://translate.googleapis.com/translate_a/single", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-    body,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  let response: Response;
+  try {
+    response = await fetch("https://translate.googleapis.com/translate_a/single", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) throw new Error(`Translation ${response.status}`);
   const payload = (await response.json()) as unknown;
   if (!Array.isArray(payload) || !Array.isArray(payload[0])) {
@@ -762,12 +777,14 @@ async function translateText(text: string) {
 }
 
 async function translateSingleCue(index: number, text: string) {
-  try {
-    const translated = await translateText(text);
-    return translated ? { index, text: translated } : null;
-  } catch {
-    return null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const translated = await translateText(text);
+      if (translated) return { index, text: translated };
+    } catch {}
+    if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
   }
+  return null;
 }
 
 async function translateMeaningBatch(batch: { index: number; text: string }[]) {
@@ -893,13 +910,13 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
 async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count: number) {
   const slice = raw.slice(start, start + count);
   if (!slice.length) return [] as CaptionCue[];
-  const batch = slice.map((cue, offset) => ({ index: start + offset, text: cue.text.replace(/\\s+/g, " ").trim() }));
+  const batch = slice.map((cue, offset) => ({ index: start + offset, text: cue.text.replace(/\s+/g, " ").trim() }));
   const repaired = await repairEnglishBatchWithGroq(batch);
   const normalized = slice.flatMap((cue, offset) => {
     const absolute = start + offset;
     return splitEnglishCueAtSentenceBoundaries({
       ...cue,
-      text: repaired?.get(absolute) || cue.text.replace(/\\s+/g, " ").trim(),
+      text: repaired?.get(absolute) || cue.text.replace(/\s+/g, " ").trim(),
     });
   });
   return clampTimedCueWindows(normalized);
@@ -921,10 +938,14 @@ async function translateCheckpointBatch(cues: CaptionCue[], start: number, count
       }
     } catch {}
   }
-  for (const item of numbered) {
-    if (output.has(item.index)) continue;
-    const fallback = await translateSingleCue(item.index, item.text);
-    if (fallback?.text && translationIntegrityOK(item.text, fallback.text)) output.set(item.index, fallback.text);
+  const missingFromGroq = numbered.filter(item => !output.has(item.index));
+  for (let startIndex = 0; startIndex < missingFromGroq.length; startIndex += 3) {
+    const group = missingFromGroq.slice(startIndex, startIndex + 3);
+    const fallbacks = await Promise.all(group.map(item => translateSingleCue(item.index, item.text)));
+    for (const fallback of fallbacks) {
+      const source = numbered.find(item => item.index === fallback?.index);
+      if (source && fallback?.text && translationIntegrityOK(source.text, fallback.text)) output.set(source.index, fallback.text);
+    }
   }
   const missing = numbered.filter(item => !output.has(item.index));
   if (missing.length) throw new Error(`Η μετάφραση απέτυχε προσωρινά σε ${missing.length} cues`);
@@ -938,6 +959,8 @@ function processingResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
     videoId: record?.videoId || "",
     stage: record?.processingStage || "source",
     cursor: record?.processingCursor || 0,
+    retryCount: record?.retryCount || 0,
+    retryAfter: record?.retryAfter || null,
     keyPoints: record?.keyPoints || [],
     transcriptVersion: TRANSCRIPT_VERSION,
   };
@@ -984,20 +1007,10 @@ async function cachedResponse(record: Awaited<ReturnType<typeof getTranscript>>)
   const title = await translateTitleToGreek(record.title);
   const originalTitle = hasGreekText([{ start: 0, duration: 1, text: record.title }]) ? "" : record.title;
 
-  // Also clean already-cached transcripts so the improvement is visible
-  // immediately without forcing every existing video through re-translation.
-  // Keep Greek/English cue indexes paired when filler-only cues are removed.
-  const cleanedPairs = record.greekTranscript
-    .map((cue: CaptionCue, index: number) => ({ index, cue: { ...cue, text: cleanSubtitleText(cue.text) } }))
-    .filter((item: { index: number; cue: CaptionCue }) => item.cue.text.length > 0);
-  const greekTranscript = cleanedPairs.map((item: { index: number; cue: CaptionCue }) => item.cue);
-  const englishTranscript: CaptionCue[] = [];
-  for (const { index } of cleanedPairs) {
-    const cue = record.englishTranscript[index] as CaptionCue | undefined;
-    if (!cue) continue;
-    const cleaned = cleanSubtitleText(cue.text);
-    if (cleaned) englishTranscript.push({ ...cue, text: cleaned });
-  }
+  // Finalized cues are already normalized and validated. Do not filter them
+  // at response time, since removing only one side would break cue alignment.
+  const greekTranscript = record.greekTranscript as CaptionCue[];
+  const englishTranscript = record.englishTranscript as CaptionCue[];
 
   return {
     status: record.status,
@@ -1038,7 +1051,7 @@ export async function GET(request: Request) {
       });
     }
     if (cached.status !== "ready") {
-      return NextResponse.json({ ready: false, status: cached.status }, { status: 409, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json({ ready: false, status: cached.status, error: cached.error || undefined }, { status: 409, headers: { "Cache-Control": "no-store" } });
     }
 
     validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
@@ -1063,6 +1076,7 @@ export async function POST(request: Request) {
     lockedVideoId = videoId;
     const force = body.force === true;
     let cached = await getTranscript(videoId);
+    const mustRestartCheckpoint = Boolean(cached && (force || cached.transcriptVersion !== TRANSCRIPT_VERSION));
 
     if (!force && cached?.status === "ready" && cached.transcriptVersion === TRANSCRIPT_VERSION) {
       validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
@@ -1074,22 +1088,37 @@ export async function POST(request: Request) {
         cached.lockExpiresAt && cached.lockExpiresAt > new Date().toISOString()) {
       return NextResponse.json(processingResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
     }
+    if (!force && cached?.status === "processing" && cached.retryAfter && cached.retryAfter > new Date().toISOString()) {
+      const seconds = Math.max(1, Math.ceil((new Date(cached.retryAfter).getTime() - Date.now()) / 1000));
+      return NextResponse.json(processingResponse(cached), { status: 202, headers: { "Retry-After": String(seconds) } });
+    }
 
     lockToken = crypto.randomUUID();
     const acquired = await acquireProcessingLock(videoId, lockToken, force);
     if (!acquired) {
       cached = await getTranscript(videoId);
+      if (cached?.status !== "processing") {
+        return NextResponse.json({ error: cached?.error || "Η προετοιμασία χρειάζεται νέα προσπάθεια." }, { status: 409, headers: { "Cache-Control": "no-store" } });
+      }
       return NextResponse.json(processingResponse(cached), { status: 202, headers: { "Retry-After": "1" } });
     }
 
-    // A forced re-translation reuses the already-paid raw source whenever possible.
-    if (force) {
+    // A forced retranslation or checkpoint-schema migration replays repair +
+    // translation, but never refetches an already-persisted Supadata source.
+    if (mustRestartCheckpoint) {
       const keepRaw = Boolean(cached?.rawEnglishTranscript?.length);
-      await resetProcessingForTranslation(videoId, lockToken, keepRaw);
+      if (!await resetProcessingForTranslation(videoId, lockToken, keepRaw)) {
+        throw new Error("Processing lock was lost before restart checkpoint persisted");
+      }
       cached = await getTranscript(videoId);
     }
 
-    let stage = cached?.processingStage || (cached?.rawEnglishTranscript?.length ? "repair" : "source");
+    // Raw English is the durable source-of-truth. Even an interrupted legacy
+    // row labelled `source` must continue at repair instead of paying Supadata
+    // again for the same video.
+    let stage = cached?.rawEnglishTranscript?.length
+      ? (cached.processingStage && cached.processingStage !== "source" ? cached.processingStage : "repair")
+      : (cached?.processingStage || "source");
     let cursor = cached?.processingCursor || 0;
 
     if (stage === "source") {
@@ -1105,24 +1134,24 @@ export async function POST(request: Request) {
       if (sourceLanguage === "el") {
         const now = new Date().toISOString();
         const points = keyPoints(supadata.cues);
-        await completeTranscript({
+        if (!await completeTranscript({
           videoId, title: metadata.title || "YouTube video", channel: metadata.authorName || "YouTube",
           thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, duration, originalLanguage: sourceLanguage,
           rawEnglishTranscript: [], englishTranscript: [], greekTranscript: supadata.cues,
           timestamps: supadata.cues.map(cue => ({ start: cue.start, duration: cue.duration })),
           topics: [], keyPoints: points, status: "ready", progress: 100, transcriptVersion: TRANSCRIPT_VERSION,
           createdAt: cached?.createdAt || now, updatedAt: now,
-        }, lockToken);
+        }, lockToken)) throw new Error("Processing lock was lost before final transcript persisted");
         lockToken = null;
         const ready = await getTranscript(videoId);
         return NextResponse.json(await cachedResponse(ready));
       }
-      await saveProcessingCheckpoint(videoId, lockToken, {
+      if (!await saveProcessingCheckpoint(videoId, lockToken, {
         stage: "repair", cursor: 0, progress: 28, rawEnglishTranscript: supadata.cues,
         englishTranscript: [], greekTranscript: [], title: metadata.title || cached?.title || "YouTube video",
         channel: metadata.authorName || cached?.channel || "YouTube", duration, originalLanguage: sourceLanguage,
-      });
-      await releaseProcessingLock(videoId, lockToken); lockToken = null;
+      })) throw new Error("Processing lock was lost before source checkpoint persisted");
+      if (!await releaseProcessingLock(videoId, lockToken)) throw new Error("Processing lock was lost before source release"); lockToken = null;
       const next = await getTranscript(videoId);
       return NextResponse.json(processingResponse(next), { status: 202, headers: { "Retry-After": "1" } });
     }
@@ -1133,20 +1162,20 @@ export async function POST(request: Request) {
     if (stage === "repair") {
       const raw = cached.rawEnglishTranscript as CaptionCue[];
       if (!raw.length) throw new Error("Raw English transcript checkpoint is empty");
-      const CHUNK = 24;
+      const CHUNK = 16;
       if (cursor < raw.length) {
         const chunk = await prepareEnglishTimedChunk(raw, cursor, CHUNK);
         const english = [...(cached.englishTranscript as CaptionCue[]), ...chunk];
         const nextCursor = Math.min(raw.length, cursor + CHUNK);
         const done = nextCursor >= raw.length;
         const progress = done ? 48 : Math.round(28 + 20 * (nextCursor / raw.length));
-        await saveProcessingCheckpoint(videoId, lockToken, {
+        if (!await saveProcessingCheckpoint(videoId, lockToken, {
           stage: done ? "translate" : "repair", cursor: done ? 0 : nextCursor, progress, englishTranscript: english,
-        });
+        })) throw new Error("Processing lock was lost before repair checkpoint persisted");
       } else {
-        await saveProcessingCheckpoint(videoId, lockToken, { stage: "translate", cursor: 0, progress: 48 });
+        if (!await saveProcessingCheckpoint(videoId, lockToken, { stage: "translate", cursor: 0, progress: 48 })) throw new Error("Processing lock was lost before repair transition persisted");
       }
-      await releaseProcessingLock(videoId, lockToken); lockToken = null;
+      if (!await releaseProcessingLock(videoId, lockToken)) throw new Error("Processing lock was lost before repair release"); lockToken = null;
       const next = await getTranscript(videoId);
       return NextResponse.json(processingResponse(next), { status: 202, headers: { "Retry-After": "1" } });
     }
@@ -1158,20 +1187,20 @@ export async function POST(request: Request) {
     if (stage === "translate") {
       const english = cached.englishTranscript as CaptionCue[];
       if (!english.length) throw new Error("Normalized English transcript checkpoint is empty");
-      const CHUNK = 12;
+      const CHUNK = 6;
       if (cursor < english.length) {
         const translatedChunk = await translateCheckpointBatch(english, cursor, CHUNK);
         const greek = [...(cached.greekTranscript as CaptionCue[]), ...translatedChunk];
         const nextCursor = Math.min(english.length, cursor + CHUNK);
         const done = nextCursor >= english.length;
         const progress = done ? 90 : Math.round(48 + 42 * (nextCursor / english.length));
-        await saveProcessingCheckpoint(videoId, lockToken, {
+        if (!await saveProcessingCheckpoint(videoId, lockToken, {
           stage: done ? "finalize" : "translate", cursor: done ? 0 : nextCursor, progress, greekTranscript: greek,
-        });
+        })) throw new Error("Processing lock was lost before translation checkpoint persisted");
       } else {
-        await saveProcessingCheckpoint(videoId, lockToken, { stage: "finalize", cursor: 0, progress: 90 });
+        if (!await saveProcessingCheckpoint(videoId, lockToken, { stage: "finalize", cursor: 0, progress: 90 })) throw new Error("Processing lock was lost before translation transition persisted");
       }
-      await releaseProcessingLock(videoId, lockToken); lockToken = null;
+      if (!await releaseProcessingLock(videoId, lockToken)) throw new Error("Processing lock was lost before translation release"); lockToken = null;
       const next = await getTranscript(videoId);
       return NextResponse.json(processingResponse(next), { status: 202, headers: { "Retry-After": "1" } });
     }
@@ -1183,17 +1212,17 @@ export async function POST(request: Request) {
       const greek = cached.greekTranscript as CaptionCue[];
       validateAlignedTranscript(english, greek);
       validateCompleteGreekTranscript(greek, cached.duration);
-      await updateProcessingProgress(videoId, lockToken, 94);
+      if (!await updateProcessingProgress(videoId, lockToken, 94)) throw new Error("Processing lock was lost before final validation persisted");
       const translatedTitle = await translateTitleToGreek(cached.title || "YouTube video");
       const points = keyPoints(greek);
       const topics = [...new Set(points.flatMap(point => point.toLowerCase().match(/[\\p{L}]{6,}/gu) || []))].slice(0, 6);
       const now = new Date().toISOString();
-      await completeTranscript({
+      if (!await completeTranscript({
         ...cached, title: cached.title || "YouTube video", channel: cached.channel || "YouTube",
         rawEnglishTranscript: cached.rawEnglishTranscript, englishTranscript: english, greekTranscript: greek,
         timestamps: greek.map(cue => ({ start: cue.start, duration: cue.duration })), topics, keyPoints: points,
         status: "ready", progress: 100, transcriptVersion: TRANSCRIPT_VERSION, updatedAt: now,
-      }, lockToken);
+      }, lockToken)) throw new Error("Processing lock was lost before final transcript persisted");
       lockToken = null;
       const ready = await getTranscript(videoId);
       const payload = await cachedResponse(ready);
@@ -1202,17 +1231,22 @@ export async function POST(request: Request) {
 
     throw new Error(`Unknown processing stage: ${stage}`);
   } catch (error) {
-    // A failed slice is recoverable. Release the lease and preserve every completed checkpoint.
-    if (lockedVideoId && lockToken) {
-      await releaseProcessingLock(lockedVideoId, lockToken).catch(() => undefined);
-    }
+    const message = error instanceof Error ? error.message : "retry";
     console.error(`[captions:${lockedVideoId || "unknown"}] resumable slice failed`, error);
-    const current = lockedVideoId ? await getTranscript(lockedVideoId).catch(() => null) : null;
-    if (current?.status === "processing") {
-      return NextResponse.json({ ...processingResponse(current), transientError: error instanceof Error ? error.message : "retry" },
-        { status: 202, headers: { "Retry-After": "2" } });
+    const recoverable = /μετάφραση|translation|groq|supadata|fetch|network|timeout|abort|429|\b5\d\d\b/i.test(message);
+    if (lockedVideoId && lockToken && recoverable) {
+      const retry = await recordTransientProcessingFailure(lockedVideoId, lockToken, message).catch(() => null);
+      lockToken = null;
+      if (retry?.status === "processing") {
+        const current = await getTranscript(lockedVideoId).catch(() => null);
+        return NextResponse.json({ ...processingResponse(current), transientError: message }, { status: 202, headers: { "Retry-After": "2" } });
+      }
+      if (retry?.status === "failed") {
+        return NextResponse.json({ error: message, retryLimit: MAX_TRANSIENT_RETRIES }, { status: 409, headers: { "Cache-Control": "no-store" } });
+      }
     }
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Δεν μπόρεσα να ετοιμάσω τους υπότιτλους." }, { status: 502 });
+    if (lockedVideoId && lockToken) await failTranscript(lockedVideoId, lockToken, message).catch(() => undefined);
+    return NextResponse.json({ error: message, retryLimit: MAX_TRANSIENT_RETRIES }, { status: 502 });
   }
 }
 

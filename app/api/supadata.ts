@@ -28,6 +28,16 @@ type SupadataResult = {
 
 const API_BASE = "https://api.supadata.ai/v1/transcript";
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 10_000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function apiKey() {
   const value = process.env.SUPADATA_API_KEY?.trim();
   if (!value) throw new Error("SUPADATA_API_KEY is not configured");
@@ -72,9 +82,11 @@ async function parseError(response: Response) {
 }
 
 async function pollJob(jobId: string, key: string) {
-  for (let attempt = 0; attempt < 25; attempt += 1) {
+  // Bound source polling well below the Vercel function limit. A timed-out
+  // source slice is retried by the checkpoint state machine, not held open.
+  for (let attempt = 0; attempt < 12; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const response = await fetch(`${API_BASE}/${encodeURIComponent(jobId)}`, {
+    const response = await fetchWithTimeout(`${API_BASE}/${encodeURIComponent(jobId)}`, {
       headers: { "x-api-key": key },
       cache: "no-store",
     });
@@ -98,7 +110,7 @@ export async function fetchSupadataTranscript(videoId: string): Promise<Supadata
   endpoint.searchParams.set("text", "false");
   endpoint.searchParams.set("mode", "native");
 
-  const response = await fetch(endpoint.toString(), {
+  const response = await fetchWithTimeout(endpoint.toString(), {
     headers: { "x-api-key": key },
     cache: "no-store",
   });
@@ -126,7 +138,7 @@ export async function fetchYouTubeOEmbed(videoId: string) {
     const endpoint = new URL("https://www.youtube.com/oembed");
     endpoint.searchParams.set("url", `https://www.youtube.com/watch?v=${videoId}`);
     endpoint.searchParams.set("format", "json");
-    const response = await fetch(endpoint.toString(), { cache: "no-store" });
+    const response = await fetchWithTimeout(endpoint.toString(), { cache: "no-store" }, 8_000);
     if (!response.ok) return { title: "", authorName: "" };
     const payload = await response.json() as { title?: unknown; author_name?: unknown };
     return {

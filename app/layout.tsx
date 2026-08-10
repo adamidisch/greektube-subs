@@ -25,8 +25,8 @@ export const metadata: Metadata = {
   description:
     "Παίξε δημόσια YouTube videos με αυτόματα μεταφρασμένους ελληνικούς υπότιτλους και συγχρονισμένο transcript.",
   other: {
-    "codex-preview": "final-v7.1.8",
-    "app-version": "7.1.8",
+    "codex-preview": "fix-v7.1.10-resumable-pipeline",
+    "app-version": "7.1.10",
   },
   icons: {
     icon: "/favicon.svg?v=654dev",

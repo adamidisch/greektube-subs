@@ -1,6 +1,9 @@
 import { database } from "@/db/postgres";
 
-export const TRANSCRIPT_VERSION = 11;
+// v7.1.8 could replay a checkpoint after every lease reacquisition. Version
+// 12 restarts only those corrupt partial results while retaining raw English.
+export const TRANSCRIPT_VERSION = 12;
+export const MAX_TRANSIENT_RETRIES = 6;
 
 export type CachedCue = { start: number; duration: number; text: string };
 
@@ -22,6 +25,9 @@ export type TranscriptRecord = {
   lockExpiresAt?: string | null;
   processingStage?: string | null;
   processingCursor?: number;
+  retryCount?: number;
+  retryAfter?: string | null;
+  error?: string | null;
   transcriptVersion: number;
   createdAt: string;
   updatedAt: string;
@@ -50,6 +56,8 @@ export async function ensureTranscriptTable() {
       error TEXT,
       processing_stage TEXT,
       processing_cursor INTEGER NOT NULL DEFAULT 0,
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      retry_after TEXT,
       transcript_version INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -58,6 +66,8 @@ export async function ensureTranscriptTable() {
   await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS raw_english_transcript TEXT NOT NULL DEFAULT '[]'");
   await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_stage TEXT");
   await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_cursor INTEGER NOT NULL DEFAULT 0");
+  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0");
+  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS retry_after TEXT");
   await db.query(
     "CREATE INDEX IF NOT EXISTS video_transcripts_status_idx ON video_transcripts (status, updated_at)",
   );
@@ -67,7 +77,8 @@ type Row = {
   video_id: string; title: string; channel: string; thumbnail: string; duration: number;
   original_language: string; raw_english_transcript: string; english_transcript: string; greek_transcript: string;
   timestamps: string; topics: string; key_points: string; status: TranscriptRecord["status"];
-  progress: number; lock_expires_at: string | null; processing_stage: string | null; processing_cursor: number; transcript_version: number; created_at: string; updated_at: string;
+  progress: number; lock_expires_at: string | null; processing_stage: string | null; processing_cursor: number;
+  retry_count: number; retry_after: string | null; error: string | null; transcript_version: number; created_at: string; updated_at: string;
 };
 
 export async function getTranscript(videoId: string) {
@@ -94,6 +105,9 @@ export async function getTranscript(videoId: string) {
     lockExpiresAt: row.lock_expires_at,
     processingStage: row.processing_stage,
     processingCursor: row.processing_cursor || 0,
+    retryCount: row.retry_count || 0,
+    retryAfter: row.retry_after,
+    error: row.error,
     transcriptVersion: row.transcript_version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -107,11 +121,21 @@ export async function acquireProcessingLock(videoId: string, token: string, forc
   const expires = new Date(now.getTime() + 180_000).toISOString();
   const rows = await db.query(
     `INSERT INTO video_transcripts (
-      video_id, status, progress, lock_token, lock_expires_at, transcript_version, created_at, updated_at
-    ) VALUES ($1, 'processing', 3, $2, $3, $4, $5, $6)
+      video_id, status, progress, lock_token, lock_expires_at, processing_stage, transcript_version, created_at, updated_at
+    ) VALUES ($1, 'processing', 3, $2, $3, 'source', $4, $5, $6)
     ON CONFLICT(video_id) DO UPDATE SET
-      status = 'processing', progress = 3, lock_token = EXCLUDED.lock_token,
-      lock_expires_at = EXCLUDED.lock_expires_at, error = NULL,
+      status = 'processing',
+      -- Reacquiring an expired/released lease continues the exact checkpoint.
+      progress = CASE WHEN $7 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN 3
+                      ELSE GREATEST(video_transcripts.progress, 3) END,
+      processing_stage = CASE WHEN $7 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN NULL
+                              ELSE video_transcripts.processing_stage END,
+      processing_cursor = CASE WHEN $7 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN 0
+                               ELSE video_transcripts.processing_cursor END,
+      retry_count = CASE WHEN $7 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version OR video_transcripts.status = 'failed' THEN 0
+                         ELSE video_transcripts.retry_count END,
+      retry_after = NULL,
+      lock_token = EXCLUDED.lock_token, lock_expires_at = EXCLUDED.lock_expires_at, error = NULL,
       transcript_version = EXCLUDED.transcript_version, updated_at = EXCLUDED.updated_at
     WHERE $7 = 1
        OR video_transcripts.transcript_version != EXCLUDED.transcript_version
@@ -126,27 +150,30 @@ export async function acquireProcessingLock(videoId: string, token: string, forc
 
 export async function updateProcessingProgress(videoId: string, token: string, progress: number) {
   const db = database();
-  await db.query(
-    "UPDATE video_transcripts SET progress = $1, lock_expires_at = $2, updated_at = $3 WHERE video_id = $4 AND lock_token = $5",
+  const rows = await db.query(
+    "UPDATE video_transcripts SET progress = GREATEST(progress, $1), lock_expires_at = $2, updated_at = $3 WHERE video_id = $4 AND lock_token = $5 RETURNING video_id",
     [progress, new Date(Date.now()+180_000).toISOString(), new Date().toISOString(), videoId, token],
-  );
+  ) as { video_id: string }[];
+  return rows.length === 1;
 }
 
 export async function completeTranscript(record: TranscriptRecord, token: string) {
   const db = database();
-  await db.query(
+  const rows = await db.query(
     `UPDATE video_transcripts SET
       title = $1, channel = $2, thumbnail = $3, duration = $4, original_language = $5,
       raw_english_transcript = $6, english_transcript = $7, greek_transcript = $8, timestamps = $9, topics = $10, key_points = $11,
-      status = 'ready', progress = 100, lock_token = NULL, lock_expires_at = NULL, error = NULL,
+      status = 'ready', progress = 100, lock_token = NULL, lock_expires_at = NULL, error = NULL, retry_count = 0, retry_after = NULL,
       processing_stage = NULL, processing_cursor = 0,
       transcript_version = $12, updated_at = $13
-    WHERE video_id = $14 AND lock_token = $15`,
+    WHERE video_id = $14 AND lock_token = $15
+    RETURNING video_id`,
     [record.title, record.channel, record.thumbnail, record.duration, record.originalLanguage,
       JSON.stringify(record.rawEnglishTranscript), JSON.stringify(record.englishTranscript), JSON.stringify(record.greekTranscript),
       JSON.stringify(record.timestamps), JSON.stringify(record.topics), JSON.stringify(record.keyPoints),
       record.transcriptVersion, record.updatedAt, record.videoId, token],
-  );
+  ) as { video_id: string }[];
+  return rows.length === 1;
 }
 
 export type ProcessingCheckpoint = {
@@ -165,50 +192,71 @@ export type ProcessingCheckpoint = {
 export async function saveProcessingCheckpoint(videoId: string, token: string, checkpoint: ProcessingCheckpoint) {
   const db = database();
   const now = new Date().toISOString();
-  await db.query(
+  const rows = await db.query(
     `UPDATE video_transcripts SET
-      processing_stage = $1, processing_cursor = $2, progress = $3,
+      processing_stage = $1, processing_cursor = $2, progress = GREATEST(progress, $3), retry_count = 0, retry_after = NULL, error = NULL,
       raw_english_transcript = COALESCE($4, raw_english_transcript),
       english_transcript = COALESCE($5, english_transcript),
       greek_transcript = COALESCE($6, greek_transcript),
       title = COALESCE($7, title), channel = COALESCE($8, channel),
       duration = COALESCE($9, duration), original_language = COALESCE($10, original_language),
       updated_at = $11, lock_expires_at = $12
-     WHERE video_id = $13 AND lock_token = $14`,
+     WHERE video_id = $13 AND lock_token = $14
+     RETURNING video_id`,
     [checkpoint.stage, checkpoint.cursor, checkpoint.progress,
       checkpoint.rawEnglishTranscript ? JSON.stringify(checkpoint.rawEnglishTranscript) : null,
       checkpoint.englishTranscript ? JSON.stringify(checkpoint.englishTranscript) : null,
       checkpoint.greekTranscript ? JSON.stringify(checkpoint.greekTranscript) : null,
       checkpoint.title ?? null, checkpoint.channel ?? null, checkpoint.duration ?? null, checkpoint.originalLanguage ?? null,
       now, new Date(Date.now()+180_000).toISOString(), videoId, token],
-  );
+  ) as { video_id: string }[];
+  return rows.length === 1;
 }
 
 export async function resetProcessingForTranslation(videoId: string, token: string, keepRaw = true) {
   const db = database();
   const now = new Date().toISOString();
-  await db.query(
+  const rows = await db.query(
     `UPDATE video_transcripts SET status='processing', progress=$1, processing_stage=$2, processing_cursor=0,
       raw_english_transcript = CASE WHEN $3 = 1 THEN raw_english_transcript ELSE '[]' END,
       english_transcript='[]', greek_transcript='[]', timestamps='[]', topics='[]', key_points='[]',
-      error=NULL, updated_at=$4
-     WHERE video_id=$5 AND lock_token=$6`,
+      error=NULL, retry_count=0, retry_after=NULL, updated_at=$4
+     WHERE video_id=$5 AND lock_token=$6
+     RETURNING video_id`,
     [keepRaw ? 28 : 3, keepRaw ? 'repair' : 'source', keepRaw ? 1 : 0, now, videoId, token],
-  );
+  ) as { video_id: string }[];
+  return rows.length === 1;
 }
 
 export async function releaseProcessingLock(videoId: string, token: string) {
   const db = database();
-  await db.query(
-    "UPDATE video_transcripts SET lock_token=NULL, lock_expires_at=NULL, updated_at=$1 WHERE video_id=$2 AND lock_token=$3 AND status='processing'",
+  const rows = await db.query(
+    "UPDATE video_transcripts SET lock_token=NULL, lock_expires_at=NULL, updated_at=$1 WHERE video_id=$2 AND lock_token=$3 AND status='processing' RETURNING video_id",
     [new Date().toISOString(), videoId, token],
-  );
+  ) as { video_id: string }[];
+  return rows.length === 1;
+}
+
+export async function recordTransientProcessingFailure(videoId: string, token: string, message: string) {
+  const db = database();
+  const now = new Date();
+  const retryAfter = new Date(now.getTime() + 2_000).toISOString();
+  const rows = await db.query(
+    `UPDATE video_transcripts SET
+      retry_count = retry_count + 1, retry_after = $1, error = $2,
+      lock_token = NULL, lock_expires_at = NULL, updated_at = $3,
+      status = CASE WHEN retry_count + 1 >= $4 THEN 'failed' ELSE 'processing' END
+     WHERE video_id = $5 AND lock_token = $6
+     RETURNING status, retry_count, retry_after`,
+    [retryAfter, message.slice(0, 500), now.toISOString(), MAX_TRANSIENT_RETRIES, videoId, token],
+  ) as { status: TranscriptRecord["status"]; retry_count: number; retry_after: string | null }[];
+  return rows[0] || null;
 }
 
 export async function failTranscript(videoId: string, token: string, message: string) {
   const db = database();
   await db.query(
-    `UPDATE video_transcripts SET status = 'failed', progress = 0, error = $1,
+    `UPDATE video_transcripts SET status = 'failed', error = $1,
       lock_token = NULL, lock_expires_at = NULL, updated_at = $2
      WHERE video_id = $3 AND lock_token = $4`,
     [message.slice(0, 500), new Date().toISOString(), videoId, token],
