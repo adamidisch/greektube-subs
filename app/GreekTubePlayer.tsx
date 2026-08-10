@@ -137,6 +137,13 @@ function upperGreekLabel(value:string){
 function searchText(value:string){
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 }
+function cleanSpeakerRole(value?:string){
+  const role=(value||"").trim();
+  if(!role)return "";
+  const normalized=searchText(role);
+  const generic=normalized.includes("ομιλητης")&&(normalized.includes("δημιουργος")||normalized.includes("περιεχομενου"));
+  return generic?"":role;
+}
 function searchHaystack(video:Video){
   return [
     greekTitle(video),
@@ -748,10 +755,11 @@ export default function GreekTubePlayer() {
 
   if(selected){
     const moments=state.moments.filter(m=>m.videoId===selected.id);
-    const speaker=captions?.speaker||speakerForVideo(selected.id,selected.channel);
-    const displaySpeakerName=selected.speakerName||speaker.name||selected.channel;
-    const displaySpeakerRole=selected.speakerRole||speaker.role||"";
-    const displaySpeakerLabel=displaySpeakerRole?`${displaySpeakerName} (${displaySpeakerRole})`:displaySpeakerName;
+    const fallbackSpeaker=speakerForVideo(selected.id,selected.channel);
+    const speaker=captions?.speaker||fallbackSpeaker;
+    const displaySpeakerName=selected.speakerName||speaker.name||fallbackSpeaker.name||selected.channel;
+    const displaySpeakerRole=[selected.speakerRole,captions?.speaker?.role,fallbackSpeaker.role].map(cleanSpeakerRole).find(Boolean)||"";
+    const displaySpeakerLabel=displaySpeakerRole?`${displaySpeakerName} | ${displaySpeakerRole}`:displaySpeakerName;
     const sourceVideoUrl=selected.originalVideoUrl||selected.url;
     const sourceChannelUrl=selected.channelUrl||"";
     const preparationStage=progress>=100?"Οι ελληνικοί υπότιτλοι είναι έτοιμοι":[...PREPARATION_STAGES_EL].reverse().find(stage=>progress>=stage.at)?.label||PREPARATION_STAGES_EL[0].label;
@@ -830,7 +838,7 @@ export default function GreekTubePlayer() {
                 </section>
               </div>
             </div>
-            <div className="video-heading"><div><small className="video-meta-kicker"><strong>{displaySpeakerName}</strong>{displaySpeakerRole&&<span> ({displaySpeakerRole})</span>}<span> · {CATEGORY_LABELS[selected.category]}</span></small><h1 className="player-greek-title">{isGreekTitle(selected.title)?selected.title:isGreekTitle(captions.title)?captions.title:"Βίντεο με ελληνικούς υπότιτλους"}</h1><div className="video-source-row"><span>ΠΗΓΗ</span>{sourceChannelUrl?<a href={sourceChannelUrl} target="_blank" rel="noreferrer" title="Άνοιγμα καναλιού στο YouTube">{selected.channel} ↗</a>:<strong>{selected.channel}</strong>}{(selected.originalTitle||captions.originalTitle||englishTitle(selected))&&<a href={sourceVideoUrl} target="_blank" rel="noreferrer" title="Άνοιγμα αρχικού βίντεο στο YouTube">{selected.originalTitle||captions.originalTitle||englishTitle(selected)} ↗</a>}</div><p className="mobile-video-description">{mobileSummary(selected,captions)}</p><button className={`mobile-transcript-toggle ${transcriptOpen?"active":""}`} aria-pressed={transcriptOpen} onClick={()=>setTranscriptOpen(value=>!value)}><span aria-hidden="true">≡</span>{transcriptOpen?"Κλείσιμο κειμένου":"Κείμενο μεταγραφής"}</button></div><div className="heading-actions"><button type="button" className="edit-video" onClick={()=>void requestEdit(selected)}><span aria-hidden="true">✎</span> Επεξεργασία</button><button aria-label="Αγαπημένο" className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div></div>
+            <div className="video-heading"><div><small className="video-meta-kicker"><strong>{displaySpeakerName}</strong>{displaySpeakerRole&&<><span className="speaker-divider" aria-hidden="true">|</span><span className="speaker-role">{displaySpeakerRole}</span></>}<span className="video-category-label" data-category={selected.category}>{CATEGORY_LABELS[selected.category]}</span></small><h1 className="player-greek-title">{isGreekTitle(selected.title)?selected.title:isGreekTitle(captions.title)?captions.title:"Βίντεο με ελληνικούς υπότιτλους"}</h1><div className="video-source-row"><span>ΠΗΓΗ</span>{sourceChannelUrl?<a href={sourceChannelUrl} target="_blank" rel="noreferrer" title="Άνοιγμα καναλιού στο YouTube">{selected.channel} ↗</a>:<strong>{selected.channel}</strong>}{(selected.originalTitle||captions.originalTitle||englishTitle(selected))&&<a href={sourceVideoUrl} target="_blank" rel="noreferrer" title="Άνοιγμα αρχικού βίντεο στο YouTube">{selected.originalTitle||captions.originalTitle||englishTitle(selected)} ↗</a>}</div><p className="mobile-video-description">{mobileSummary(selected,captions)}</p><button className={`mobile-transcript-toggle ${transcriptOpen?"active":""}`} aria-pressed={transcriptOpen} onClick={()=>setTranscriptOpen(value=>!value)}><span aria-hidden="true">≡</span>{transcriptOpen?"Κλείσιμο κειμένου":"Κείμενο μεταγραφής"}</button></div><div className="heading-actions"><button type="button" className="edit-video" onClick={()=>void requestEdit(selected)}><span aria-hidden="true">✎</span> Επεξεργασία</button><button aria-label="Αγαπημένο" className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div></div>
             <div className="mobile-watch-summary"><p>{selected.channel} · {CATEGORY_LABELS[selected.category]} · {selected.views||0} προβολές</p><section><span>{(speaker.name||selected.speakerName||selected.channel).slice(0,1)}</span><div><strong>{displaySpeakerName}</strong><small>{displaySpeakerRole}</small></div><button type="button" aria-label="Επεξεργασία βίντεο" onClick={()=>void requestEdit(selected)}>✎</button><button type="button" aria-label="Αγαπημένο" className={selected.favorite?"active":""} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♡</button></section></div>
             <section className="moments"><div className="section-title"><h2>Αποθηκευμένες στιγμές</h2><small>{moments.length}</small></div>{moments.length===0?<p className="muted">Πάτησε M ή το κουμπί πάνω για να κρατήσεις ένα σημείο.</p>:moments.map(m=><article className="moment" key={m.id} onClick={()=>seek(m.time)}><time>{clock(m.time)}</time><div><strong>{m.note}</strong><p>{m.excerpt}</p></div><div className="moment-actions"><button onClick={e=>{e.stopPropagation();seek(m.time)}}>Αναπαραγωγή</button><button onClick={e=>{e.stopPropagation();void copyMoment(m)}}>Αντιγραφή συνδέσμου</button><button onClick={e=>{e.stopPropagation();navigator.share?.({title:m.note,url:`${location.origin}/?video=${m.videoId}&t=${Math.floor(m.time)}`})}}>Κοινοποίηση</button><button onClick={e=>{e.stopPropagation();setState(s=>({...s,moments:s.moments.filter(x=>x.id!==m.id)}))}}>Διαγραφή</button></div></article>)}</section>
             <section className="video-guide"><div className="section-title"><h2>Οδηγός βίντεο</h2><small>{guideItems.length}</small></div><p className="guide-intro">Τα βασικά σημεία του βίντεο με χρόνους, για να πας γρήγορα στο κομμάτι που σε ενδιαφέρει.</p><div className="guide-list">{guideItems.map((item,index)=><button key={`${item.time}-${index}`} onClick={()=>seek(item.time)}><time>{clock(item.time)}</time><span>{item.text}</span></button>)}</div></section>
@@ -929,7 +937,7 @@ function EditVideo({video,close,save,rebuild}:{video:Video;close:()=>void;save:(
     <div className="edit-video-preview"><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><div><strong>{greekTitle(video)}</strong><span>{clock(video.duration)}</span></div></div>
     <label>Ελληνικός τίτλος<input name="title" required defaultValue={video.title}/></label>
     <label>Αγγλικός τίτλος<input name="originalTitle" defaultValue={video.originalTitle||""}/></label>
-    <div className="form-grid"><label>Γιατρός ή ομιλητής<input name="speakerName" defaultValue={video.speakerName||""}/></label><label>Ιδιότητα<input name="speakerRole" defaultValue={video.speakerRole||""} placeholder="π.χ. Neurologist"/></label></div>
+    <div className="form-grid"><label>Γιατρός ή ομιλητής<input name="speakerName" defaultValue={video.speakerName||""}/></label><label>Ιδιότητα<input name="speakerRole" defaultValue={cleanSpeakerRole(video.speakerRole)||cleanSpeakerRole(speakerForVideo(video.id,video.channel).role)} placeholder="π.χ. Neurologist"/></label></div>
     <div className="form-grid"><label>Κανάλι<input name="channel" defaultValue={video.channel}/></label><label>Link καναλιού<input name="channelUrl" type="url" defaultValue={video.channelUrl||""}/></label></div>
     <label>Original video link<input name="originalVideoUrl" type="url" defaultValue={video.originalVideoUrl||video.url}/></label>
     <div className="form-grid"><label>Κατηγορία<select name="category" defaultValue={video.category}>{CATEGORIES.slice(1).map(category=><option key={category} value={category}>{CATEGORY_LABELS[category]}</option>)}</select></label><label>Ετικέτες<input name="tags" defaultValue={video.tags.join(", ")}/></label></div>
