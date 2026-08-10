@@ -1121,6 +1121,31 @@ export async function POST(request: Request) {
       : (cached?.processingStage || "source");
     let cursor = cached?.processingCursor || 0;
 
+    // Native Greek sources have no English raw checkpoint. Their Supadata
+    // cues are persisted in a dedicated durable stage before any metadata
+    // enrichment, so a later oEmbed failure cannot restart source fetching.
+    if (stage === "source_el_finalize") {
+      cached = await getTranscript(videoId);
+      if (!cached) throw new Error("Greek source checkpoint missing");
+      const greek = cached.greekTranscript as CaptionCue[];
+      validateCompleteGreekTranscript(greek, cached.duration);
+      const metadata = await fetchYouTubeOEmbed(videoId).catch(() => ({ title: "", authorName: "" }));
+      const now = new Date().toISOString();
+      const points = keyPoints(greek);
+      if (!await completeTranscript({
+        ...cached,
+        title: metadata.title || cached.title || "YouTube video",
+        channel: metadata.authorName || cached.channel || "YouTube",
+        thumbnail: cached.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        rawEnglishTranscript: [], englishTranscript: [], greekTranscript: greek,
+        timestamps: greek.map(cue => ({ start: cue.start, duration: cue.duration })),
+        topics: [], keyPoints: points, status: "ready", progress: 100, transcriptVersion: TRANSCRIPT_VERSION, updatedAt: now,
+      }, lockToken)) throw new Error("Processing lock was lost before Greek final transcript persisted");
+      lockToken = null;
+      const ready = await getTranscript(videoId);
+      return NextResponse.json(await cachedResponse(ready));
+    }
+
     if (stage === "source") {
       // Supadata first on Vercel: direct YouTube timed-text is consistently challenged.
       // One successful fetch is persisted and never repeated during translation retries.
@@ -1131,20 +1156,14 @@ export async function POST(request: Request) {
       }
       const duration = supadata.cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
       if (sourceLanguage === "el") {
-        const metadata = await fetchYouTubeOEmbed(videoId);
-        const now = new Date().toISOString();
-        const points = keyPoints(supadata.cues);
-        if (!await completeTranscript({
-          videoId, title: metadata.title || "YouTube video", channel: metadata.authorName || "YouTube",
-          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, duration, originalLanguage: sourceLanguage,
-          rawEnglishTranscript: [], englishTranscript: [], greekTranscript: supadata.cues,
-          timestamps: supadata.cues.map(cue => ({ start: cue.start, duration: cue.duration })),
-          topics: [], keyPoints: points, status: "ready", progress: 100, transcriptVersion: TRANSCRIPT_VERSION,
-          createdAt: cached?.createdAt || now, updatedAt: now,
-        }, lockToken)) throw new Error("Processing lock was lost before final transcript persisted");
-        lockToken = null;
-        const ready = await getTranscript(videoId);
-        return NextResponse.json(await cachedResponse(ready));
+        if (!await saveProcessingCheckpoint(videoId, lockToken, {
+          stage: "source_el_finalize", cursor: 0, progress: 90,
+          englishTranscript: [], greekTranscript: supadata.cues, duration, originalLanguage: sourceLanguage,
+          title: cached?.title || "YouTube video", channel: cached?.channel || "YouTube",
+        })) throw new Error("Processing lock was lost before Greek source checkpoint persisted");
+        if (!await releaseProcessingLock(videoId, lockToken)) throw new Error("Processing lock was lost before Greek source release"); lockToken = null;
+        const next = await getTranscript(videoId);
+        return NextResponse.json(processingResponse(next), { status: 202, headers: { "Retry-After": "1" } });
       }
       // Commit the paid Supadata response before any optional metadata work.
       // If oEmbed is unavailable, the next slice starts at repair from this
