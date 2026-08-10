@@ -541,7 +541,7 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
     expectedIds.has(Number(rawId)) ? "" : full,
   );
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 1; attempt += 1) {
     let response: Response;
     try {
       response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -561,7 +561,7 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
         }),
       });
     } catch (error) {
-      if (attempt < 2) {
+      if (attempt < 1) {
         await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
         continue;
       }
@@ -569,16 +569,16 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
     }
 
     if (response.status === 429) {
-      if (attempt < 2) {
+      if (attempt < 1) {
         const retryAfterSeconds = Number(response.headers.get("retry-after")) || 5;
-        const waitMs = Math.min(retryAfterSeconds, 20) * 1000;
+        const waitMs = Math.min(retryAfterSeconds, 8) * 1000;
         await new Promise(resolve => setTimeout(resolve, waitMs));
         continue;
       }
       throw new Error("Groq 429 after retries");
     }
     if (!response.ok) {
-      if (response.status >= 500 && attempt < 2) {
+      if (response.status >= 500 && attempt < 1) {
         await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
         continue;
       }
@@ -588,7 +588,7 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
     const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
     const content = payload.choices?.[0]?.message?.content;
     if (!content) {
-      if (attempt < 2) continue;
+      if (attempt < 1) continue;
       throw new Error("Groq response empty");
     }
 
@@ -615,7 +615,7 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
       batch.every(item => results.has(item.index));
     if (completeMapping) return results;
 
-    if (attempt < 2) {
+    if (attempt < 1) {
       await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
       continue;
     }
@@ -684,6 +684,16 @@ function hasGreekNegation(text: string) {
   return /(?:^|[^\p{L}])(?:δεν|μην|μη|όχι|χωρίς|ούτε)(?=$|[^\p{L}])/iu.test(text);
 }
 
+function semanticRiskScore(text: string) {
+  let score = technicalGuardTokens(text).size * 3;
+  if (hasEnglishNegation(text)) score += 3;
+  if (/\b\d+(?:\.\d+)?\b/.test(text)) score += 2;
+  if (/\b(?:because|cause|causes|caused|due to|therefore|so that|from|by)\b/i.test(text)) score += 2;
+  if (/\b(?:or|either|instead|rather|versus|vs\.?)\b/i.test(text)) score += 2;
+  if (text.length >= 110) score += 1;
+  return score;
+}
+
 function needsStrictSemanticRetry(cues: CaptionCue[], translated: Map<number, string>, index: number) {
   const source = cues[index]?.text || "";
   const target = translated.get(index) || "";
@@ -709,29 +719,44 @@ function needsStrictSemanticRetry(cues: CaptionCue[], translated: Map<number, st
   return false;
 }
 
-async function verifySemanticFidelity(cues: CaptionCue[], translated: Map<number, string>) {
+async function verifySemanticFidelity(
+  cues: CaptionCue[],
+  translated: Map<number, string>,
+  candidateIndexes: number[],
+) {
   const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return [] as number[];
+  if (!apiKey || !candidateIndexes.length) return [] as number[];
+
+  // Hard budget: never review the whole transcript with a second AI pass.
+  // Only the highest-risk cues are checked, in at most two small requests.
+  const candidates = [...new Set(candidateIndexes)]
+    .filter(index => index >= 0 && index < cues.length && translated.has(index))
+    .slice(0, 12);
   const suspicious: number[] = [];
   const size = 6;
-  for (let start = 0; start < cues.length; start += size) {
-    const indexes = cues.slice(start, start + size).map((_, offset) => start + offset).filter(index => translated.has(index));
-    if (!indexes.length) continue;
-    const pairs = indexes.map(index => `[[${index}]]\nEN: ${cues[index].text}\nEL: ${translated.get(index)}`).join("\n\n");
+
+  for (let start = 0; start < candidates.length; start += size) {
+    const indexes = candidates.slice(start, start + size);
+    const pairs = indexes
+      .map(index => `[[${index}]]\nEN: ${cues[index].text}\nEL: ${translated.get(index)}`)
+      .join("\n\n");
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 9000);
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
+        signal: controller.signal,
         headers: {"Content-Type":"application/json", Authorization:`Bearer ${apiKey}`},
         body: JSON.stringify({
           model: GROQ_MODEL,
           temperature: 0,
-          max_tokens: 350,
+          max_tokens: 260,
           messages: [
             {role:"system",content:"Είσαι αυστηρός ελεγκτής πιστότητας υποτίτλων. Σύγκρινε ΚΑΘΕ αγγλικό cue μόνο με το δικό του ελληνικό. Σημείωσε cue ως λάθος μόνο αν αλλάζει ουσιαστικά το νόημα: λάθος υποκείμενο/αντικείμενο, αιτία-αποτέλεσμα, άρνηση, ποσότητα, επιλογή, τεχνικός όρος ή προσθήκη/αφαίρεση σημαντικής πληροφορίας. Μικρές φυσικές αναδιατυπώσεις είναι σωστές. Απάντησε μόνο JSON array με τα αριθμητικά ids που χρειάζονται νέα μετάφραση, π.χ. [4,7] ή []."},
             {role:"user",content:pairs},
           ],
         }),
-      });
+      }).finally(() => clearTimeout(timeout));
       if (!response.ok) continue;
       const payload = await response.json() as {choices?:{message?:{content?:string}}[]};
       const raw = payload.choices?.[0]?.message?.content || "";
@@ -739,10 +764,12 @@ async function verifySemanticFidelity(cues: CaptionCue[], translated: Map<number
       if (!arrayText) continue;
       const ids = JSON.parse(arrayText) as unknown;
       if (!Array.isArray(ids)) continue;
-      for (const id of ids) if (Number.isInteger(id) && indexes.includes(id as number)) suspicious.push(id as number);
+      for (const id of ids) {
+        if (Number.isInteger(id) && indexes.includes(id as number)) suspicious.push(id as number);
+      }
     } catch {}
   }
-  return [...new Set(suspicious)];
+  return [...new Set(suspicious)].slice(0, 4);
 }
 
 async function translateTitleToGreek(title: string) {
@@ -829,8 +856,14 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
     const deterministic = cues
       .map((_, index) => index)
       .filter(index => translated.has(index) && needsStrictSemanticRetry(cues, translated, index));
-    const semantic = await verifySemanticFidelity(cues, translated);
-    const suspicious = [...new Set([...deterministic, ...semantic])];
+    const riskCandidates = cues
+      .map((cue, index) => ({ index, score: translated.has(index) ? semanticRiskScore(cue.text) : 0 }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.index);
+    const verificationCandidates = [...new Set([...deterministic, ...riskCandidates])].slice(0, 12);
+    const semantic = await verifySemanticFidelity(cues, translated, verificationCandidates);
+    const suspicious = [...new Set([...deterministic, ...semantic])].slice(0, 4);
     let checked = 0;
     for (const index of suspicious) {
       try {
