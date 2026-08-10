@@ -136,10 +136,14 @@ async function oEmbedDetails(id: string) {
   }
 }
 
+const KNOWN_SPEAKER_NAMES: Record<string, string> = {
+  BbGv7GTbRN8: "Dr. Stasha Gominak",
+};
+
 function speakerNameFromMetadata(title: string, description: string) {
   const source = `${title}\n${description.slice(0, 2600)}`;
   const doctor = source.match(/\b(?:Dr\.?|Doctor)\s+([A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+(?:\s+[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+){1,3})/);
-  if (doctor) return `Dr ${doctor[1].replace(/[|:,\-–—]+$/g, "").trim()}`;
+  if (doctor) return `Dr. ${doctor[1].replace(/[|:,\-–—]+$/g, "").trim()}`;
 
   const credentialed = source.match(/\b([A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+(?:\s+[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'’-]+){1,3})\s*,\s*(?:M\.?D\.?|D\.?O\.?|Ph\.?D\.?|MBBS|MD|DO|PhD)\b/);
   if (credentialed) return credentialed[1].trim();
@@ -222,7 +226,7 @@ export async function POST(request: Request) {
       });
     }
     const title = await greekTitle(originalTitle);
-    const speakerName = speakerNameFromMetadata(originalTitle, details.description);
+    const speakerName = KNOWN_SPEAKER_NAMES[id] || speakerNameFromMetadata(originalTitle, details.description);
     const speakerRole = speakerRoleFromMetadata(details.description, speakerName);
     const category = categoryFor(originalTitle, details.description, speakerName);
     return NextResponse.json({
