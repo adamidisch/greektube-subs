@@ -180,7 +180,13 @@ function activeIndex(cues:Cue[], time:number) { let result=-1; for(let i=0;i<cue
 function subtitleParts(text:string,maxCharacters=76){
   const clean=text.replace(/\s+/g," ").trim();
   if(!clean)return [];
-  const sentences=clean.match(/[^.!?…]+[.!?…]?/g)?.map(part=>part.trim()).filter(Boolean)||[clean];
+  const rawSentences=clean.match(/[^.!?…]+[.!?…]?/g)?.map(part=>part.trim()).filter(Boolean)||[clean];
+  const sentences:string[]=[];
+  for(const sentence of rawSentences){
+    if(sentences.length&&sentence.replace(/[.!?…]+$/,"").length<=2){
+      sentences[sentences.length-1]=`${sentences[sentences.length-1]} ${sentence}`;
+    }else sentences.push(sentence);
+  }
   const parts:string[]=[];
   for(const sentence of sentences){
     const words=sentence.split(" ");
