@@ -36,9 +36,13 @@ export type TranscriptRecord = {
   updatedAt: string;
 };
 
-export async function ensureTranscriptTable() {
-  const db = database();
-  await db.query(
+let transcriptTableReady: Promise<void> | null = null;
+
+export function ensureTranscriptTable() {
+  if (transcriptTableReady) return transcriptTableReady;
+  transcriptTableReady = (async () => {
+    const db = database();
+    await db.query(
     `CREATE TABLE IF NOT EXISTS video_transcripts (
       video_id TEXT PRIMARY KEY,
       title TEXT NOT NULL DEFAULT '',
@@ -68,18 +72,24 @@ export async function ensureTranscriptTable() {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
-  );
-  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS raw_english_transcript TEXT NOT NULL DEFAULT '[]'");
-  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_stage TEXT");
-  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_cursor INTEGER NOT NULL DEFAULT 0");
-  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0");
-  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS retry_after TEXT");
-  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS groq_429_streak INTEGER NOT NULL DEFAULT 0");
-  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS groq_cooldown_until TEXT");
-  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_started_at TEXT");
-  await db.query(
+    );
+    await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS raw_english_transcript TEXT NOT NULL DEFAULT '[]'");
+    await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_stage TEXT");
+    await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_cursor INTEGER NOT NULL DEFAULT 0");
+    await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0");
+    await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS retry_after TEXT");
+    await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS groq_429_streak INTEGER NOT NULL DEFAULT 0");
+    await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS groq_cooldown_until TEXT");
+    await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_started_at TEXT");
+    await db.query(
     "CREATE INDEX IF NOT EXISTS video_transcripts_status_idx ON video_transcripts (status, updated_at)",
-  );
+    );
+  })().catch((error: unknown) => {
+    // A failed cold-start migration must be retryable by the next request.
+    transcriptTableReady = null;
+    throw error;
+  });
+  return transcriptTableReady;
 }
 
 type Row = {

@@ -1030,6 +1030,20 @@ async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count:
   return clampTimedCueWindows(normalized);
 }
 
+type TranslationSliceTelemetry = {
+  groqMs: number;
+  strictGroqMs: number;
+  googleMs: number;
+  checkpointMs: number;
+  committedCues: number;
+  groqCues: number;
+  groqStrictCues: number;
+  googleFallbackCues: number;
+  providerPaths: { cueIndex: number; path: string }[];
+};
+
+type CommitTranslatedCue = (cue: CaptionCue, cueIndex: number, path: string) => Promise<void>;
+
 async function translateCheckpointBatch(
   videoId: string,
   lockToken: string,
@@ -1037,10 +1051,29 @@ async function translateCheckpointBatch(
   cues: CaptionCue[],
   start: number,
   count: number,
+  commitTranslatedCue: CommitTranslatedCue,
 ) {
   const slice = cues.slice(start, start + count);
-  if (!slice.length) return [] as CaptionCue[];
   const numbered = slice.map((cue, offset) => ({ index: start + offset, text: cue.text }));
+  const telemetry: TranslationSliceTelemetry = {
+    groqMs: 0, strictGroqMs: 0, googleMs: 0, checkpointMs: 0,
+    committedCues: 0, groqCues: 0, groqStrictCues: 0, googleFallbackCues: 0,
+    providerPaths: [],
+  };
+  const sliceStartedAt = Date.now();
+  let failure: string | null = null;
+  const commitAcceptedCue = async (cue: CaptionCue, cueIndex: number, path: string) => {
+    const checkpointStartedAt = Date.now();
+    await commitTranslatedCue(cue, cueIndex, path);
+    telemetry.checkpointMs += Date.now() - checkpointStartedAt;
+    telemetry.committedCues += 1;
+    telemetry.providerPaths.push({ cueIndex, path });
+    if (path === "groq" || path === "groq-strict") telemetry.groqCues += 1;
+    if (path === "groq-strict") telemetry.groqStrictCues += 1;
+    if (path.startsWith("google-placeholder")) telemetry.googleFallbackCues += 1;
+  };
+  try {
+  if (!slice.length) return telemetry;
   const output = new Map<number, string>();
   let groqFailure: string | null = null;
   let groqResults: Map<number, string> | null = null;
@@ -1048,7 +1081,12 @@ async function translateCheckpointBatch(
   const groqCooling = Boolean(groqCooldownUntil && groqCooldownUntil > new Date().toISOString());
   if (process.env.GROQ_API_KEY && !groqCooling) {
     try {
-      groqResults = await translateBatchWithGroq(numbered);
+      const groqStartedAt = Date.now();
+      try {
+        groqResults = await translateBatchWithGroq(numbered);
+      } finally {
+        telemetry.groqMs += Date.now() - groqStartedAt;
+      }
       if (!await recordGroqProviderSuccess(videoId, lockToken)) {
         throw new Error("Processing lock was lost while recording Groq success");
       }
@@ -1068,13 +1106,14 @@ async function translateCheckpointBatch(
     groqFailure = `groq-cooldown-until:${groqCooldownUntil}`;
   }
 
-  for (const item of numbered) {
+  for (const [offset, item] of numbered.entries()) {
     const groqCandidate = groqResults?.get(item.index) || null;
     const groqReason = groqCandidate
       ? translationIntegrityFailure(item.text, groqCandidate)
       : (groqFailure || (process.env.GROQ_API_KEY ? "groq-missing-cue" : "groq-not-configured"));
     if (!groqReason) {
       output.set(item.index, groqCandidate as string);
+      await commitAcceptedCue({ ...slice[offset], text: groqCandidate as string }, item.index, "groq");
       continue;
     }
     logRejectedTranslationCue(videoId, item.index, item.text, "groq-batch", groqCandidate, groqReason);
@@ -1084,7 +1123,12 @@ async function translateCheckpointBatch(
     let strictCandidate: string | null = null;
     if (!groqRateLimited && !groqCooling && process.env.GROQ_API_KEY) {
       try {
-        strictCandidate = await translateStrictSingleCueWithGroq(item.index, item.text);
+        const strictStartedAt = Date.now();
+        try {
+          strictCandidate = await translateStrictSingleCueWithGroq(item.index, item.text);
+        } finally {
+          telemetry.strictGroqMs += Date.now() - strictStartedAt;
+        }
         if (!await recordGroqProviderSuccess(videoId, lockToken)) {
           throw new Error("Processing lock was lost while recording strict Groq success");
         }
@@ -1107,7 +1151,9 @@ async function translateCheckpointBatch(
       const strictReason = translationIntegrityFailure(item.text, strictCandidate);
       if (!strictReason) {
         output.set(item.index, strictCandidate);
-        console.info("[captions:translation-recovered]", JSON.stringify({ videoId, cueIndex: item.index, provider: "groq-strict" }));
+        const path = "groq-strict";
+        console.info("[captions:translation-recovered]", JSON.stringify({ videoId, cueIndex: item.index, provider: path }));
+        await commitAcceptedCue({ ...slice[offset], text: strictCandidate }, item.index, path);
         continue;
       }
       logRejectedTranslationCue(videoId, item.index, item.text, "groq-strict", strictCandidate, strictReason);
@@ -1115,28 +1161,47 @@ async function translateCheckpointBatch(
 
     // Google receives placeholders instead of protected tokens/numbers. They
     // are restored verbatim before the same non-relaxed integrity validation.
+    const googleStartedAt = Date.now();
     try {
       const google = await translateSingleCueWithProtectedGoogleFallback(item.text);
       if (google.restorationFailure || !google.restoredCandidate) {
         logRejectedTranslationCue(videoId, item.index, item.text, "google-placeholder", google.candidate,
           google.restorationFailure || "placeholder-restoration-failed", google.restoredCandidate);
-        continue;
+        throw new Error(google.restorationFailure || "placeholder-restoration-failed");
       }
       const googleReason = translationIntegrityFailure(item.text, google.restoredCandidate);
       if (!googleReason) {
         output.set(item.index, google.restoredCandidate);
-        console.info("[captions:translation-recovered]", JSON.stringify({ videoId, cueIndex: item.index, provider: "google-placeholder" }));
+        const path = groqCooling ? "google-placeholder:groq-cooldown"
+          : groqRateLimited ? "google-placeholder:groq-429"
+            : "google-placeholder:recovery";
+        console.info("[captions:translation-recovered]", JSON.stringify({ videoId, cueIndex: item.index, provider: path }));
+        await commitAcceptedCue({ ...slice[offset], text: google.restoredCandidate }, item.index, path);
         continue;
       }
       logRejectedTranslationCue(videoId, item.index, item.text, "google-placeholder", google.candidate, googleReason, google.restoredCandidate);
     } catch (error) {
       logRejectedTranslationCue(videoId, item.index, item.text, "google-placeholder", null,
         error instanceof Error ? error.message : "Google fallback failed");
+    } finally {
+      telemetry.googleMs += Date.now() - googleStartedAt;
     }
+    // A later cue may be present in the provider response, but it can never
+    // move the checkpoint over this unresolved cue.
+    throw new Error(`Translation temporarily failed for 1 cue: ${item.index}`);
   }
   const missing = numbered.filter(item => !output.has(item.index));
   if (missing.length) throw new Error(`Η μετάφραση απέτυχε προσωρινά σε ${missing.length} cues: ${missing.map(item => item.index).join(",")}`);
-  return slice.map((cue, offset) => ({ ...cue, text: output.get(start + offset) as string }));
+  return telemetry;
+  } catch (error) {
+    failure = error instanceof Error ? error.message : "translation-slice-failed";
+    throw error;
+  } finally {
+    console.info("[captions:translation-slice]", JSON.stringify({
+      videoId, start, requestedCues: numbered.length, ...telemetry,
+      sliceMs: Date.now() - sliceStartedAt, outcome: failure ? "failed" : "committed", failure,
+    }));
+  }
 }
 
 function processingTelemetry(record: NonNullable<Awaited<ReturnType<typeof getTranscript>>>) {
@@ -1441,20 +1506,31 @@ export async function POST(request: Request) {
     if (stage === "translate") {
       const english = cached.englishTranscript as CaptionCue[];
       if (!english.length) throw new Error("Normalized English transcript checkpoint is empty");
-      // One durable translation slice is one cue. A rejected cue therefore
-      // cannot make the next lease repeat already-accepted neighbours.
-      const CHUNK = 1;
+      // One provider micro-batch contains exactly four cues. Each accepted
+      // cue is persisted before the next one, preserving a contiguous cursor.
+      const CHUNK = 4;
       if (cursor < english.length) {
-        const translatedChunk = await translateCheckpointBatch(videoId, lockToken, cached.groqCooldownUntil, english, cursor, CHUNK);
-        const greek = [...(cached.greekTranscript as CaptionCue[]), ...translatedChunk];
-        const nextCursor = Math.min(english.length, cursor + CHUNK);
-        const done = nextCursor >= english.length;
-        const progress = done ? 90 : Math.round(48 + 42 * (nextCursor / english.length));
-        if (!await saveProcessingCheckpoint(videoId, lockToken, {
-          stage: done ? "finalize" : "translate", cursor: done ? 0 : nextCursor, progress, greekTranscript: greek,
-        })) throw new Error("Processing lock was lost before translation checkpoint persisted");
+        const translationLockToken = lockToken;
+        let greek = [...(cached.greekTranscript as CaptionCue[])];
+        await translateCheckpointBatch(videoId, translationLockToken, cached.groqCooldownUntil, english, cursor, CHUNK,
+          async (translatedCue, cueIndex) => {
+            // Committing out of order would let a later cue hide an unresolved
+            // earlier cue. Refuse it before any durable write.
+            if (cueIndex !== cursor) throw new Error(`Non-contiguous translation checkpoint: expected ${cursor}, got ${cueIndex}`);
+            const nextCursor = cueIndex + 1;
+            const done = nextCursor >= english.length;
+            const progress = done ? 90 : Math.round(48 + 42 * (nextCursor / english.length));
+            const nextGreek = [...greek, translatedCue];
+            // This existing durable checkpoint also extends the lease by 180s.
+            // No separate heartbeat write is required.
+            if (!await saveProcessingCheckpoint(videoId, translationLockToken, {
+              stage: done ? "finalize" : "translate", cursor: nextCursor, progress, greekTranscript: nextGreek,
+            })) throw new Error("Processing lock was lost before translation checkpoint persisted");
+            greek = nextGreek;
+            cursor = nextCursor;
+          });
       } else {
-        if (!await saveProcessingCheckpoint(videoId, lockToken, { stage: "finalize", cursor: 0, progress: 90 })) throw new Error("Processing lock was lost before translation transition persisted");
+        if (!await saveProcessingCheckpoint(videoId, lockToken, { stage: "finalize", cursor: english.length, progress: 90 })) throw new Error("Processing lock was lost before translation transition persisted");
       }
       if (!await releaseProcessingLock(videoId, lockToken)) throw new Error("Processing lock was lost before translation release"); lockToken = null;
       const next = await getTranscript(videoId);
