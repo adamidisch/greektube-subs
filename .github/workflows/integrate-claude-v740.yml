@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           git fetch origin tmp-v740-claude-apply-run
-          git show origin/tmp-v740-claude-apply-run:.tmp/claude-v7.4.0.patch.gz > /tmp/claude-v7.4.0.patch.gz
+          git show origin/tmp-v740-claude-apply-run:.tmp/claude-v7.4.0.patch.gz | base64 -d > /tmp/claude-v7.4.0.patch.gz
           gzip -dc /tmp/claude-v7.4.0.patch.gz > /tmp/claude-v7.4.0.patch
           git apply --check /tmp/claude-v7.4.0.patch
           git apply /tmp/claude-v7.4.0.patch
@@ -74,4 +74,4 @@ jobs:
           git commit -m 'GreekTube Subs 7.4.0: add translation choice modal and exact SRT export'
           git push origin HEAD:v7.4.0
 
-# exact-payload-v3
+# exact-payload-v4
