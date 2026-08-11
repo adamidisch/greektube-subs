@@ -912,7 +912,7 @@ export default function GreekTubePlayer() {
                 </section>
               </div>
             </div>
-            <div className="video-heading"><div><small className="video-meta-kicker"><strong>{displaySpeakerName}</strong>{displaySpeakerRole&&<><span className="speaker-divider" aria-hidden="true">|</span><span className="speaker-role">{displaySpeakerRole}</span></>}<span className="video-category-label" data-category={selected.category}>{CATEGORY_LABELS[selected.category]}</span></small><h1 className="player-greek-title">{isGreekTitle(selected.title)?selected.title:isGreekTitle(captions.title)?captions.title:"Βίντεο με ελληνικούς υπότιτλους"}</h1><div className="video-source-row"><span>ΠΗΓΗ</span>{sourceChannelUrl?<a href={sourceChannelUrl} target="_blank" rel="noreferrer" title="Άνοιγμα καναλιού στο YouTube">{selected.channel} ↗</a>:<strong>{selected.channel}</strong>}{(selected.originalTitle||captions.originalTitle||englishTitle(selected))&&<a href={sourceVideoUrl} target="_blank" rel="noreferrer" title="Άνοιγμα αρχικού βίντεο στο YouTube">{selected.originalTitle||captions.originalTitle||englishTitle(selected)} ↗</a>}</div><p className="mobile-video-description">{mobileSummary(selected,captions)}</p><button className={`mobile-transcript-toggle ${transcriptOpen?"active":""}`} aria-pressed={transcriptOpen} onClick={()=>setTranscriptOpen(value=>!value)}><span aria-hidden="true">≡</span>{transcriptOpen?"Κλείσιμο κειμένου":"Κείμενο μεταγραφής"}</button></div><div className="heading-actions"><button type="button" className="edit-video" onClick={()=>void requestEdit(selected)}><span aria-hidden="true">✎</span> Επεξεργασία</button><button aria-label="Αγαπημένο" className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div></div>
+            <div className="video-heading"><div><small className="video-meta-kicker"><strong>{displaySpeakerName}</strong>{displaySpeakerRole&&<><span className="speaker-divider" aria-hidden="true">|</span><span className="speaker-role">{displaySpeakerRole}</span></>}<span className="video-category-label" data-category={selected.category}>{CATEGORY_LABELS[selected.category]}</span></small><h1 className="player-greek-title">{isGreekTitle(selected.title)?selected.title:isGreekTitle(captions.title)?captions.title:"Βίντεο με ελληνικούς υπότιτλους"}</h1><div className="video-source-row"><span>ΠΗΓΗ</span>{sourceChannelUrl?<a href={sourceChannelUrl} target="_blank" rel="noreferrer" title="Άνοιγμα καναλιού στο YouTube">{selected.channel} ↗</a>:<strong>{selected.channel}</strong>}{(selected.originalTitle||captions.originalTitle||englishTitle(selected))&&<a href={sourceVideoUrl} target="_blank" rel="noreferrer" title="Άνοιγμα αρχικού βίντεο στο YouTube">{selected.originalTitle||captions.originalTitle||englishTitle(selected)} ↗</a>}</div><p className="mobile-video-description">{mobileSummary(selected,captions)}</p><button className={`mobile-transcript-toggle ${transcriptOpen?"active":""}`} aria-pressed={transcriptOpen} onClick={()=>setTranscriptOpen(value=>!value)}><span aria-hidden="true">≡</span>{transcriptOpen?"Κλείσιμο κειμένου":"Κείμενο μεταγραφής"}</button></div><div className="heading-actions"><button type="button" className="edit-video" onClick={()=>void requestEdit(selected)}><span aria-hidden="true">✦</span> Επεξεργασία</button><button aria-label="Αγαπημένο" className={`favorite ${selected.favorite?"active":""}`} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♥</button></div></div>
             <div className="mobile-watch-summary"><p>{selected.channel} · {CATEGORY_LABELS[selected.category]} · {selected.views||0} προβολές</p><section><span>{(speaker.name||selected.speakerName||selected.channel).slice(0,1)}</span><div><strong>{displaySpeakerName}</strong><small>{displaySpeakerRole}</small></div><button type="button" aria-label="Επεξεργασία βίντεο" onClick={()=>void requestEdit(selected)}>✎</button><button type="button" aria-label="Αγαπημένο" className={selected.favorite?"active":""} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♡</button></section></div>
             <section className="moments"><div className="section-title"><h2>Αποθηκευμένες στιγμές</h2><small>{moments.length}</small></div>{moments.length===0?<p className="muted">Πάτησε M ή το κουμπί πάνω για να κρατήσεις ένα σημείο.</p>:moments.map(m=><article className="moment" key={m.id} onClick={()=>seek(m.time)}><time>{clock(m.time)}</time><div><strong>{m.note}</strong><p>{m.excerpt}</p></div><div className="moment-actions"><button onClick={e=>{e.stopPropagation();seek(m.time)}}>Αναπαραγωγή</button><button onClick={e=>{e.stopPropagation();void copyMoment(m)}}>Αντιγραφή συνδέσμου</button><button onClick={e=>{e.stopPropagation();navigator.share?.({title:m.note,url:`${location.origin}/?video=${m.videoId}&t=${Math.floor(m.time)}`})}}>Κοινοποίηση</button><button onClick={e=>{e.stopPropagation();setState(s=>({...s,moments:s.moments.filter(x=>x.id!==m.id)}))}}>Διαγραφή</button></div></article>)}</section>
             <section className="video-guide"><div className="section-title"><h2>Οδηγός βίντεο</h2><small>{guideItems.length}</small></div><p className="guide-intro">Τα βασικά σημεία του βίντεο με χρόνους, για να πας γρήγορα στο κομμάτι που σε ενδιαφέρει.</p><div className="guide-list">{guideItems.map((item,index)=><button key={`${item.time}-${index}`} onClick={()=>seek(item.time)}><time>{clock(item.time)}</time><span>{item.text}</span></button>)}</div></section>
@@ -926,9 +926,9 @@ export default function GreekTubePlayer() {
       </>}
       {momentModal&&<Modal title="Αποθήκευση στιγμής" close={()=>setMomentModal(null)}><form className="form moment-form" onSubmit={saveMoment}><div className="moment-preview"><time>{clock(momentModal.time)}</time><p>{momentModal.excerpt||"Η στιγμή θα αποθηκευτεί στο συγκεκριμένο σημείο του βίντεο."}</p></div><label>Σύντομη σημείωση<input name="note" autoFocus placeholder="Τι θέλεις να θυμάσαι από αυτό το σημείο;"/></label><label>Ετικέτες <small>Προαιρετικά</small><input name="tags" placeholder="π.χ. ινσουλίνη, διατροφή"/></label><div className="modal-actions"><button type="button" className="secondary" onClick={()=>setMomentModal(null)}>Ακύρωση</button><button className="primary">Αποθήκευση στιγμής</button></div></form></Modal>}
       {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
-      {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}} rebuild={()=>{const video=editingVideo;setEditingVideo(null);setTranslationChoiceVideo(video);}} importPro={()=>{const video=editingVideo;setEditingVideo(null);setProImportVideo(video);}}/>}
-      {proImportVideo&&<ProTranscriptImport video={proImportVideo} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);await openVideo(video);}}/>}
-      {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenProImport={()=>{const video=translationChoiceVideo;setTranslationChoiceVideo(null);setProImportVideo(video);}}/>}
+      {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}} rebuild={()=>{const video=editingVideo;setEditingVideo(null);setTranslationChoiceVideo(video);}}/>}
+      {proImportVideo&&<ManualTranslateModal video={proImportVideo} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video);}}/>}
+      {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenManual={()=>setProImportVideo(translationChoiceVideo)}/>}
     </main>;
   }
 
@@ -968,9 +968,9 @@ export default function GreekTubePlayer() {
     {addRequest&&<EditPassword close={()=>setAddRequest(false)} authorized={()=>{setAddRequest(false);window.setTimeout(()=>void syncLibraryToServer(),350);setModal(true);}}/>}
     {syncRequest&&<EditPassword close={()=>setSyncRequest(false)} authorized={()=>{setSyncRequest(false);window.setTimeout(()=>void syncLibraryToServer(),350);}}/>}
     {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
-    {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}} rebuild={()=>{const video=editingVideo;setEditingVideo(null);setTranslationChoiceVideo(video);}} importPro={()=>{const video=editingVideo;setEditingVideo(null);setProImportVideo(video);}}/>}
-    {proImportVideo&&<ProTranscriptImport video={proImportVideo} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);await openVideo(video);}}/>}
-    {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenProImport={()=>{const video=translationChoiceVideo;setTranslationChoiceVideo(null);setProImportVideo(video);}}/>}
+    {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}} rebuild={()=>{const video=editingVideo;setEditingVideo(null);setTranslationChoiceVideo(video);}}/>}
+    {proImportVideo&&<ManualTranslateModal video={proImportVideo} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video);}}/>}
+    {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenManual={()=>setProImportVideo(translationChoiceVideo)}/>}
   </main>;
 }
 
@@ -994,7 +994,7 @@ function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
 }
 function VideoCard({video,open,patch,edit,settings,variant="library",isNew=false}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;edit:(v:Video)=>void;settings:Settings;variant?:"library"|"continue";isNew?:boolean}){const title=greekTitle(video);const watchedMinutes=Math.round(video.lastPosition/60);const totalMinutes=Math.ceil(video.duration/60);const progress=Math.round(video.progress||0);return <article className={`video-card ${variant==="continue"?"continue-card":""} ${isNew?"new-video":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img loading="lazy" decoding="async" src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/>{isNew&&<span className="new-badge">ΝΕΟ</span>}<span className="duration">{video.duration?clock(video.duration):"EL subs"}</span>{progress>=WATCHED_THRESHOLD&&<span className="watched-badge">✓ Προβλήθηκε</span>}<button aria-label="Επεξεργασία βίντεο" className="card-edit" onKeyDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();edit(video)}}>✎</button><div className="thumb-top-right"><span className="card-category" data-category={video.category}>{CATEGORY_LABELS[video.category]}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onKeyDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button></div>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><div className="card-meta-line"><span>{video.channel}</span>{progress>0&&<em>{progress}%</em>}</div><strong>{title}</strong>{englishTitle(video)&&englishTitle(video)!==title&&<p className="card-original-title">{englishTitle(video)}</p>}{variant==="continue"&&<small>{totalMinutes>0?`${watchedMinutes} / ${totalMinutes} λεπτά`:"Η διάρκεια υπολογίζεται…"}</small>}{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
-function EditVideo({video,close,save,rebuild,importPro}:{video:Video;close:()=>void;save:(patch:Partial<Video>)=>void;rebuild?:()=>void;importPro?:()=>void}) {
+function EditVideo({video,close,save,rebuild}:{video:Video;close:()=>void;save:(patch:Partial<Video>)=>void;rebuild?:()=>void}) {
   function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();
     const data=new FormData(event.currentTarget);
@@ -1020,39 +1020,102 @@ function EditVideo({video,close,save,rebuild,importPro}:{video:Video;close:()=>v
     <label>Original video link<input name="originalVideoUrl" type="url" defaultValue={video.originalVideoUrl||video.url}/></label>
     <div className="form-grid"><label>Κατηγορία<select name="category" defaultValue={video.category}>{CATEGORIES.slice(1).map(category=><option key={category} value={category}>{CATEGORY_LABELS[category]}</option>)}</select></label><label>Ετικέτες<input name="tags" defaultValue={video.tags.join(", ")}/></label></div>
     <label>Περιγραφή<textarea name="description" defaultValue={video.description}/></label>
-    {rebuild&&<button type="button" className="secondary rebuild-translation" onClick={rebuild}>↻ Νέα μετάφραση από το αγγλικό πρωτότυπο</button>}
-    {importPro&&<button type="button" className="secondary pro-import-entry" onClick={importPro}>✦ Εισαγωγή PRO υποτίτλων</button>}
+    {rebuild&&<button type="button" className="secondary rebuild-translation" onClick={rebuild}>↻ Νέα μετάφραση</button>}
     <div className="modal-actions"><button type="button" className="secondary" onClick={close}>Ακύρωση</button><button className="primary">Αποθήκευση αλλαγών</button></div>
   </form></Modal>;
 }
 
-function ProTranscriptImport({video,close,done}:{video:Video;close:()=>void;done:(captions:Captions)=>Promise<void>}) {
+function ManualTranslateModal({video,close,done}:{video:Video;close:()=>void;done:(captions:Captions)=>Promise<void>}) {
+  const [downloading,setDownloading]=useState(false);
+  const [downloadError,setDownloadError]=useState("");
+  const [importing,setImporting]=useState(false);
+  const [importError,setImportError]=useState("");
+  const [showFallback,setShowFallback]=useState(false);
   const [subtitleText,setSubtitleText]=useState("");
-  const [busy,setBusy]=useState(false);
-  const [error,setError]=useState("");
-  async function submit(event:FormEvent<HTMLFormElement>){
+  const [manualBusy,setManualBusy]=useState(false);
+  const [manualError,setManualError]=useState("");
+  const fileInput=useRef<HTMLInputElement|null>(null);
+
+  async function downloadSrt(){
+    setDownloading(true);setDownloadError("");
+    try{
+      const response=await fetch(`/api/captions/export-srt?videoId=${encodeURIComponent(video.id)}`,{cache:"no-store"});
+      if(!response.ok){const failure=await response.json().catch(()=>null) as {error?:string}|null;throw new Error(failure?.error||"Δεν ήταν δυνατή η λήψη του αγγλικού transcript.");}
+      const blob=await response.blob();
+      const link=document.createElement("a");
+      link.href=URL.createObjectURL(blob);
+      link.download=`${video.id}-english.srt`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }catch(problem){setDownloadError(problem instanceof Error?problem.message:"Δεν ήταν δυνατή η λήψη του αγγλικού transcript.");}
+    finally{setDownloading(false);}
+  }
+  async function importFile(file:File){
+    setImporting(true);setImportError("");
+    try{
+      const text=await file.text();
+      const response=await fetch("/api/manual-captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,title:video.title,originalTitle:video.originalTitle||"",channel:video.channel,duration:video.duration||0,subtitleText:text,strict:true})});
+      const result=await response.json() as Captions&{error?:string};
+      if(!response.ok)throw new Error(result.error||"Η εισαγωγή του ελληνικού SRT απέτυχε.");
+      await done(result);
+    }catch(problem){setImportError(problem instanceof Error?problem.message:"Η εισαγωγή του ελληνικού SRT απέτυχε.");}
+    finally{setImporting(false);}
+  }
+  async function submitManual(event:FormEvent<HTMLFormElement>){
     event.preventDefault();
-    if(!subtitleText.trim()){setError("Επικόλλησε πρώτα τους έτοιμους ελληνικούς υπότιτλους.");return;}
-    setBusy(true);setError("");
+    if(!subtitleText.trim()){setManualError("Επικόλλησε πρώτα τους έτοιμους ελληνικούς υπότιτλους.");return;}
+    setManualBusy(true);setManualError("");
     try{
       const response=await fetch("/api/manual-captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,title:video.title,originalTitle:video.originalTitle||"",channel:video.channel,duration:video.duration||0,subtitleText})});
       const result=await response.json() as Captions&{error?:string};
-      if(!response.ok)throw new Error(result.error||"Δεν έγινε η εισαγωγή των PRO υποτίτλων.");
+      if(!response.ok)throw new Error(result.error||"Δεν έγινε η εισαγωγή της μετάφρασης.");
       await done(result);
-    }catch(problem){setError(problem instanceof Error?problem.message:"Δεν έγινε η εισαγωγή των PRO υποτίτλων.");}
-    finally{setBusy(false);}
+    }catch(problem){setManualError(problem instanceof Error?problem.message:"Δεν έγινε η εισαγωγή της μετάφρασης.");}
+    finally{setManualBusy(false);}
   }
-  return <Modal title="PRO μετάφραση · ChatGPT" close={close}><form className="form pro-translation-form" onSubmit={submit}>
-    <div className="pro-translation-intro"><span className="pro-badge">PRO</span><div><strong>Μετάφραση με πλήρες context</strong><p>Αντέγραψε το αγγλικό transcript μαζί με τα timestamps και στείλε μου το εδώ στο ChatGPT. Θα σου επιστρέψω ελληνικούς υπότιτλους με τα ίδια timestamps για άμεσο συγχρονισμό.</p></div></div>
-    <div className="pro-flow" aria-label="Ροή PRO μετάφρασης"><span><b>01</b> Transcript + timestamps</span><i>→</i><span><b>02</b> Μετάφραση στο ChatGPT</span><i>→</i><span><b>03</b> Εισαγωγή εδώ</span></div>
-    <label>Έτοιμοι ελληνικοί υπότιτλοι<textarea value={subtitleText} onChange={event=>{setSubtitleText(event.target.value);setError("")}} rows={14} spellCheck={false} placeholder={'1\n00:00:00,000 --> 00:00:03,400\nΗ ελληνική μετάφραση εδώ…\n\n2\n00:00:03,400 --> 00:00:07,100\nΗ επόμενη πρόταση…'}/></label>
-    <small className="pro-format-note">Δέχεται SRT, VTT ή απλές γραμμές με timestamps. Τα timestamps παραμένουν ακριβώς συνδεδεμένα με το βίντεο.</small>
-    {error&&<p className="form-error" role="alert">{error}</p>}
-    <div className="modal-actions"><button type="button" className="secondary" disabled={busy} onClick={close}>Ακύρωση</button><button className="primary" disabled={busy}>{busy?"Εισαγωγή…":"Εισαγωγή PRO υποτίτλων"}</button></div>
-  </form></Modal>;
+  return <Modal title="Μετάφραση με ChatGPT" close={close}>
+    <div className="form manual-translate">
+      <ol className="manual-steps" aria-label="Βήματα">
+        <li><b>01</b><span>Λήψη αγγλικού SRT</span></li>
+        <li aria-hidden="true" className="manual-steps-arrow">→</li>
+        <li><b>02</b><span>Μετάφραση</span></li>
+        <li aria-hidden="true" className="manual-steps-arrow">→</li>
+        <li><b>03</b><span>Εισαγωγή ελληνικού SRT</span></li>
+      </ol>
+      <section className="manual-step">
+        <span className="manual-step-index">01</span>
+        <div className="manual-step-body"><strong>Λήψη αγγλικού SRT</strong><p>Το αρχείο έχει σταθερή αρίθμηση και τα ακριβή timestamps του timed transcript που χρησιμοποιεί η εφαρμογή.</p></div>
+        <button type="button" className="primary" disabled={downloading} onClick={()=>void downloadSrt()}>{downloading?"Λήψη…":"Λήψη αγγλικού transcript (.srt)"}</button>
+      </section>
+      {downloadError&&<p className="form-error" role="alert">{downloadError}</p>}
+      <section className="manual-step">
+        <span className="manual-step-index">02</span>
+        <div className="manual-step-body"><strong>Μετάφραση στο ChatGPT</strong><p>Ανέβασε το .srt στο ChatGPT και ζήτησε ελληνική μετάφραση κρατώντας ακριβώς τον ίδιο αριθμό cues και ακριβώς τα ίδια timestamps.</p></div>
+      </section>
+      <section className="manual-step">
+        <span className="manual-step-index">03</span>
+        <div className="manual-step-body"><strong>Εισαγωγή ελληνικού SRT</strong><p>Ελέγχουμε αριθμό cues, σειρά και timestamps πριν αποθηκευτεί οτιδήποτε. Αν κάτι δεν ταιριάζει, το υπάρχον transcript παραμένει όπως είναι.</p></div>
+        <input ref={fileInput} type="file" accept=".srt,.vtt,text/plain" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void importFile(file);event.target.value="";}}/>
+        <button type="button" className="primary" disabled={importing} onClick={()=>fileInput.current?.click()}>{importing?"Έλεγχος…":"Εισαγωγή ελληνικού SRT"}</button>
+      </section>
+      {importError&&<p className="form-error" role="alert">{importError}</p>}
+      <button type="button" className="manual-fallback-toggle" onClick={()=>setShowFallback(value=>!value)}>{showFallback?"Απόκρυψη χειροκίνητης επικόλλησης":"Ή επικόλλησε χειροκίνητα"}</button>
+      {showFallback&&<div className="manual-fallback">
+        <form onSubmit={submitManual}>
+          <label>Ελληνικοί υπότιτλοι (χειροκίνητα)<textarea value={subtitleText} onChange={event=>{setSubtitleText(event.target.value);setManualError("")}} rows={10} spellCheck={false} placeholder={'1\n00:00:00,000 --> 00:00:03,400\nΗ ελληνική μετάφραση εδώ…\n\n2\n00:00:03,400 --> 00:00:07,100\nΗ επόμενη πρόταση…'}/></label>
+          <small className="pro-format-note">Δέχεται SRT, VTT ή απλές γραμμές με timestamps. Δεν γίνεται αυστηρός έλεγχος ταύτισης — προτείνεται μόνο ως fallback.</small>
+          {manualError&&<p className="form-error" role="alert">{manualError}</p>}
+          <div className="modal-actions"><button className="secondary" disabled={manualBusy}>{manualBusy?"Εισαγωγή…":"Εισαγωγή (χειροκίνητα)"}</button></div>
+        </form>
+      </div>}
+      <div className="modal-actions"><button type="button" className="secondary" onClick={close}>Ακύρωση</button></div>
+    </div>
+  </Modal>;
 }
 
-function TranslationChoiceModal({video,close,backToLibrary,onQuick,onOpenProImport}:{video:Video;close:()=>void;backToLibrary:()=>void;onQuick:()=>void;onOpenProImport:()=>void}) {
+function TranslationChoiceModal({video,close,backToLibrary,onQuick,onOpenManual}:{video:Video;close:()=>void;backToLibrary:()=>void;onQuick:()=>void;onOpenManual:()=>void}) {
   const [hasExisting,setHasExisting]=useState(false);
   const [downloading,setDownloading]=useState(false);
   const [downloadError,setDownloadError]=useState("");
@@ -1082,18 +1145,18 @@ function TranslationChoiceModal({video,close,backToLibrary,onQuick,onOpenProImpo
       {hasExisting&&<div className="translation-choice-warning" role="status"><span aria-hidden="true">⚠</span><p>Υπάρχει ήδη ολοκληρωμένη ελληνική μεταγραφή για αυτό το βίντεο. Δεν θα αλλάξει τίποτα μέχρι να επικυρωθεί και να αποθηκευτεί επιτυχώς η νέα μετάφραση.</p></div>}
       <div className="translation-choice-grid">
         <section className="translation-choice-card quick">
-          <span className="mode-icon">⚡</span>
-          <h3>Γρήγορη μετάφραση</h3>
+          <span className="mode-icon" aria-hidden="true">↻</span>
+          <h3>Αυτόματη μετάφραση</h3>
           <p>Αυτόματη μετάφραση με Google. Ίδιο timing με το πρωτότυπο, έτοιμη μέσα σε λίγα λεπτά.</p>
-          <button type="button" className="primary" onClick={onQuick}>Ξεκίνα γρήγορη μετάφραση</button>
+          <button type="button" className="primary" onClick={onQuick}>Ξεκίνα αυτόματη μετάφραση</button>
         </section>
-        <section className="translation-choice-card pro">
-          <span className="pro-badge">PRO</span>
-          <h3>PRO μετάφραση</h3>
-          <p>Χειροκίνητη μετάφραση υψηλής ποιότητας με πλήρες context. Κατέβασε το αγγλικό transcript, μετάφρασέ το, και εισάγαγέ το έτοιμο.</p>
+        <section className="translation-choice-card manual">
+          <span className="mode-icon" aria-hidden="true">✦</span>
+          <h3>Μετάφραση με ChatGPT</h3>
+          <p>Χειροκίνητη μετάφραση υψηλής ποιότητας με πλήρες context: κατέβασε το αγγλικό SRT, μετάφρασέ το, εισάγαγε το ελληνικό SRT.</p>
           <div className="translation-choice-pro-actions">
-            <button type="button" className="secondary" disabled={downloading} onClick={()=>void downloadSrt()}>{downloading?"Λήψη…":"Λήψη αγγλικού transcript (.srt)"}</button>
-            <button type="button" className="primary" onClick={onOpenProImport}>Εισαγωγή PRO μετάφρασης</button>
+            <button type="button" className="primary" disabled={downloading} onClick={()=>void downloadSrt()}>{downloading?"Λήψη…":"Λήψη αγγλικού transcript (.srt)"}</button>
+            <button type="button" className="secondary" onClick={onOpenManual}>Εισαγωγή ελληνικού SRT</button>
           </div>
         </section>
       </div>
@@ -1113,10 +1176,10 @@ function AddVideo({close,add,existingIds}:{close:()=>void;add:(v:Video,t:boolean
   async function submit(e:React.MouseEvent<HTMLButtonElement>,action:"save"|"prepare"){e.preventDefault();const form=e.currentTarget.form;if(!form||busy)return;if(!metadata){await inspect();return;}setBusy(true);setError("");try{const fd=new FormData(form);const manualTags=String(fd.get("tags")||"").split(",").map(x=>x.trim()).filter(Boolean);const v:Video={id:metadata.id,url,title:metadata.title,originalTitle:metadata.originalTitle,channel:metadata.channel,channelUrl:metadata.channelUrl,originalVideoUrl:metadata.originalVideoUrl||url,speakerName:metadata.speakerName,speakerRole:metadata.speakerRole,category:String(fd.get("category")||metadata.category||"Other") as Category,tags:Array.from(new Set([...(metadata.tags||[]),...manualTags])),notes:String(fd.get("notes")||""),description:String(fd.get("notes")||metadata.description||"Νέο βίντεο στη βιβλιοθήκη."),duration:metadata.duration||0,addedAt:new Date().toISOString(),favorite:false,lastPosition:0,progress:0,metadataVersion:5,translationMode:mode};if(action==="save")await add(v,false,false);else if(mode==="google")await add(v,true,false);else await add(v,false,true);}catch(problem){setError(problem instanceof Error?problem.message:"Δεν αποθηκεύτηκε το βίντεο.");}finally{setBusy(false);}}
   return <Modal title="Προσθήκη βίντεο" close={close}><form className="form add-video-v740"><label>Σύνδεσμος YouTube<div className="inspect-row"><input value={url} onChange={e=>{setUrl(e.target.value);setMetadata(null);setError("")}} placeholder="https://youtube.com/watch?v=…"/><button type="button" disabled={busy} onClick={()=>void inspect()}>{busy?"Έλεγχος…":"Έλεγχος"}</button></div></label>{error&&<p className="form-error">{error}</p>}{metadata&&<div className="metadata"><img src={`https://i.ytimg.com/vi/${metadata.id}/hqdefault.jpg`} alt=""/><div><strong>{metadata.title}</strong>{metadata.originalTitle&&<small>{metadata.originalTitle}</small>}<span>{metadata.speakerName||metadata.channel}{metadata.speakerRole?` (${metadata.speakerRole})`:""} · {CATEGORY_LABELS[metadata.category||"Other"]} · {metadata.duration?clock(metadata.duration):"Διάρκεια υπό υπολογισμό"}</span></div></div>}
     <section className="translation-mode-section"><div className="translation-mode-heading"><span>ΤΡΟΠΟΣ ΜΕΤΑΦΡΑΣΗΣ</span><small>Διάλεξε ταχύτητα ή μέγιστη ποιότητα.</small></div><div className="translation-mode-grid">
-      <button type="button" className={`translation-mode-card ${mode==="google"?"active":""}`} onClick={()=>setMode("google")}><span className="mode-icon">⚡</span><div><strong>Γρήγορη · Google</strong><small>ΑΥΤΟΜΑΤΗ</small><p>Έξυπνα contextual batches, ίδιο timing και πολύ λιγότερα provider calls.</p></div><i aria-hidden="true">{mode==="google"?"✓":""}</i></button>
-      <button type="button" className={`translation-mode-card pro ${mode==="manual-pro"?"active":""}`} onClick={()=>setMode("manual-pro")}><span className="mode-icon">✦</span><div><strong>PRO · ChatGPT</strong><small>ΜΕΓΙΣΤΗ ΠΟΙΟΤΗΤΑ</small><p>Μεταφράζουμε εδώ με πλήρες context και εισάγουμε έτοιμους timed υπότιτλους.</p></div><i aria-hidden="true">{mode==="manual-pro"?"✓":""}</i></button>
+      <button type="button" className={`translation-mode-card ${mode==="google"?"active":""}`} onClick={()=>setMode("google")}><span className="mode-icon" aria-hidden="true">↻</span><div><strong>Αυτόματη μετάφραση</strong><small>Google</small><p>Έξυπνα contextual batches, ίδιο timing και πολύ λιγότερα provider calls.</p></div><i aria-hidden="true">{mode==="google"?"✓":""}</i></button>
+      <button type="button" className={`translation-mode-card manual ${mode==="manual-pro"?"active":""}`} onClick={()=>setMode("manual-pro")}><span className="mode-icon" aria-hidden="true">✦</span><div><strong>Μετάφραση με ChatGPT</strong><small>ChatGPT</small><p>Κατεβάζεις το αγγλικό SRT, μεταφράζεις εξωτερικά, εισάγεις το ελληνικό SRT.</p></div><i aria-hidden="true">{mode==="manual-pro"?"✓":""}</i></button>
     </div></section>
-    <div className="form-grid"><label>Κατηγορία<select name="category" key={metadata?.category||"Other"} defaultValue={metadata?.category||"Other"}>{CATEGORIES.slice(1).map(c=><option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}</select></label><label>Ετικέτες<input name="tags" defaultValue={metadata?.tags?.join(", ")||""} placeholder="υγεία, ινσουλίνη"/></label></div><label>Προσωπικές σημειώσεις<textarea name="notes" placeholder="Γιατί θέλω να κρατήσω αυτό το βίντεο…"/></label><div className="modal-actions"><button className="secondary" disabled={busy} onClick={e=>void submit(e,"save")}>Αποθήκευση μόνο</button><button className="primary" disabled={busy} onClick={e=>void submit(e,"prepare")}>{busy?"Αποθήκευση…":mode==="google"?"Αποθήκευση και γρήγορη μετάφραση":"Αποθήκευση και εισαγωγή PRO"}</button></div></form></Modal>;
+    <div className="form-grid"><label>Κατηγορία<select name="category" key={metadata?.category||"Other"} defaultValue={metadata?.category||"Other"}>{CATEGORIES.slice(1).map(c=><option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}</select></label><label>Ετικέτες<input name="tags" defaultValue={metadata?.tags?.join(", ")||""} placeholder="υγεία, ινσουλίνη"/></label></div><label>Προσωπικές σημειώσεις<textarea name="notes" placeholder="Γιατί θέλω να κρατήσω αυτό το βίντεο…"/></label><div className="modal-actions"><button className="secondary" disabled={busy} onClick={e=>void submit(e,"save")}>Αποθήκευση μόνο</button><button className="primary" disabled={busy} onClick={e=>void submit(e,"prepare")}>{busy?"Αποθήκευση…":mode==="google"?"Αποθήκευση και αυτόματη μετάφραση":"Αποθήκευση και Manual Translate"}</button></div></form></Modal>;
 }
 
 function SettingsPage({settings,update,close}:{settings:Settings;update:(p:Partial<Settings>)=>void;close:()=>void}) {
