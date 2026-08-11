@@ -36,7 +36,7 @@ jobs:
       - name: Manual captions
         run: npm run test:manual-captions
       - name: v7.4.1 quality tests
-        run: node scripts/v741-quality-reliability.test.mjs
+        run: node --experimental-strip-types scripts/v741-quality-reliability.test.mjs
       - name: v7.4.2 player guide invariants
         run: node scripts/v742-player-guide.test.mjs
       - name: TypeScript
