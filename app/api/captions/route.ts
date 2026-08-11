@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
+import { splitSubtitleSentences } from "./sentence-split";
+import { hasTranslatableWordTokens } from "./translation-text";
 import {
   allocateSequentialCueWindows,
   effectiveSequentialRawWindows,
@@ -550,19 +552,7 @@ async function repairEnglishBatchWithGroq(batch: { index: number; text: string }
 function splitEnglishCueAtSentenceBoundaries(cue: CaptionCue) {
   const text = cue.text.replace(/\s+/g, " ").trim();
   if (!text) return [] as CaptionCue[];
-  const matches = text.match(/[^.!?…]+[.!?…]+[\"')\]]*|[^.!?…]+$/g)?.map(part => part.trim()).filter(Boolean) || [text];
-  if (matches.length <= 1) return [{ ...cue, text }];
-
-  // Avoid treating common abbreviations as sentence endings.
-  const parts: string[] = [];
-  for (let index = 0; index < matches.length; index += 1) {
-    let part = matches[index];
-    while (/\b(?:Dr|Mr|Mrs|Ms|Prof|St|vs|e\.g|i\.e)\.$/i.test(part) && index + 1 < matches.length) {
-      part = `${part} ${matches[index + 1]}`.replace(/\s+/g, " ").trim();
-      index += 1;
-    }
-    parts.push(part);
-  }
+  const parts = splitSubtitleSentences(text);
   if (parts.length <= 1) return [{ ...cue, text: parts[0] || text }];
 
   const timing = allocateSequentialCueWindows(cue, parts.map(part => Math.max(1, englishWordTokens(part).length)));
@@ -804,8 +794,9 @@ function translationIntegrityFailure(source: string, target: string) {
   for (const token of translationProtectedTokens(source)) {
     if (!compactTarget.includes(token)) return `missing-protected-token:${token}`;
   }
-  const ordinaryEnglish = englishWordTokens(source).filter(token => !translationProtectedTokens(source).includes(token.toLowerCase()));
-  if (ordinaryEnglish.length > 0 && !hasGreekText([{ start: 0, duration: 1, text: target }])) return "non-greek-output";
+  const sourceWordTokens = englishWordTokens(source);
+  if (hasTranslatableWordTokens(sourceWordTokens, translationProtectedTokens(source)) &&
+      !hasGreekText([{ start: 0, duration: 1, text: target }])) return "non-greek-output";
   return null;
 }
 
@@ -1090,6 +1081,20 @@ async function translateCheckpointBatch(
   }
 
   for (const [offset, item] of numbered.entries()) {
+    const sourceWordTokens = englishWordTokens(item.text);
+    if (!hasTranslatableWordTokens(sourceWordTokens, translationProtectedTokens(item.text))) {
+      const passthrough = item.text.trim();
+      const passthroughReason = translationIntegrityFailure(item.text, passthrough);
+      if (passthroughReason) {
+        logRejectedTranslationCue(videoId, item.index, item.text, "passthrough", passthrough, passthroughReason);
+        throw new Error(`Translation passthrough integrity failed for cue: ${item.index}`);
+      }
+      output.set(item.index, passthrough);
+      console.info("[captions:translation-recovered]", JSON.stringify({ videoId, cueIndex: item.index, provider: "passthrough" }));
+      await commitAcceptedCue({ ...slice[offset], text: passthrough }, item.index, "passthrough");
+      continue;
+    }
+
     const groqCandidate = groqResults?.get(item.index) || null;
     const groqReason = groqCandidate
       ? translationIntegrityFailure(item.text, groqCandidate)
