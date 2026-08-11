@@ -1,0 +1,56 @@
+name: Apply v7.4.1 Claude polish reviewed
+on:
+  push:
+    branches: [tmp-v741-claude-polish-apply]
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.4.1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch reviewed patch script
+        run: |
+          git show origin/tmp-v741-claude-polish-apply:scripts/apply-v741-claude-polish-reviewed.py > /tmp/apply.py
+      - name: Apply reviewed Claude bug fix and polish
+        run: python /tmp/apply.py
+      - name: Install dependencies
+        run: npm install --package-lock=false --no-audit --no-fund
+      - name: Caption integrity
+        run: npm run test:caption-integrity
+      - name: Caption timing
+        run: npm run test:caption-timing
+      - name: Caption edge cases
+        run: npm run test:caption-edgecases
+      - name: Manual captions
+        run: npm run test:manual-captions
+      - name: v7.4.1 quality tests
+        run: node --experimental-strip-types scripts/v741-quality-reliability.test.mjs
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Verify reviewed invariants
+        run: |
+          grep -q 'readyCaptions?:Captions' app/GreekTubePlayer.tsx
+          test "$(grep -o 'openVideo(video,undefined,false,false,result)' app/GreekTubePlayer.tsx | wc -l)" -eq 2
+          grep -q 'AutoTranslateIcon' app/GreekTubePlayer.tsx
+          grep -q 'ManualTranslateIcon' app/GreekTubePlayer.tsx
+          grep -q 'Αυτόματη μετάφραση' app/GreekTubePlayer.tsx
+          grep -q 'Μετάφραση με ChatGPT' app/GreekTubePlayer.tsx
+          grep -q 'v7.4.1 reviewed Claude polish' app/v7-4-0.css
+      - name: Commit validated reviewed patch
+        run: |
+          git config user.name 'GreekTube Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add app/GreekTubePlayer.tsx app/v7-4-0.css
+          git commit -m 'GreekTube Subs 7.4.1: fix manual import race and polish translation UI'
+          git push origin HEAD:v7.4.1
