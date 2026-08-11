@@ -2,6 +2,8 @@ import { database } from "@/db/postgres";
 
 // v7.1.8 could replay a checkpoint after every lease reacquisition. Version
 // 12 restarts only those corrupt partial results while retaining raw English.
+// Keep this checkpoint version during the v7.1.13 timing migration so an
+// already translated finalize checkpoint can be repaired without retranslation.
 export const TRANSCRIPT_VERSION = 12;
 export const MAX_TRANSIENT_RETRIES = 6;
 

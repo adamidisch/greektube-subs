@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
 import {
+  allocateSequentialCueWindows,
+  effectiveSequentialRawWindows,
+  recoverMalformedAlignedTimings,
+  timingInversionCount,
+} from "./timing";
+import {
   TRANSCRIPT_VERSION,
   acquireProcessingLock,
   completeTranscript,
@@ -559,35 +565,17 @@ function splitEnglishCueAtSentenceBoundaries(cue: CaptionCue) {
   }
   if (parts.length <= 1) return [{ ...cue, text: parts[0] || text }];
 
-  const weights = parts.map(part => Math.max(1, englishWordTokens(part).length));
-  const total = weights.reduce((sum, value) => sum + value, 0) || 1;
-  let consumed = 0;
-  return parts.map((part, index) => {
-    const startRatio = consumed / total;
-    consumed += weights[index];
-    const endRatio = consumed / total;
-    const start = cue.start + cue.duration * startRatio;
-    const end = cue.start + cue.duration * endRatio;
-    return { start, duration: Math.max(0.001, end - start), text: part };
-  });
-}
-
-function clampTimedCueWindows(cues: CaptionCue[]) {
-  return cues.map((cue, index) => {
-    const next = cues[index + 1];
-    if (!next || next.start <= cue.start) return cue;
-    return { ...cue, duration: Math.max(0.001, Math.min(cue.duration, next.start - cue.start)) };
-  });
+  const timing = allocateSequentialCueWindows(cue, parts.map(part => Math.max(1, englishWordTokens(part).length)));
+  return parts.map((part, index) => ({ ...cue, ...timing[index], text: part }));
 }
 
 async function prepareEnglishTimedCues(
   cues: CaptionCue[],
   onProgress?: (progress: number) => Promise<void>,
 ) {
-  const raw = cues
+  const raw = effectiveSequentialRawWindows(cues
     .map(cue => ({ ...cue, text: cue.text.replace(/\s+/g, " ").trim() }))
-    .filter(cue => cue.text.length > 0)
-    .sort((a, b) => a.start - b.start);
+    .filter(cue => cue.text.length > 0));
   if (!raw.length) return [] as CaptionCue[];
 
   const repaired = new Map<number, string>();
@@ -605,7 +593,7 @@ async function prepareEnglishTimedCues(
   const normalized = raw.flatMap((cue, index) =>
     splitEnglishCueAtSentenceBoundaries({ ...cue, text: repaired.get(index) || cue.text }),
   );
-  return clampTimedCueWindows(normalized);
+  return normalized;
 }
 
 function cleanSubtitleText(text: string) {
@@ -1009,7 +997,9 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
 }
 
 async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count: number) {
-  const slice = raw.slice(start, start + count);
+  // Supadata display windows overlap by design. Normalize each source window
+  // before splitting so a terminal fragment never spills into the next onset.
+  const slice = effectiveSequentialRawWindows(raw).slice(start, start + count);
   if (!slice.length) return [] as CaptionCue[];
   const batch = slice.map((cue, offset) => ({ index: start + offset, text: cue.text.replace(/\s+/g, " ").trim() }));
   const repaired = await repairEnglishBatchWithGroq(batch);
@@ -1020,7 +1010,7 @@ async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count:
       text: repaired?.get(absolute) || cue.text.replace(/\s+/g, " ").trim(),
     });
   });
-  return clampTimedCueWindows(normalized);
+  return normalized;
 }
 
 type TranslationSliceTelemetry = {
@@ -1533,8 +1523,26 @@ export async function POST(request: Request) {
     cached = await getTranscript(videoId);
     if (!cached) throw new Error("Processing checkpoint missing");
     if ((cached.processingStage || stage) === "finalize") {
-      const english = cached.englishTranscript as CaptionCue[];
-      const greek = cached.greekTranscript as CaptionCue[];
+      let english = cached.englishTranscript as CaptionCue[];
+      let greek = cached.greekTranscript as CaptionCue[];
+      const englishInversions = timingInversionCount(english);
+      const greekInversions = timingInversionCount(greek);
+      if (englishInversions || greekInversions) {
+        if (!englishInversions || !greekInversions) {
+          throw new Error("English/Greek checkpoint timing inversions diverged");
+        }
+        const recovered = recoverMalformedAlignedTimings(english, greek);
+        if (!recovered.recovered) throw new Error("Malformed checkpoint timing was not recovered");
+        english = recovered.english;
+        greek = recovered.greek;
+        if (!await saveProcessingCheckpoint(videoId, lockToken, {
+          stage: "finalize", cursor: english.length, progress: 90,
+          englishTranscript: english, greekTranscript: greek,
+        })) throw new Error("Processing lock was lost before timing recovery checkpoint persisted");
+        console.info("[captions:timing-recovered]", JSON.stringify({
+          videoId, englishInversions, greekInversions, cues: english.length,
+        }));
+      }
       validateAlignedTranscript(english, greek);
       validateCompleteGreekTranscript(greek, cached.duration);
       if (!await updateProcessingProgress(videoId, lockToken, 94)) throw new Error("Processing lock was lost before final validation persisted");
