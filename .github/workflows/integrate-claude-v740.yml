@@ -23,14 +23,12 @@ jobs:
         with:
           node-version: 24
 
-      - name: Fetch Claude patch payload from temp branch
+      - name: Fetch exact Claude patch from temp branch
         shell: bash
         run: |
           git fetch origin tmp-v740-claude-apply-run
-          for part in claude-patch-00.b64 claude-patch-01.b64 claude-patch-02.b64 claude-patch-rest.b64; do
-            git show origin/tmp-v740-claude-apply-run:.tmp/$part >> /tmp/claude.patch.b64
-          done
-          base64 -d /tmp/claude.patch.b64 > /tmp/claude-v7.4.0.patch
+          git show origin/tmp-v740-claude-apply-run:.tmp/claude-v7.4.0.patch.gz > /tmp/claude-v7.4.0.patch.gz
+          gzip -dc /tmp/claude-v7.4.0.patch.gz > /tmp/claude-v7.4.0.patch
           git apply --check /tmp/claude-v7.4.0.patch
           git apply /tmp/claude-v7.4.0.patch
 
