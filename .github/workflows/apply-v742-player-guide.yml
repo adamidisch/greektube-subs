@@ -26,7 +26,7 @@ jobs:
       - name: Apply editorial guide and player redesign
         run: python /tmp/apply-v742.py
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-package-lock
       - name: Caption integrity
         run: npm run test:caption-integrity
       - name: Caption timing
@@ -49,6 +49,6 @@ jobs:
         run: |
           git config user.name 'GreekTube Release Bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add app/GreekTubePlayer.tsx app/layout.tsx app/v7-4-2.css package.json package-lock.json scripts/v742-player-guide.test.mjs
+          git add app/GreekTubePlayer.tsx app/layout.tsx app/v7-4-2.css package.json scripts/v742-player-guide.test.mjs
           git commit -m 'GreekTube Subs 7.4.2: editorial video guide and player polish'
           git push origin HEAD:v7.4.2
