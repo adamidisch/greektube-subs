@@ -1,6 +1,6 @@
 {
   "name": "greektube-subs",
-  "version": "7.1.14",
+  "version": "7.4.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "test:caption-integrity": "node --experimental-strip-types scripts/caption-numeric-integrity.test.mjs",
     "test:caption-timing": "node --experimental-strip-types scripts/caption-timing.test.mjs",
-    "test:caption-edgecases": "node --experimental-strip-types scripts/caption-translation-edgecases.test.mjs"
+    "test:caption-edgecases": "node --experimental-strip-types scripts/caption-translation-edgecases.test.mjs",
+    "test:manual-captions": "node --experimental-strip-types scripts/manual-captions-parser.test.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",

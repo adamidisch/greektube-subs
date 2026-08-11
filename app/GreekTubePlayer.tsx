@@ -8,11 +8,13 @@ type Captions = { videoId: string; title: string; originalTitle?:string; channel
 type ProcessingTelemetry = { status?:string; progress?:number; stage?:string; cursor?:number; totalCues?:number; currentCue?:number; cueStart?:number|null; elapsedSeconds?:number; updatedAt?:string|null; keyPoints?:string[] };
 type GuideItem = { time:number; text:string };
 type Category = "Medical" | "Tech" | "Podcasts" | "Comedy" | "Education" | "Documentaries" | "Other";
+type TranslationMode = "legacy" | "google" | "manual-pro";
 type Video = {
   id: string; url: string; title: string; originalTitle?:string; channel: string; category: Category;
   tags: string[]; notes: string; description: string; duration: number; addedAt: string;
   favorite: boolean; lastPosition: number; progress: number; lastWatched?: string; captions?: Cue[];
   speakerName?:string; speakerRole?:string; channelUrl?:string; originalVideoUrl?:string; views?:number; metadataVersion?:number;
+  translationMode?:TranslationMode;
 };
 type Moment = { id: string; videoId: string; time: number; note: string; tags: string[]; excerpt: string };
 type Settings = {
@@ -260,7 +262,7 @@ function transcriptHighlights(cues:Cue[]) {
 const PREPARATION_STAGES_EL=[
   {at:4,label:"Ανάκτηση στοιχείων βίντεο"},
   {at:12,label:"Ανάκτηση αγγλικού transcript"},
-  {at:28,label:"Δόμηση και διόρθωση αγγλικού κειμένου"},
+  {at:28,label:"Δόμηση αγγλικού transcript"},
   {at:48,label:"Μετάφραση στα ελληνικά"},
   {at:84,label:"Συγχρονισμός με το αρχικό timing"},
   {at:92,label:"Έλεγχος πιστότητας και ακεραιότητας"},
@@ -337,6 +339,7 @@ export default function GreekTubePlayer() {
   const [syncMessage,setSyncMessage]=useState("");
   const [editingVideo,setEditingVideo]=useState<Video|null>(null);
   const [editRequest,setEditRequest]=useState<Video|null>(null);
+  const [proImportVideo,setProImportVideo]=useState<Video|null>(null);
   const [mobileMenu,setMobileMenu]=useState(false);
   const [momentModal,setMomentModal]=useState<{time:number;excerpt:string}|null>(null);
   const [isFullscreen,setIsFullscreen]=useState(false);
@@ -572,6 +575,7 @@ export default function GreekTubePlayer() {
     setProcessingTelemetry(next);
   }
   async function openVideo(video:Video,start?:number,showTranscript=false,forceTranslation=false){
+    const translationMode:TranslationMode=video.translationMode||"legacy";
     const knownPoints=transcriptHighlights(video.captions||[]);
     patchVideo(video.id,{views:(video.views||0)+1});
     setSelectedId(video.id); setView("library"); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
@@ -611,6 +615,9 @@ export default function GreekTubePlayer() {
         }
       }catch{}
     }
+    if(translationMode==="manual-pro"&&!forceTranslation){
+      setLoading(false);setProgress(0);setCaptions(null);setProImportVideo(video);return;
+    }
     setLoading(false); setProgress(3); setCaptions(null);
     const loadingDelay=window.setTimeout(()=>setLoading(true),350);
     let stopStatusPolling=false;
@@ -638,7 +645,7 @@ export default function GreekTubePlayer() {
           const controller=new AbortController();
           const timeout=window.setTimeout(()=>controller.abort(),300000);
           try{
-            response=await fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,force:forceTranslation&&attempt===0}),signal:controller.signal});
+            response=await fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,force:forceTranslation&&attempt===0,translationMode}),signal:controller.signal});
           }catch{
             response=null;
           }finally{
@@ -912,7 +919,8 @@ export default function GreekTubePlayer() {
       </>}
       {momentModal&&<Modal title="Αποθήκευση στιγμής" close={()=>setMomentModal(null)}><form className="form moment-form" onSubmit={saveMoment}><div className="moment-preview"><time>{clock(momentModal.time)}</time><p>{momentModal.excerpt||"Η στιγμή θα αποθηκευτεί στο συγκεκριμένο σημείο του βίντεο."}</p></div><label>Σύντομη σημείωση<input name="note" autoFocus placeholder="Τι θέλεις να θυμάσαι από αυτό το σημείο;"/></label><label>Ετικέτες <small>Προαιρετικά</small><input name="tags" placeholder="π.χ. ινσουλίνη, διατροφή"/></label><div className="modal-actions"><button type="button" className="secondary" onClick={()=>setMomentModal(null)}>Ακύρωση</button><button className="primary">Αποθήκευση στιγμής</button></div></form></Modal>}
       {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
-      {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}} rebuild={()=>void rebuildTranslation(editingVideo)}/>}
+      {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}} rebuild={()=>void rebuildTranslation(editingVideo)} importPro={()=>{const video=editingVideo;setEditingVideo(null);setProImportVideo(video);}}/>}
+      {proImportVideo&&<ProTranscriptImport video={proImportVideo} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);await openVideo(video);}}/>}
     </main>;
   }
 
@@ -948,15 +956,16 @@ export default function GreekTubePlayer() {
       {hydrated&&filtered.length===0&&<div className="empty polished-empty"><b>⌕</b><h2>Δεν βρέθηκαν βίντεο</h2><p>Δοκίμασε διαφορετική κατηγορία, ομιλητή ή λέξη αναζήτησης.</p></div>}
       <footer className="app-footer"><div className="app-footer-brand"><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span></div><p>Αυτόματοι ελληνικοί υπότιτλοι για δημόσια βίντεο YouTube.</p><span className="app-footer-note">Φτιαγμένο με ♥ για ελληνόφωνους θεατές</span></footer>
     </>}
-    {modal&&<AddVideo existingIds={state.videos.map(video=>video.id)} close={()=>setModal(false)} add={async(video,translate)=>{const next={...stateRef.current,videos:[video,...stateRef.current.videos.filter(item=>item.id!==video.id)]};const saved=await saveStateToServer(next,false,true);if(!saved?.ok||!saved.sharedSaved)throw new Error(saved?.error||"Δεν αποθηκεύτηκε η κοινή βιβλιοθήκη.");setState(next);setModal(false);if(translate)await openVideo(video);}}/>}
+    {modal&&<AddVideo existingIds={state.videos.map(video=>video.id)} close={()=>setModal(false)} add={async(video,translate,openProImport)=>{const next={...stateRef.current,videos:[video,...stateRef.current.videos.filter(item=>item.id!==video.id)]};const saved=await saveStateToServer(next,false,true);if(!saved?.ok||!saved.sharedSaved)throw new Error(saved?.error||"Δεν αποθηκεύτηκε η κοινή βιβλιοθήκη.");setState(next);setModal(false);if(openProImport){setProImportVideo(video);return;}if(translate)await openVideo(video);}}/>}
     {addRequest&&<EditPassword close={()=>setAddRequest(false)} authorized={()=>{setAddRequest(false);window.setTimeout(()=>void syncLibraryToServer(),350);setModal(true);}}/>}
     {syncRequest&&<EditPassword close={()=>setSyncRequest(false)} authorized={()=>{setSyncRequest(false);window.setTimeout(()=>void syncLibraryToServer(),350);}}/>}
     {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
-    {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}}/>}
+    {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}} importPro={()=>{const video=editingVideo;setEditingVideo(null);setProImportVideo(video);}}/>}
+    {proImportVideo&&<ProTranscriptImport video={proImportVideo} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);await openVideo(video);}}/>}
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.1.14</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.0</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
@@ -976,7 +985,7 @@ function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
 }
 function VideoCard({video,open,patch,edit,settings,variant="library",isNew=false}:{video:Video;open:(v:Video)=>void;patch:(id:string,p:Partial<Video>)=>void;edit:(v:Video)=>void;settings:Settings;variant?:"library"|"continue";isNew?:boolean}){const title=greekTitle(video);const watchedMinutes=Math.round(video.lastPosition/60);const totalMinutes=Math.ceil(video.duration/60);const progress=Math.round(video.progress||0);return <article className={`video-card ${variant==="continue"?"continue-card":""} ${isNew?"new-video":""}`} role="button" tabIndex={0} aria-label={`Άνοιγμα βίντεο: ${title}`} onClick={()=>void open(video)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();void open(video)}}}><div className="thumb"><img loading="lazy" decoding="async" src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/>{isNew&&<span className="new-badge">ΝΕΟ</span>}<span className="duration">{video.duration?clock(video.duration):"EL subs"}</span>{progress>=WATCHED_THRESHOLD&&<span className="watched-badge">✓ Προβλήθηκε</span>}<button aria-label="Επεξεργασία βίντεο" className="card-edit" onKeyDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();edit(video)}}>✎</button><div className="thumb-top-right"><span className="card-category" data-category={video.category}>{CATEGORY_LABELS[video.category]}</span><button aria-label="Αγαπημένο" className={`heart ${video.favorite?"active":""}`} onKeyDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();patch(video.id,{favorite:!video.favorite})}}>♥</button></div>{video.progress>0&&<i className="card-progress" style={{width:`${video.progress}%`}}/>}</div><div className="card-info"><div className="card-meta-line"><span>{video.channel}</span>{progress>0&&<em>{progress}%</em>}</div><strong>{title}</strong>{englishTitle(video)&&englishTitle(video)!==title&&<p className="card-original-title">{englishTitle(video)}</p>}{variant==="continue"&&<small>{totalMinutes>0?`${watchedMinutes} / ${totalMinutes} λεπτά`:"Η διάρκεια υπολογίζεται…"}</small>}{variant==="library"&&settings.descriptions&&<p>{video.description}</p>}</div></article>;}
 
-function EditVideo({video,close,save,rebuild}:{video:Video;close:()=>void;save:(patch:Partial<Video>)=>void;rebuild?:()=>void}) {
+function EditVideo({video,close,save,rebuild,importPro}:{video:Video;close:()=>void;save:(patch:Partial<Video>)=>void;rebuild?:()=>void;importPro?:()=>void}) {
   function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();
     const data=new FormData(event.currentTarget);
@@ -1003,15 +1012,51 @@ function EditVideo({video,close,save,rebuild}:{video:Video;close:()=>void;save:(
     <div className="form-grid"><label>Κατηγορία<select name="category" defaultValue={video.category}>{CATEGORIES.slice(1).map(category=><option key={category} value={category}>{CATEGORY_LABELS[category]}</option>)}</select></label><label>Ετικέτες<input name="tags" defaultValue={video.tags.join(", ")}/></label></div>
     <label>Περιγραφή<textarea name="description" defaultValue={video.description}/></label>
     {rebuild&&<button type="button" className="secondary rebuild-translation" onClick={rebuild}>↻ Νέα μετάφραση από το αγγλικό πρωτότυπο</button>}
+    {importPro&&<button type="button" className="secondary pro-import-entry" onClick={importPro}>✦ Εισαγωγή PRO υποτίτλων</button>}
     <div className="modal-actions"><button type="button" className="secondary" onClick={close}>Ακύρωση</button><button className="primary">Αποθήκευση αλλαγών</button></div>
   </form></Modal>;
 }
 
-function AddVideo({close,add,existingIds}:{close:()=>void;add:(v:Video,t:boolean)=>Promise<void>;existingIds:string[]}) {
-  const [url,setUrl]=useState("");const [metadata,setMetadata]=useState<{id:string;title:string;originalTitle?:string;channel:string;channelUrl?:string;originalVideoUrl?:string;duration?:number;description?:string;speakerName?:string;speakerRole?:string;category?:Category;tags?:string[]}|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState("");
+function ProTranscriptImport({video,close,done}:{video:Video;close:()=>void;done:(captions:Captions)=>Promise<void>}) {
+  const [subtitleText,setSubtitleText]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  async function submit(event:FormEvent<HTMLFormElement>){
+    event.preventDefault();
+    if(!subtitleText.trim()){setError("Επικόλλησε πρώτα τους έτοιμους ελληνικούς υπότιτλους.");return;}
+    setBusy(true);setError("");
+    try{
+      const response=await fetch("/api/manual-captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,title:video.title,originalTitle:video.originalTitle||"",channel:video.channel,duration:video.duration||0,subtitleText})});
+      const result=await response.json() as Captions&{error?:string};
+      if(!response.ok)throw new Error(result.error||"Δεν έγινε η εισαγωγή των PRO υποτίτλων.");
+      await done(result);
+    }catch(problem){setError(problem instanceof Error?problem.message:"Δεν έγινε η εισαγωγή των PRO υποτίτλων.");}
+    finally{setBusy(false);}
+  }
+  return <Modal title="PRO μετάφραση · ChatGPT" close={close}><form className="form pro-translation-form" onSubmit={submit}>
+    <div className="pro-translation-intro"><span className="pro-badge">PRO</span><div><strong>Μετάφραση με πλήρες context</strong><p>Αντέγραψε το αγγλικό transcript μαζί με τα timestamps και στείλε μου το εδώ στο ChatGPT. Θα σου επιστρέψω ελληνικούς υπότιτλους με τα ίδια timestamps για άμεσο συγχρονισμό.</p></div></div>
+    <div className="pro-flow" aria-label="Ροή PRO μετάφρασης"><span><b>01</b> Transcript + timestamps</span><i>→</i><span><b>02</b> Μετάφραση στο ChatGPT</span><i>→</i><span><b>03</b> Εισαγωγή εδώ</span></div>
+    <label>Έτοιμοι ελληνικοί υπότιτλοι<textarea value={subtitleText} onChange={event=>{setSubtitleText(event.target.value);setError("")}} rows={14} spellCheck={false} placeholder={'1\n00:00:00,000 --> 00:00:03,400\nΗ ελληνική μετάφραση εδώ…\n\n2\n00:00:03,400 --> 00:00:07,100\nΗ επόμενη πρόταση…'}/></label>
+    <small className="pro-format-note">Δέχεται SRT, VTT ή απλές γραμμές με timestamps. Τα timestamps παραμένουν ακριβώς συνδεδεμένα με το βίντεο.</small>
+    {error&&<p className="form-error" role="alert">{error}</p>}
+    <div className="modal-actions"><button type="button" className="secondary" disabled={busy} onClick={close}>Ακύρωση</button><button className="primary" disabled={busy}>{busy?"Εισαγωγή…":"Εισαγωγή PRO υποτίτλων"}</button></div>
+  </form></Modal>;
+}
+
+function AddVideo({close,add,existingIds}:{close:()=>void;add:(v:Video,t:boolean,openProImport?:boolean)=>Promise<void>;existingIds:string[]}) {
+  const [url,setUrl]=useState("");
+  const [metadata,setMetadata]=useState<{id:string;title:string;originalTitle?:string;channel:string;channelUrl?:string;originalVideoUrl?:string;duration?:number;description?:string;speakerName?:string;speakerRole?:string;category?:Category;tags?:string[]}|null>(null);
+  const [mode,setMode]=useState<Exclude<TranslationMode,"legacy">>("google");
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
   async function inspect(){const id=extractId(url);if(!id){setError("Βάλε έναν έγκυρο σύνδεσμο YouTube.");return;}if(existingIds.includes(id)){setError("Αυτό το βίντεο υπάρχει ήδη στη βιβλιοθήκη.");return;}setBusy(true);setError("");try{const r=await fetch("/api/metadata",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});const j=await r.json();if(!r.ok)throw new Error(j.error);setMetadata(j);}catch(e){setError(e instanceof Error?e.message:"Σφάλμα");}finally{setBusy(false);}}
-  async function submit(e:React.MouseEvent<HTMLButtonElement>,translate:boolean){e.preventDefault();const form=e.currentTarget.form;if(!form||busy)return;if(!metadata){await inspect();return;}setBusy(true);setError("");try{const fd=new FormData(form);const manualTags=String(fd.get("tags")||"").split(",").map(x=>x.trim()).filter(Boolean);const v:Video={id:metadata.id,url,title:metadata.title,originalTitle:metadata.originalTitle,channel:metadata.channel,channelUrl:metadata.channelUrl,originalVideoUrl:metadata.originalVideoUrl||url,speakerName:metadata.speakerName,speakerRole:metadata.speakerRole,category:String(fd.get("category")||metadata.category||"Other") as Category,tags:Array.from(new Set([...(metadata.tags||[]),...manualTags])),notes:String(fd.get("notes")||""),description:String(fd.get("notes")||metadata.description||"Νέο βίντεο στη βιβλιοθήκη."),duration:metadata.duration||0,addedAt:new Date().toISOString(),favorite:false,lastPosition:0,progress:0,metadataVersion:5};await add(v,translate);}catch(error){setError(error instanceof Error?error.message:"Δεν αποθηκεύτηκε το βίντεο.");}finally{setBusy(false);}}
-  return <Modal title="Προσθήκη βίντεο" close={close}><form className="form"><label>Σύνδεσμος YouTube<div className="inspect-row"><input value={url} onChange={e=>{setUrl(e.target.value);setMetadata(null);setError("")}} placeholder="https://youtube.com/watch?v=…"/><button type="button" disabled={busy} onClick={()=>void inspect()}>{busy?"Έλεγχος…":"Έλεγχος"}</button></div></label>{error&&<p className="form-error">{error}</p>}{metadata&&<div className="metadata"><img src={`https://i.ytimg.com/vi/${metadata.id}/hqdefault.jpg`} alt=""/><div><strong>{metadata.title}</strong>{metadata.originalTitle&&<small>{metadata.originalTitle}</small>}<span>{metadata.speakerName||metadata.channel}{metadata.speakerRole?` (${metadata.speakerRole})`:""} · {CATEGORY_LABELS[metadata.category||"Other"]} · {metadata.duration?clock(metadata.duration):"Διάρκεια υπό υπολογισμό"}</span></div></div>}<div className="form-grid"><label>Κατηγορία<select name="category" key={metadata?.category||"Other"} defaultValue={metadata?.category||"Other"}>{CATEGORIES.slice(1).map(c=><option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}</select></label><label>Ετικέτες<input name="tags" defaultValue={metadata?.tags?.join(", ")||""} placeholder="υγεία, ινσουλίνη"/></label></div><label>Προσωπικές σημειώσεις<textarea name="notes" placeholder="Γιατί θέλω να κρατήσω αυτό το βίντεο…"/></label><div className="modal-actions"><button className="secondary" disabled={busy} onClick={e=>void submit(e,false)}>Αποθήκευση</button><button className="primary" disabled={busy} onClick={e=>void submit(e,true)}>Αποθήκευση και ετοιμασία υποτίτλων</button></div></form></Modal>;
+  async function submit(e:React.MouseEvent<HTMLButtonElement>,action:"save"|"prepare"){e.preventDefault();const form=e.currentTarget.form;if(!form||busy)return;if(!metadata){await inspect();return;}setBusy(true);setError("");try{const fd=new FormData(form);const manualTags=String(fd.get("tags")||"").split(",").map(x=>x.trim()).filter(Boolean);const v:Video={id:metadata.id,url,title:metadata.title,originalTitle:metadata.originalTitle,channel:metadata.channel,channelUrl:metadata.channelUrl,originalVideoUrl:metadata.originalVideoUrl||url,speakerName:metadata.speakerName,speakerRole:metadata.speakerRole,category:String(fd.get("category")||metadata.category||"Other") as Category,tags:Array.from(new Set([...(metadata.tags||[]),...manualTags])),notes:String(fd.get("notes")||""),description:String(fd.get("notes")||metadata.description||"Νέο βίντεο στη βιβλιοθήκη."),duration:metadata.duration||0,addedAt:new Date().toISOString(),favorite:false,lastPosition:0,progress:0,metadataVersion:5,translationMode:mode};if(action==="save")await add(v,false,false);else if(mode==="google")await add(v,true,false);else await add(v,false,true);}catch(problem){setError(problem instanceof Error?problem.message:"Δεν αποθηκεύτηκε το βίντεο.");}finally{setBusy(false);}}
+  return <Modal title="Προσθήκη βίντεο" close={close}><form className="form add-video-v740"><label>Σύνδεσμος YouTube<div className="inspect-row"><input value={url} onChange={e=>{setUrl(e.target.value);setMetadata(null);setError("")}} placeholder="https://youtube.com/watch?v=…"/><button type="button" disabled={busy} onClick={()=>void inspect()}>{busy?"Έλεγχος…":"Έλεγχος"}</button></div></label>{error&&<p className="form-error">{error}</p>}{metadata&&<div className="metadata"><img src={`https://i.ytimg.com/vi/${metadata.id}/hqdefault.jpg`} alt=""/><div><strong>{metadata.title}</strong>{metadata.originalTitle&&<small>{metadata.originalTitle}</small>}<span>{metadata.speakerName||metadata.channel}{metadata.speakerRole?` (${metadata.speakerRole})`:""} · {CATEGORY_LABELS[metadata.category||"Other"]} · {metadata.duration?clock(metadata.duration):"Διάρκεια υπό υπολογισμό"}</span></div></div>}
+    <section className="translation-mode-section"><div className="translation-mode-heading"><span>ΤΡΟΠΟΣ ΜΕΤΑΦΡΑΣΗΣ</span><small>Διάλεξε ταχύτητα ή μέγιστη ποιότητα.</small></div><div className="translation-mode-grid">
+      <button type="button" className={`translation-mode-card ${mode==="google"?"active":""}`} onClick={()=>setMode("google")}><span className="mode-icon">⚡</span><div><strong>Γρήγορη · Google</strong><small>ΑΥΤΟΜΑΤΗ</small><p>Έξυπνα contextual batches, ίδιο timing και πολύ λιγότερα provider calls.</p></div><i aria-hidden="true">{mode==="google"?"✓":""}</i></button>
+      <button type="button" className={`translation-mode-card pro ${mode==="manual-pro"?"active":""}`} onClick={()=>setMode("manual-pro")}><span className="mode-icon">✦</span><div><strong>PRO · ChatGPT</strong><small>ΜΕΓΙΣΤΗ ΠΟΙΟΤΗΤΑ</small><p>Μεταφράζουμε εδώ με πλήρες context και εισάγουμε έτοιμους timed υπότιτλους.</p></div><i aria-hidden="true">{mode==="manual-pro"?"✓":""}</i></button>
+    </div></section>
+    <div className="form-grid"><label>Κατηγορία<select name="category" key={metadata?.category||"Other"} defaultValue={metadata?.category||"Other"}>{CATEGORIES.slice(1).map(c=><option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}</select></label><label>Ετικέτες<input name="tags" defaultValue={metadata?.tags?.join(", ")||""} placeholder="υγεία, ινσουλίνη"/></label></div><label>Προσωπικές σημειώσεις<textarea name="notes" placeholder="Γιατί θέλω να κρατήσω αυτό το βίντεο…"/></label><div className="modal-actions"><button className="secondary" disabled={busy} onClick={e=>void submit(e,"save")}>Αποθήκευση μόνο</button><button className="primary" disabled={busy} onClick={e=>void submit(e,"prepare")}>{busy?"Αποθήκευση…":mode==="google"?"Αποθήκευση και γρήγορη μετάφραση":"Αποθήκευση και εισαγωγή PRO"}</button></div></form></Modal>;
 }
 
 function SettingsPage({settings,update,close}:{settings:Settings;update:(p:Partial<Settings>)=>void;close:()=>void}) {

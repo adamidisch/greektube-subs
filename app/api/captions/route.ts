@@ -48,6 +48,8 @@ type CaptionCue = {
   text: string;
 };
 
+type TranslationMode = "legacy" | "google";
+
 type ClientCachedTranscript = {
   videoId?: unknown;
   title?: unknown;
@@ -987,13 +989,13 @@ async function translateCuesToGreek(cues: CaptionCue[], onProgress?: (progress: 
   return cues.map((cue, index) => ({ ...cue, text: translated.get(index) as string }));
 }
 
-async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count: number) {
+async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count: number, useGroqRepair = true) {
   // Supadata display windows overlap by design. Normalize each source window
   // before splitting so a terminal fragment never spills into the next onset.
   const slice = effectiveSequentialRawWindows(raw).slice(start, start + count);
   if (!slice.length) return [] as CaptionCue[];
   const batch = slice.map((cue, offset) => ({ index: start + offset, text: cue.text.replace(/\s+/g, " ").trim() }));
-  const repaired = await repairEnglishBatchWithGroq(batch);
+  const repaired = useGroqRepair ? await repairEnglishBatchWithGroq(batch) : null;
   const normalized = slice.flatMap((cue, offset) => {
     const absolute = start + offset;
     return splitEnglishCueAtSentenceBoundaries({
@@ -1022,6 +1024,7 @@ async function translateCheckpointBatch(
   videoId: string,
   lockToken: string,
   groqCooldownUntil: string | null | undefined,
+  translationMode: TranslationMode,
   cues: CaptionCue[],
   start: number,
   count: number,
@@ -1044,11 +1047,69 @@ async function translateCheckpointBatch(
     telemetry.providerPaths.push({ cueIndex, path });
     if (path === "groq" || path === "groq-strict") telemetry.groqCues += 1;
     if (path === "groq-strict") telemetry.groqStrictCues += 1;
-    if (path.startsWith("google-placeholder")) telemetry.googleFallbackCues += 1;
+    if (path.startsWith("google")) telemetry.googleFallbackCues += 1;
   };
   try {
   if (!slice.length) return telemetry;
   const output = new Map<number, string>();
+
+  // v7.4.0 Fast mode: one Google request sees a short window of neighbouring
+  // cues for context. Every cue is still validated and durably committed in
+  // order. Any cue rejected by the batch falls back to the protected-token
+  // Google path before the checkpoint may advance.
+  if (translationMode === "google") {
+    let batchResults: Map<number, string> | null = null;
+    const googleBatchStartedAt = Date.now();
+    try {
+      batchResults = await translateMeaningBatch(numbered);
+    } catch (error) {
+      console.warn("[captions:google-batch-failed]", JSON.stringify({
+        videoId, start, cues: numbered.length, error: error instanceof Error ? error.message : "Google batch failed",
+      }));
+    } finally {
+      telemetry.googleMs += Date.now() - googleBatchStartedAt;
+    }
+
+    for (const [offset, item] of numbered.entries()) {
+      const sourceWordTokens = englishWordTokens(item.text);
+      if (!hasTranslatableWordTokens(sourceWordTokens, translationProtectedTokens(item.text))) {
+        const passthrough = item.text.trim();
+        const passthroughReason = translationIntegrityFailure(item.text, passthrough);
+        if (passthroughReason) throw new Error(`Translation passthrough integrity failed for cue: ${item.index}`);
+        output.set(item.index, passthrough);
+        await commitAcceptedCue({ ...slice[offset], text: passthrough }, item.index, "passthrough");
+        continue;
+      }
+
+      const batchCandidate = batchResults?.get(item.index) || null;
+      const batchReason = batchCandidate ? translationIntegrityFailure(item.text, batchCandidate) : "google-batch-missing-cue";
+      if (!batchReason && batchCandidate) {
+        output.set(item.index, batchCandidate);
+        await commitAcceptedCue({ ...slice[offset], text: batchCandidate }, item.index, "google-batch");
+        continue;
+      }
+      if (batchCandidate) logRejectedTranslationCue(videoId, item.index, item.text, "google-batch", batchCandidate, batchReason || "google-batch-invalid");
+
+      const googleStartedAt = Date.now();
+      try {
+        const google = await translateSingleCueWithProtectedGoogleFallback(item.text);
+        if (google.restorationFailure || !google.restoredCandidate) {
+          throw new Error(google.restorationFailure || "placeholder-restoration-failed");
+        }
+        const googleReason = translationIntegrityFailure(item.text, google.restoredCandidate);
+        if (googleReason) {
+          logRejectedTranslationCue(videoId, item.index, item.text, "google-protected", google.candidate, googleReason, google.restoredCandidate);
+          throw new Error(googleReason);
+        }
+        output.set(item.index, google.restoredCandidate);
+        await commitAcceptedCue({ ...slice[offset], text: google.restoredCandidate }, item.index, "google-protected");
+      } finally {
+        telemetry.googleMs += Date.now() - googleStartedAt;
+      }
+    }
+    return telemetry;
+  }
+
   let groqFailure: string | null = null;
   let groqResults: Map<number, string> | null = null;
   let groqRateLimited = false;
@@ -1347,7 +1408,7 @@ export async function POST(request: Request) {
   let lockToken: string | null = null;
   let lockedVideoId: string | null = null;
   try {
-    const body = (await request.json()) as { url?: unknown; force?: unknown; cachedTranscript?: ClientCachedTranscript };
+    const body = (await request.json()) as { url?: unknown; force?: unknown; cachedTranscript?: ClientCachedTranscript; translationMode?: unknown };
     if (typeof body.url !== "string" || body.url.length > 500) {
       return NextResponse.json({ error: "Βάλε ένα έγκυρο YouTube link." }, { status: 400 });
     }
@@ -1355,6 +1416,10 @@ export async function POST(request: Request) {
     if (!videoId) return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
     lockedVideoId = videoId;
     const force = body.force === true;
+    if (body.translationMode === "manual-pro") {
+      return NextResponse.json({ error: "Η PRO μετάφραση εισάγεται από το εργαλείο PRO και δεν εκτελεί αυτόματη μετάφραση." }, { status: 409 });
+    }
+    const translationMode: TranslationMode = body.translationMode === "google" ? "google" : "legacy";
     let cached = await getTranscript(videoId);
     const mustRestartCheckpoint = Boolean(cached && (force || cached.transcriptVersion !== TRANSCRIPT_VERSION));
 
@@ -1471,7 +1536,7 @@ export async function POST(request: Request) {
       if (!raw.length) throw new Error("Raw English transcript checkpoint is empty");
       const CHUNK = 16;
       if (cursor < raw.length) {
-        const chunk = await prepareEnglishTimedChunk(raw, cursor, CHUNK);
+        const chunk = await prepareEnglishTimedChunk(raw, cursor, CHUNK, translationMode === "legacy");
         const english = [...(cached.englishTranscript as CaptionCue[]), ...chunk];
         const nextCursor = Math.min(raw.length, cursor + CHUNK);
         const done = nextCursor >= raw.length;
@@ -1496,11 +1561,11 @@ export async function POST(request: Request) {
       if (!english.length) throw new Error("Normalized English transcript checkpoint is empty");
       // One provider micro-batch contains exactly four cues. Each accepted
       // cue is persisted before the next one, preserving a contiguous cursor.
-      const CHUNK = 4;
+      const CHUNK = translationMode === "google" ? 12 : 4;
       if (cursor < english.length) {
         const translationLockToken = lockToken;
         let greek = [...(cached.greekTranscript as CaptionCue[])];
-        await translateCheckpointBatch(videoId, translationLockToken, cached.groqCooldownUntil, english, cursor, CHUNK,
+        await translateCheckpointBatch(videoId, translationLockToken, cached.groqCooldownUntil, translationMode, english, cursor, CHUNK,
           async (translatedCue, cueIndex) => {
             // Committing out of order would let a later cue hide an unresolved
             // earlier cue. Refuse it before any durable write.
@@ -1564,7 +1629,7 @@ export async function POST(request: Request) {
       lockToken = null;
       const ready = await getTranscript(videoId);
       const payload = await cachedResponse(ready);
-      return NextResponse.json({ ...payload, title: translatedTitle, translationMethod: "resumable_repaired_timed_v8", cached: false });
+      return NextResponse.json({ ...payload, title: translatedTitle, translationMethod: translationMode === "google" ? "google_fast_context_v1" : "resumable_repaired_timed_v8", cached: false });
     }
 
     throw new Error(`Unknown processing stage: ${stage}`);
