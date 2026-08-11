@@ -1,0 +1,92 @@
+name: Apply v7.4.1 manual translate workflow
+
+on:
+  push:
+    branches: [tmp-v741-manual-translate]
+    paths:
+      - .github/workflows/apply-v741-manual-translate.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.4.1
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Reconstruct Claude patch
+        shell: bash
+        run: |
+          git fetch origin tmp-v741-manual-translate
+          for n in 0 1 2; do
+            git show origin/tmp-v741-manual-translate:.tmp/manual-patch-${n}.b64
+          done | tr -d '\n' | base64 -d | gzip -d > /tmp/claude-manual.patch
+          test -s /tmp/claude-manual.patch
+
+      - name: Apply Claude patch on current v7.4.1
+        shell: bash
+        run: |
+          git apply --3way /tmp/claude-manual.patch
+
+      - name: Production refinements
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/GreekTubePlayer.tsx')
+          s = p.read_text()
+          s = s.replace('title="Manual Translate"', 'title="Μετάφραση με ChatGPT"')
+          s = s.replace('<h3>Auto Translate</h3>', '<h3>Αυτόματη μετάφραση</h3>')
+          s = s.replace('<h3>Manual Translate</h3>', '<h3>Μετάφραση με ChatGPT</h3>')
+          s = s.replace('<strong>Auto Translate</strong>', '<strong>Αυτόματη μετάφραση</strong>')
+          s = s.replace('<strong>Manual Translate</strong>', '<strong>Μετάφραση με ChatGPT</strong>')
+          s = s.replace('>⚡</span>', '>↻</span>')
+          s = s.replace('>✎</span>', '>✦</span>')
+          s = s.replace('ίδιο αριθμό γραμμών και τα ίδια timestamps', 'ίδιο αριθμό cues και ακριβώς τα ίδια timestamps')
+          p.write_text(s)
+
+          p = Path('app/api/manual-captions/route.ts')
+          s = p.read_text()
+          s = s.replace('const TOLERANCE = 0.15;', 'const TOLERANCE = 0.002;')
+          p.write_text(s)
+          PY
+
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - run: npm run test:caption-integrity
+      - run: npm run test:caption-timing
+      - run: npm run test:caption-edgecases
+      - run: npm run test:manual-captions
+      - run: node --experimental-strip-types scripts/v741-quality-reliability.test.mjs
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+      - name: Verify manual workflow invariants
+        shell: bash
+        run: |
+          grep -q 'Λήψη αγγλικού transcript (.srt)' app/GreekTubePlayer.tsx
+          grep -q 'Εισαγωγή ελληνικού SRT' app/GreekTubePlayer.tsx
+          grep -q 'Μετάφραση με ChatGPT' app/GreekTubePlayer.tsx
+          grep -q 'Αυτόματη μετάφραση' app/GreekTubePlayer.tsx
+          grep -q 'const TOLERANCE = 0.002;' app/api/manual-captions/route.ts
+          grep -q 'strict:true' app/GreekTubePlayer.tsx
+          ! grep -q '>PRO<' app/GreekTubePlayer.tsx
+          git diff --check
+
+      - name: Commit validated manual translation UX
+        shell: bash
+        run: |
+          git config user.name 'GreekTube Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add app/GreekTubePlayer.tsx app/api/manual-captions/route.ts app/v7-4-0.css
+          git commit -m 'GreekTube Subs 7.4.1: add SRT ChatGPT translation workflow'
+          git push origin HEAD:v7.4.1
