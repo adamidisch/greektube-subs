@@ -6,6 +6,8 @@ import {
   failTranscript,
   getTranscript,
   MAX_TRANSIENT_RETRIES,
+  recordGroqProviderSuccess,
+  recordGroqRateLimit,
   recordTransientProcessingFailure,
   releaseProcessingLock,
   resetProcessingForTranslation,
@@ -643,6 +645,18 @@ const GROQ_SYSTEM_PROMPT =
   "Επέστρεψε ακριβώς έναν δείκτη [[N]] για κάθε input cue, στην ίδια σειρά, χωρίς παραλείψεις, διπλασιασμούς ή νέους δείκτες. " +
   "Απάντησε μόνο με τις μεταφρασμένες γραμμές και τους δείκτες.";
 
+class GroqRateLimitError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super("Groq 429 rate limited");
+    this.name = "GroqRateLimitError";
+  }
+}
+
+function groqRetryAfterSeconds(response: Response) {
+  const value = Number(response.headers.get("retry-after"));
+  return Number.isFinite(value) && value > 0 ? value : 30;
+}
+
 async function translateBatchWithGroq(batch: { index: number; text: string }[], precedingContext?: string) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return null;
@@ -687,15 +701,7 @@ async function translateBatchWithGroq(batch: { index: number; text: string }[], 
       clearTimeout(timeout);
     }
 
-    if (response.status === 429) {
-      if (attempt < 1) {
-        const retryAfterSeconds = Number(response.headers.get("retry-after")) || 5;
-        const waitMs = Math.min(retryAfterSeconds, 8) * 1000;
-        await new Promise(resolve => setTimeout(resolve, waitMs));
-        continue;
-      }
-      throw new Error("Groq 429 after retries");
-    }
+    if (response.status === 429) throw new GroqRateLimitError(groqRetryAfterSeconds(response));
     if (!response.ok) {
       if (response.status >= 500 && attempt < 1) {
         await new Promise(resolve => setTimeout(resolve, 800 * (attempt + 1)));
@@ -900,6 +906,7 @@ async function translateStrictSingleCueWithGroq(index: number, text: string) {
         ],
       }),
     });
+    if (response.status === 429) throw new GroqRateLimitError(groqRetryAfterSeconds(response));
     if (!response.ok) throw new Error(`Groq ${response.status}`);
     const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
     const content = payload.choices?.[0]?.message?.content || "";
@@ -1023,19 +1030,42 @@ async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count:
   return clampTimedCueWindows(normalized);
 }
 
-async function translateCheckpointBatch(videoId: string, cues: CaptionCue[], start: number, count: number) {
+async function translateCheckpointBatch(
+  videoId: string,
+  lockToken: string,
+  groqCooldownUntil: string | null | undefined,
+  cues: CaptionCue[],
+  start: number,
+  count: number,
+) {
   const slice = cues.slice(start, start + count);
   if (!slice.length) return [] as CaptionCue[];
   const numbered = slice.map((cue, offset) => ({ index: start + offset, text: cue.text }));
   const output = new Map<number, string>();
   let groqFailure: string | null = null;
   let groqResults: Map<number, string> | null = null;
-  if (process.env.GROQ_API_KEY) {
+  let groqRateLimited = false;
+  const groqCooling = Boolean(groqCooldownUntil && groqCooldownUntil > new Date().toISOString());
+  if (process.env.GROQ_API_KEY && !groqCooling) {
     try {
       groqResults = await translateBatchWithGroq(numbered);
+      if (!await recordGroqProviderSuccess(videoId, lockToken)) {
+        throw new Error("Processing lock was lost while recording Groq success");
+      }
     } catch (error) {
-      groqFailure = error instanceof Error ? error.message : "Groq batch failed";
+      if (error instanceof GroqRateLimitError) {
+        const state = await recordGroqRateLimit(videoId, lockToken, error.retryAfterSeconds);
+        if (!state) throw new Error("Processing lock was lost while recording Groq rate limit");
+        groqRateLimited = true;
+        groqFailure = state.groq_cooldown_until && state.groq_cooldown_until > new Date().toISOString()
+          ? `groq-cooldown-until:${state.groq_cooldown_until}`
+          : "groq-429";
+      } else {
+        groqFailure = error instanceof Error ? error.message : "Groq batch failed";
+      }
     }
+  } else if (groqCooling) {
+    groqFailure = `groq-cooldown-until:${groqCooldownUntil}`;
   }
 
   for (const item of numbered) {
@@ -1049,14 +1079,29 @@ async function translateCheckpointBatch(videoId: string, cues: CaptionCue[], sta
     }
     logRejectedTranslationCue(videoId, item.index, item.text, "groq-batch", groqCandidate, groqReason);
 
-    // A single rejected cue never retries the complete six-cue slice. Ask
-    // Groq once more with the exact immutable values spelled out explicitly.
+    // A rate-limited provider gets no second attempt for this cue. For normal
+    // integrity failures, ask Groq once more with immutable values explicit.
     let strictCandidate: string | null = null;
-    try {
-      strictCandidate = await translateStrictSingleCueWithGroq(item.index, item.text);
-    } catch (error) {
-      logRejectedTranslationCue(videoId, item.index, item.text, "groq-strict", null,
-        error instanceof Error ? error.message : "Groq strict retry failed");
+    if (!groqRateLimited && !groqCooling && process.env.GROQ_API_KEY) {
+      try {
+        strictCandidate = await translateStrictSingleCueWithGroq(item.index, item.text);
+        if (!await recordGroqProviderSuccess(videoId, lockToken)) {
+          throw new Error("Processing lock was lost while recording strict Groq success");
+        }
+      } catch (error) {
+        if (error instanceof GroqRateLimitError) {
+          const state = await recordGroqRateLimit(videoId, lockToken, error.retryAfterSeconds);
+          if (!state) throw new Error("Processing lock was lost while recording strict Groq rate limit");
+          groqRateLimited = true;
+          logRejectedTranslationCue(videoId, item.index, item.text, "groq-strict", null,
+            state.groq_cooldown_until && state.groq_cooldown_until > new Date().toISOString()
+              ? `groq-cooldown-until:${state.groq_cooldown_until}`
+              : "groq-429");
+        } else {
+          logRejectedTranslationCue(videoId, item.index, item.text, "groq-strict", null,
+            error instanceof Error ? error.message : "Groq strict retry failed");
+        }
+      }
     }
     if (strictCandidate) {
       const strictReason = translationIntegrityFailure(item.text, strictCandidate);
@@ -1094,15 +1139,55 @@ async function translateCheckpointBatch(videoId: string, cues: CaptionCue[], sta
   return slice.map((cue, offset) => ({ ...cue, text: output.get(start + offset) as string }));
 }
 
+function processingTelemetry(record: NonNullable<Awaited<ReturnType<typeof getTranscript>>>) {
+  const persistedStage = record.processingStage || "source";
+  const stage = record.rawEnglishTranscript.length && persistedStage === "source" ? "repair" : persistedStage;
+  const cues = stage === "repair"
+    ? record.rawEnglishTranscript
+    : stage === "source_el_finalize"
+      ? record.greekTranscript
+      : record.englishTranscript;
+  const totalCues = cues.length;
+  const cursor = Math.max(0, Math.min(record.processingCursor || 0, totalCues));
+  const completed = stage === "finalize" || stage === "source_el_finalize" ? totalCues : cursor;
+  const cueStart = totalCues ? cues[Math.min(cursor, totalCues - 1)]?.start ?? null : null;
+  let preciseProgress = record.progress;
+  if (stage === "repair" && totalCues) preciseProgress = 28 + 20 * (completed / totalCues);
+  if (stage === "translate" && totalCues) preciseProgress = 48 + 42 * (completed / totalCues);
+  return {
+    stage,
+    cursor,
+    totalCues,
+    currentCue: totalCues
+      ? (stage === "finalize" || stage === "source_el_finalize"
+        ? totalCues
+        : Math.min(totalCues, cursor + 1))
+      : 0,
+    cueStart,
+    progress: Math.round(preciseProgress * 10) / 10,
+    elapsedSeconds: record.processingStartedAt
+      ? Math.max(0, Math.floor((Date.now() - new Date(record.processingStartedAt).getTime()) / 1_000))
+      : 0,
+    updatedAt: record.updatedAt,
+  };
+}
+
 function processingResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
+  const telemetry = record ? processingTelemetry(record) : null;
   return {
     status: "processing",
-    progress: record?.progress || 3,
+    progress: telemetry?.progress ?? 3,
     videoId: record?.videoId || "",
-    stage: record?.processingStage || "source",
-    cursor: record?.processingCursor || 0,
+    stage: telemetry?.stage || "source",
+    cursor: telemetry?.cursor || 0,
+    totalCues: telemetry?.totalCues || 0,
+    currentCue: telemetry?.currentCue || 0,
+    cueStart: telemetry?.cueStart ?? null,
+    elapsedSeconds: telemetry?.elapsedSeconds || 0,
+    updatedAt: telemetry?.updatedAt || null,
     retryCount: record?.retryCount || 0,
     retryAfter: record?.retryAfter || null,
+    groqCooldownUntil: record?.groqCooldownUntil || null,
     keyPoints: record?.keyPoints || [],
     transcriptVersion: TRANSCRIPT_VERSION,
   };
@@ -1360,7 +1445,7 @@ export async function POST(request: Request) {
       // cannot make the next lease repeat already-accepted neighbours.
       const CHUNK = 1;
       if (cursor < english.length) {
-        const translatedChunk = await translateCheckpointBatch(videoId, english, cursor, CHUNK);
+        const translatedChunk = await translateCheckpointBatch(videoId, lockToken, cached.groqCooldownUntil, english, cursor, CHUNK);
         const greek = [...(cached.greekTranscript as CaptionCue[]), ...translatedChunk];
         const nextCursor = Math.min(english.length, cursor + CHUNK);
         const done = nextCursor >= english.length;

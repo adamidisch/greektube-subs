@@ -27,6 +27,9 @@ export type TranscriptRecord = {
   processingCursor?: number;
   retryCount?: number;
   retryAfter?: string | null;
+  groq429Streak?: number;
+  groqCooldownUntil?: string | null;
+  processingStartedAt?: string | null;
   error?: string | null;
   transcriptVersion: number;
   createdAt: string;
@@ -58,6 +61,9 @@ export async function ensureTranscriptTable() {
       processing_cursor INTEGER NOT NULL DEFAULT 0,
       retry_count INTEGER NOT NULL DEFAULT 0,
       retry_after TEXT,
+      groq_429_streak INTEGER NOT NULL DEFAULT 0,
+      groq_cooldown_until TEXT,
+      processing_started_at TEXT,
       transcript_version INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -68,6 +74,9 @@ export async function ensureTranscriptTable() {
   await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_cursor INTEGER NOT NULL DEFAULT 0");
   await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0");
   await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS retry_after TEXT");
+  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS groq_429_streak INTEGER NOT NULL DEFAULT 0");
+  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS groq_cooldown_until TEXT");
+  await db.query("ALTER TABLE video_transcripts ADD COLUMN IF NOT EXISTS processing_started_at TEXT");
   await db.query(
     "CREATE INDEX IF NOT EXISTS video_transcripts_status_idx ON video_transcripts (status, updated_at)",
   );
@@ -78,7 +87,9 @@ type Row = {
   original_language: string; raw_english_transcript: string; english_transcript: string; greek_transcript: string;
   timestamps: string; topics: string; key_points: string; status: TranscriptRecord["status"];
   progress: number; lock_expires_at: string | null; processing_stage: string | null; processing_cursor: number;
-  retry_count: number; retry_after: string | null; error: string | null; transcript_version: number; created_at: string; updated_at: string;
+  retry_count: number; retry_after: string | null; groq_429_streak: number; groq_cooldown_until: string | null;
+  processing_started_at: string | null;
+  error: string | null; transcript_version: number; created_at: string; updated_at: string;
 };
 
 export async function getTranscript(videoId: string) {
@@ -107,6 +118,9 @@ export async function getTranscript(videoId: string) {
     processingCursor: row.processing_cursor || 0,
     retryCount: row.retry_count || 0,
     retryAfter: row.retry_after,
+    groq429Streak: row.groq_429_streak || 0,
+    groqCooldownUntil: row.groq_cooldown_until,
+    processingStartedAt: row.processing_started_at,
     error: row.error,
     transcriptVersion: row.transcript_version,
     createdAt: row.created_at,
@@ -121,29 +135,33 @@ export async function acquireProcessingLock(videoId: string, token: string, forc
   const expires = new Date(now.getTime() + 180_000).toISOString();
   const rows = await db.query(
     `INSERT INTO video_transcripts (
-      video_id, status, progress, lock_token, lock_expires_at, processing_stage, transcript_version, created_at, updated_at
-    ) VALUES ($1, 'processing', 3, $2, $3, 'source', $4, $5, $6)
+      video_id, status, progress, lock_token, lock_expires_at, processing_stage, transcript_version, processing_started_at, created_at, updated_at
+    ) VALUES ($1, 'processing', 3, $2, $3, 'source', $4, $5, $6, $7)
     ON CONFLICT(video_id) DO UPDATE SET
       status = 'processing',
       -- Reacquiring an expired/released lease continues the exact checkpoint.
-      progress = CASE WHEN $7 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN 3
+      progress = CASE WHEN $8 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN 3
                       ELSE GREATEST(video_transcripts.progress, 3) END,
-      processing_stage = CASE WHEN $7 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN NULL
+      processing_stage = CASE WHEN $8 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN NULL
                               ELSE video_transcripts.processing_stage END,
-      processing_cursor = CASE WHEN $7 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN 0
+      processing_cursor = CASE WHEN $8 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN 0
                                ELSE video_transcripts.processing_cursor END,
-      retry_count = CASE WHEN $7 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version OR video_transcripts.status = 'failed' THEN 0
+      retry_count = CASE WHEN $8 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version OR video_transcripts.status = 'failed' THEN 0
                          ELSE video_transcripts.retry_count END,
       retry_after = NULL,
+      processing_started_at = CASE
+        WHEN $8 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN EXCLUDED.processing_started_at
+        ELSE COALESCE(video_transcripts.processing_started_at, EXCLUDED.processing_started_at)
+      END,
       lock_token = EXCLUDED.lock_token, lock_expires_at = EXCLUDED.lock_expires_at, error = NULL,
       transcript_version = EXCLUDED.transcript_version, updated_at = EXCLUDED.updated_at
-    WHERE $7 = 1
+    WHERE $8 = 1
        OR video_transcripts.transcript_version != EXCLUDED.transcript_version
        OR video_transcripts.status = 'failed'
        OR video_transcripts.lock_expires_at IS NULL
        OR video_transcripts.lock_expires_at < EXCLUDED.updated_at
     RETURNING video_id`,
-    [videoId, token, expires, TRANSCRIPT_VERSION, now.toISOString(), now.toISOString(), force ? 1 : 0],
+    [videoId, token, expires, TRANSCRIPT_VERSION, now.toISOString(), now.toISOString(), now.toISOString(), force ? 1 : 0],
   ) as { video_id: string }[];
   return rows.length > 0;
 }
@@ -233,6 +251,42 @@ export async function releaseProcessingLock(videoId: string, token: string) {
   const rows = await db.query(
     "UPDATE video_transcripts SET lock_token=NULL, lock_expires_at=NULL, updated_at=$1 WHERE video_id=$2 AND lock_token=$3 AND status='processing' RETURNING video_id",
     [new Date().toISOString(), videoId, token],
+  ) as { video_id: string }[];
+  return rows.length === 1;
+}
+
+export async function recordGroqRateLimit(videoId: string, token: string, retryAfterSeconds?: number) {
+  const db = database();
+  // Keep the provider pause short and bounded. It is durable per transcript,
+  // so new serverless slices see it instead of immediately rate-limiting again.
+  const cooldownSeconds = Math.max(20, Math.min(120, Math.ceil(retryAfterSeconds || 30)));
+  const cooldownUntil = new Date(Date.now() + cooldownSeconds * 1_000).toISOString();
+  const rows = await db.query(
+    `UPDATE video_transcripts SET
+      groq_429_streak = groq_429_streak + 1,
+      groq_cooldown_until = CASE
+        WHEN groq_429_streak + 1 >= 2 THEN CASE
+          WHEN groq_cooldown_until IS NOT NULL AND groq_cooldown_until > $1 THEN groq_cooldown_until
+          ELSE $1
+        END
+        ELSE groq_cooldown_until
+      END,
+      updated_at = $2, lock_expires_at = $3
+     WHERE video_id = $4 AND lock_token = $5
+     RETURNING groq_429_streak, groq_cooldown_until`,
+    [cooldownUntil, new Date().toISOString(), new Date(Date.now() + 180_000).toISOString(), videoId, token],
+  ) as { groq_429_streak: number; groq_cooldown_until: string | null }[];
+  return rows[0] || null;
+}
+
+export async function recordGroqProviderSuccess(videoId: string, token: string) {
+  const db = database();
+  const rows = await db.query(
+    `UPDATE video_transcripts SET groq_429_streak = 0, groq_cooldown_until = NULL,
+      updated_at = $1, lock_expires_at = $2
+     WHERE video_id = $3 AND lock_token = $4
+     RETURNING video_id`,
+    [new Date().toISOString(), new Date(Date.now() + 180_000).toISOString(), videoId, token],
   ) as { video_id: string }[];
   return rows.length === 1;
 }

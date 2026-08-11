@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState, type CSSProperties } f
 type Cue = { start: number; duration: number; text: string };
 type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
 type Captions = { videoId: string; title: string; originalTitle?:string; channel: string; channelUrl?:string; originalVideoUrl?:string; cues: Cue[]; englishCues?:Cue[]; duration?: number; transcriptVersion?: number; keyPoints?: string[]; topics?: string[]; speaker?:SpeakerProfile };
+type ProcessingTelemetry = { status?:string; progress?:number; stage?:string; cursor?:number; totalCues?:number; currentCue?:number; cueStart?:number|null; elapsedSeconds?:number; updatedAt?:string|null; keyPoints?:string[] };
 type GuideItem = { time:number; text:string };
 type Category = "Medical" | "Tech" | "Podcasts" | "Comedy" | "Education" | "Documentaries" | "Other";
 type Video = {
@@ -315,6 +316,7 @@ export default function GreekTubePlayer() {
   const [captions,setCaptions]=useState<Captions|null>(null);
   const [loading,setLoading]=useState(false);
   const [progress,setProgress]=useState(0);
+  const [processingTelemetry,setProcessingTelemetry]=useState<ProcessingTelemetry|null>(null);
   const [loadingPoints,setLoadingPoints]=useState<string[]>([]);
   const [loadingDescription,setLoadingDescription]=useState("");
   const [transcriptOpen,setTranscriptOpen]=useState(false);
@@ -356,6 +358,7 @@ export default function GreekTubePlayer() {
   const stateRef=useRef(state);
   const activeRef=useRef(-1);
   const lastProgressSave=useRef(0);
+  const lastTelemetryUpdatedAt=useRef<string|null>(null);
   const selected=state.videos.find(v=>v.id===selectedId)||null;
 
   useEffect(()=>{ void (async()=>{
@@ -560,10 +563,18 @@ export default function GreekTubePlayer() {
     }catch{}
     setSyncRequest(true);
   }
+  function applyProcessingTelemetry(next:ProcessingTelemetry){
+    const updatedAt=typeof next.updatedAt==="string"?next.updatedAt:null;
+    if(updatedAt&&lastTelemetryUpdatedAt.current&&updatedAt<lastTelemetryUpdatedAt.current)return;
+    if(updatedAt)lastTelemetryUpdatedAt.current=updatedAt;
+    const reportedProgress=next.progress;
+    if(typeof reportedProgress==="number")setProgress(Math.max(0,Math.min(100,reportedProgress)));
+    setProcessingTelemetry(next);
+  }
   async function openVideo(video:Video,start?:number,showTranscript=false,forceTranslation=false){
     const knownPoints=transcriptHighlights(video.captions||[]);
     patchVideo(video.id,{views:(video.views||0)+1});
-    setSelectedId(video.id); setView("library"); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript);
+    setSelectedId(video.id); setView("library"); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
     // The shared transcript is authoritative. Browser storage is only an offline fallback.
     if(!forceTranslation){
@@ -609,12 +620,9 @@ export default function GreekTubePlayer() {
         if(stopStatusPolling)break;
         try{
           const statusResponse=await fetch(`/api/captions?videoId=${encodeURIComponent(video.id)}`,{cache:"no-store"});
-          if(statusResponse.status!==202&&!statusResponse.ok)continue;
-          const statusData=await statusResponse.json() as Captions & {progress?:number;status?:string};
-          const reportedProgress=statusData.progress;
-          if(typeof reportedProgress==="number"){
-            setProgress(current=>Math.max(current,Math.max(3,Math.min(100,reportedProgress))));
-          }
+          if(statusResponse.status!==202)continue;
+          const statusData=await statusResponse.json() as ProcessingTelemetry;
+          applyProcessingTelemetry(statusData);
           if(Array.isArray(statusData.keyPoints)&&statusData.keyPoints.length)setLoadingPoints(statusData.keyPoints);
         }catch{}
       }
@@ -639,9 +647,7 @@ export default function GreekTubePlayer() {
           if(response?.status===202){
             setLoading(true);
             const processing=await response.json();
-            if(typeof processing.progress==="number"){
-              setProgress(current=>Math.max(current,Math.max(3,Math.min(96,processing.progress))));
-            }
+            applyProcessingTelemetry(processing as ProcessingTelemetry);
             if(Array.isArray(processing.keyPoints)&&processing.keyPoints.length)setLoadingPoints(processing.keyPoints);
             const retryAfter=Math.max(1,Number(response.headers.get("Retry-After"))||1);
             await new Promise(resolve=>window.setTimeout(resolve,retryAfter*1000));
@@ -824,10 +830,11 @@ export default function GreekTubePlayer() {
     return <main className="app-shell viewer">
       <header className="app-header"><button className="ghost back-library" onClick={close}><span aria-hidden="true">‹</span> Βιβλιοθήκη</button><Brand home={goHome}/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}>⚙</button></header>
       {loading&&<section className="content-loading">
-        <div className="loading-visual"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div className="loading-percentage" aria-label={`${Math.round(progress)} τοις εκατό`}>{Math.round(progress)}%</div><div className="loading-caption"><small>{speaker.name}</small><h1>{greekTitle(selected)}</h1>{englishTitle(selected)&&<p className="original-title">{englishTitle(selected)}</p>}</div></div>
+        <div className="loading-visual"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div className="loading-percentage" aria-label={`${progress.toFixed(1)} τοις εκατό`}>{progress.toFixed(1)}%</div><div className="loading-caption"><small>{speaker.name}</small><h1>{greekTitle(selected)}</h1>{englishTitle(selected)&&<p className="original-title">{englishTitle(selected)}</p>}</div></div>
         <div className="loading-insights">
           <div className="loading-progress-line"><span>ΠΡΟΕΤΟΙΜΑΣΙΑ ΥΠΟΤΙΤΛΩΝ</span></div>
           <div className="progress" role="progressbar" aria-label="Πρόοδος προετοιμασίας" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{width:`${progress}%`}}/></div>
+          {processingTelemetry&&<div className="preparation-telemetry" aria-label={`Πρόοδος ${progress.toFixed(1)} τοις εκατό`}><strong>{progress.toFixed(1)}%</strong>{processingTelemetry.totalCues? <span className="telemetry-cues">{processingTelemetry.currentCue||Math.min(processingTelemetry.totalCues,(processingTelemetry.cursor||0)+1)} / {processingTelemetry.totalCues}</span>:null}<span className="telemetry-elapsed">◷ {clock(processingTelemetry.elapsedSeconds||0)}</span></div>}
           <div className={`preparation-status ${progress>=100?"done":""}`} aria-live="polite"><i aria-hidden="true">{progress>=100?"✓":""}</i><span key={preparationStage}>{preparationStage}</span></div>
           <ol className="preparation-steps" aria-label="Στάδια προετοιμασίας υποτίτλων">{PREPARATION_STAGES_EL.map((stage,index)=>{const next=PREPARATION_STAGES_EL[index+1];const done=progress>=100||Boolean(next&&progress>=next.at);const active=!done&&progress>=stage.at;return <li key={stage.at} className={`${done?"done":""} ${active?"active":""}`}><i aria-hidden="true">{done?"✓":String(index+1).padStart(2,"0")}</i><span>{stage.label}</span></li>})}</ol>
           <section className="speaker-loading-card"><h2>{speaker.name}</h2><strong>{speaker.role}</strong></section>

@@ -803,6 +803,10 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
 .loading-progress-line strong{color:var(--muted);font-size:12px;font-weight:650;font-variant-numeric:tabular-nums}
 .content-loading .progress{width:100%;height:4px;margin:0 0 20px;background:var(--raised)}
 .content-loading .progress i{background:#8f7ff0}
+.preparation-telemetry{display:flex;align-items:center;gap:8px;margin:-9px 0 13px;color:rgba(214,211,234,.66);font-size:10.5px;font-variant-numeric:tabular-nums}
+.preparation-telemetry strong{color:#e5e1ff;font-size:12px;font-weight:730;letter-spacing:-.01em}
+.telemetry-cues{padding:3px 7px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.035);color:rgba(218,216,229,.72)}
+.telemetry-elapsed{display:inline-flex;align-items:center;gap:4px;color:rgba(197,193,218,.68)}
 .preparation-stages{display:grid;gap:3px;margin:0 0 14px;padding:0;list-style:none}
 .preparation-stages li{display:grid;grid-template-columns:21px minmax(0,1fr) auto;align-items:center;gap:7px;min-height:31px;padding:4px 8px;border:1px solid transparent;border-radius:8px;color:#777b85;font-size:10.5px;line-height:1.25}
 .preparation-stages li i{display:grid;place-items:center;width:18px;height:18px;border:1px solid var(--line);border-radius:50%;font-family:var(--font-geist-mono);font-size:7.5px;font-style:normal}
@@ -824,6 +828,7 @@ button,.primary,.secondary,nav button,.ghost,.icon-button,.quick-filters button,
   .loading-visual>div{left:16px;right:16px;bottom:15px}
   .loading-visual h1{font-size:18px}
   .loading-insights{padding:16px}
+  .preparation-telemetry{margin-bottom:12px}
   .loading-insights ul{grid-template-columns:1fr}
   .loading-insights li{padding:8px 0}
   .loading-insights li span{font-size:12px}
