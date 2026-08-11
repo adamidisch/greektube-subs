@@ -1,0 +1,64 @@
+name: Apply v7.4.1 subtitle access flow
+
+on:
+  push:
+    branches: [tmp-v741-subtitle-access]
+    paths:
+      - '.github/workflows/apply-v741-subtitle-access.yml'
+      - 'scripts/apply-v741-subtitle-access.py'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.4.1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch reviewed patch
+        run: |
+          git fetch origin tmp-v741-subtitle-access
+          git show origin/tmp-v741-subtitle-access:scripts/apply-v741-subtitle-access.py > /tmp/apply.py
+      - name: Apply subtitle access flow
+        run: python /tmp/apply.py
+      - name: Install dependencies
+        run: npm install --package-lock=false --no-audit --no-fund
+      - name: Caption integrity
+        run: npm run test:caption-integrity
+      - name: Caption timing
+        run: npm run test:caption-timing
+      - name: Caption edge cases
+        run: npm run test:caption-edgecases
+      - name: Manual captions
+        run: npm run test:manual-captions
+      - name: v7.4.1 quality tests
+        run: node --experimental-strip-types scripts/v741-quality-reliability.test.mjs
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Verify subtitle access invariants
+        run: |
+          grep -F 'if(!forceTranslation)' app/GreekTubePlayer.tsx
+          grep -F 'setTranslationChoiceVideo(video);return;' app/GreekTubePlayer.tsx
+          grep -F 'Υπότιτλοι</button>' app/GreekTubePlayer.tsx
+          grep -F 'aria-label="Διαχείριση υποτίτλων"' app/GreekTubePlayer.tsx
+      - name: Commit validated subtitle access flow
+        run: |
+          git config user.name 'GreekTube Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add app/GreekTubePlayer.tsx
+          if git diff --cached --quiet; then
+            echo 'No changes to commit'
+            exit 0
+          fi
+          git commit -m 'GreekTube Subs 7.4.1: require subtitle choice before translation'
+          git push origin HEAD:v7.4.1
