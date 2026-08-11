@@ -1,0 +1,77 @@
+name: Integrate Claude v7.4.0 modal
+
+on:
+  push:
+    branches: [tmp-v740-claude-apply-run]
+    paths:
+      - .github/workflows/integrate-claude-v740.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.4.0
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Fetch Claude patch payload from temp branch
+        shell: bash
+        run: |
+          git fetch origin tmp-v740-claude-apply-run
+          for part in claude-patch-00.b64 claude-patch-01.b64 claude-patch-02.b64 claude-patch-rest.b64; do
+            git show origin/tmp-v740-claude-apply-run:.tmp/$part >> /tmp/claude.patch.b64
+          done
+          base64 -d /tmp/claude.patch.b64 > /tmp/claude-v7.4.0.patch
+          git apply --check /tmp/claude-v7.4.0.patch
+          git apply /tmp/claude-v7.4.0.patch
+
+      - name: Preserve exact SRT cue timestamps
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/api/captions/export-srt/route.ts')
+          s = p.read_text()
+          old = 'const end = srtTimestamp(cue.start + Math.max(cue.duration, 0.25));'
+          new = 'const end = srtTimestamp(cue.start + cue.duration);'
+          if old not in s:
+              raise SystemExit('Expected Claude SRT duration guard not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - run: npm run test:caption-integrity
+      - run: npm run test:caption-timing
+      - run: npm run test:caption-edgecases
+      - run: npm run test:manual-captions
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+      - name: Verify integration invariants
+        shell: bash
+        run: |
+          grep -q 'function TranslationChoiceModal' app/GreekTubePlayer.tsx
+          grep -q 'Λήψη αγγλικού transcript (.srt)' app/GreekTubePlayer.tsx
+          grep -q 'const end = srtTimestamp(cue.start + cue.duration);' app/api/captions/export-srt/route.ts
+          ! grep -q 'Math.max(cue.duration, 0.25)' app/api/captions/export-srt/route.ts
+          grep -q 'translation-choice-grid' app/v7-4-0.css
+
+      - name: Commit reviewed v7.4.0 changes
+        shell: bash
+        run: |
+          git config user.name 'GreekTube Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add app/GreekTubePlayer.tsx app/api/captions/export-srt/route.ts app/v7-4-0.css
+          git diff --cached --check
+          git commit -m 'GreekTube Subs 7.4.0: add translation choice modal and exact SRT export'
+          git push origin HEAD:v7.4.0
