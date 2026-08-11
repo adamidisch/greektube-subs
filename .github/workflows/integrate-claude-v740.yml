@@ -74,4 +74,4 @@ jobs:
           git commit -m 'GreekTube Subs 7.4.0: add translation choice modal and exact SRT export'
           git push origin HEAD:v7.4.0
 
-# retry-with-exact-payload
+# exact-payload-v3
