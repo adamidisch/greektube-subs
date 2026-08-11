@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
 import {
   TRANSCRIPT_VERSION,
   acquireProcessingLock,
@@ -457,14 +458,6 @@ function englishWordTokens(text: string) {
   return text.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu) || [];
 }
 
-function canonicalNumberTokens(text: string) {
-  const matches = text.match(/\b\d+(?:[.,]\d+)*\b/g) || [];
-  return matches.map(token => {
-    const compactThousands = token.replace(/(?<=\d)[.,](?=\d{3}(?:\D|$))/g, "");
-    return compactThousands.replace(",", ".");
-  });
-}
-
 function protectedSourceTokens(text: string) {
   const matches = text.match(/\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml|IU|iu|%))\b/g) || [];
   return [...new Set(matches.map(token => token.replace(/\s+/g, "").toLowerCase()))];
@@ -816,7 +809,7 @@ function translationIntegrityFailure(source: string, target: string) {
   if (/\[\s*\d+\s*\]/.test(target)) return "marker-artifact";
   const sourceNumbers = canonicalNumberTokens(source);
   const targetNumbers = canonicalNumberTokens(target);
-  if (!sameStringMultiset(sourceNumbers, targetNumbers)) {
+  if (!numberTokensMatch(source, target)) {
     return `number-mismatch source=${JSON.stringify(sourceNumbers)} target=${JSON.stringify(targetNumbers)}`;
   }
   const compactTarget = target.toLowerCase().replace(/\s+/g, "");
