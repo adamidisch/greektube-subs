@@ -1,0 +1,69 @@
+name: Apply v7.4.1 quality reliability
+
+on:
+  push:
+    branches: [tmp-v741-quality-reliability]
+    paths:
+      - scripts/apply-v741-quality-reliability.py
+      - scripts/v741-quality-reliability.test.mjs
+      - .github/workflows/apply-v741-quality-reliability.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.4.1
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Fetch reviewed v7.4.1 patch and tests
+        shell: bash
+        run: |
+          git fetch origin tmp-v741-quality-reliability
+          git show origin/tmp-v741-quality-reliability:scripts/apply-v741-quality-reliability.py > /tmp/apply-v741.py
+          git show origin/tmp-v741-quality-reliability:scripts/v741-quality-reliability.test.mjs > scripts/v741-quality-reliability.test.mjs
+
+      - name: Apply guarded v7.4.1 changes
+        run: python /tmp/apply-v741.py
+
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - run: npm run test:caption-integrity
+      - run: npm run test:caption-timing
+      - run: npm run test:caption-edgecases
+      - run: npm run test:manual-captions
+      - run: node --experimental-strip-types scripts/v741-quality-reliability.test.mjs
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+      - name: Verify v7.4.1 invariants
+        shell: bash
+        run: |
+          grep -q 'stripEnglishSpeechFillers' app/api/captions/translation-text.ts
+          grep -q 'groupEnglishCuesForContext' app/api/captions/translation-text.ts
+          grep -q 'recordRecoverableProcessingFailure' app/api/shared-cache.ts
+          grep -q 'processingStageForMode' app/api/captions/route.ts
+          grep -q 'translate_google' app/api/captions/route.ts || grep -q '_google' app/api/captions/route.ts
+          grep -q 'Προσωρινή καθυστέρηση — συνεχίζουμε αυτόματα' app/GreekTubePlayer.tsx
+          grep -q '"version": "7.4.1"' package.json
+          grep -q 'TRANSCRIPT_VERSION = 12' app/api/shared-cache.ts
+
+      - name: Commit validated v7.4.1 changes
+        shell: bash
+        run: |
+          git config user.name 'GreekTube Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add app package.json scripts/v741-quality-reliability.test.mjs
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m 'GreekTube Subs 7.4.1: improve Fast Google quality and recovery'
+          git push origin HEAD:v7.4.1
