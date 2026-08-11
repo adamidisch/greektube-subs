@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState, type CSSProperties } f
 type Cue = { start: number; duration: number; text: string };
 type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
 type Captions = { videoId: string; title: string; originalTitle?:string; channel: string; channelUrl?:string; originalVideoUrl?:string; cues: Cue[]; englishCues?:Cue[]; duration?: number; transcriptVersion?: number; keyPoints?: string[]; topics?: string[]; speaker?:SpeakerProfile };
-type ProcessingTelemetry = { status?:string; progress?:number; stage?:string; cursor?:number; totalCues?:number; currentCue?:number; cueStart?:number|null; elapsedSeconds?:number; updatedAt?:string|null; keyPoints?:string[] };
+type ProcessingTelemetry = { status?:string; progress?:number; stage?:string; cursor?:number; totalCues?:number; currentCue?:number; cueStart?:number|null; elapsedSeconds?:number; updatedAt?:string|null; retryAfter?:string|null; transientError?:string; keyPoints?:string[] };
 type GuideItem = { time:number; text:string };
 type Category = "Medical" | "Tech" | "Podcasts" | "Comedy" | "Education" | "Documentaries" | "Other";
 type TranslationMode = "legacy" | "google" | "manual-pro";
@@ -672,8 +672,9 @@ export default function GreekTubePlayer() {
           }
           if(!response||response.status===429||response.status>=500){
             transientFailures+=1;
-            if(transientFailures<5){
-              await new Promise(resolve=>window.setTimeout(resolve,Math.min(6000,1000*transientFailures)));
+            if(transientFailures<20){
+              const delay=Math.min(30000,1000*Math.pow(2,Math.min(5,transientFailures-1)));
+              await new Promise(resolve=>window.setTimeout(resolve,delay));
               continue;
             }
             throw new Error(failureMessage||"shared-storage");
@@ -728,13 +729,17 @@ export default function GreekTubePlayer() {
   }
   useEffect(()=>{if(!captions||!selectedId)return;lastProgressSave.current=0;const selectedDuration=selected?.duration||0;const timer=window.setInterval(()=>{const target=currentPlayer();if(!target)return;const now=target.getCurrentTime();if(typeof now!=="number")return;setPlayhead(now+state.settings.delay);const nextActive=activeIndex(captions.cues,now+state.settings.delay);if(nextActive!==activeRef.current){activeRef.current=nextActive;setActive(nextActive);}const duration=target.getDuration()||selectedDuration;if(duration>0&&now-lastProgressSave.current>=5){lastProgressSave.current=now;patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});}},250);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay,selected?.duration]);
   useEffect(()=>{
-    if(active<0||!state.settings.autoScroll||!transcript.current)return;
+    if(!transcriptOpen||!state.settings.autoScroll||!transcript.current||!captions)return;
+    const currentTime=currentPlayer()?.getCurrentTime();
+    const cueIndex=typeof currentTime==="number"?activeIndex(captions.cues,currentTime+state.settings.delay):active;
+    if(cueIndex<0)return;
+    if(cueIndex!==activeRef.current){activeRef.current=cueIndex;setActive(cueIndex);}
     const container=transcript.current;
-    const cue=container.querySelector(`[data-cue="${active}"]`) as HTMLElement|null;
+    const cue=container.querySelector(`[data-cue="${cueIndex}"]`) as HTMLElement|null;
     if(!cue)return;
     const target=Math.max(0,cue.offsetTop-container.clientHeight/2+cue.clientHeight/2);
     container.scrollTo({top:target,behavior:"smooth"});
-  },[active,state.settings.autoScroll]);
+  },[transcriptOpen,active,state.settings.autoScroll,state.settings.delay,captions]);
   useEffect(()=>{const params=new URLSearchParams(location.search);const id=params.get("video");const t=Number(params.get("t")||0);if(hydrated&&id){const v=state.videos.find(x=>x.id===id);if(v)window.setTimeout(()=>void openVideo(v,t),0);}},[hydrated]);
   useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key.toLowerCase()==="m"&&selected){e.preventDefault();beginMoment();}};addEventListener("keydown",key);return()=>removeEventListener("keydown",key);},[selected,active,captions]);
 
@@ -828,7 +833,8 @@ export default function GreekTubePlayer() {
     const displaySpeakerLabel=displaySpeakerRole?`${displaySpeakerName} | ${displaySpeakerRole}`:displaySpeakerName;
     const sourceVideoUrl=selected.originalVideoUrl||selected.url;
     const sourceChannelUrl=selected.channelUrl||"";
-    const preparationStage=progress>=100?"Οι ελληνικοί υπότιτλοι είναι έτοιμοι":[...PREPARATION_STAGES_EL].reverse().find(stage=>progress>=stage.at)?.label||PREPARATION_STAGES_EL[0].label;
+    const providerWaiting=Boolean(processingTelemetry?.retryAfter&&new Date(processingTelemetry.retryAfter).getTime()>Date.now());
+    const preparationStage=providerWaiting?"Προσωρινή καθυστέρηση — συνεχίζουμε αυτόματα":progress>=100?"Οι ελληνικοί υπότιτλοι είναι έτοιμοι":[...PREPARATION_STAGES_EL].reverse().find(stage=>progress>=stage.at)?.label||PREPARATION_STAGES_EL[0].label;
     const guideItems=videoGuide(captions);
     const preparingGuide=loadingGuide(loadingPoints);
     const nextVideos=state.videos.filter(video=>video.id!==selected.id&&video.progress<WATCHED_THRESHOLD).sort((a,b)=>b.addedAt.localeCompare(a.addedAt)).slice(0,4);
@@ -968,7 +974,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.0</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.1</small></button>;}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");

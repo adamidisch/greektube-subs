@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
 import { splitSubtitleSentences } from "./sentence-split";
-import { hasTranslatableWordTokens } from "./translation-text";
+import { groupEnglishCuesForContext, hasTranslatableWordTokens, stripEnglishSpeechFillers } from "./translation-text";
 import {
   allocateSequentialCueWindows,
   effectiveSequentialRawWindows,
@@ -17,7 +17,7 @@ import {
   MAX_TRANSIENT_RETRIES,
   recordGroqProviderSuccess,
   recordGroqRateLimit,
-  recordTransientProcessingFailure,
+  recordRecoverableProcessingFailure,
   releaseProcessingLock,
   resetProcessingForTranslation,
   saveProcessingCheckpoint,
@@ -583,7 +583,7 @@ async function prepareEnglishTimedCues(
   }
 
   const normalized = raw.flatMap((cue, index) =>
-    splitEnglishCueAtSentenceBoundaries({ ...cue, text: repaired.get(index) || cue.text }),
+    splitEnglishCueAtSentenceBoundaries({ ...cue, text: stripEnglishSpeechFillers(repaired.get(index) || cue.text) }),
   );
   return normalized;
 }
@@ -593,7 +593,7 @@ function cleanSubtitleText(text: string) {
     // JavaScript \b is ASCII-centric and was missing Greek filler tokens.
     // Use Unicode letter/number boundaries instead and remove only clear
     // hesitation noises, leaving meaningful words/interjections untouched.
-    .replace(/(^|[^\p{L}\p{N}])(?:u+m+|u+h+|e+r+m+|h+m{2,}|m{3,}|χ+μ{2,}|μ{3,}|ε{2,}|α+χ+)(?=$|[^\p{L}\p{N}])/giu, "$1")
+    .replace(/(^|[^\p{L}\p{N}])(?:u+m+|u+h+|e+r+m+|h+m{2,}|m{3,}|χ+μ+|μ{3,}|ε{2,}|α+χ+)(?=$|[^\p{L}\p{N}])/giu, "$1")
     // Collapse obvious ASR stutters only when the same 2+ letter word is
     // repeated three or more times in a row.
     .replace(/(^|[^\p{L}\p{N}])(\p{L}{2,})(?:\s+\2){2,}(?=$|[^\p{L}\p{N}])/giu, "$1$2")
@@ -1000,10 +1000,17 @@ async function prepareEnglishTimedChunk(raw: CaptionCue[], start: number, count:
     const absolute = start + offset;
     return splitEnglishCueAtSentenceBoundaries({
       ...cue,
-      text: repaired?.get(absolute) || cue.text.replace(/\s+/g, " ").trim(),
+      text: stripEnglishSpeechFillers(repaired?.get(absolute) || cue.text.replace(/\s+/g, " ").trim()),
     });
   });
   return normalized;
+}
+
+async function prepareGoogleEnglishTimedChunk(raw: CaptionCue[], start: number, count: number) {
+  const slice = effectiveSequentialRawWindows(raw).slice(start, start + count)
+    .map(cue => ({ ...cue, text: stripEnglishSpeechFillers(cue.text.replace(/\s+/g, " ").trim()) }))
+    .filter(cue => cue.text.length > 0);
+  return groupEnglishCuesForContext(slice, { maxCues: 4, maxChars: 120, maxDuration: 7.5, maxGap: 0.8 });
 }
 
 type TranslationSliceTelemetry = {
@@ -1253,9 +1260,24 @@ async function translateCheckpointBatch(
   }
 }
 
+function baseProcessingStage(stage: string | null | undefined) {
+  const value = stage || "source";
+  return value.endsWith("_google") ? value.slice(0, -7) : value;
+}
+
+function modeFromProcessingStage(stage: string | null | undefined, fallback: TranslationMode): TranslationMode {
+  return stage?.endsWith("_google") ? "google" : fallback;
+}
+
+function processingStageForMode(stage: string, mode: TranslationMode) {
+  return mode === "google" && (stage === "repair" || stage === "translate" || stage === "finalize")
+    ? `${stage}_google`
+    : stage;
+}
+
 function processingTelemetry(record: NonNullable<Awaited<ReturnType<typeof getTranscript>>>) {
   const persistedStage = record.processingStage || "source";
-  const stage = record.rawEnglishTranscript.length && persistedStage === "source" ? "repair" : persistedStage;
+  const stage = baseProcessingStage(record.rawEnglishTranscript.length && persistedStage === "source" ? "repair" : persistedStage);
   const cues = stage === "repair"
     ? record.rawEnglishTranscript
     : stage === "source_el_finalize"
@@ -1419,8 +1441,9 @@ export async function POST(request: Request) {
     if (body.translationMode === "manual-pro") {
       return NextResponse.json({ error: "Η PRO μετάφραση εισάγεται από το εργαλείο PRO και δεν εκτελεί αυτόματη μετάφραση." }, { status: 409 });
     }
-    const translationMode: TranslationMode = body.translationMode === "google" ? "google" : "legacy";
+    const requestedTranslationMode: TranslationMode = body.translationMode === "google" ? "google" : "legacy";
     let cached = await getTranscript(videoId);
+    let translationMode = modeFromProcessingStage(cached?.processingStage, requestedTranslationMode);
     const mustRestartCheckpoint = Boolean(cached && (force || cached.transcriptVersion !== TRANSCRIPT_VERSION));
 
     if (!force && cached?.status === "ready" && cached.transcriptVersion === TRANSCRIPT_VERSION) {
@@ -1461,9 +1484,11 @@ export async function POST(request: Request) {
     // Raw English is the durable source-of-truth. Even an interrupted legacy
     // row labelled `source` must continue at repair instead of paying Supadata
     // again for the same video.
-    let stage = cached?.rawEnglishTranscript?.length
+    const persistedStage = cached?.rawEnglishTranscript?.length
       ? (cached.processingStage && cached.processingStage !== "source" ? cached.processingStage : "repair")
       : (cached?.processingStage || "source");
+    translationMode = modeFromProcessingStage(persistedStage, translationMode);
+    let stage = baseProcessingStage(persistedStage);
     let cursor = cached?.processingCursor || 0;
 
     // Native Greek sources have no English raw checkpoint. Their Supadata
@@ -1514,12 +1539,12 @@ export async function POST(request: Request) {
       // If oEmbed is unavailable, the next slice starts at repair from this
       // durable raw source and must not call Supadata again.
       if (!await saveProcessingCheckpoint(videoId, lockToken, {
-        stage: "repair", cursor: 0, progress: 28, rawEnglishTranscript: supadata.cues,
+        stage: processingStageForMode("repair", translationMode), cursor: 0, progress: 28, rawEnglishTranscript: supadata.cues,
         englishTranscript: [], greekTranscript: [], duration, originalLanguage: sourceLanguage,
       })) throw new Error("Processing lock was lost before source checkpoint persisted");
       const metadata = await fetchYouTubeOEmbed(videoId).catch(() => ({ title: "", authorName: "" }));
       if ((metadata.title || metadata.authorName) && !await saveProcessingCheckpoint(videoId, lockToken, {
-        stage: "repair", cursor: 0, progress: 28,
+        stage: processingStageForMode("repair", translationMode), cursor: 0, progress: 28,
         title: metadata.title || cached?.title || "YouTube video",
         channel: metadata.authorName || cached?.channel || "YouTube",
       })) throw new Error("Processing lock was lost before metadata checkpoint persisted");
@@ -1534,18 +1559,20 @@ export async function POST(request: Request) {
     if (stage === "repair") {
       const raw = cached.rawEnglishTranscript as CaptionCue[];
       if (!raw.length) throw new Error("Raw English transcript checkpoint is empty");
-      const CHUNK = 16;
+      const CHUNK = translationMode === "google" ? 48 : 16;
       if (cursor < raw.length) {
-        const chunk = await prepareEnglishTimedChunk(raw, cursor, CHUNK, translationMode === "legacy");
+        const chunk = translationMode === "google"
+          ? await prepareGoogleEnglishTimedChunk(raw, cursor, CHUNK)
+          : await prepareEnglishTimedChunk(raw, cursor, CHUNK, true);
         const english = [...(cached.englishTranscript as CaptionCue[]), ...chunk];
         const nextCursor = Math.min(raw.length, cursor + CHUNK);
         const done = nextCursor >= raw.length;
         const progress = done ? 48 : Math.round(28 + 20 * (nextCursor / raw.length));
         if (!await saveProcessingCheckpoint(videoId, lockToken, {
-          stage: done ? "translate" : "repair", cursor: done ? 0 : nextCursor, progress, englishTranscript: english,
+          stage: processingStageForMode(done ? "translate" : "repair", translationMode), cursor: done ? 0 : nextCursor, progress, englishTranscript: english,
         })) throw new Error("Processing lock was lost before repair checkpoint persisted");
       } else {
-        if (!await saveProcessingCheckpoint(videoId, lockToken, { stage: "translate", cursor: 0, progress: 48 })) throw new Error("Processing lock was lost before repair transition persisted");
+        if (!await saveProcessingCheckpoint(videoId, lockToken, { stage: processingStageForMode("translate", translationMode), cursor: 0, progress: 48 })) throw new Error("Processing lock was lost before repair transition persisted");
       }
       if (!await releaseProcessingLock(videoId, lockToken)) throw new Error("Processing lock was lost before repair release"); lockToken = null;
       const next = await getTranscript(videoId);
@@ -1554,7 +1581,8 @@ export async function POST(request: Request) {
 
     cached = await getTranscript(videoId);
     if (!cached) throw new Error("Processing checkpoint missing");
-    stage = cached.processingStage || stage; cursor = cached.processingCursor || 0;
+    translationMode = modeFromProcessingStage(cached.processingStage, translationMode);
+    stage = baseProcessingStage(cached.processingStage || stage); cursor = cached.processingCursor || 0;
 
     if (stage === "translate") {
       const english = cached.englishTranscript as CaptionCue[];
@@ -1577,13 +1605,13 @@ export async function POST(request: Request) {
             // This existing durable checkpoint also extends the lease by 180s.
             // No separate heartbeat write is required.
             if (!await saveProcessingCheckpoint(videoId, translationLockToken, {
-              stage: done ? "finalize" : "translate", cursor: nextCursor, progress, greekTranscript: nextGreek,
+              stage: processingStageForMode(done ? "finalize" : "translate", translationMode), cursor: nextCursor, progress, greekTranscript: nextGreek,
             })) throw new Error("Processing lock was lost before translation checkpoint persisted");
             greek = nextGreek;
             cursor = nextCursor;
           });
       } else {
-        if (!await saveProcessingCheckpoint(videoId, lockToken, { stage: "finalize", cursor: english.length, progress: 90 })) throw new Error("Processing lock was lost before translation transition persisted");
+        if (!await saveProcessingCheckpoint(videoId, lockToken, { stage: processingStageForMode("finalize", translationMode), cursor: english.length, progress: 90 })) throw new Error("Processing lock was lost before translation transition persisted");
       }
       if (!await releaseProcessingLock(videoId, lockToken)) throw new Error("Processing lock was lost before translation release"); lockToken = null;
       const next = await getTranscript(videoId);
@@ -1592,7 +1620,8 @@ export async function POST(request: Request) {
 
     cached = await getTranscript(videoId);
     if (!cached) throw new Error("Processing checkpoint missing");
-    if ((cached.processingStage || stage) === "finalize") {
+    translationMode = modeFromProcessingStage(cached.processingStage, translationMode);
+    if (baseProcessingStage(cached.processingStage || stage) === "finalize") {
       let english = cached.englishTranscript as CaptionCue[];
       let greek = cached.greekTranscript as CaptionCue[];
       const englishInversions = timingInversionCount(english);
@@ -1606,7 +1635,7 @@ export async function POST(request: Request) {
         english = recovered.english;
         greek = recovered.greek;
         if (!await saveProcessingCheckpoint(videoId, lockToken, {
-          stage: "finalize", cursor: english.length, progress: 90,
+          stage: processingStageForMode("finalize", translationMode), cursor: english.length, progress: 90,
           englishTranscript: english, greekTranscript: greek,
         })) throw new Error("Processing lock was lost before timing recovery checkpoint persisted");
         console.info("[captions:timing-recovered]", JSON.stringify({
@@ -1636,16 +1665,17 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "retry";
     console.error(`[captions:${lockedVideoId || "unknown"}] resumable slice failed`, error);
-    const recoverable = /μετάφραση|translation|groq|supadata|fetch|network|timeout|abort|429|\b5\d\d\b/i.test(message);
+    const recoverable = /429|cooldown|timeout|timed out|abort|network|fetch failed|econn|eai_again|\b5\d\d\b/i.test(message);
     if (lockedVideoId && lockToken && recoverable) {
-      const retry = await recordTransientProcessingFailure(lockedVideoId, lockToken, message).catch(() => null);
+      const retrySeconds = /429|cooldown/i.test(message) ? 30 : 5;
+      const retry = await recordRecoverableProcessingFailure(lockedVideoId, lockToken, message, retrySeconds).catch(() => null);
       lockToken = null;
       if (retry?.status === "processing") {
         const current = await getTranscript(lockedVideoId).catch(() => null);
-        return NextResponse.json({ ...processingResponse(current), transientError: message }, { status: 202, headers: { "Retry-After": "2" } });
-      }
-      if (retry?.status === "failed") {
-        return NextResponse.json({ error: message, retryLimit: MAX_TRANSIENT_RETRIES }, { status: 409, headers: { "Cache-Control": "no-store" } });
+        const seconds = current?.retryAfter
+          ? Math.max(1, Math.ceil((new Date(current.retryAfter).getTime() - Date.now()) / 1000))
+          : retrySeconds;
+        return NextResponse.json({ ...processingResponse(current), transientError: message }, { status: 202, headers: { "Retry-After": String(seconds) } });
       }
     }
     if (lockedVideoId && lockToken) await failTranscript(lockedVideoId, lockToken, message).catch(() => undefined);
