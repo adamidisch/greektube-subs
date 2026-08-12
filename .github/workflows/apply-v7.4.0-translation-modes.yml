@@ -1,0 +1,59 @@
+name: Apply v7.4.0 translation modes
+
+on:
+  push:
+    branches: [v7.4.0]
+    paths:
+      - scripts/apply-v7.4.0-translation-modes.py
+      - .github/workflows/apply-v7.4.0-translation-modes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v7.4.0
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Apply v7.4.0 dual translation architecture
+        run: python scripts/apply-v7.4.0-translation-modes.py
+
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - run: npm run test:caption-integrity
+      - run: npm run test:caption-timing
+      - run: npm run test:caption-edgecases
+      - run: npm run test:manual-captions
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+      - name: Verify v7.4.0 invariants
+        shell: bash
+        run: |
+          grep -q 'type TranslationMode = "legacy" | "google" | "manual-pro"' app/GreekTubePlayer.tsx
+          grep -q 'translationMode === "google" ? 12 : 4' app/api/captions/route.ts
+          grep -q 'google_fast_context_v1' app/api/captions/route.ts
+          grep -q 'manual_chatgpt_pro_v1' app/api/manual-captions/route.ts
+          grep -q 'ver 7.4.0' app/GreekTubePlayer.tsx
+          grep -q '"version": "7.4.0"' package.json
+          grep -q 'TRANSCRIPT_VERSION = 12' app/api/shared-cache.ts
+
+      - name: Commit functional v7.4.0 changes
+        shell: bash
+        run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app package.json scripts/manual-captions-parser.test.mjs
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.4.0: add Fast Google and PRO manual translation modes"
+          git push origin HEAD:v7.4.0

@@ -1,0 +1,50 @@
+name: Apply v7.1.14 decimal cue fix
+
+on:
+  push:
+    branches:
+      - codex/fix-v718-resumable-pipeline
+    paths:
+      - scripts/apply-v7.1.14-decimal-cue-fix.py
+      - .github/workflows/apply-v7.1.14-decimal-cue-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/fix-v718-resumable-pipeline
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: python scripts/apply-v7.1.14-decimal-cue-fix.py
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - run: npm run test:caption-integrity
+      - run: npm run test:caption-timing
+      - run: npm run test:caption-edgecases
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+      - name: Verify v7.1.14 invariants
+        run: |
+          grep -q 'splitSubtitleSentences(text)' app/api/captions/route.ts
+          grep -q 'provider: "passthrough"' app/api/captions/route.ts
+          grep -q 'hasTranslatableWordTokens' app/api/captions/route.ts
+          grep -q '"version": "7.1.14"' package.json
+          grep -q 'ver 7.1.14' app/GreekTubePlayer.tsx
+          grep -q 'TRANSCRIPT_VERSION = 12' app/api/shared-cache.ts
+      - name: Commit functional changes
+        run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/api/captions/route.ts app/api/captions/sentence-split.ts app/api/captions/translation-text.ts scripts/caption-translation-edgecases.test.mjs package.json app/GreekTubePlayer.tsx
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.1.14: preserve decimal cues and numeric passthrough"
+          git push origin HEAD:codex/fix-v718-resumable-pipeline
