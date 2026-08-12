@@ -27,9 +27,9 @@ const checks=[
   ['same source snapshot',src.includes('setSourceSubtitleText(text)')&&src.includes('subtitleText:text,sourceSubtitleText')&&(src.match(/sessionStorage\.setItem\(`manual-source-srt:\$\{video\.id\}`/g)?.length||0)>=3&&progressRoute.includes('parseManualSubtitleText(body.sourceSubtitleText as string)')],
   ['cached source timing integrity',captionsRoute.includes('Source subtitle tracks can legitimately overlap')&&!captionsRoute.includes('cue.start >= cues[index - 1].start')],
   ['details automatic mode',src.includes('const next={...selected,translationMode:"google" as TranslationMode}')&&src.includes('patchVideo(selected.id,{translationMode:"google"})')],
-  ['version',pkg.version==='7.4.9'&&layout.includes('"app-version": "7.4.9"')&&layout.includes('import "./v7-4-9.css";')],
+  ['version',pkg.version==='7.4.10'&&layout.includes('"app-version": "7.4.10"')&&layout.includes('import "./v7-4-9.css";')],
   ['details accessibility',detailsCss.includes('min-height:44px')&&detailsCss.includes('.video-details button:focus-visible')&&!detailsCss.match(/font-size:(?:8|9|10|11)(?:\.|px)/)],
   ['premium css',css.includes('.editorial-guide-list>button')&&css.includes('.speed-control')],
 ];
-for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.9 invariant failed: ${label}`)}
-console.log(`v7.4.9 player/guide invariants passed (${checks.length})`);
+for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.10 invariant failed: ${label}`)}
+console.log(`v7.4.10 player/guide invariants passed (${checks.length})`);
