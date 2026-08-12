@@ -716,7 +716,7 @@ export default function GreekTubePlayer() {
             const processing=await response.json();
             applyProcessingTelemetry(processing as ProcessingTelemetry);
             if(Array.isArray(processing.keyPoints)&&processing.keyPoints.length)setLoadingPoints(processing.keyPoints);
-            const retryAfter=Math.max(1,Number(response.headers.get("Retry-After"))||1);
+            const retryAfter=Math.max(.25,Number(response.headers.get("Retry-After"))||1);
             await new Promise(resolve=>window.setTimeout(resolve,retryAfter*1000));
             continue;
           }
