@@ -107,7 +107,7 @@ html body .app-shell.app-shell.app-shell .video-details{
 html body .app-shell.app-shell.app-shell .video-details>*{
   opacity:0!important;
   visibility:hidden!important;
-  animation:v753-details-reveal .01s linear .72s forwards!important;
+  animation:v753-details-reveal .01s linear 1.8s forwards!important;
 }
 html body .app-shell.app-shell.app-shell .video-details::before{
   content:""!important;
@@ -122,7 +122,7 @@ html body .app-shell.app-shell.app-shell .video-details::before{
   border-right-color:rgba(143,127,240,.58)!important;
   border-radius:50%!important;
   box-sizing:border-box!important;
-  animation:v753-ready-spin 1.05s linear infinite,v753-ready-hide .01s linear .72s forwards!important;
+  animation:v753-ready-spin 1.05s linear infinite,v753-ready-hide .01s linear 1.8s forwards!important;
   pointer-events:none!important;
 }
 html body .app-shell.app-shell.app-shell .video-details::after{
@@ -138,7 +138,7 @@ html body .app-shell.app-shell.app-shell .video-details::after{
   letter-spacing:.09em!important;
   line-height:1!important;
   white-space:nowrap!important;
-  animation:v753-ready-hide .01s linear .72s forwards!important;
+  animation:v753-ready-hide .01s linear 1.8s forwards!important;
   pointer-events:none!important;
 }
 @keyframes v753-ready-spin{to{transform:rotate(360deg)}}
@@ -165,5 +165,5 @@ html body .app-shell.app-shell.app-shell .video-details::after{
 @media(prefers-reduced-motion:reduce){
   html body .app-shell.app-shell.app-shell .brand-mark::after,
   html body .app-shell.app-shell.app-shell.viewer .brand-mark::after{animation:none!important;display:none!important}
-  html body .app-shell.app-shell.app-shell .video-details::before{animation:v753-ready-hide .01s linear .72s forwards!important}
+  html body .app-shell.app-shell.app-shell .video-details::before{animation:v753-ready-hide .01s linear 1.8s forwards!important}
 }
