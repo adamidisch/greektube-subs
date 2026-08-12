@@ -12,6 +12,7 @@ import "./release-6.6.15.css";
 import "./v7-4-0.css";
 import "./v7-4-2.css";
 import "./v7-4-9.css";
+import "./v7-5-1.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,8 +29,8 @@ export const metadata: Metadata = {
   description:
     "Παίξε δημόσια YouTube videos με αυτόματα μεταφρασμένους ελληνικούς υπότιτλους και συγχρονισμένο transcript.",
   other: {
-    "codex-preview": "v7.4.11-keyboard-controls",
-    "app-version": "7.4.11",
+    "codex-preview": "v7.5.1-version-visibility",
+    "app-version": "7.5.1",
   },
   icons: {
     icon: "/favicon.svg?v=654dev",
