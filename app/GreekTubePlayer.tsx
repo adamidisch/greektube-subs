@@ -6,6 +6,7 @@ type Cue = { start: number; duration: number; text: string };
 type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
 type Captions = { videoId: string; title: string; originalTitle?:string; channel: string; channelUrl?:string; originalVideoUrl?:string; cues: Cue[]; englishCues?:Cue[]; duration?: number; transcriptVersion?: number; keyPoints?: string[]; topics?: string[]; speaker?:SpeakerProfile };
 type ProcessingTelemetry = { status?:string; progress?:number; stage?:string; cursor?:number; totalCues?:number; currentCue?:number; cueStart?:number|null; elapsedSeconds?:number; updatedAt?:string|null; retryAfter?:string|null; transientError?:string; keyPoints?:string[] };
+type ManualImportProgress = { progress:number; label:string; detail:string; currentCue?:number; totalCues?:number };
 type GuideItem = { time:number; title:string; summary:string; comment?:string };
 type Category = "Medical" | "Tech" | "Podcasts" | "Comedy" | "Education" | "Documentaries" | "Other";
 type TranslationMode = "legacy" | "google" | "manual-pro";
@@ -994,8 +995,8 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.3</small></button>;}
-function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header><h2>{title}</h2><button aria-label="Κλείσιμο" onClick={close}>×</button></header>{children}</section></div>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.4</small></button>;}
+function Modal({title,close,children,busy=false}:{title:string;close:()=>void;children:React.ReactNode;busy?:boolean}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!busy)close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[busy,close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title} aria-busy={busy}><header><h2>{title}</h2><button aria-label="Κλείσιμο" disabled={busy} onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
@@ -1053,6 +1054,7 @@ function ManualTranslateModal({video,close,done}:{video:Video;close:()=>void;don
   const [downloadError,setDownloadError]=useState("");
   const [importing,setImporting]=useState(false);
   const [importError,setImportError]=useState("");
+  const [importProgress,setImportProgress]=useState<ManualImportProgress|null>(null);
   const [showFallback,setShowFallback]=useState(false);
   const [subtitleText,setSubtitleText]=useState("");
   const [manualBusy,setManualBusy]=useState(false);
@@ -1076,14 +1078,37 @@ function ManualTranslateModal({video,close,done}:{video:Video;close:()=>void;don
     finally{setDownloading(false);}
   }
   async function importFile(file:File){
-    setImporting(true);setImportError("");
+    setImporting(true);setImportError("");setImportProgress({progress:4,label:"Ανάγνωση ελληνικού SRT",detail:`Διαβάζουμε το αρχείο ${file.name}.`});
     try{
       const text=await file.text();
-      const response=await fetch("/api/manual-captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,title:video.title,originalTitle:video.originalTitle||"",channel:video.channel,duration:video.duration||0,subtitleText:text,strict:true})});
-      const result=await response.json() as Captions&{error?:string};
-      if(!response.ok)throw new Error(result.error||"Η εισαγωγή του ελληνικού SRT απέτυχε.");
+      setImportProgress({progress:8,label:"Αποστολή για ασφαλή έλεγχο",detail:"Το αρχείο διαβάστηκε και ξεκινά ο αυστηρός έλεγχος."});
+      const response=await fetch("/api/manual-captions/progress",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/x-ndjson"},body:JSON.stringify({url:video.url,title:video.title,originalTitle:video.originalTitle||"",channel:video.channel,duration:video.duration||0,subtitleText:text})});
+      if(!response.ok){const failure=await response.json().catch(()=>null) as {error?:string}|null;throw new Error(failure?.error||"Η εισαγωγή του ελληνικού SRT απέτυχε.");}
+      if(!response.body)throw new Error("Δεν ήταν δυνατή η παρακολούθηση της εισαγωγής.");
+      const reader=response.body.getReader();
+      const decoder=new TextDecoder();
+      let buffer="";
+      let result:Captions|null=null;
+      let streamError="";
+      for(;;){
+        const {done:streamDone,value}=await reader.read();
+        buffer+=decoder.decode(value||new Uint8Array(),{stream:!streamDone});
+        const lines=buffer.split("\n");
+        buffer=streamDone?"":lines.pop()||"";
+        for(const line of lines){
+          if(!line.trim())continue;
+          const event=JSON.parse(line) as ({type:"progress"}&ManualImportProgress)|{type:"complete";result:Captions}|{type:"error";error:string};
+          if(event.type==="progress")setImportProgress({progress:event.progress,label:event.label,detail:event.detail,currentCue:event.currentCue,totalCues:event.totalCues});
+          if(event.type==="complete")result=event.result;
+          if(event.type==="error")streamError=event.error;
+        }
+        if(streamDone)break;
+      }
+      if(streamError)throw new Error(streamError);
+      if(!result)throw new Error("Η εισαγωγή δεν επέστρεψε ολοκληρωμένους υπότιτλους.");
+      setImportProgress({progress:100,label:"Η εισαγωγή ολοκληρώθηκε",detail:"Όλοι οι έλεγχοι πέρασαν. Ανοίγουμε το video.",currentCue:result.cues.length,totalCues:result.cues.length});
       await done(result);
-    }catch(problem){setImportError(problem instanceof Error?problem.message:"Η εισαγωγή του ελληνικού SRT απέτυχε.");}
+    }catch(problem){setImportProgress(null);setImportError(problem instanceof Error?problem.message:"Η εισαγωγή του ελληνικού SRT απέτυχε.");}
     finally{setImporting(false);}
   }
   async function submitManual(event:FormEvent<HTMLFormElement>){
@@ -1098,7 +1123,7 @@ function ManualTranslateModal({video,close,done}:{video:Video;close:()=>void;don
     }catch(problem){setManualError(problem instanceof Error?problem.message:"Δεν έγινε η εισαγωγή της μετάφρασης.");}
     finally{setManualBusy(false);}
   }
-  return <Modal title="Manual Translate" close={close}>
+  return <Modal title="Manual Translate" close={close} busy={importing}>
     <div className="form manual-translate">
       <section className="manual-step">
         <div className="manual-step-head"><span className="manual-step-index">01</span><div className="manual-step-body"><strong>Λήψη αγγλικού SRT</strong><p>Σταθερή αρίθμηση, ακριβή timestamps από το timed transcript που χρησιμοποιεί η εφαρμογή.</p></div></div>
@@ -1111,7 +1136,12 @@ function ManualTranslateModal({video,close,done}:{video:Video;close:()=>void;don
       <section className="manual-step">
         <div className="manual-step-head"><span className="manual-step-index">03</span><div className="manual-step-body"><strong>Εισαγωγή ελληνικού SRT</strong><p>Ελέγχουμε αριθμό cues, σειρά και timestamps πριν αποθηκευτεί οτιδήποτε. Αν κάτι δεν ταιριάζει, το υπάρχον transcript παραμένει όπως είναι.</p></div></div>
         <input ref={fileInput} type="file" accept=".srt,.vtt,text/plain" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void importFile(file);event.target.value="";}}/>
-        <button type="button" className="primary" disabled={importing} onClick={()=>fileInput.current?.click()}>{importing?"Έλεγχος…":"Εισαγωγή ελληνικού SRT"}</button>
+        <button type="button" className="primary" disabled={importing} onClick={()=>fileInput.current?.click()}>{importing?"Εισαγωγή σε εξέλιξη":"Εισαγωγή ελληνικού SRT"}</button>
+        {importing&&importProgress&&<div className="manual-import-progress" role="status" aria-live="polite" aria-label={`${Math.round(importProgress.progress)}% — ${importProgress.label}`}>
+          <div className="manual-import-progress-head"><strong>{importProgress.label}</strong><span>{Math.round(importProgress.progress)}%</span></div>
+          <div className="manual-import-progress-track" aria-hidden="true"><i style={{width:`${Math.max(3,Math.min(100,importProgress.progress))}%`}}/></div>
+          <div className="manual-import-progress-meta"><p>{importProgress.detail}</p>{importProgress.totalCues?<span>{(importProgress.currentCue||0).toLocaleString("el-GR")} / {importProgress.totalCues.toLocaleString("el-GR")} cues</span>:null}</div>
+        </div>}
       </section>
       {importError&&<p className="form-error" role="alert">{importError}</p>}
       <button type="button" className="manual-fallback-toggle" onClick={()=>setShowFallback(value=>!value)}>{showFallback?"Απόκρυψη χειροκίνητης επικόλλησης":"Εναλλακτικά επικόλλησε χειροκίνητα"}</button>
@@ -1123,7 +1153,7 @@ function ManualTranslateModal({video,close,done}:{video:Video;close:()=>void;don
           <div className="modal-actions"><button className="secondary" disabled={manualBusy}>{manualBusy?"Εισαγωγή…":"Εισαγωγή (χειροκίνητα)"}</button></div>
         </form>
       </div>}
-      <div className="modal-actions"><button type="button" className="secondary" onClick={close}>Ακύρωση</button></div>
+      <div className="modal-actions"><button type="button" className="secondary" disabled={importing} onClick={close}>Ακύρωση</button></div>
     </div>
   </Modal>;
 }

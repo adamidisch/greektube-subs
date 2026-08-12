@@ -2,6 +2,7 @@ import fs from 'node:fs';
 const src=fs.readFileSync('app/GreekTubePlayer.tsx','utf8');
 const css=fs.readFileSync('app/v7-4-2.css','utf8');
 const layout=fs.readFileSync('app/layout.tsx','utf8');
+const progressRoute=fs.readFileSync('app/api/manual-captions/progress/route.ts','utf8');
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
 const checks=[
   ['editorial guide model',src.includes('type GuideItem = { time:number; title:string; summary:string; comment?:string };')],
@@ -15,8 +16,11 @@ const checks=[
   ['single active translation modal',src.match(/onOpenManual=\{\(\)=>\{setProImportVideo\(translationChoiceVideo\);setTranslationChoiceVideo\(null\);\}\}/g)?.length===2],
   ['translation mode labels',src.includes('<h3>Auto Translate</h3>')&&src.includes('<h3>Manual Translate</h3>')],
   ['css imported',layout.includes('import "./v7-4-2.css";')],
-  ['version',pkg.version==='7.4.3'&&layout.includes('"app-version": "7.4.3"')],
+  ['real import progress',src.includes('/api/manual-captions/progress')&&src.includes('manual-import-progress')&&progressRoute.includes('Σύγκριση cues και timestamps')&&progressRoute.includes('currentCue: completed')],
+  ['stream completion',progressRoute.includes('type: "complete"')&&progressRoute.includes('application/x-ndjson')],
+  ['protected active import',src.includes('busy={importing}')&&src.includes('aria-busy={busy}')],
+  ['version',pkg.version==='7.4.4'&&layout.includes('"app-version": "7.4.4"')],
   ['premium css',css.includes('.editorial-guide-list>button')&&css.includes('.speed-control')],
 ];
-for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.3 invariant failed: ${label}`)}
-console.log(`v7.4.3 player/guide invariants passed (${checks.length})`);
+for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.4 invariant failed: ${label}`)}
+console.log(`v7.4.4 player/guide invariants passed (${checks.length})`);
