@@ -53,9 +53,10 @@ export async function POST(request: Request) {
   let lockToken: string | null = null;
   let videoId: string | null = null;
   try {
-    const body = await request.json() as { url?: unknown; title?: unknown; originalTitle?: unknown; channel?: unknown; duration?: unknown; subtitleText?: unknown; strict?: unknown };
+    const body = await request.json() as { url?: unknown; title?: unknown; originalTitle?: unknown; channel?: unknown; duration?: unknown; subtitleText?: unknown; sourceSubtitleText?: unknown; strict?: unknown };
     if (typeof body.url !== "string" || typeof body.subtitleText !== "string") return NextResponse.json({ error: "Λείπει το βίντεο ή το κείμενο υποτίτλων." }, { status: 400 });
     if (body.subtitleText.length > 2_000_000) return NextResponse.json({ error: "Το αρχείο υποτίτλων είναι υπερβολικά μεγάλο." }, { status: 413 });
+    if (typeof body.sourceSubtitleText === "string" && body.sourceSubtitleText.length > 2_000_000) return NextResponse.json({ error: "Το αγγλικό αρχείο υποτίτλων είναι υπερβολικά μεγάλο." }, { status: 413 });
     videoId = videoIdFrom(body.url);
     if (!videoId) return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
     const strict = body.strict === true;
@@ -67,7 +68,15 @@ export async function POST(request: Request) {
     if (!hasValidManualCueTimings(cues)) return NextResponse.json({ error: "Το αρχείο περιέχει μη έγκυρα timestamps." }, { status: 400 });
 
     const existing = await getTranscript(videoId);
-    const existingEnglish = (existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];
+    const hasSuppliedEnglish = typeof body.sourceSubtitleText === "string" && Boolean(body.sourceSubtitleText.trim());
+    const suppliedEnglish = hasSuppliedEnglish
+      ? parseManualSubtitleText(body.sourceSubtitleText as string)
+      : [];
+    if (hasSuppliedEnglish && !suppliedEnglish.length) return NextResponse.json({ error: "Το αγγλικό SRT δεν μπόρεσε να διαβαστεί." }, { status: 400 });
+    if (suppliedEnglish.length && !hasValidManualCueTimings(suppliedEnglish)) return NextResponse.json({ error: "Το αγγλικό SRT περιέχει μη έγκυρα timestamps." }, { status: 400 });
+    const existingEnglish = (suppliedEnglish.length
+      ? suppliedEnglish
+      : existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];
 
     if (strict) {
       if (!existingEnglish.length) return NextResponse.json({ error: "Δεν υπάρχει αγγλικό transcript για σύγκριση. Κάνε πρώτα λήψη του αγγλικού SRT από αυτή τη οθόνη." }, { status: 409 });
@@ -101,7 +110,7 @@ export async function POST(request: Request) {
       thumbnail: existing?.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
       duration,
       originalLanguage: "en",
-      rawEnglishTranscript: existing?.rawEnglishTranscript || [],
+      rawEnglishTranscript: suppliedEnglish.length ? suppliedEnglish : existing?.rawEnglishTranscript || existingEnglish,
       englishTranscript: alignedEnglish,
       greekTranscript: cues,
       timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),

@@ -11,6 +11,7 @@ type ImportBody = {
   channel?: unknown;
   duration?: unknown;
   subtitleText?: unknown;
+  sourceSubtitleText?: unknown;
 };
 
 type ProgressUpdate = {
@@ -99,6 +100,7 @@ export async function POST(request: Request) {
         try {
           if (typeof body.url !== "string" || typeof body.subtitleText !== "string") throw new ManualImportError("Λείπει το βίντεο ή το κείμενο υποτίτλων.");
           if (body.subtitleText.length > 2_000_000) throw new ManualImportError("Το αρχείο υποτίτλων είναι υπερβολικά μεγάλο.", 413);
+          if (typeof body.sourceSubtitleText === "string" && body.sourceSubtitleText.length > 2_000_000) throw new ManualImportError("Το αγγλικό αρχείο υποτίτλων είναι υπερβολικά μεγάλο.", 413);
           videoId = videoIdFrom(body.url);
           if (!videoId) throw new ManualImportError("Δεν αναγνωρίζω αυτό το YouTube link.");
 
@@ -113,7 +115,15 @@ export async function POST(request: Request) {
 
           report({ progress: 34, label: "Φόρτωση αγγλικού πρωτοτύπου", detail: "Ανακτούμε το αρχικό transcript για ακριβή σύγκριση.", currentCue: 0, totalCues: cues.length });
           const existing = await getTranscript(videoId);
-          const existingEnglish = (existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];
+          const hasSuppliedEnglish = typeof body.sourceSubtitleText === "string" && Boolean(body.sourceSubtitleText.trim());
+          const suppliedEnglish = hasSuppliedEnglish
+            ? parseManualSubtitleText(body.sourceSubtitleText as string)
+            : [];
+          if (hasSuppliedEnglish && !suppliedEnglish.length) throw new ManualImportError("Το αγγλικό SRT δεν μπόρεσε να διαβαστεί.");
+          if (suppliedEnglish.length && !hasValidManualCueTimings(suppliedEnglish)) throw new ManualImportError("Το αγγλικό SRT περιέχει μη έγκυρα timestamps.");
+          const existingEnglish = (suppliedEnglish.length
+            ? suppliedEnglish
+            : existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];
           if (!existingEnglish.length) throw new ManualImportError("Δεν υπάρχει αγγλικό transcript για σύγκριση. Κάνε πρώτα λήψη του αγγλικού SRT από αυτή την οθόνη.", 409);
           if (cues.length !== existingEnglish.length) throw new ManualImportError(`Ο αριθμός των υποτίτλων δεν ταιριάζει: το ελληνικό SRT έχει ${cues.length} cues, το αγγλικό έχει ${existingEnglish.length}. Μην προσθέσεις, αφαιρέσεις ή ενώσεις γραμμές — μετάφρασε γραμμή προς γραμμή.`);
 
@@ -145,7 +155,7 @@ export async function POST(request: Request) {
           const suppliedDuration = Number(body.duration || 0);
           const cueDuration = cues.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
           const duration = Number.isFinite(suppliedDuration) && suppliedDuration > 0 ? Math.max(suppliedDuration, cueDuration) : cueDuration;
-          const alignedEnglish = existingEnglish.every((cue, index) => Math.abs(cue.start - cues[index].start) < 0.15) ? existingEnglish : [];
+          const alignedEnglish = existingEnglish;
           const points = keyPoints(cues);
           const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : (existing?.title || "YouTube video");
           const channel = typeof body.channel === "string" && body.channel.trim() ? body.channel.trim() : (existing?.channel || "YouTube");
@@ -158,7 +168,7 @@ export async function POST(request: Request) {
             thumbnail: existing?.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
             duration,
             originalLanguage: "en",
-            rawEnglishTranscript: existing?.rawEnglishTranscript || [],
+            rawEnglishTranscript: suppliedEnglish.length ? suppliedEnglish : existing?.rawEnglishTranscript || existingEnglish,
             englishTranscript: alignedEnglish,
             greekTranscript: cues,
             timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),

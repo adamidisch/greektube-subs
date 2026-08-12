@@ -26,7 +26,10 @@ function normalize(cues: { start: number; end?: number; text: string }[]) {
     // the next later cue when one is available.
     let end = suppliedEnd && suppliedEnd > cue.start ? suppliedEnd : (nextStart ?? cue.start + 4);
     if (end <= cue.start) end = cue.start + 0.25;
-    result.push({ start: cue.start, duration: Math.max(0.25, end - cue.start), text: cleanText(cue.text) });
+    // A valid explicit SRT/VTT range may legitimately be shorter than 250 ms.
+    // Preserve that duration exactly so a downloaded source SRT round-trips
+    // through manual import without being changed by the parser.
+    result.push({ start: cue.start, duration: end - cue.start, text: cleanText(cue.text) });
   }
   return result;
 }

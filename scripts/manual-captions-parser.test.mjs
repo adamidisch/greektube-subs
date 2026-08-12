@@ -38,4 +38,12 @@ const overlap = parseManualSubtitleText(`20\n00:00:30,640 --> 00:00:34,399\nCue 
 assert.ok(Math.abs(overlap[0].duration - 3.759) < 0.000001);
 assert.ok(Math.abs(overlap[1].duration - 1.387) < 0.000001);
 
+// Real source cue #51 is only 149 ms long. The parser must not expand it to
+// 250 ms because strict import compares it with the untouched cached source.
+const shortSourceCue = parseManualSubtitleText(`51\n00:01:13,051 --> 00:01:13,200\nΌμως δεν υπάρχουν`);
+assert.equal(shortSourceCue.length, 1);
+assert.ok(Math.abs(shortSourceCue[0].start - 73.051) < 0.000001);
+assert.ok(Math.abs(shortSourceCue[0].duration - 0.149) < 0.000001);
+assert.equal(hasValidManualCueTimings(shortSourceCue), true);
+
 console.log("manual caption parser regression checks passed");
