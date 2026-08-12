@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       url: "https://www.youtube.com/watch?v=KkBy__7d9Fs",
-      force: true,
+      force: false,
       translationMode: "google",
     }),
   });
