@@ -23,9 +23,10 @@ const checks=[
   ['manual import auth gate',src.includes('async function requestManualImport(video:Video)')&&src.includes('manualImportRequest&&<EditPassword')&&src.includes('onOpenManual={()=>void requestManualImport(translationChoiceVideo)}')],
   ['auth before file picker',src.includes('async function chooseImportFile()')&&src.includes('onClick={()=>void chooseImportFile()}')],
   ['source timing integrity',progressRoute.includes('hasValidManualCueTimings')&&!progressRoute.includes('cue.start >= cues[index - 1].start')],
+  ['same source snapshot',src.includes('setSourceSubtitleText(text)')&&src.includes('subtitleText:text,sourceSubtitleText')&&src.includes('manual-source-srt:${video.id}')&&progressRoute.includes('parseManualSubtitleText(body.sourceSubtitleText as string)')],
   ['cached source timing integrity',captionsRoute.includes('Source subtitle tracks can legitimately overlap')&&!captionsRoute.includes('cue.start >= cues[index - 1].start')],
-  ['version',pkg.version==='7.4.6'&&layout.includes('"app-version": "7.4.6"')],
+  ['version',pkg.version==='7.4.7'&&layout.includes('"app-version": "7.4.7"')],
   ['premium css',css.includes('.editorial-guide-list>button')&&css.includes('.speed-control')],
 ];
-for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.6 invariant failed: ${label}`)}
-console.log(`v7.4.6 player/guide invariants passed (${checks.length})`);
+for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.7 invariant failed: ${label}`)}
+console.log(`v7.4.7 player/guide invariants passed (${checks.length})`);
