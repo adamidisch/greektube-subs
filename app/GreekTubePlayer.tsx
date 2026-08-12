@@ -349,6 +349,7 @@ export default function GreekTubePlayer() {
   const [editingVideo,setEditingVideo]=useState<Video|null>(null);
   const [editRequest,setEditRequest]=useState<Video|null>(null);
   const [proImportVideo,setProImportVideo]=useState<Video|null>(null);
+  const [manualImportRequest,setManualImportRequest]=useState<Video|null>(null);
   const [translationChoiceVideo,setTranslationChoiceVideo]=useState<Video|null>(null);
   const [mobileMenu,setMobileMenu]=useState(false);
   const [momentModal,setMomentModal]=useState<{time:number;excerpt:string}|null>(null);
@@ -540,6 +541,15 @@ export default function GreekTubePlayer() {
       if(response.ok&&result.authorized){setModal(true);return;}
     }catch{}
     setAddRequest(true);
+  }
+  async function requestManualImport(video:Video){
+    try{
+      const response=await fetch("/api/admin-auth",{cache:"no-store"});
+      const result=await response.json() as {authorized?:boolean};
+      if(response.ok&&result.authorized){setTranslationChoiceVideo(null);setProImportVideo(video);return;}
+    }catch{}
+    setTranslationChoiceVideo(null);
+    setManualImportRequest(video);
   }
   async function syncLocalTranscripts(videos:Video[]){
     let synced=0;
@@ -948,8 +958,9 @@ export default function GreekTubePlayer() {
       {momentModal&&<Modal title="Αποθήκευση στιγμής" close={()=>setMomentModal(null)}><form className="form moment-form" onSubmit={saveMoment}><div className="moment-preview"><time>{clock(momentModal.time)}</time><p>{momentModal.excerpt||"Η στιγμή θα αποθηκευτεί στο συγκεκριμένο σημείο του βίντεο."}</p></div><label>Σύντομη σημείωση<input name="note" autoFocus placeholder="Τι θέλεις να θυμάσαι από αυτό το σημείο;"/></label><label>Ετικέτες <small>Προαιρετικά</small><input name="tags" placeholder="π.χ. ινσουλίνη, διατροφή"/></label><div className="modal-actions"><button type="button" className="secondary" onClick={()=>setMomentModal(null)}>Ακύρωση</button><button className="primary">Αποθήκευση στιγμής</button></div></form></Modal>}
       {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
       {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}} rebuild={()=>{const video=editingVideo;setEditingVideo(null);setTranslationChoiceVideo(video);}}/>}
-      {proImportVideo&&<ManualTranslateModal video={proImportVideo} close={()=>{setTranslationChoiceVideo(proImportVideo);setProImportVideo(null);}} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video,undefined,false,false,result);}}/>}
-      {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenManual={()=>{setProImportVideo(translationChoiceVideo);setTranslationChoiceVideo(null);}}/>}
+      {manualImportRequest&&<EditPassword close={()=>{setTranslationChoiceVideo(manualImportRequest);setManualImportRequest(null);}} authorized={()=>{setProImportVideo(manualImportRequest);setManualImportRequest(null);}}/>}
+      {proImportVideo&&<ManualTranslateModal video={proImportVideo} authorizationRequired={()=>{setManualImportRequest(proImportVideo);setProImportVideo(null);}} close={()=>{setTranslationChoiceVideo(proImportVideo);setProImportVideo(null);}} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video,undefined,false,false,result);}}/>}
+      {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenManual={()=>void requestManualImport(translationChoiceVideo)}/>}
     </main>;
   }
 
@@ -990,12 +1001,13 @@ export default function GreekTubePlayer() {
     {syncRequest&&<EditPassword close={()=>setSyncRequest(false)} authorized={()=>{setSyncRequest(false);window.setTimeout(()=>void syncLibraryToServer(),350);}}/>}
     {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
     {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:5});setEditingVideo(null);}} rebuild={()=>{const video=editingVideo;setEditingVideo(null);setTranslationChoiceVideo(video);}}/>}
-    {proImportVideo&&<ManualTranslateModal video={proImportVideo} close={()=>{setTranslationChoiceVideo(proImportVideo);setProImportVideo(null);}} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video,undefined,false,false,result);}}/>}
-    {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenManual={()=>{setProImportVideo(translationChoiceVideo);setTranslationChoiceVideo(null);}}/>}
+    {manualImportRequest&&<EditPassword close={()=>{setTranslationChoiceVideo(manualImportRequest);setManualImportRequest(null);}} authorized={()=>{setProImportVideo(manualImportRequest);setManualImportRequest(null);}}/>}
+    {proImportVideo&&<ManualTranslateModal video={proImportVideo} authorizationRequired={()=>{setManualImportRequest(proImportVideo);setProImportVideo(null);}} close={()=>{setTranslationChoiceVideo(proImportVideo);setProImportVideo(null);}} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video,undefined,false,false,result);}}/>}
+    {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenManual={()=>void requestManualImport(translationChoiceVideo)}/>}
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.4</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.5</small></button>;}
 function Modal({title,close,children,busy=false}:{title:string;close:()=>void;children:React.ReactNode;busy?:boolean}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!busy)close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[busy,close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title} aria-busy={busy}><header><h2>{title}</h2><button aria-label="Κλείσιμο" disabled={busy} onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
@@ -1049,7 +1061,7 @@ function EditVideo({video,close,save,rebuild}:{video:Video;close:()=>void;save:(
 function AutoTranslateIcon(){return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round"/></svg>;}
 function ManualTranslateIcon(){return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h16M4 20v-3.5L15 5.5a1.5 1.5 0 0 1 2.1 0l1.4 1.4a1.5 1.5 0 0 1 0 2.1L7.5 20H4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round"/><path d="M13 7.5 16.5 11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>;}
 
-function ManualTranslateModal({video,close,done}:{video:Video;close:()=>void;done:(captions:Captions)=>Promise<void>}) {
+function ManualTranslateModal({video,authorizationRequired,close,done}:{video:Video;authorizationRequired:()=>void;close:()=>void;done:(captions:Captions)=>Promise<void>}) {
   const [downloading,setDownloading]=useState(false);
   const [downloadError,setDownloadError]=useState("");
   const [importing,setImporting]=useState(false);
@@ -1111,6 +1123,15 @@ function ManualTranslateModal({video,close,done}:{video:Video;close:()=>void;don
     }catch(problem){setImportProgress(null);setImportError(problem instanceof Error?problem.message:"Η εισαγωγή του ελληνικού SRT απέτυχε.");}
     finally{setImporting(false);}
   }
+  async function chooseImportFile(){
+    setImportError("");
+    try{
+      const response=await fetch("/api/admin-auth",{cache:"no-store"});
+      const result=await response.json() as {authorized?:boolean};
+      if(response.ok&&result.authorized){fileInput.current?.click();return;}
+    }catch{}
+    authorizationRequired();
+  }
   async function submitManual(event:FormEvent<HTMLFormElement>){
     event.preventDefault();
     if(!subtitleText.trim()){setManualError("Επικόλλησε πρώτα τους έτοιμους ελληνικούς υπότιτλους.");return;}
@@ -1136,7 +1157,7 @@ function ManualTranslateModal({video,close,done}:{video:Video;close:()=>void;don
       <section className="manual-step">
         <div className="manual-step-head"><span className="manual-step-index">03</span><div className="manual-step-body"><strong>Εισαγωγή ελληνικού SRT</strong><p>Ελέγχουμε αριθμό cues, σειρά και timestamps πριν αποθηκευτεί οτιδήποτε. Αν κάτι δεν ταιριάζει, το υπάρχον transcript παραμένει όπως είναι.</p></div></div>
         <input ref={fileInput} type="file" accept=".srt,.vtt,text/plain" hidden onChange={event=>{const file=event.target.files?.[0];if(file)void importFile(file);event.target.value="";}}/>
-        <button type="button" className="primary" disabled={importing} onClick={()=>fileInput.current?.click()}>{importing?"Εισαγωγή σε εξέλιξη":"Εισαγωγή ελληνικού SRT"}</button>
+        <button type="button" className="primary" disabled={importing} onClick={()=>void chooseImportFile()}>{importing?"Εισαγωγή σε εξέλιξη":"Εισαγωγή ελληνικού SRT"}</button>
         {importing&&importProgress&&<div className="manual-import-progress" role="status" aria-live="polite" aria-label={`${Math.round(importProgress.progress)}% — ${importProgress.label}`}>
           <div className="manual-import-progress-head"><strong>{importProgress.label}</strong><span>{Math.round(importProgress.progress)}%</span></div>
           <div className="manual-import-progress-track" aria-hidden="true"><i style={{width:`${Math.max(3,Math.min(100,importProgress.progress))}%`}}/></div>
