@@ -104,14 +104,43 @@ type Row = {
   error: string | null; transcript_version: number; created_at: string; updated_at: string;
 };
 
+function normalizeReadyTranscriptOrder(
+  greekTranscript: CachedCue[],
+  englishTranscript: CachedCue[],
+  timestamps: { start: number; duration: number }[],
+) {
+  const order = greekTranscript
+    .map((cue, index) => ({ index, start: cue.start }))
+    .sort((a, b) => a.start - b.start || a.index - b.index)
+    .map(item => item.index);
+
+  return {
+    greekTranscript: order.map(index => greekTranscript[index]),
+    englishTranscript: englishTranscript.length === greekTranscript.length
+      ? order.map(index => englishTranscript[index])
+      : englishTranscript,
+    timestamps: timestamps.length === greekTranscript.length
+      ? order.map(index => timestamps[index])
+      : timestamps,
+  };
+}
+
 export async function getTranscript(videoId: string) {
   await ensureTranscriptTable();
   const db = database();
   const rows = await db.query("SELECT * FROM video_transcripts WHERE video_id = $1 LIMIT 1", [videoId]) as Row[];
   const row = rows[0];
   if (!row) return null;
-  const greekTranscript = JSON.parse(row.greek_transcript || "[]") as CachedCue[];
-  const hasReadyGreekTranslation = row.status === "ready" && greekTranscript.length > 0;
+  const storedGreekTranscript = JSON.parse(row.greek_transcript || "[]") as CachedCue[];
+  const storedEnglishTranscript = JSON.parse(row.english_transcript || "[]") as CachedCue[];
+  const storedTimestamps = JSON.parse(row.timestamps || "[]") as { start: number; duration: number }[];
+  const hasReadyGreekTranslation = row.status === "ready" && storedGreekTranscript.length > 0;
+  const readyOrder = hasReadyGreekTranslation
+    ? normalizeReadyTranscriptOrder(storedGreekTranscript, storedEnglishTranscript, storedTimestamps)
+    : null;
+  const greekTranscript = readyOrder?.greekTranscript || storedGreekTranscript;
+  const englishTranscript = readyOrder?.englishTranscript || storedEnglishTranscript;
+  const timestamps = readyOrder?.timestamps || storedTimestamps;
   return {
     videoId: row.video_id,
     title: row.title,
@@ -120,9 +149,9 @@ export async function getTranscript(videoId: string) {
     duration: row.duration,
     originalLanguage: row.original_language,
     rawEnglishTranscript: JSON.parse(row.raw_english_transcript || "[]"),
-    englishTranscript: JSON.parse(row.english_transcript || "[]"),
+    englishTranscript,
     greekTranscript,
-    timestamps: JSON.parse(row.timestamps || "[]"),
+    timestamps,
     topics: JSON.parse(row.topics || "[]"),
     keyPoints: JSON.parse(row.key_points || "[]"),
     status: row.status,
