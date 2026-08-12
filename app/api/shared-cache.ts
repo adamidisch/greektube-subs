@@ -110,6 +110,8 @@ export async function getTranscript(videoId: string) {
   const rows = await db.query("SELECT * FROM video_transcripts WHERE video_id = $1 LIMIT 1", [videoId]) as Row[];
   const row = rows[0];
   if (!row) return null;
+  const greekTranscript = JSON.parse(row.greek_transcript || "[]") as CachedCue[];
+  const hasReadyGreekTranslation = row.status === "ready" && greekTranscript.length > 0;
   return {
     videoId: row.video_id,
     title: row.title,
@@ -119,7 +121,7 @@ export async function getTranscript(videoId: string) {
     originalLanguage: row.original_language,
     rawEnglishTranscript: JSON.parse(row.raw_english_transcript || "[]"),
     englishTranscript: JSON.parse(row.english_transcript || "[]"),
-    greekTranscript: JSON.parse(row.greek_transcript || "[]"),
+    greekTranscript,
     timestamps: JSON.parse(row.timestamps || "[]"),
     topics: JSON.parse(row.topics || "[]"),
     keyPoints: JSON.parse(row.key_points || "[]"),
@@ -134,7 +136,7 @@ export async function getTranscript(videoId: string) {
     groqCooldownUntil: row.groq_cooldown_until,
     processingStartedAt: row.processing_started_at,
     error: row.error,
-    transcriptVersion: row.transcript_version,
+    transcriptVersion: hasReadyGreekTranslation ? TRANSCRIPT_VERSION : row.transcript_version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   } satisfies TranscriptRecord;
