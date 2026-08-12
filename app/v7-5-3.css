@@ -1,0 +1,169 @@
+/* v7.5.3 — premium brand, readable version, guarded readiness state */
+
+/* Release badge — override the legacy generated-text treatment with a clearly readable pill. */
+html body .app-shell.app-shell.app-shell .brand-version{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:68px!important;
+  min-height:24px!important;
+  margin-left:0!important;
+  padding:0 9px!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.085)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 5px 16px rgba(0,0,0,.14)!important;
+  color:transparent!important;
+  font-size:0!important;
+  opacity:1!important;
+  white-space:nowrap!important;
+}
+html body .app-shell.app-shell.app-shell .brand-version::after{
+  content:"ver 7.5.3"!important;
+  display:block!important;
+  color:#f5f3ff!important;
+  font-family:var(--font-geist-mono),monospace!important;
+  font-size:10px!important;
+  font-weight:700!important;
+  letter-spacing:.025em!important;
+  line-height:1!important;
+  opacity:1!important;
+}
+html body .app-shell.app-shell.app-shell .brand-home:hover .brand-version{
+  border-color:rgba(255,255,255,.25)!important;
+  background:rgba(255,255,255,.11)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-version{
+  border-color:rgba(20,22,28,.15)!important;
+  background:rgba(20,22,28,.055)!important;
+  box-shadow:none!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-version::after{color:#282831!important}
+
+/* Unified premium brand mark in library and viewer. */
+html body .app-shell.app-shell.app-shell .brand-mark,
+html body .app-shell.app-shell.app-shell.viewer .brand-mark{
+  width:38px!important;
+  height:28px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  position:relative!important;
+  overflow:hidden!important;
+  flex:none!important;
+  padding:0 0 0 7px!important;
+  border:1px solid rgba(255,255,255,.17)!important;
+  border-radius:10px!important;
+  background:linear-gradient(155deg,#9b8ff5 0%,#6b5fc7 45%,#3a3560 100%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -6px 10px rgba(0,0,0,.22),0 7px 22px rgba(111,96,207,.17)!important;
+  color:#fff!important;
+  font-size:0!important;
+}
+html body .app-shell.app-shell.app-shell .brand-mark i,
+html body .app-shell.app-shell.app-shell.viewer .brand-mark i{
+  display:block!important;
+  width:14px!important;
+  height:14px!important;
+  flex:none!important;
+  background:linear-gradient(#fff,#fff) 0 1px/14px 2px no-repeat,linear-gradient(#fff,#fff) 0 6.5px/10px 2px no-repeat,linear-gradient(#fff,#fff) 0 12px/6px 2px no-repeat!important;
+  opacity:1!important;
+  transform:none!important;
+  font-size:0!important;
+}
+html body .app-shell.app-shell.app-shell .brand-mark::before,
+html body .app-shell.app-shell.app-shell.viewer .brand-mark::before{
+  content:""!important;
+  position:absolute!important;
+  right:7px!important;
+  top:50%!important;
+  width:0!important;
+  height:0!important;
+  transform:translateY(-50%)!important;
+  border-top:5.5px solid transparent!important;
+  border-bottom:5.5px solid transparent!important;
+  border-left:8px solid #ded8ff!important;
+}
+html body .app-shell.app-shell.app-shell .brand-mark::after,
+html body .app-shell.app-shell.app-shell.viewer .brand-mark::after{
+  content:""!important;
+  position:absolute!important;
+  inset:-45% -70%!important;
+  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.24) 50%,transparent 58%)!important;
+  transform:translateX(-55%)!important;
+  animation:brand-shine-v753 6s ease-in-out infinite!important;
+  pointer-events:none!important;
+}
+@keyframes brand-shine-v753{0%,55%{transform:translateX(-55%)}100%{transform:translateX(65%)}}
+
+/*
+  Guard the transient no-captions render while the authoritative GET is still resolving.
+  For ready videos this shell disappears before the translation details are revealed.
+  If no ready transcript exists, the real details become visible after the short guard.
+*/
+html body .app-shell.app-shell.app-shell .video-details{
+  position:relative!important;
+  min-height:55vh!important;
+}
+html body .app-shell.app-shell.app-shell .video-details>*{
+  opacity:0!important;
+  visibility:hidden!important;
+  animation:v753-details-reveal .01s linear .72s forwards!important;
+}
+html body .app-shell.app-shell.app-shell .video-details::before{
+  content:""!important;
+  position:fixed!important;
+  z-index:25!important;
+  left:calc(50% - 24px)!important;
+  top:calc(50% - 24px)!important;
+  width:48px!important;
+  height:48px!important;
+  border:3px solid rgba(143,127,240,.16)!important;
+  border-top-color:var(--accent2)!important;
+  border-right-color:rgba(143,127,240,.58)!important;
+  border-radius:50%!important;
+  box-sizing:border-box!important;
+  animation:v753-ready-spin 1.05s linear infinite,v753-ready-hide .01s linear .72s forwards!important;
+  pointer-events:none!important;
+}
+html body .app-shell.app-shell.app-shell .video-details::after{
+  content:"ΕΛΕΓΧΟΣ ΕΛΛΗΝΙΚΩΝ ΥΠΟΤΙΤΛΩΝ"!important;
+  position:fixed!important;
+  z-index:25!important;
+  left:50%!important;
+  top:calc(50% + 42px)!important;
+  transform:translateX(-50%)!important;
+  color:var(--muted)!important;
+  font-size:9px!important;
+  font-weight:650!important;
+  letter-spacing:.09em!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  animation:v753-ready-hide .01s linear .72s forwards!important;
+  pointer-events:none!important;
+}
+@keyframes v753-ready-spin{to{transform:rotate(360deg)}}
+@keyframes v753-ready-hide{to{opacity:0;visibility:hidden}}
+@keyframes v753-details-reveal{to{opacity:1;visibility:visible}}
+
+@media(max-width:620px){
+  html body .app-shell.app-shell.app-shell:not(.viewer) .brand-version{
+    min-width:60px!important;
+    min-height:21px!important;
+    padding:0 7px!important;
+  }
+  html body .app-shell.app-shell.app-shell:not(.viewer) .brand-version::after{font-size:9px!important}
+  html body .app-shell.app-shell.app-shell.viewer .brand-version{display:none!important}
+  html body .app-shell.app-shell.app-shell .video-details::before{
+    left:calc(50% - 22px)!important;
+    top:calc(50% - 22px)!important;
+    width:44px!important;
+    height:44px!important;
+  }
+  html body .app-shell.app-shell.app-shell .video-details::after{top:calc(50% + 38px)!important;font-size:8px!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html body .app-shell.app-shell.app-shell .brand-mark::after,
+  html body .app-shell.app-shell.app-shell.viewer .brand-mark::after{animation:none!important;display:none!important}
+  html body .app-shell.app-shell.app-shell .video-details::before{animation:v753-ready-hide .01s linear .72s forwards!important}
+}
