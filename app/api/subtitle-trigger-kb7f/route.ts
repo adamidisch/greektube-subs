@@ -14,7 +14,7 @@ export async function GET(request: Request) {
       body: JSON.stringify({
         url: "https://www.youtube.com/watch?v=KkBy__7d9Fs",
         force: false,
-        translationMode: "google",
+        translationMode: "legacy",
       }),
     });
 
