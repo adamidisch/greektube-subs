@@ -1007,7 +1007,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.7</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.8</small></button>;}
 function Modal({title,close,children,busy=false}:{title:string;close:()=>void;children:React.ReactNode;busy?:boolean}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!busy)close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[busy,close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title} aria-busy={busy}><header><h2>{title}</h2><button aria-label="Κλείσιμο" disabled={busy} onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
@@ -1067,16 +1067,14 @@ function ManualTranslateModal({video,authorizationRequired,close,done}:{video:Vi
   const [importing,setImporting]=useState(false);
   const [importError,setImportError]=useState("");
   const [importProgress,setImportProgress]=useState<ManualImportProgress|null>(null);
-  const [sourceSubtitleText,setSourceSubtitleText]=useState("");
+  const [sourceSubtitleText,setSourceSubtitleText]=useState(()=>{
+    try{return typeof window==="undefined"?"":sessionStorage.getItem(`manual-source-srt:${video.id}`)||"";}catch{return "";}
+  });
   const [showFallback,setShowFallback]=useState(false);
   const [subtitleText,setSubtitleText]=useState("");
   const [manualBusy,setManualBusy]=useState(false);
   const [manualError,setManualError]=useState("");
   const fileInput=useRef<HTMLInputElement|null>(null);
-
-  useEffect(()=>{
-    try{setSourceSubtitleText(sessionStorage.getItem(`manual-source-srt:${video.id}`)||"");}catch{}
-  },[video.id]);
 
   async function downloadSrt(){
     setDownloading(true);setDownloadError("");
@@ -1201,7 +1199,9 @@ function TranslationChoiceModal({video,close,backToLibrary,onQuick,onOpenManual}
     try{
       const response=await fetch(`/api/captions/export-srt?videoId=${encodeURIComponent(video.id)}`,{cache:"no-store"});
       if(!response.ok){const failure=await response.json().catch(()=>null) as {error?:string}|null;throw new Error(failure?.error||"Δεν ήταν δυνατή η λήψη του αγγλικού transcript.");}
-      const blob=await response.blob();
+      const text=await response.text();
+      try{sessionStorage.setItem(`manual-source-srt:${video.id}`,text);}catch{}
+      const blob=new Blob([text],{type:"application/x-subrip;charset=utf-8"});
       const link=document.createElement("a");
       link.href=URL.createObjectURL(blob);
       link.download=srtFilename(video);
