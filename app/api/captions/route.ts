@@ -1333,14 +1333,17 @@ function validateCompleteGreekTranscript(cues: CaptionCue[], duration: number) {
   if (cues.length < 3 || !hasGreekText(cues)) {
     throw new Error("Οι ελληνικοί υπότιτλοι δεν ολοκληρώθηκαν");
   }
-  const ordered = cues.every((cue, index) =>
+  // Source subtitle tracks can legitimately overlap and may include small
+  // local start-time inversions. Alignment is validated against the matching
+  // source cues elsewhere, so completeness must not rewrite or reject them.
+  const valid = cues.every(cue =>
     Number.isFinite(cue.start) &&
+    cue.start >= 0 &&
     Number.isFinite(cue.duration) &&
     cue.duration > 0 &&
-    cue.text.trim().length > 0 &&
-    (index === 0 || cue.start >= cues[index - 1].start),
+    cue.text.trim().length > 0,
   );
-  if (!ordered) throw new Error("Οι χρονισμοί των υποτίτλων δεν ολοκληρώθηκαν");
+  if (!valid) throw new Error("Οι χρονισμοί των υποτίτλων δεν ολοκληρώθηκαν");
 
   if (duration > 0) {
     const first = cues[0].start;
@@ -1682,4 +1685,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message, retryLimit: MAX_TRANSIENT_RETRIES }, { status: 502 });
   }
 }
-

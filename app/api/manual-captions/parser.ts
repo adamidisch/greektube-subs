@@ -21,12 +21,18 @@ function normalize(cues: { start: number; end?: number; text: string }[]) {
     if (!Number.isFinite(cue.start) || cue.start < 0 || !cue.text.trim()) continue;
     const suppliedEnd = Number.isFinite(cue.end) ? cue.end as number : null;
     const nextStart = next && Number.isFinite(next.start) && next.start > cue.start ? next.start : null;
+    // Explicit SRT/VTT end times are source data and must remain untouched.
+    // Timed transcripts without end times still derive their duration from
+    // the next later cue when one is available.
     let end = suppliedEnd && suppliedEnd > cue.start ? suppliedEnd : (nextStart ?? cue.start + 4);
-    if (nextStart !== null) end = Math.min(end, nextStart);
     if (end <= cue.start) end = cue.start + 0.25;
     result.push({ start: cue.start, duration: Math.max(0.25, end - cue.start), text: cleanText(cue.text) });
   }
   return result;
+}
+
+export function hasValidManualCueTimings(cues: ManualCue[]) {
+  return cues.every(cue => Number.isFinite(cue.start) && cue.start >= 0 && Number.isFinite(cue.duration) && cue.duration > 0);
 }
 
 export function parseManualSubtitleText(input: string) {

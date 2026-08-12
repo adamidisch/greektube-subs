@@ -3,6 +3,7 @@ const src=fs.readFileSync('app/GreekTubePlayer.tsx','utf8');
 const css=fs.readFileSync('app/v7-4-2.css','utf8');
 const layout=fs.readFileSync('app/layout.tsx','utf8');
 const progressRoute=fs.readFileSync('app/api/manual-captions/progress/route.ts','utf8');
+const captionsRoute=fs.readFileSync('app/api/captions/route.ts','utf8');
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
 const checks=[
   ['editorial guide model',src.includes('type GuideItem = { time:number; title:string; summary:string; comment?:string };')],
@@ -21,8 +22,10 @@ const checks=[
   ['protected active import',src.includes('busy={importing}')&&src.includes('aria-busy={busy}')],
   ['manual import auth gate',src.includes('async function requestManualImport(video:Video)')&&src.includes('manualImportRequest&&<EditPassword')&&src.includes('onOpenManual={()=>void requestManualImport(translationChoiceVideo)}')],
   ['auth before file picker',src.includes('async function chooseImportFile()')&&src.includes('onClick={()=>void chooseImportFile()}')],
-  ['version',pkg.version==='7.4.5'&&layout.includes('"app-version": "7.4.5"')],
+  ['source timing integrity',progressRoute.includes('hasValidManualCueTimings')&&!progressRoute.includes('cue.start >= cues[index - 1].start')],
+  ['cached source timing integrity',captionsRoute.includes('Source subtitle tracks can legitimately overlap')&&!captionsRoute.includes('cue.start >= cues[index - 1].start')],
+  ['version',pkg.version==='7.4.6'&&layout.includes('"app-version": "7.4.6"')],
   ['premium css',css.includes('.editorial-guide-list>button')&&css.includes('.speed-control')],
 ];
-for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.5 invariant failed: ${label}`)}
-console.log(`v7.4.5 player/guide invariants passed (${checks.length})`);
+for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.6 invariant failed: ${label}`)}
+console.log(`v7.4.6 player/guide invariants passed (${checks.length})`);
