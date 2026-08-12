@@ -1,4 +1,4 @@
-import { canonicalNumberTokens, numberTokensMatch } from "../captions/numeric-integrity";
+import { numberTokensMatch } from "../captions/numeric-integrity";
 import {
   acquireProcessingLock,
   getTranscript,
@@ -24,6 +24,14 @@ function hasGreek(text: string) {
 function protectedTokens(text: string) {
   return [...new Set((text.match(/\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml|IU|iu|%))\b/g) || [])
     .map(token => token.replace(/\s+/g, "").toLowerCase()))];
+}
+
+function hasTranslatableEnglish(text: string) {
+  const withoutProtected = text
+    .replace(/\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml|IU|iu|%)|\d+(?:[.,]\d+)*)\b/g, " ")
+    .replace(/[^A-Za-z]+/g, " ")
+    .trim();
+  return /[A-Za-z]{2,}/.test(withoutProtected);
 }
 
 function suffix(index: number) {
@@ -63,7 +71,8 @@ function clean(text: string) {
 }
 
 function valid(source: string, target: string) {
-  if (!target || !hasGreek(target) || /\[\s*\d+\s*\]/.test(target)) return false;
+  if (!target || /\[\s*\d+\s*\]/.test(target)) return false;
+  if (hasTranslatableEnglish(source) && !hasGreek(target)) return false;
   if (!numberTokensMatch(source, target)) return false;
   const compact = target.toLowerCase().replace(/\s+/g, "");
   return protectedTokens(source).every(token => compact.includes(token));
@@ -111,6 +120,7 @@ async function groqTranslate(source: string) {
 }
 
 async function translateCue(source: string) {
+  if (!hasTranslatableEnglish(source)) return source.trim();
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const candidate = await googleTranslate(source);
