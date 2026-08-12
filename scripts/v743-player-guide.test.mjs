@@ -13,14 +13,16 @@ const checks=[
   ['mobile subtitle access',src.includes('aria-label="Διαχείριση υποτίτλων"')],
   ['safe SRT filename',src.includes('function srtFilename(video:Video)')&&src.match(/link\.download=srtFilename\(video\)/g)?.length===2],
   ['closed-modal fallback',src.includes('className="empty translation-needed"')&&src.includes('Επιλογή μετάφρασης')],
-  ['single active translation modal',src.match(/onOpenManual=\{\(\)=>\{setProImportVideo\(translationChoiceVideo\);setTranslationChoiceVideo\(null\);\}\}/g)?.length===2],
+  ['single active translation modal',src.match(/onOpenManual=\{\(\)=>void requestManualImport\(translationChoiceVideo\)\}/g)?.length===2],
   ['translation mode labels',src.includes('<h3>Auto Translate</h3>')&&src.includes('<h3>Manual Translate</h3>')],
   ['css imported',layout.includes('import "./v7-4-2.css";')],
   ['real import progress',src.includes('/api/manual-captions/progress')&&src.includes('manual-import-progress')&&progressRoute.includes('Σύγκριση cues και timestamps')&&progressRoute.includes('currentCue: completed')],
   ['stream completion',progressRoute.includes('type: "complete"')&&progressRoute.includes('application/x-ndjson')],
   ['protected active import',src.includes('busy={importing}')&&src.includes('aria-busy={busy}')],
-  ['version',pkg.version==='7.4.4'&&layout.includes('"app-version": "7.4.4"')],
+  ['manual import auth gate',src.includes('async function requestManualImport(video:Video)')&&src.includes('manualImportRequest&&<EditPassword')&&src.includes('onOpenManual={()=>void requestManualImport(translationChoiceVideo)}')],
+  ['auth before file picker',src.includes('async function chooseImportFile()')&&src.includes('onClick={()=>void chooseImportFile()}')],
+  ['version',pkg.version==='7.4.5'&&layout.includes('"app-version": "7.4.5"')],
   ['premium css',css.includes('.editorial-guide-list>button')&&css.includes('.speed-control')],
 ];
-for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.4 invariant failed: ${label}`)}
-console.log(`v7.4.4 player/guide invariants passed (${checks.length})`);
+for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.5 invariant failed: ${label}`)}
+console.log(`v7.4.5 player/guide invariants passed (${checks.length})`);
