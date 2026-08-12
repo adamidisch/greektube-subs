@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../shared-cache";
-import { parseManualSubtitleText } from "./parser";
+import { hasValidManualCueTimings, parseManualSubtitleText } from "./parser";
 
 const ADMIN_COOKIE = "greektube-admin";
 const SESSION_MESSAGE = "greektube-edit-authorized";
@@ -64,8 +64,7 @@ export async function POST(request: Request) {
     if (cues.length < 3) return NextResponse.json({ error: "Δεν βρέθηκαν αρκετά έγκυρα timed cues. Χρησιμοποίησε SRT, VTT ή transcript με timestamps." }, { status: 400 });
     const combined = cues.slice(0, 150).map(cue => cue.text).join(" ");
     if (greekRatio(combined) < 0.2) return NextResponse.json({ error: "Το SRT δεν φαίνεται να περιέχει ελληνικό κείμενο. Έλεγξε ότι ανέβασες τη μεταφρασμένη έκδοση." }, { status: 400 });
-    const ordered = cues.every((cue, index) => cue.start >= 0 && cue.duration > 0 && (index === 0 || cue.start >= cues[index - 1].start));
-    if (!ordered) return NextResponse.json({ error: "Τα timestamps δεν είναι σε σωστή σειρά." }, { status: 400 });
+    if (!hasValidManualCueTimings(cues)) return NextResponse.json({ error: "Το αρχείο περιέχει μη έγκυρα timestamps." }, { status: 400 });
 
     const existing = await getTranscript(videoId);
     const existingEnglish = (existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];

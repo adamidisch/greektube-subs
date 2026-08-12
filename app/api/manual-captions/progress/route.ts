@@ -1,5 +1,5 @@
 import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../../shared-cache";
-import { parseManualSubtitleText } from "../parser";
+import { hasValidManualCueTimings, parseManualSubtitleText } from "../parser";
 
 const ADMIN_COOKIE = "greektube-admin";
 const SESSION_MESSAGE = "greektube-edit-authorized";
@@ -109,8 +109,7 @@ export async function POST(request: Request) {
 
           const combined = cues.slice(0, 150).map(cue => cue.text).join(" ");
           if (greekRatio(combined) < 0.2) throw new ManualImportError("Το SRT δεν φαίνεται να περιέχει ελληνικό κείμενο. Έλεγξε ότι ανέβασες τη μεταφρασμένη έκδοση.");
-          const ordered = cues.every((cue, index) => cue.start >= 0 && cue.duration > 0 && (index === 0 || cue.start >= cues[index - 1].start));
-          if (!ordered) throw new ManualImportError("Τα timestamps δεν είναι σε σωστή σειρά.");
+          if (!hasValidManualCueTimings(cues)) throw new ManualImportError("Το αρχείο περιέχει μη έγκυρα timestamps.");
 
           report({ progress: 34, label: "Φόρτωση αγγλικού πρωτοτύπου", detail: "Ανακτούμε το αρχικό transcript για ακριβή σύγκριση.", currentCue: 0, totalCues: cues.length });
           const existing = await getTranscript(videoId);
