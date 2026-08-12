@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import RuntimePolish from "./RuntimePolish";
 import "./globals.css";
 import "./mobile-controls-fix.css";
 import "./ui-651.css";
@@ -14,6 +15,7 @@ import "./v7-4-2.css";
 import "./v7-4-9.css";
 import "./v7-5-1.css";
 import "./v7-5-3.css";
+import "./v7-6-0.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,8 +32,8 @@ export const metadata: Metadata = {
   description:
     "Παίξε δημόσια YouTube videos με αυτόματα μεταφρασμένους ελληνικούς υπότιτλους και συγχρονισμένο transcript.",
   other: {
-    "codex-preview": "v7.5.3-readiness-brand-polish",
-    "app-version": "7.5.3",
+    "codex-preview": "v7.6.0-runtime-readiness-ui-polish",
+    "app-version": "7.6.0",
   },
   icons: {
     icon: "/favicon.svg?v=654dev",
@@ -49,6 +51,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <RuntimePolish />
         {children}
       </body>
     </html>
