@@ -69,6 +69,15 @@
 .manual-step-body p{margin:0;font-size:12.5px;line-height:1.55;color:#aeb3bd}
 .manual-step>button{width:100%;transition:transform .12s ease}
 .manual-step>button:active{transform:scale(.97)}
+.manual-import-progress{display:grid;gap:10px;padding:13px 14px;border:1px solid rgba(142,124,255,.22);border-radius:12px;background:linear-gradient(145deg,rgba(118,100,223,.11),rgba(255,255,255,.018));box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+.manual-import-progress-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.manual-import-progress-head strong{min-width:0;font-size:13px;font-weight:680;line-height:1.35;color:#f2f3f6}
+.manual-import-progress-head span{flex:0 0 auto;font-family:var(--font-geist-mono),monospace;font-size:12px;font-weight:700;color:#c7beff;font-variant-numeric:tabular-nums}
+.manual-import-progress-track{height:6px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.075);box-shadow:inset 0 1px 2px rgba(0,0,0,.28)}
+.manual-import-progress-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7664df,#a895ff);box-shadow:0 0 14px rgba(142,124,255,.38);transition:width .18s ease}
+.manual-import-progress-meta{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.manual-import-progress-meta p{margin:0;font-size:12px;line-height:1.45;color:#aeb3bd}
+.manual-import-progress-meta span{flex:0 0 auto;white-space:nowrap;font-family:var(--font-geist-mono),monospace;font-size:12px;font-weight:650;line-height:1.45;color:#d7d3ef;font-variant-numeric:tabular-nums}
 .manual-translate .modal-actions .secondary{min-height:44px;font-size:12px}
 .manual-fallback-toggle{justify-self:start;min-height:44px;padding:4px 0;background:none;border:none;font-size:12px;color:#aeb3bd;text-decoration:underline;text-decoration-color:rgba(255,255,255,.25);cursor:pointer;width:max-content;transition:color .15s ease}
 .manual-fallback-toggle:hover{color:var(--text,#e8e9ee)}
@@ -77,5 +86,6 @@
 
 .empty.translation-needed b{background:rgba(142,124,255,.14);color:#c7beff;font-size:12px;font-weight:800;letter-spacing:.02em}
 .empty-actions{display:flex;gap:9px;margin-top:6px}
-@media(max-width:700px){.modal:has(.translation-choice)>header button,.modal:has(.manual-translate)>header button{width:44px;height:44px}.manual-step-body p{font-size:13px}.manual-step-body strong{font-size:15px}.manual-translate button,.manual-translate .modal-actions .secondary{min-height:44px;font-size:14px}.manual-fallback-toggle,.manual-fallback textarea{font-size:13px}}
+@media(max-width:700px){.modal:has(.translation-choice)>header button,.modal:has(.manual-translate)>header button{width:44px;height:44px}.manual-step-body p{font-size:13px}.manual-step-body strong{font-size:15px}.manual-translate button,.manual-translate .modal-actions .secondary{min-height:44px;font-size:14px}.manual-fallback-toggle,.manual-fallback textarea,.manual-import-progress-head strong,.manual-import-progress-head span,.manual-import-progress-meta p,.manual-import-progress-meta span{font-size:13px}}
+@media(max-width:430px){.manual-import-progress-meta{display:grid;gap:5px}.manual-import-progress-meta span{justify-self:start}}
 @media(max-width:520px){.empty-actions{flex-direction:column;width:min(320px,100%)}.empty-actions button{width:100%;min-height:44px;font-size:14px}}
