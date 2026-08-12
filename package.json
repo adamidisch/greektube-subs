@@ -1,6 +1,6 @@
 {
   "name": "greektube-subs",
-  "version": "7.4.8",
+  "version": "7.4.9",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
