@@ -1,0 +1,39 @@
+/* v7.5.1 — version badge visibility
+   Keep the header compact while making the deployed build immediately readable. */
+html body .app-shell.app-shell.app-shell .brand-version{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:24px!important;
+  padding:0 9px!important;
+  border:1px solid rgba(169,157,255,.42)!important;
+  border-radius:8px!important;
+  background:rgba(124,116,224,.16)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 4px 14px rgba(74,62,150,.12)!important;
+  color:transparent!important;
+  font-size:0!important;
+  font-family:var(--font-geist-mono),monospace!important;
+  font-weight:700!important;
+  line-height:1!important;
+  letter-spacing:.015em!important;
+  opacity:1!important;
+}
+html body .app-shell.app-shell.app-shell .brand-version::after{
+  content:"ver 7.5.1"!important;
+  color:#cfc9ff!important;
+  font-size:10px!important;
+  line-height:1!important;
+  font-weight:700!important;
+}
+html body .app-shell.app-shell.app-shell .brand-home:hover .brand-version{
+  border-color:rgba(184,174,255,.62)!important;
+  background:rgba(124,116,224,.23)!important;
+}
+@media(max-width:620px){
+  html body .app-shell.app-shell.app-shell:not(.viewer) .brand-version{
+    min-height:22px!important;
+    padding:0 8px!important;
+  }
+  html body .app-shell.app-shell.app-shell:not(.viewer) .brand-version::after{font-size:9.5px!important}
+  html body .app-shell.app-shell.app-shell.viewer .brand-version{display:none!important}
+}
