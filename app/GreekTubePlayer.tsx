@@ -173,6 +173,9 @@ const PLAYBACK_SPEEDS=[0.25,0.5,0.75,1,1.25,1.5,1.75,2] as const;
 function isAllowedShareSpeed(value:number):boolean{
   return Number.isFinite(value)&&PLAYBACK_SPEEDS.some(speed=>Math.abs(speed-value)<0.001);
 }
+function blocksPlayerShortcut(target:EventTarget|null):boolean{
+  return target instanceof HTMLElement&&Boolean(target.closest('input,textarea,select,button,a,[contenteditable="true"],[role="textbox"]'));
+}
 function buildMomentShareUrl(videoId:string,time:number,speed:number){
   const safeTime=Number.isFinite(time)&&time>=0?Math.floor(time):0;
   const safeSpeed=isAllowedShareSpeed(speed)?speed:1;
@@ -400,6 +403,8 @@ export default function GreekTubePlayer() {
   const [showFsExit,setShowFsExit]=useState(true);
   const fsExitTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const controlsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const keyboardSeekTarget=useRef<number|null>(null);
+  const keyboardSeekTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [subtitleMenuOpen,setSubtitleMenuOpen]=useState(false);
   const [guideOpen,setGuideOpen]=useState(false);
   const playerHost=useRef<HTMLDivElement>(null);
@@ -829,7 +834,39 @@ export default function GreekTubePlayer() {
       }
     }
   },[hydrated]);
-  useEffect(()=>{const key=(e:KeyboardEvent)=>{if(e.key.toLowerCase()==="m"&&selected){e.preventDefault();beginMoment();}};addEventListener("keydown",key);return()=>removeEventListener("keydown",key);},[selected,active,captions]);
+  useEffect(()=>{
+    const key=(event:KeyboardEvent)=>{
+      if(event.defaultPrevented||event.metaKey||event.ctrlKey||event.altKey||blocksPlayerShortcut(event.target))return;
+      if(event.code==="KeyM"&&selected){
+        if(event.repeat)return;
+        event.preventDefault();
+        const time=player.current?.getCurrentTime()||0;
+        setMomentModal({time,excerpt:captions?.cues[active]?.text||""});
+        return;
+      }
+      const target=player.current;
+      if(!captions||!target||typeof target.getCurrentTime!=="function")return;
+      if(event.code==="Space"){
+        if(event.repeat)return;
+        event.preventDefault();
+        if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();
+        setShowFsExit(true);
+        return;
+      }
+      if(event.code!=="ArrowLeft"&&event.code!=="ArrowRight")return;
+      event.preventDefault();
+      const direction=event.code==="ArrowLeft"?-5:5;
+      const duration=target.getDuration()||Number.MAX_SAFE_INTEGER;
+      const base=keyboardSeekTarget.current??target.getCurrentTime();
+      const next=Math.max(0,Math.min(duration,base+direction));
+      keyboardSeekTarget.current=next;
+      target.seekTo(next,true);
+      if(keyboardSeekTimer.current)clearTimeout(keyboardSeekTimer.current);
+      keyboardSeekTimer.current=setTimeout(()=>{keyboardSeekTarget.current=null;},350);
+    };
+    addEventListener("keydown",key);
+    return()=>{removeEventListener("keydown",key);if(keyboardSeekTimer.current)clearTimeout(keyboardSeekTimer.current);};
+  },[selected,active,captions]);
 
   function seek(time:number){const target=currentPlayer();target?.seekTo(time,true);target?.playVideo();}
   function skip(seconds:number){
@@ -1032,7 +1069,7 @@ export default function GreekTubePlayer() {
                 </div>
                 {state.settings.subtitles&&active>=0&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{"--subtitle-size":`${state.settings.subtitleSize}px`,background:`rgba(0,0,0,${state.settings.opacity})`} as CSSProperties}>{state.settings.subtitleMode==="en"?subtitleWindow(captions.englishCues?.[active]||captions.cues[active],playhead,captions.englishCues?.[active+1]||captions.cues[active+1]):state.settings.subtitleMode==="dual"?<><span>{subtitleWindow(captions.cues[active],playhead,captions.cues[active+1])}</span>{captions.englishCues?.[active]?.text&&<small>{subtitleWindow(captions.englishCues[active],playhead,captions.englishCues?.[active+1]||captions.cues[active+1])}</small>}</>:subtitleWindow(captions.cues[active],playhead,captions.cues[active+1])}</div>}
                 <button className="video-tap-toggle" aria-label={isPlaying?"Παύση βίντεο":"Αναπαραγωγή βίντεο"} onClick={()=>{revealPlayerUi();togglePlayback();revealFsExit();}}/>
-                {(isFullscreen||isPseudoFullscreen)&&<button className={`custom-fullscreen${showFsExit?"":" fs-exit-hidden"}`} title="Έξοδος από πλήρη οθόνη" aria-label="Έξοδος από πλήρη οθόνη" onClick={e=>{e.preventDefault();e.stopPropagation();void toggleFullscreen();}} onTouchEnd={e=>{e.preventDefault();e.stopPropagation();void toggleFullscreen();}}>↙</button>}
+                {(isFullscreen||isPseudoFullscreen)&&<button className={`custom-fullscreen${showFsExit?"":" fs-exit-hidden"}`} title="Έξοδος από πλήρη οθόνη" aria-label="Έξοδος από πλήρη οθόνη" onClick={e=>{e.preventDefault();e.stopPropagation();e.currentTarget.blur();void toggleFullscreen();}} onTouchEnd={e=>{e.preventDefault();e.stopPropagation();void toggleFullscreen();}}>↙</button>}
               </div>
               <div className="player-actions player-tools">
                 <small className="player-tools-label">ΧΕΙΡΙΣΤΗΡΙΑ</small>
@@ -1058,7 +1095,7 @@ export default function GreekTubePlayer() {
                     </section>
                   </div>
                   <label className="speed-control" aria-label="Ταχύτητα αναπαραγωγής"><span>Ταχύτητα</span><select value={state.settings.speed} onChange={event=>{const next=Number(event.target.value);setState(current=>({...current,settings:{...current.settings,speed:next}}));currentPlayer()?.setPlaybackRate(next);}}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>
-                  <button className="fullscreen-toggle fullscreen-primary" aria-label="Πλήρης οθόνη" onClick={()=>void toggleFullscreen()}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3m11 0h3a2 2 0 002-2v-3"/></svg><span>Πλήρης οθόνη</span></button>
+                  <button className="fullscreen-toggle fullscreen-primary" aria-label="Πλήρης οθόνη" onClick={event=>{event.currentTarget.blur();void toggleFullscreen();}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3m11 0h3a2 2 0 002-2v-3"/></svg><span>Πλήρης οθόνη</span></button>
                 </div>
                 <section className="control-section action-section">
                   <div className="player-secondary-actions">
@@ -1136,7 +1173,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.10</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.11</small></button>;}
 function Modal({title,close,children,busy=false}:{title:string;close:()=>void;children:React.ReactNode;busy?:boolean}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!busy)close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[busy,close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title} aria-busy={busy}><header><h2>{title}</h2><button aria-label="Κλείσιμο" disabled={busy} onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");

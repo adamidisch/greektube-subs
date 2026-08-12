@@ -12,6 +12,7 @@ const checks=[
   ['no raw fallback',src.includes('Δεν εμφανίζουμε αυτόματα raw subtitle fragments.')],
   ['collapsed guide',src.includes('aria-expanded={guideOpen}')&&src.includes('setGuideOpen(open=>!open)')],
   ['speed control',src.includes('className="speed-control"')&&src.includes('currentPlayer()?.setPlaybackRate(next)')],
+  ['keyboard player controls',src.includes('event.code==="Space"')&&src.includes('event.code==="ArrowLeft"?-5:5')&&src.includes('blocksPlayerShortcut(event.target)')],
   ['mobile subtitle access',src.includes('aria-label="Διαχείριση υποτίτλων"')],
   ['safe SRT filename',src.includes('function srtFilename(video:Video)')&&(src.match(/link\.download=srtFilename\(video\)/g)?.length||0)>=3],
   ['video details fallback',src.includes('className="video-details"')&&src.includes('"Αντιγραφή"')&&!src.includes('setCaptions(null);setTranslationChoiceVideo(video);return')],
@@ -27,9 +28,9 @@ const checks=[
   ['same source snapshot',src.includes('setSourceSubtitleText(text)')&&src.includes('subtitleText:text,sourceSubtitleText')&&(src.match(/sessionStorage\.setItem\(`manual-source-srt:\$\{video\.id\}`/g)?.length||0)>=3&&progressRoute.includes('parseManualSubtitleText(body.sourceSubtitleText as string)')],
   ['cached source timing integrity',captionsRoute.includes('Source subtitle tracks can legitimately overlap')&&!captionsRoute.includes('cue.start >= cues[index - 1].start')],
   ['details automatic mode',src.includes('const next={...selected,translationMode:"google" as TranslationMode}')&&src.includes('patchVideo(selected.id,{translationMode:"google"})')],
-  ['version',pkg.version==='7.4.10'&&layout.includes('"app-version": "7.4.10"')&&layout.includes('import "./v7-4-9.css";')],
+  ['version',pkg.version==='7.4.11'&&layout.includes('"app-version": "7.4.11"')&&layout.includes('import "./v7-4-9.css";')],
   ['details accessibility',detailsCss.includes('min-height:44px')&&detailsCss.includes('.video-details button:focus-visible')&&!detailsCss.match(/font-size:(?:8|9|10|11)(?:\.|px)/)],
   ['premium css',css.includes('.editorial-guide-list>button')&&css.includes('.speed-control')],
 ];
-for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.10 invariant failed: ${label}`)}
-console.log(`v7.4.10 player/guide invariants passed (${checks.length})`);
+for(const [label,ok] of checks){if(!ok)throw new Error(`v7.4.11 invariant failed: ${label}`)}
+console.log(`v7.4.11 player/guide invariants passed (${checks.length})`);
