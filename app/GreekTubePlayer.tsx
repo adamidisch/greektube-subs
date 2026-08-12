@@ -731,7 +731,7 @@ export default function GreekTubePlayer() {
             const processing=await response.json();
             applyProcessingTelemetry(processing as ProcessingTelemetry);
             if(Array.isArray(processing.keyPoints)&&processing.keyPoints.length)setLoadingPoints(processing.keyPoints);
-            const retryAfter=Math.max(1,Number(response.headers.get("Retry-After"))||1);
+            const retryAfter=Math.max(.25,Number(response.headers.get("Retry-After"))||1);
             await new Promise(resolve=>window.setTimeout(resolve,retryAfter*1000));
             continue;
           }
@@ -1173,7 +1173,7 @@ export default function GreekTubePlayer() {
   </main>;
 }
 
-function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.11</small></button>;}
+function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span><small className="brand-version">ver 7.4.12</small></button>;}
 function Modal({title,close,children,busy=false}:{title:string;close:()=>void;children:React.ReactNode;busy?:boolean}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!busy)close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[busy,close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title} aria-busy={busy}><header><h2>{title}</h2><button aria-label="Κλείσιμο" disabled={busy} onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
