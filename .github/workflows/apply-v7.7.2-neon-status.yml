@@ -1,0 +1,52 @@
+name: Apply v7.7.2 Neon status reads
+
+on:
+  push:
+    branches: [neon-egress-audit-7.7.2]
+    paths:
+      - scripts/apply-v7.7.2-neon-status.py
+      - .github/workflows/apply-v7.7.2-neon-status.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: neon-egress-audit-7.7.2
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Apply guarded Neon egress patch
+        run: python scripts/apply-v7.7.2-neon-status.py
+      - run: npm install --no-audit --no-fund
+      - run: npm run test:caption-integrity
+      - run: npm run test:caption-timing
+      - run: npm run test:caption-edgecases
+      - run: npm run test:manual-captions
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+      - name: Verify Neon egress invariants
+        shell: bash
+        run: |
+          grep -q 'getTranscriptStatus' app/api/shared-cache.ts
+          grep -q 'X-GreekTube-Neon-Read' app/api/captions/route.ts
+          grep -q 'jsonb_array_length' app/api/shared-cache.ts
+          grep -q '"version": "7.7.2"' package.json
+      - name: Commit verified v7.7.2 branch
+        shell: bash
+        run: |
+          rm -f next-env.d.ts
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app package.json
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.7.2: reduce Neon status egress"
+          git push origin HEAD:neon-egress-audit-7.7.2
