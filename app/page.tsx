@@ -4,6 +4,7 @@ import GreekTubePlayer from "./GreekTubePlayer";
 import CueEditEnhancer from "./CueEditEnhancer";
 import PlayerUXEnhancer from "./PlayerUXEnhancer";
 import FullscreenExitEnhancer from "./FullscreenExitEnhancer";
+import PlayerInteractionEnhancer from "./PlayerInteractionEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
@@ -82,6 +83,7 @@ export default function Home() {
       <CueEditEnhancer />
       <PlayerUXEnhancer />
       <FullscreenExitEnhancer />
+      <PlayerInteractionEnhancer />
     </>
   );
 }
