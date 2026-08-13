@@ -1402,12 +1402,13 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const value = url.searchParams.get("videoId") || url.searchParams.get("url") || "";
+    const includeEnglish = url.searchParams.get("includeEnglish") === "1";
     const videoId = /^[\w-]{11}$/.test(value) ? value : extractVideoId(value);
     if (!videoId) {
       return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
     }
 
-    const published = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION);
+    const published = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION, includeEnglish);
     if (published) {
       const publishedCues = published.cues as CaptionCue[];
       const publishedDuration = typeof published.duration === "number" ? published.duration : 0;
@@ -1438,7 +1439,8 @@ export async function GET(request: Request) {
     validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
     const payload = await cachedResponse(cached);
     const migrated = await publishTranscript(videoId, TRANSCRIPT_VERSION, payload);
-    return NextResponse.json(payload, {
+    const clientPayload = includeEnglish ? payload : { ...payload, englishCues: undefined };
+    return NextResponse.json(clientPayload, {
       headers: {
         "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
         "X-GreekTube-Transcript-Source": migrated ? "neon-migrated" : "neon",

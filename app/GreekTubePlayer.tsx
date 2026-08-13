@@ -425,6 +425,20 @@ export default function GreekTubePlayer() {
   const lastTelemetryUpdatedAt=useRef<string|null>(null);
   const selected=state.videos.find(v=>v.id===selectedId)||null;
 
+  useEffect(()=>{
+    if(!selectedId||!captions||state.settings.subtitleMode==="el"||captions.englishCues?.length)return;
+    let active=true;
+    void fetch(`/api/captions?videoId=${encodeURIComponent(selectedId)}&includeEnglish=1`,{cache:"no-store"})
+      .then(async response=>{
+        if(!response.ok)return;
+        const enriched=await response.json() as Captions;
+        if(!active||!isCompleteGreekTranscript(enriched)||!enriched.englishCues?.length)return;
+        setCaptions(current=>current?.videoId===selectedId?{...current,englishCues:enriched.englishCues}:current);
+      })
+      .catch(()=>undefined);
+    return()=>{active=false;};
+  },[selectedId,captions,state.settings.subtitleMode]);
+
   useEffect(()=>{ void (async()=>{
     let fallback:AppState|null=null;
     try{const raw=localStorage.getItem(PERSONAL_CACHE_KEY);if(raw)fallback=JSON.parse(raw) as AppState;}catch{}
