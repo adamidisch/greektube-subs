@@ -1,50 +1,23 @@
 import { NextResponse } from "next/server";
-
-const COOKIE = "greektube-admin";
-const SESSION_MESSAGE = "greektube-edit-authorized";
-
-async function secret() {
-  return String(process.env.ADMIN_EDIT_PASSWORD || "");
-}
-
-async function sessionToken(password: string) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(SESSION_MESSAGE));
-  return Array.from(new Uint8Array(signature)).map(value => value.toString(16).padStart(2, "0")).join("");
-}
-
-function safeEqual(left: string, right: string) {
-  const a = new TextEncoder().encode(left);
-  const b = new TextEncoder().encode(right);
-  if (a.length !== b.length) return false;
-  let difference = 0;
-  for (let index = 0; index < a.length; index += 1) difference |= a[index] ^ b[index];
-  return difference === 0;
-}
+import { ADMIN_SESSION_COOKIE, adminPassword, adminSessionToken, safeEqual } from "@/lib/admin-auth";
 
 export async function GET(request: Request) {
-  const password = await secret();
+  const password = adminPassword();
   if (!password) return NextResponse.json({ authorized: false }, { status: 503 });
   const cookie = request.headers.get("cookie")?.split(";").map(value => value.trim())
-    .find(value => value.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1) || "";
-  return NextResponse.json({ authorized: safeEqual(cookie, await sessionToken(password)) });
+    .find(value => value.startsWith(`${ADMIN_SESSION_COOKIE}=`))?.slice(ADMIN_SESSION_COOKIE.length + 1) || "";
+  return NextResponse.json({ authorized: safeEqual(cookie, await adminSessionToken(password)) });
 }
 
 export async function POST(request: Request) {
-  const configuredPassword = await secret();
+  const configuredPassword = adminPassword();
   if (!configuredPassword) return NextResponse.json({ error: "Η προστασία επεξεργασίας δεν έχει ρυθμιστεί." }, { status: 503 });
   const suppliedPassword = String((await request.json() as { password?: string }).password || "");
   if (!safeEqual(suppliedPassword, configuredPassword)) {
     return NextResponse.json({ error: "Ο κωδικός δεν είναι σωστός." }, { status: 401 });
   }
   const response = NextResponse.json({ authorized: true });
-  response.cookies.set(COOKIE, await sessionToken(configuredPassword), {
+  response.cookies.set(ADMIN_SESSION_COOKIE, await adminSessionToken(configuredPassword), {
     httpOnly: true,
     sameSite: "strict",
     secure: true,
