@@ -14,7 +14,6 @@
 .readiness-spinner circle{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-dasharray:88;stroke-dashoffset:66;opacity:.92}
 .readiness-check small{font-size:9px;font-weight:650;letter-spacing:.09em;white-space:nowrap}
 @keyframes v761-ready-spin{to{transform:rotate(360deg)}}
-.runtime-readiness-overlay{display:none!important}
 .editorial-guide-list button span:has(>strong:only-child) strong{margin-bottom:0}
 @media(max-width:620px){
   .readiness-check{min-height:calc(100svh - 59px)}
