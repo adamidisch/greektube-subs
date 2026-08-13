@@ -70,3 +70,5 @@ export async function publishTranscript(videoId: string, transcriptVersion: numb
     return false;
   }
 }
+
+// Redeploy marker: refresh Vercel runtime env after Blob store connection.
