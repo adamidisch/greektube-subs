@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { publishTranscript, readPublishedTranscript, transcriptBlobConfigured } from "../transcript-blob";
 import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
 import { splitSubtitleSentences } from "./sentence-split";
 import { groupEnglishCuesForContext, hasTranslatableWordTokens, stripEnglishSpeechFillers } from "./translation-text";
@@ -1406,6 +1407,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
     }
 
+    const published = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION);
+    if (published) {
+      const publishedCues = published.cues as CaptionCue[];
+      const publishedDuration = typeof published.duration === "number" ? published.duration : 0;
+      validateCompleteGreekTranscript(publishedCues, publishedDuration);
+      return NextResponse.json(published, {
+        headers: {
+          "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+          "X-GreekTube-Transcript-Source": "blob",
+          "X-GreekTube-Blob-Configured": "1",
+        },
+      });
+    }
+
     const cached = await getTranscript(videoId);
     if (!cached || cached.transcriptVersion !== TRANSCRIPT_VERSION) {
       return NextResponse.json({ ready: false }, { status: 404, headers: { "Cache-Control": "no-store" } });
@@ -1421,8 +1436,14 @@ export async function GET(request: Request) {
     }
 
     validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
-    return NextResponse.json(await cachedResponse(cached), {
-      headers: { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400" },
+    const payload = await cachedResponse(cached);
+    const migrated = await publishTranscript(videoId, TRANSCRIPT_VERSION, payload);
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
+        "X-GreekTube-Transcript-Source": migrated ? "neon-migrated" : "neon",
+        "X-GreekTube-Blob-Configured": transcriptBlobConfigured() ? "1" : "0",
+      },
     });
   } catch {
     return NextResponse.json({ ready: false }, { status: 404, headers: { "Cache-Control": "no-store" } });
@@ -1451,7 +1472,9 @@ export async function POST(request: Request) {
 
     if (!force && cached?.status === "ready" && cached.transcriptVersion === TRANSCRIPT_VERSION) {
       validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
-      return NextResponse.json(await cachedResponse(cached));
+      const payload = await cachedResponse(cached);
+      await publishTranscript(videoId, TRANSCRIPT_VERSION, payload);
+      return NextResponse.json(payload);
     }
 
     // If another short processing slice owns the lease, only report status.
@@ -1516,7 +1539,9 @@ export async function POST(request: Request) {
       }, lockToken)) throw new Error("Processing lock was lost before Greek final transcript persisted");
       lockToken = null;
       const ready = await getTranscript(videoId);
-      return NextResponse.json(await cachedResponse(ready));
+      const payload = await cachedResponse(ready);
+      await publishTranscript(videoId, TRANSCRIPT_VERSION, payload);
+      return NextResponse.json(payload);
     }
 
     if (stage === "source") {
@@ -1661,7 +1686,9 @@ export async function POST(request: Request) {
       lockToken = null;
       const ready = await getTranscript(videoId);
       const payload = await cachedResponse(ready);
-      return NextResponse.json({ ...payload, title: translatedTitle, translationMethod: translationMode === "google" ? "google_fast_context_v1" : "resumable_repaired_timed_v8", cached: false });
+      const publishedPayload = { ...payload, title: translatedTitle, translationMethod: translationMode === "google" ? "google_fast_context_v1" : "resumable_repaired_timed_v8", cached: false };
+      await publishTranscript(videoId, TRANSCRIPT_VERSION, publishedPayload);
+      return NextResponse.json(publishedPayload);
     }
 
     throw new Error(`Unknown processing stage: ${stage}`);
