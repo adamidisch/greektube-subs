@@ -21,3 +21,32 @@
   .readiness-check small{font-size:8px}
 }
 @media(prefers-reduced-motion:reduce){.readiness-spinner svg{animation:none}}
+
+/* v7.6.1 — resolve v7-4-2 legacy .editorial-guide-list styling still
+   applying alongside the v7-6-0 .guide-list treatment (same DOM node
+   carries both classes). Neutralizes only the two conflicting elements. */
+.guide-list.editorial-guide-list time{
+  display:block;
+  place-items:normal;
+  min-height:0;
+  padding:0;
+  padding-top:2px;
+  border-radius:0;
+  background:none;
+  font-style:normal;
+  line-height:1;
+  color:#b3a9fa;
+  font-family:var(--font-geist-mono);
+  font-size:10px;
+  font-weight:600;
+}
+.guide-list.editorial-guide-list>button>i{
+  display:block;
+  width:auto;
+  height:auto;
+  border-radius:0;
+  background:none;
+  color:var(--soft);
+  font-size:10px;
+  padding-top:3px;
+}
