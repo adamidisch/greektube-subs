@@ -1,0 +1,60 @@
+name: Apply v7.6.1 final production cleanup
+
+on:
+  push:
+    branches: [final-cleanup-7.6.1]
+    paths:
+      - scripts/apply-v7.6.1-final-cleanup.py
+      - .github/workflows/apply-v7.6.1-final-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: final-cleanup-7.6.1
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Apply v7.6.1 production cleanup
+        run: python scripts/apply-v7.6.1-final-cleanup.py
+
+      - run: npm install --package-lock=false --no-audit --no-fund
+      - run: npm run test:caption-integrity
+      - run: npm run test:caption-timing
+      - run: npm run test:caption-edgecases
+      - run: npm run test:manual-captions
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+      - name: Verify production invariants
+        shell: bash
+        run: |
+          grep -q 'creatorChapters' app/api/metadata/route.ts
+          grep -q 'const \[checkingReady,setCheckingReady\]=useState(false)' app/GreekTubePlayer.tsx
+          grep -q 'YOUTUBE CHAPTERS' app/GreekTubePlayer.tsx
+          grep -q 'APP_VERSION' app/GreekTubePlayer.tsx
+          grep -q 'APP_VERSION' app/layout.tsx
+          grep -q '"version": "7.6.1"' package.json
+          test ! -f app/RuntimePolish.tsx
+          grep -q 'readiness-check' app/v7-6-1.css
+
+      - name: Commit verified v7.6.1
+        shell: bash
+        run: |
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.6.1: production cleanup and creator chapters"
+          git push origin HEAD:final-cleanup-7.6.1
