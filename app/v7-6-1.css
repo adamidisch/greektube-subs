@@ -50,3 +50,41 @@
   font-size:10px;
   padding-top:3px;
 }
+
+/* v7.8.2 — Settings page light-mode fix */
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-grid>section{
+  background:#ffffff!important;
+  border:1px solid rgba(34,45,24,.14)!important;
+  box-shadow:0 14px 34px rgba(34,45,24,.07)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-grid>section:nth-of-type(1){border-top:3px solid #2f6b4f!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-grid>section:nth-of-type(1) h2{color:#1f4f38!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-grid>section:nth-of-type(2){border-top:3px solid #b8863f!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-grid>section:nth-of-type(2) h2{color:#8a6a2e!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-grid>section:nth-of-type(3){border-top:3px solid #2f7fd1!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-grid>section:nth-of-type(3) h2{color:#1f5a94!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .setting-row input{background:#d3d9c6!important;border:1px solid rgba(34,45,24,.16)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .setting-row input:after{background:#6b7460!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .setting-row input:checked{background:#2f6b4f!important;border-color:#2f6b4f!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .setting-row input:checked:after{background:#fff!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-page label{color:#3d4436!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-grid output{color:#5e6656!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .library-tools select,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-page select{color:#1c2116!important;border-color:rgba(34,45,24,.18)!important}
+
+/* Header action sizing */
+.heading-actions{gap:8px!important}
+.heading-actions .subtitle-manage,
+.heading-actions .edit-video,
+.heading-actions .favorite{
+  height:36px!important;min-height:36px!important;
+  padding:0 14px!important;
+  font-size:12px!important;font-weight:600!important;
+  gap:6px!important;
+}
+.heading-actions .favorite{width:36px!important;padding:0!important;font-size:14px!important}
+
+/* Skip editor typography/token cleanup from Claude final patch */
+.skip-editor-modal h2{font-size:15px!important;font-weight:620!important}
+.skip-editor-modal>footer .primary{border-color:rgba(143,127,240,.45)!important;background:var(--accent2)!important;color:#fff!important}
+html[data-theme="light"] .skip-editor-modal>footer .primary{border-color:#2f6b4f!important;background:linear-gradient(150deg,#3d8563,#1f4f38)!important}

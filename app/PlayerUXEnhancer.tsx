@@ -4,47 +4,6 @@ import {useEffect,useRef,useState} from "react";
 
 type Toast={message:string;id:number}|null;
 
-function editableTarget(target:EventTarget|null){
-  return target instanceof HTMLElement&&Boolean(target.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]'));
-}
-
-function activePlayerButton(){
-  return document.querySelector<HTMLButtonElement>(".play-toggle");
-}
-
-function togglePlayback(){
-  const button=activePlayerButton();
-  if(!button)return false;
-  button.blur();
-  button.click();
-  return true;
-}
-
-function seekByKeyboard(direction:-1|1){
-  const range=document.querySelector<HTMLInputElement>(".player-seek-bar");
-  if(!range||range.disabled)return false;
-  const max=Number(range.max)||0;
-  const current=Number(range.value)||0;
-  const next=Math.max(0,Math.min(max,current+direction*5));
-  range.value=String(next);
-  range.dispatchEvent(new Event("input",{bubbles:true}));
-  range.dispatchEvent(new Event("change",{bubbles:true}));
-  return true;
-}
-
-function seekFromPointer(event:PointerEvent,range:HTMLInputElement){
-  if(range.disabled)return;
-  const rect=range.getBoundingClientRect();
-  if(rect.width<=0)return;
-  const min=Number(range.min)||0;
-  const max=Number(range.max)||0;
-  const ratio=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));
-  const next=min+(max-min)*ratio;
-  range.value=String(next);
-  range.dispatchEvent(new Event("input",{bubbles:true}));
-  range.dispatchEvent(new Event("change",{bubbles:true}));
-}
-
 export default function PlayerUXEnhancer(){
   const [toast,setToast]=useState<Toast>(null);
   const timer=useRef<number|undefined>(undefined);
@@ -61,30 +20,6 @@ export default function PlayerUXEnhancer(){
     `;
     document.head.appendChild(style);
 
-    const key=(event:KeyboardEvent)=>{
-      if(event.defaultPrevented||event.metaKey||event.ctrlKey||event.altKey||editableTarget(event.target))return;
-      if(event.code==="Space"){
-        if(event.repeat)return;
-        const transcriptButton=event.target instanceof HTMLElement?event.target.closest(".transcript>button[data-cue]"):null;
-        if(transcriptButton||event.target===document.body||event.target===document.documentElement){
-          event.preventDefault();event.stopPropagation();
-          togglePlayback();
-        }
-        return;
-      }
-      if(event.code!=="ArrowLeft"&&event.code!=="ArrowRight")return;
-      if(event.repeat)return;
-      event.preventDefault();event.stopPropagation();
-      seekByKeyboard(event.code==="ArrowLeft"?-1:1);
-    };
-
-    const pointer=(event:PointerEvent)=>{
-      const target=event.target as HTMLElement|null;
-      const range=target?.closest(".player-seek-bar") as HTMLInputElement|null;
-      if(!range)return;
-      seekFromPointer(event,range);
-    };
-
     const click=(event:MouseEvent)=>{
       const target=(event.target as HTMLElement|null)?.closest("button,a") as HTMLElement|null;
       if(!target)return;
@@ -100,12 +35,8 @@ export default function PlayerUXEnhancer(){
       timer.current=window.setTimeout(()=>setToast(null),1800);
     };
 
-    document.addEventListener("keydown",key,true);
-    document.addEventListener("pointerdown",pointer,true);
     document.addEventListener("click",click,true);
     return()=>{
-      document.removeEventListener("keydown",key,true);
-      document.removeEventListener("pointerdown",pointer,true);
       document.removeEventListener("click",click,true);
       if(timer.current)window.clearTimeout(timer.current);
       style.remove();

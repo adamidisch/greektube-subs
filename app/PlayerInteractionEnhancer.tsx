@@ -22,14 +22,28 @@ function isFullscreenFrame(frame:HTMLElement|null){
 export default function PlayerInteractionEnhancer(){
   const [frame,setFrame]=useState<HTMLElement|null>(null);
   const [fullscreen,setFullscreen]=useState(false);
+  const [shell,setShell]=useState<Element|null>(null);
+  const [showFooter,setShowFooter]=useState(false);
 
   useEffect(()=>{
     let suppressFloatingClickUntil=0;
 
     const sync=()=>{
       const next=document.querySelector<HTMLElement>(".video-frame");
+      const appShell=document.querySelector(".app-shell");
+      const playerView=Boolean(document.querySelector(".watch-layout"));
+      const existingFooter=Boolean(document.querySelector(".app-footer"));
       setFrame(current=>current===next?current:next);
       setFullscreen(isFullscreenFrame(next));
+      setShell(current=>current===appShell?current:appShell);
+      setShowFooter(Boolean(appShell&&playerView&&!existingFooter));
+
+      document.querySelectorAll<HTMLElement>('button[aria-label="Διαχείριση υποτίτλων"]').forEach(button=>{
+        if((button.textContent||"").trim()==="CC")button.textContent="Subs";
+      });
+      document.querySelectorAll<HTMLElement>(".heading-actions .subtitle-manage>span").forEach(span=>{
+        if((span.textContent||"").trim()==="CC")span.textContent="Subs";
+      });
     };
 
     const handleDoubleClick=(event:MouseEvent)=>{
@@ -60,7 +74,7 @@ export default function PlayerInteractionEnhancer(){
     };
 
     const observer=new MutationObserver(sync);
-    observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["class"]});
+    observer.observe(document.body,{subtree:true,childList:true,attributes:true,characterData:true,attributeFilter:["class"]});
     document.addEventListener("fullscreenchange",sync);
     document.addEventListener("webkitfullscreenchange",sync as EventListener);
     document.addEventListener("dblclick",handleDoubleClick,true);
@@ -78,10 +92,8 @@ export default function PlayerInteractionEnhancer(){
     };
   },[]);
 
-  if(!frame)return <style jsx global>{styles}</style>;
-
   return <>
-    {createPortal(
+    {frame&&createPortal(
       <button
         type="button"
         className="gts-seek-fullscreen"
@@ -95,6 +107,14 @@ export default function PlayerInteractionEnhancer(){
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3m11 0h3a2 2 0 002-2v-3"/></svg>}
       </button>,
       frame,
+    )}
+    {shell&&showFooter&&createPortal(
+      <footer className="app-footer player-view-footer">
+        <div className="app-footer-brand"><span className="brand-mark"><i aria-hidden="true"/>▶</span><span>GreekTube <b>Subs</b></span></div>
+        <p>Αυτόματοι ελληνικοί υπότιτλοι για δημόσια βίντεο YouTube.</p>
+        <span className="app-footer-note">Φτιαγμένο με ♥ για ελληνόφωνους θεατές</span>
+      </footer>,
+      shell,
     )}
     <style jsx global>{styles}</style>
   </>;
