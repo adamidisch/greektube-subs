@@ -16,6 +16,43 @@ function extractVideoId(value: string) {
   return null;
 }
 
+
+type CreatorChapter = { time: number; title: string; summary: string };
+
+function chapterSeconds(value: string) {
+  const parts = value.split(":").map(part => Number(part));
+  if (parts.length < 2 || parts.length > 3 || parts.some(part => !Number.isFinite(part) || part < 0)) return null;
+  const seconds = parts.length === 3
+    ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+    : parts[0] * 60 + parts[1];
+  return Number.isFinite(seconds) ? seconds : null;
+}
+
+function limitCreatorChapters(items: CreatorChapter[]) {
+  const meaningful = items
+    .filter(item => item.time >= 15 && item.title.trim().length >= 2)
+    .sort((a, b) => a.time - b.time)
+    .filter((item, index, list) => index === 0 || Math.abs(item.time - list[index - 1].time) >= 8);
+  if (meaningful.length <= 5) return meaningful;
+  const last = meaningful.length - 1;
+  const indexes = [0, Math.round(last * 0.25), Math.round(last * 0.5), Math.round(last * 0.75), last];
+  return [...new Set(indexes)].map(index => meaningful[index]).slice(0, 5);
+}
+
+function creatorChaptersFromDescription(description: string, duration = 0) {
+  const chapters: CreatorChapter[] = [];
+  for (const line of description.split(/\r?\n/)) {
+    const match = line.match(/^\s*((?:\d{1,2}:)?\d{1,2}:\d{2})\s*(?:[-–—|•·:]\s*)?(.{2,140}?)\s*$/);
+    if (!match) continue;
+    const time = chapterSeconds(match[1]);
+    const title = match[2].replace(/\s+/g, " ").trim();
+    if (time === null || !title || (duration > 0 && time >= duration)) continue;
+    chapters.push({ time, title, summary: "" });
+  }
+  const deduped = chapters.filter((item, index, list) => list.findIndex(other => other.time === item.time) === index);
+  return limitCreatorChapters(deduped);
+}
+
 function isGreek(value: string) {
   const letters = value.match(/\p{L}/gu)?.length || 0;
   const greek = value.match(/[\u0370-\u03ff\u1f00-\u1fff]/g)?.length || 0;
@@ -221,6 +258,7 @@ export async function POST(request: Request) {
         originalVideoUrl: `https://www.youtube.com/watch?v=${id}`,
         category: "Other",
         tags: [],
+        creatorChapters: [],
         thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
         metadataPending: true,
       });
@@ -229,6 +267,11 @@ export async function POST(request: Request) {
     const speakerName = KNOWN_SPEAKER_NAMES[id] || speakerNameFromMetadata(originalTitle, details.description);
     const speakerRole = speakerRoleFromMetadata(details.description, speakerName);
     const category = categoryFor(originalTitle, details.description, speakerName);
+    const creatorChapterSource = creatorChaptersFromDescription(details.description, details.duration);
+    const creatorChapters = await Promise.all(creatorChapterSource.map(async chapter => ({
+      ...chapter,
+      title: await greekTitle(chapter.title),
+    })));
     return NextResponse.json({
       id,
       title,
@@ -242,6 +285,7 @@ export async function POST(request: Request) {
       speakerRole,
       category,
       tags: [category === "Medical" ? "υγεία" : category.toLowerCase(), speakerName].filter(Boolean),
+      creatorChapters,
       thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
     });
   } catch {

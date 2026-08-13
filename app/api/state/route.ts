@@ -110,6 +110,8 @@ function mergeState(personal: PersonalState | null, sharedVideos: VideoRecord[])
       progress: Number(personalVideo?.progress || 0),
       lastWatched: typeof personalVideo?.lastWatched === "string" ? personalVideo.lastWatched : undefined,
       views: Number(personalVideo?.views || 0),
+      creatorChapters: Array.isArray(personalVideo?.creatorChapters) ? personalVideo.creatorChapters : video.creatorChapters,
+      metadataVersion: Math.max(Number(video.metadataVersion || 0), Number(personalVideo?.metadataVersion || 0)),
     };
   }).sort((a, b) => String(b.addedAt || "").localeCompare(String(a.addedAt || "")));
   return { settings: personal?.settings, moments: personal?.moments || [], videos };
