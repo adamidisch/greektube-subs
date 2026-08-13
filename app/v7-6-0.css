@@ -1,4 +1,4 @@
-/* v7.6.0 — unified Claude UI polish + generic no-black-screen guard */
+/* v7.6.0 — unified Claude UI polish */
 
 :root{--raised:#1c202a}
 
@@ -11,27 +11,7 @@ html body .app-shell.app-shell.app-shell .video-details>*{
 html body .app-shell.app-shell.app-shell .video-details::before,
 html body .app-shell.app-shell.app-shell .video-details::after{display:none!important}
 
-/* Runtime readiness state: covers any video while the authoritative captions GET is pending. */
-.runtime-readiness-overlay{
-  position:fixed;
-  z-index:90;
-  inset:59px 0 0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:15px;
-  background:var(--bg);
-  color:var(--muted);
-  pointer-events:none;
-}
-.runtime-readiness-spinner{width:52px;height:52px;color:var(--accent2)}
-.runtime-readiness-spinner svg{width:100%;height:100%;animation:v760-ready-spin 1.05s linear infinite}
-.runtime-readiness-spinner circle{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-dasharray:88;stroke-dashoffset:66;opacity:.92}
-.runtime-readiness-overlay>span:last-child{font-size:9px;font-weight:650;letter-spacing:.09em;white-space:nowrap}
-@keyframes v760-ready-spin{to{transform:rotate(360deg)}}
-
-/* Real version text, not generated pseudo-content. RuntimePolish updates the DOM label to 7.6.0. */
+/* Real version text rendered by the app from APP_VERSION. */
 html body .app-shell.app-shell.app-shell .brand-version{
   display:inline-flex!important;
   align-items:center!important;
@@ -114,16 +94,12 @@ html body .app-shell.app-shell.app-shell.viewer .brand-mark::after{
 .moments .section-title{margin:0 0 10px}
 
 @media(max-width:620px){
-  .runtime-readiness-overlay{inset:59px 0 0}
-  .runtime-readiness-spinner{width:44px;height:44px}
-  .runtime-readiness-overlay>span:last-child{font-size:8px}
   html body .app-shell.app-shell.app-shell.viewer .brand{display:flex!important}
   html body .app-shell.app-shell.app-shell.viewer .brand>span:not(.brand-mark){display:none!important}
   html body .app-shell.app-shell.app-shell.viewer .brand-version{display:inline-flex!important;min-width:58px!important;min-height:21px!important;padding:0 7px!important;font-size:9px!important}
 }
 
 @media(prefers-reduced-motion:reduce){
-  .runtime-readiness-spinner svg{animation:none!important}
   html body .app-shell.app-shell.app-shell .brand-mark::after,
   html body .app-shell.app-shell.app-shell.viewer .brand-mark::after{animation:none!important;display:none!important}
 }
