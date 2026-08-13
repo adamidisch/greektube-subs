@@ -4,12 +4,35 @@ import {useEffect,useRef,useState} from "react";
 type Cue={start?:number;duration?:number;text?:string};
 type Captions={transcriptVersion?:number;cues?:Cue[]};
 type Edit={videoId:string;index:number;version:number;expected:string;top:number;left:number;width:number;record:Captions};
-type Override={videoId:string;index:number;text:string};
+type Override={videoId:string;index:number;text:string;savedAt:number};
+type OverrideMap=Record<string,{text:string;savedAt:number}>;
 
+const OVERRIDE_TTL=10*60*1000;
+function overrideKey(videoId:string){return `greektube-cue-overrides:${videoId}:v12`;}
+function currentVideoId(){return new URLSearchParams(location.search).get("video")||"";}
+function loadOverrides(videoId:string):OverrideMap{
+  if(!videoId)return {};
+  try{
+    const raw=localStorage.getItem(overrideKey(videoId));
+    if(!raw)return {};
+    const parsed=JSON.parse(raw) as OverrideMap;
+    const now=Date.now();
+    const fresh=Object.fromEntries(Object.entries(parsed).filter(([,value])=>value&&typeof value.text==="string"&&now-Number(value.savedAt)<OVERRIDE_TTL));
+    if(Object.keys(fresh).length)localStorage.setItem(overrideKey(videoId),JSON.stringify(fresh));
+    else localStorage.removeItem(overrideKey(videoId));
+    return fresh;
+  }catch{return {};}
+}
+function saveOverride(override:Override){
+  try{
+    const map=loadOverrides(override.videoId);
+    map[String(override.index)]={text:override.text,savedAt:override.savedAt};
+    localStorage.setItem(overrideKey(override.videoId),JSON.stringify(map));
+  }catch{}
+}
 function pausePlayer(){
   document.querySelector<HTMLButtonElement>('.play-toggle[aria-label="Παύση"]')?.click();
 }
-
 function patchVisibleCue(override:Override){
   const row=document.querySelector<HTMLElement>(`.transcript>button[data-cue="${override.index}"]`);
   const span=row?.querySelector<HTMLElement>(":scope>span");
@@ -22,6 +45,13 @@ function patchVisibleCue(override:Override){
   if(greek){if(greek.textContent!==override.text)greek.textContent=override.text;}
   else if(subtitle.textContent!==override.text)subtitle.textContent=override.text;
 }
+function patchRecentOverrides(){
+  const videoId=currentVideoId();
+  const map=loadOverrides(videoId);
+  for(const [index,value] of Object.entries(map)){
+    patchVisibleCue({videoId,index:Number(index),text:value.text,savedAt:value.savedAt});
+  }
+}
 
 export default function CueEditEnhancer(){
   const [edit,setEdit]=useState<Edit|null>(null);
@@ -30,7 +60,6 @@ export default function CueEditEnhancer(){
   const [busy,setBusy]=useState(false);
   const [authorized,setAuthorized]=useState(false);
   const clickTimer=useRef<number|undefined>(undefined);
-  const override=useRef<Override|null>(null);
 
   useEffect(()=>{
     let active=true;
@@ -53,7 +82,7 @@ export default function CueEditEnhancer(){
     };
     const openEditor=async(event:Event)=>{
       const target=targetFor(event);
-      const videoId=new URLSearchParams(location.search).get("video")||"";
+      const videoId=currentVideoId();
       if(!target||!videoId)return;
       event.preventDefault();event.stopPropagation();
       if(clickTimer.current)window.clearTimeout(clickTimer.current);
@@ -61,11 +90,12 @@ export default function CueEditEnhancer(){
       const response=await fetch(`/api/captions?videoId=${encodeURIComponent(videoId)}&edit=${Date.now()}`,{cache:"no-store"});
       if(!response.ok)return;
       const record=await response.json() as Captions;
-      const expected=String(record.cues?.[target.index]?.text||target.span.textContent||"");
+      const localOverride=loadOverrides(videoId)[String(target.index)]?.text;
+      const expected=String(localOverride||record.cues?.[target.index]?.text||target.span.textContent||"");
       if(!expected||!Number.isFinite(record.transcriptVersion))return;
       const rect=target.row.getBoundingClientRect();
       setText(expected);setError("");
-      setEdit({videoId,index:target.index,version:Number(record.transcriptVersion),expected,top:rect.top,left:rect.left,width:rect.width,record});
+      setEdit({videoId,index:target.index,version:Number(record.transcriptVersion),expected:String(record.cues?.[target.index]?.text||expected),top:rect.top,left:rect.left,width:rect.width,record});
     };
     const click=(event:MouseEvent)=>{
       const target=targetFor(event);
@@ -89,9 +119,11 @@ export default function CueEditEnhancer(){
   },[authorized]);
 
   useEffect(()=>{
-    const observer=new MutationObserver(()=>{if(override.current)patchVisibleCue(override.current)});
+    patchRecentOverrides();
+    const observer=new MutationObserver(()=>patchRecentOverrides());
     observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:["class"]});
-    return()=>observer.disconnect();
+    const navigation=window.setInterval(()=>patchRecentOverrides(),1200);
+    return()=>{observer.disconnect();window.clearInterval(navigation);};
   },[]);
 
   async function save(){
@@ -102,8 +134,8 @@ export default function CueEditEnhancer(){
     const response=await fetch("/api/captions/cue",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({videoId:edit.videoId,transcriptVersion:edit.version,cueIndex:edit.index,text:value,expectedText:edit.expected})});
     const result=await response.json().catch(()=>({})) as {ok?:boolean;error?:string};
     if(!response.ok||!result.ok){setError(result.error||"Η αποθήκευση απέτυχε.");setBusy(false);return;}
-    const updated:Override={videoId:edit.videoId,index:edit.index,text:value};
-    override.current=updated;
+    const updated:Override={videoId:edit.videoId,index:edit.index,text:value,savedAt:Date.now()};
+    saveOverride(updated);
     patchVisibleCue(updated);
     const cues=Array.isArray(edit.record.cues)?edit.record.cues.slice():[];
     if(cues[edit.index])cues[edit.index]={...cues[edit.index],text:value};
