@@ -60,9 +60,34 @@ async function readJson(pathname: string) {
   return await new Response(blob.stream).json() as unknown;
 }
 
+function cleanTrailingOrphanArticle(value: unknown) {
+  if (typeof value !== "string") return value;
+  const text = value.replace(/\s+/g, " ").trim();
+  if (!text) return text;
+
+  // Translation providers can occasionally leave a dangling source article
+  // as a final one-letter token ("a" -> "α"). Remove only that narrow case:
+  // a clearly Greek, multi-word cue ending in lowercase a/alpha. Uppercase A/Α
+  // remains untouched so grades, vitamins and scientific labels are preserved.
+  const letters = text.match(/\p{L}/gu)?.length ?? 0;
+  const greekLetters = text.match(/[\u0370-\u03ff\u1f00-\u1fff]/g)?.length ?? 0;
+  const words = text.match(/\p{L}+/gu)?.length ?? 0;
+  if (letters < 8 || words < 4 || greekLetters / letters < 0.45) return text;
+
+  return text.replace(/\s+(?:α|a)([.!?…])?$/u, "$1").trim();
+}
+
 function greekOnly(payload: PublishedTranscript): PublishedTranscript {
   const { englishCues: _englishCues, ...rest } = payload;
-  return rest;
+  if (!Array.isArray(rest.cues)) return rest;
+  return {
+    ...rest,
+    cues: rest.cues.map(cue => {
+      if (!cue || typeof cue !== "object") return cue;
+      const value = cue as Record<string, unknown>;
+      return { ...value, text: cleanTrailingOrphanArticle(value.text) };
+    }),
+  };
 }
 
 export function transcriptBlobConfigured() {
