@@ -15,6 +15,7 @@ import {
   completeTranscript,
   failTranscript,
   getTranscript,
+  getTranscriptStatus,
   MAX_TRANSIENT_RETRIES,
   recordGroqProviderSuccess,
   recordGroqRateLimit,
@@ -1309,6 +1310,43 @@ function processingTelemetry(record: NonNullable<Awaited<ReturnType<typeof getTr
   };
 }
 
+function processingStatusResponse(record: Awaited<ReturnType<typeof getTranscriptStatus>>) {
+  if (!record) return processingResponse(null);
+  const persistedStage = record.processingStage || "source";
+  const stage = baseProcessingStage(record.rawEnglishCount && persistedStage === "source" ? "repair" : persistedStage);
+  const totalCues = stage === "repair"
+    ? record.rawEnglishCount
+    : stage === "source_el_finalize"
+      ? record.greekCount
+      : record.englishCount;
+  const cursor = Math.max(0, Math.min(record.processingCursor || 0, totalCues));
+  const completed = stage === "finalize" || stage === "source_el_finalize" ? totalCues : cursor;
+  let preciseProgress = record.progress;
+  if (stage === "repair" && totalCues) preciseProgress = 28 + 20 * (completed / totalCues);
+  if (stage === "translate" && totalCues) preciseProgress = 48 + 42 * (completed / totalCues);
+  return {
+    status: "processing",
+    progress: Math.round(preciseProgress * 10) / 10,
+    videoId: record.videoId,
+    stage,
+    cursor,
+    totalCues,
+    currentCue: totalCues
+      ? (stage === "finalize" || stage === "source_el_finalize" ? totalCues : Math.min(totalCues, cursor + 1))
+      : 0,
+    cueStart: null,
+    elapsedSeconds: record.processingStartedAt
+      ? Math.max(0, Math.floor((Date.now() - new Date(record.processingStartedAt).getTime()) / 1_000))
+      : 0,
+    updatedAt: record.updatedAt,
+    retryCount: record.retryCount,
+    retryAfter: record.retryAfter || null,
+    groqCooldownUntil: record.groqCooldownUntil || null,
+    keyPoints: record.keyPoints,
+    transcriptVersion: TRANSCRIPT_VERSION,
+  };
+}
+
 function processingResponse(record: Awaited<ReturnType<typeof getTranscript>>) {
   const telemetry = record ? processingTelemetry(record) : null;
   return {
@@ -1422,20 +1460,26 @@ export async function GET(request: Request) {
       });
     }
 
-    const cached = await getTranscript(videoId);
-    if (!cached || cached.transcriptVersion !== TRANSCRIPT_VERSION) {
+    const statusRecord = await getTranscriptStatus(videoId);
+    if (!statusRecord || statusRecord.transcriptVersion !== TRANSCRIPT_VERSION) {
       return NextResponse.json({ ready: false }, { status: 404, headers: { "Cache-Control": "no-store" } });
     }
-    if (cached.status === "processing") {
-      return NextResponse.json(processingResponse(cached), {
+    if (statusRecord.status === "processing") {
+      return NextResponse.json(processingStatusResponse(statusRecord), {
         status: 202,
-        headers: { "Cache-Control": "no-store", "Retry-After": "1" },
+        headers: { "Cache-Control": "no-store", "Retry-After": "1", "X-GreekTube-Neon-Read": "status-only" },
       });
     }
-    if (cached.status !== "ready") {
-      return NextResponse.json({ ready: false, status: cached.status, error: cached.error || undefined }, { status: 409, headers: { "Cache-Control": "no-store" } });
+    if (statusRecord.status !== "ready") {
+      return NextResponse.json({ ready: false, status: statusRecord.status, error: statusRecord.error || undefined }, { status: 409, headers: { "Cache-Control": "no-store", "X-GreekTube-Neon-Read": "status-only" } });
     }
 
+    // A ready transcript without a published Blob is the only viewer GET that needs
+    // one full Neon row. It is immediately published, so subsequent reads exit above.
+    const cached = await getTranscript(videoId);
+    if (!cached || cached.transcriptVersion !== TRANSCRIPT_VERSION || cached.status !== "ready") {
+      return NextResponse.json({ ready: false }, { status: 404, headers: { "Cache-Control": "no-store" } });
+    }
     validateCompleteGreekTranscript(cached.greekTranscript, cached.duration);
     const payload = await cachedResponse(cached);
     const migrated = await publishTranscript(videoId, TRANSCRIPT_VERSION, payload);

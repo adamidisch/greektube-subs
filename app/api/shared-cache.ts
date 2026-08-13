@@ -171,6 +171,95 @@ export async function getTranscript(videoId: string) {
   } satisfies TranscriptRecord;
 }
 
+export type TranscriptStatusRecord = {
+  videoId: string;
+  status: TranscriptRecord["status"];
+  progress: number;
+  lockExpiresAt?: string | null;
+  processingStage?: string | null;
+  processingCursor: number;
+  retryCount: number;
+  retryAfter?: string | null;
+  groq429Streak: number;
+  groqCooldownUntil?: string | null;
+  processingStartedAt?: string | null;
+  error?: string | null;
+  transcriptVersion: number;
+  createdAt: string;
+  updatedAt: string;
+  rawEnglishCount: number;
+  englishCount: number;
+  greekCount: number;
+  keyPoints: string[];
+};
+
+type StatusRow = {
+  video_id: string;
+  status: TranscriptRecord["status"];
+  progress: number;
+  lock_expires_at: string | null;
+  processing_stage: string | null;
+  processing_cursor: number;
+  retry_count: number;
+  retry_after: string | null;
+  groq_429_streak: number;
+  groq_cooldown_until: string | null;
+  processing_started_at: string | null;
+  error: string | null;
+  transcript_version: number;
+  created_at: string;
+  updated_at: string;
+  raw_english_count: number | string;
+  english_count: number | string;
+  greek_count: number | string;
+  key_points: string;
+};
+
+/**
+ * Lightweight status read for readiness checks and processing telemetry.
+ * Deliberately avoids transferring the large transcript TEXT columns from Neon.
+ */
+export async function getTranscriptStatus(videoId: string): Promise<TranscriptStatusRecord | null> {
+  await ensureTranscriptTable();
+  const db = database();
+  const rows = await db.query(
+    `SELECT
+      video_id, status, progress, lock_expires_at, processing_stage, processing_cursor,
+      retry_count, retry_after, groq_429_streak, groq_cooldown_until, processing_started_at,
+      error, transcript_version, created_at, updated_at, key_points,
+      jsonb_array_length(COALESCE(NULLIF(raw_english_transcript, ''), '[]')::jsonb) AS raw_english_count,
+      jsonb_array_length(COALESCE(NULLIF(english_transcript, ''), '[]')::jsonb) AS english_count,
+      jsonb_array_length(COALESCE(NULLIF(greek_transcript, ''), '[]')::jsonb) AS greek_count
+     FROM video_transcripts WHERE video_id = $1 LIMIT 1`,
+    [videoId],
+  ) as StatusRow[];
+  const row = rows[0];
+  if (!row) return null;
+  const greekCount = Number(row.greek_count) || 0;
+  const hasReadyGreekTranslation = row.status === "ready" && greekCount > 0;
+  return {
+    videoId: row.video_id,
+    status: row.status,
+    progress: row.progress,
+    lockExpiresAt: row.lock_expires_at,
+    processingStage: row.processing_stage,
+    processingCursor: row.processing_cursor || 0,
+    retryCount: row.retry_count || 0,
+    retryAfter: row.retry_after,
+    groq429Streak: row.groq_429_streak || 0,
+    groqCooldownUntil: row.groq_cooldown_until,
+    processingStartedAt: row.processing_started_at,
+    error: row.error,
+    transcriptVersion: hasReadyGreekTranslation ? TRANSCRIPT_VERSION : row.transcript_version,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    rawEnglishCount: Number(row.raw_english_count) || 0,
+    englishCount: Number(row.english_count) || 0,
+    greekCount,
+    keyPoints: JSON.parse(row.key_points || "[]") as string[],
+  };
+}
+
 export async function acquireProcessingLock(videoId: string, token: string, force = false) {
   await ensureTranscriptTable();
   const db = database();
