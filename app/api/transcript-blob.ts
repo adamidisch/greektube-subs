@@ -140,7 +140,7 @@ export async function publishTranscript(videoId: string, transcriptVersion: numb
         access: "public" as const,
         addRandomSuffix: false,
         allowOverwrite: true,
-        cacheControlMaxAge: 3600,
+        cacheControlMaxAge: 60,
         contentType: "application/json; charset=utf-8",
       }),
     ];
@@ -151,7 +151,7 @@ export async function publishTranscript(videoId: string, transcriptVersion: numb
         access: "public" as const,
         addRandomSuffix: false,
         allowOverwrite: true,
-        cacheControlMaxAge: 3600,
+        cacheControlMaxAge: 60,
         contentType: "application/json; charset=utf-8",
       }));
     }
