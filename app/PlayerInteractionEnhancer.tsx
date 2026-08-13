@@ -33,7 +33,6 @@ export default function PlayerInteractionEnhancer(){
     };
 
     const handleDoubleClick=(event:MouseEvent)=>{
-      if(event.pointerType==="touch")return;
       const target=event.target as Element|null;
       if(!target)return;
       if(target.closest(".player-seek-ui,.custom-fullscreen,.gts-seek-fullscreen,.player-cover,.subtitles,button:not(.video-tap-toggle),input,select,a"))return;
