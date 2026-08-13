@@ -17,6 +17,7 @@ import "./v7-5-1.css";
 import "./v7-5-3.css";
 import "./v7-6-0.css";
 import "./v7-6-1.css";
+import "./claude-ui-v78.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
