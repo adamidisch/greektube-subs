@@ -1,0 +1,61 @@
+name: Apply v7.7.0 Blob transcript migration
+
+on:
+  push:
+    branches: [blob-transcripts-7.7.0]
+    paths:
+      - scripts/apply-v7.7.0-blob-transcripts.py
+      - .github/workflows/apply-v7.7.0-blob-transcripts.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: blob-transcripts-7.7.0
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Apply guarded Blob migration
+        run: python scripts/apply-v7.7.0-blob-transcripts.py
+
+      - name: Install Vercel Blob SDK
+        run: npm install @vercel/blob@latest --save --package-lock=false --no-audit --no-fund
+
+      - run: npm run test:caption-integrity
+      - run: npm run test:caption-timing
+      - run: npm run test:caption-edgecases
+      - run: npm run test:manual-captions
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+      - name: Verify Blob migration invariants
+        shell: bash
+        run: |
+          grep -q '@vercel/blob' package.json
+          grep -q 'readPublishedTranscript' app/api/captions/route.ts
+          grep -q 'publishTranscript' app/api/captions/route.ts
+          grep -q 'X-GreekTube-Transcript-Source' app/api/captions/route.ts
+          grep -q 'transcripts/v' app/api/transcript-blob.ts
+          grep -q '"version": "7.7.0"' package.json
+
+      - name: Commit verified v7.7.0 branch
+        shell: bash
+        run: |
+          rm -f next-env.d.ts
+          git config user.name "GreekTube Release Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app package.json
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m "GreekTube Subs 7.7.0: serve ready transcripts from Vercel Blob"
+          git push origin HEAD:blob-transcripts-7.7.0
