@@ -10,6 +10,12 @@ type PublishedTranscript = {
   [key: string]: unknown;
 };
 
+type PublishedEnglish = {
+  videoId?: unknown;
+  englishCues?: unknown;
+  transcriptVersion?: unknown;
+};
+
 function configured() {
   return Boolean(
     process.env.BLOB_READ_WRITE_TOKEN ||
@@ -17,8 +23,16 @@ function configured() {
   );
 }
 
-function pathname(videoId: string, transcriptVersion: number) {
+function legacyPathname(videoId: string, transcriptVersion: number) {
   return `transcripts/v${transcriptVersion}/${videoId}.json`;
+}
+
+function greekPathname(videoId: string, transcriptVersion: number) {
+  return `transcripts/v${transcriptVersion}/greek/${videoId}.json`;
+}
+
+function englishPathname(videoId: string, transcriptVersion: number) {
+  return `transcripts/v${transcriptVersion}/english/${videoId}.json`;
 }
 
 function validPayload(value: unknown, videoId: string, transcriptVersion: number): value is PublishedTranscript {
@@ -31,17 +45,58 @@ function validPayload(value: unknown, videoId: string, transcriptVersion: number
     payload.cues.length > 0;
 }
 
+function validEnglish(value: unknown, videoId: string, transcriptVersion: number): value is PublishedEnglish {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as PublishedEnglish;
+  return payload.videoId === videoId &&
+    payload.transcriptVersion === transcriptVersion &&
+    Array.isArray(payload.englishCues) &&
+    payload.englishCues.length > 0;
+}
+
+async function readJson(pathname: string) {
+  const blob = await get(pathname, { access: "public" });
+  if (!blob?.stream) return null;
+  return await new Response(blob.stream).json() as unknown;
+}
+
+function greekOnly(payload: PublishedTranscript): PublishedTranscript {
+  const { englishCues: _englishCues, ...rest } = payload;
+  return rest;
+}
+
 export function transcriptBlobConfigured() {
   return configured();
 }
 
-export async function readPublishedTranscript(videoId: string, transcriptVersion: number) {
+export async function readPublishedTranscript(videoId: string, transcriptVersion: number, includeEnglish = false) {
   if (!configured()) return null;
   try {
-    const blob = await get(pathname(videoId, transcriptVersion), { access: "public" });
-    if (!blob?.stream) return null;
-    const payload = await new Response(blob.stream).json() as unknown;
-    return validPayload(payload, videoId, transcriptVersion) ? payload : null;
+    let greekValue = await readJson(greekPathname(videoId, transcriptVersion));
+    let legacyValue: unknown = null;
+
+    if (!validPayload(greekValue, videoId, transcriptVersion)) {
+      legacyValue = await readJson(legacyPathname(videoId, transcriptVersion));
+      if (!validPayload(legacyValue, videoId, transcriptVersion)) return null;
+      await publishTranscript(videoId, transcriptVersion, legacyValue);
+      greekValue = greekOnly(legacyValue);
+    }
+
+    if (!validPayload(greekValue, videoId, transcriptVersion)) return null;
+    if (!includeEnglish) return greekOnly(greekValue);
+
+    const englishValue = await readJson(englishPathname(videoId, transcriptVersion));
+    if (validEnglish(englishValue, videoId, transcriptVersion)) {
+      return { ...greekOnly(greekValue), englishCues: englishValue.englishCues };
+    }
+
+    if (!legacyValue) legacyValue = await readJson(legacyPathname(videoId, transcriptVersion));
+    if (validPayload(legacyValue, videoId, transcriptVersion) && Array.isArray(legacyValue.englishCues) && legacyValue.englishCues.length) {
+      await publishTranscript(videoId, transcriptVersion, legacyValue);
+      return { ...greekOnly(greekValue), englishCues: legacyValue.englishCues };
+    }
+
+    return null;
   } catch (error) {
     console.warn("[transcript-blob:read-failed]", JSON.stringify({
       videoId,
@@ -54,13 +109,29 @@ export async function readPublishedTranscript(videoId: string, transcriptVersion
 export async function publishTranscript(videoId: string, transcriptVersion: number, payload: unknown) {
   if (!configured() || !validPayload(payload, videoId, transcriptVersion)) return false;
   try {
-    await put(pathname(videoId, transcriptVersion), JSON.stringify(payload), {
-      access: "public",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      cacheControlMaxAge: 3600,
-      contentType: "application/json; charset=utf-8",
-    });
+    const greekPayload = greekOnly(payload);
+    const writes = [
+      put(greekPathname(videoId, transcriptVersion), JSON.stringify(greekPayload), {
+        access: "public" as const,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        cacheControlMaxAge: 3600,
+        contentType: "application/json; charset=utf-8",
+      }),
+    ];
+
+    if (Array.isArray(payload.englishCues) && payload.englishCues.length) {
+      const englishPayload = { videoId, transcriptVersion, englishCues: payload.englishCues };
+      writes.push(put(englishPathname(videoId, transcriptVersion), JSON.stringify(englishPayload), {
+        access: "public" as const,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        cacheControlMaxAge: 3600,
+        contentType: "application/json; charset=utf-8",
+      }));
+    }
+
+    await Promise.all(writes);
     return true;
   } catch (error) {
     console.warn("[transcript-blob:publish-failed]", JSON.stringify({
@@ -70,5 +141,3 @@ export async function publishTranscript(videoId: string, transcriptVersion: numb
     return false;
   }
 }
-
-// Redeploy marker: refresh Vercel runtime env after Blob store connection.
