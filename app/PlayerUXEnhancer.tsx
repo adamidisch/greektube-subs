@@ -16,28 +16,22 @@ export default function PlayerUXEnhancer(){
       button:active,.secondary:active,.primary:active,.video-details-secondary-link:active{transform:scale(.975)}
       .gt-action-confirm{position:fixed;left:50%;bottom:24px;z-index:20000;transform:translateX(-50%);max-width:min(92vw,420px);padding:10px 14px;border:1px solid rgba(164,150,255,.34);border-radius:12px;background:rgba(20,20,27,.94);box-shadow:0 14px 40px rgba(0,0,0,.38);backdrop-filter:blur(16px);color:#f4f2ff;font-size:12px;font-weight:650;letter-spacing:.01em;pointer-events:none;animation:gtConfirmIn .16s ease-out}
       @keyframes gtConfirmIn{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
-      [data-gt-clicked="1"]{border-color:rgba(164,150,255,.58)!important;box-shadow:0 0 0 3px rgba(143,127,240,.10)!important}
     `;
     document.head.appendChild(style);
 
     const click=(event:MouseEvent)=>{
       const target=(event.target as HTMLElement|null)?.closest("button,a") as HTMLElement|null;
       if(!target)return;
-      target.dataset.gtClicked="1";
-      window.setTimeout(()=>delete target.dataset.gtClicked,280);
       const text=(target.textContent||"").replace(/\s+/g," ").trim().toLowerCase();
-      let message="";
-      if(text.includes("αντιγραφή")||text.includes("αντιγράφηκε"))message="Ο σύνδεσμος αντιγράφηκε ✓";
-      else if(text.includes("αποθήκευση στιγμής"))message="Η στιγμή αποθηκεύτηκε ✓";
-      if(!message)return;
+      if(!text.includes("αντιγραφή")&&!text.includes("αντιγράφηκε"))return;
       if(timer.current)window.clearTimeout(timer.current);
-      setToast({message,id:Date.now()});
+      setToast({message:"Ο σύνδεσμος αντιγράφηκε ✓",id:Date.now()});
       timer.current=window.setTimeout(()=>setToast(null),1800);
     };
 
-    document.addEventListener("click",click,true);
+    document.addEventListener("click",click);
     return()=>{
-      document.removeEventListener("click",click,true);
+      document.removeEventListener("click",click);
       if(timer.current)window.clearTimeout(timer.current);
       style.remove();
     };

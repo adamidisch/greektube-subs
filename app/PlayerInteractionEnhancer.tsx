@@ -26,8 +26,6 @@ export default function PlayerInteractionEnhancer(){
   const [showFooter,setShowFooter]=useState(false);
 
   useEffect(()=>{
-    let suppressFloatingClickUntil=0;
-
     const sync=()=>{
       const next=document.querySelector<HTMLElement>(".video-frame");
       const appShell=document.querySelector(".app-shell");
@@ -56,30 +54,12 @@ export default function PlayerInteractionEnhancer(){
       triggerFullscreen();
     };
 
-    const handleFloatingTouch=(event:TouchEvent)=>{
-      const target=event.target as Element|null;
-      if(!target?.closest(".custom-fullscreen"))return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      suppressFloatingClickUntil=Date.now()+800;
-      triggerFullscreen();
-    };
-
-    const suppressSyntheticFloatingClick=(event:MouseEvent)=>{
-      const target=event.target as Element|null;
-      if(!target?.closest(".custom-fullscreen"))return;
-      if(Date.now()>=suppressFloatingClickUntil)return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    };
-
+    const observeRoot=document.querySelector(".app-shell")||document.body;
     const observer=new MutationObserver(sync);
-    observer.observe(document.body,{subtree:true,childList:true,attributes:true,characterData:true,attributeFilter:["class"]});
+    observer.observe(observeRoot,{subtree:true,childList:true,attributes:true,attributeFilter:["class"]});
     document.addEventListener("fullscreenchange",sync);
     document.addEventListener("webkitfullscreenchange",sync as EventListener);
     document.addEventListener("dblclick",handleDoubleClick,true);
-    document.addEventListener("touchend",handleFloatingTouch,{capture:true,passive:false});
-    document.addEventListener("click",suppressSyntheticFloatingClick,true);
     sync();
 
     return()=>{
@@ -87,8 +67,6 @@ export default function PlayerInteractionEnhancer(){
       document.removeEventListener("fullscreenchange",sync);
       document.removeEventListener("webkitfullscreenchange",sync as EventListener);
       document.removeEventListener("dblclick",handleDoubleClick,true);
-      document.removeEventListener("touchend",handleFloatingTouch,true);
-      document.removeEventListener("click",suppressSyntheticFloatingClick,true);
     };
   },[]);
 

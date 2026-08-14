@@ -1,5 +1,6 @@
 "use client";
 import {useEffect} from "react";
+import {watchAppNavigation} from "./navigation-events";
 
 const HIDE_DELAY=2200;
 
@@ -55,9 +56,8 @@ export default function FullscreenExitEnhancer(){
       revealRestore();
     };
 
-    // iOS/Safari can fire touchend and then a synthetic click. The React
-    // button currently has handlers for both. Forward exactly one click and
-    // suppress the generated second click so fullscreen cannot exit/re-enter.
+    // iOS/Safari can fire touchend and then a synthetic click. Forward one
+    // click and suppress the generated duplicate so fullscreen cannot toggle twice.
     const handleTouchEnd=(event:TouchEvent)=>{
       const target=event.target as Element|null;
       const button=target?.closest<HTMLButtonElement>(".custom-fullscreen");
@@ -89,13 +89,32 @@ export default function FullscreenExitEnhancer(){
     document.addEventListener("pointermove",handleInteraction,true);
     document.addEventListener("touchstart",handleInteraction,{capture:true,passive:true});
 
-    const observer=new MutationObserver(()=>syncFullscreenUi());
-    observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["class"]});
-    syncFullscreenUi();
+    let observedFrame:HTMLElement|null=null;
+    let frameObserver:MutationObserver|null=null;
+    const attachFrameObserver=()=>{
+      const next=document.querySelector<HTMLElement>(".video-frame");
+      if(next===observedFrame)return;
+      frameObserver?.disconnect();
+      frameObserver=null;
+      observedFrame=next;
+      if(next){
+        frameObserver=new MutationObserver(syncFullscreenUi);
+        frameObserver.observe(next,{attributes:true,attributeFilter:["class"]});
+      }
+      syncFullscreenUi();
+    };
+
+    const lifecycleRoot=document.querySelector(".app-shell")||document.body;
+    const lifecycleObserver=new MutationObserver(attachFrameObserver);
+    lifecycleObserver.observe(lifecycleRoot,{subtree:true,childList:true});
+    attachFrameObserver();
+    const stopWatching=watchAppNavigation(()=>window.requestAnimationFrame(attachFrameObserver));
 
     return()=>{
       clearHideTimer();
-      observer.disconnect();
+      frameObserver?.disconnect();
+      lifecycleObserver.disconnect();
+      stopWatching();
       document.removeEventListener("touchend",handleTouchEnd,true);
       document.removeEventListener("click",handleClickCapture,true);
       document.removeEventListener("fullscreenchange",syncFullscreenUi);
