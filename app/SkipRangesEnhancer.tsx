@@ -2,6 +2,7 @@
 
 import {useEffect,useMemo,useRef,useState} from "react";
 import {createPortal} from "react-dom";
+import {watchAppNavigation} from "./navigation-events";
 
 type SkipRange={start:number;end:number};
 type VideoRecord={id?:unknown;skipRanges?:unknown;[key:string]:unknown};
@@ -75,26 +76,48 @@ export default function SkipRangesEnhancer(){
       setRanges(normalizeRanges(video?.skipRanges));
     };
     void syncVideo();
-    const timer=window.setInterval(()=>void syncVideo(),500);
-    return()=>{cancelled=true;window.clearInterval(timer);};
+    const stopWatching=watchAppNavigation(()=>void syncVideo());
+    return()=>{cancelled=true;stopWatching();};
   },[videoId]);
 
   useEffect(()=>{
     let cancelled=false;
+    let authTimer1=0;
+    let authTimer2=0;
     const auth=()=>void fetch("/api/admin-auth",{cache:"no-store",credentials:"same-origin"}).then(async response=>{
       const result=await response.json().catch(()=>({})) as {authorized?:boolean};
       if(!cancelled)setAuthorized(response.ok&&result.authorized===true);
     }).catch(()=>{if(!cancelled)setAuthorized(false);});
-    auth();const timer=window.setInterval(auth,3000);
-    return()=>{cancelled=true;window.clearInterval(timer);};
+    const onVisible=()=>{if(document.visibilityState==="visible")auth();};
+    const onFocus=()=>auth();
+    const onSubmit=(event:Event)=>{
+      const form=event.target as Element|null;
+      if(!form?.matches("form.password-form"))return;
+      window.clearTimeout(authTimer1);window.clearTimeout(authTimer2);
+      authTimer1=window.setTimeout(auth,450);
+      authTimer2=window.setTimeout(auth,1400);
+    };
+    auth();
+    document.addEventListener("visibilitychange",onVisible);
+    window.addEventListener("focus",onFocus);
+    document.addEventListener("submit",onSubmit,true);
+    return()=>{
+      cancelled=true;
+      window.clearTimeout(authTimer1);window.clearTimeout(authTimer2);
+      document.removeEventListener("visibilitychange",onVisible);
+      window.removeEventListener("focus",onFocus);
+      document.removeEventListener("submit",onSubmit,true);
+    };
   },[]);
 
   useEffect(()=>{
     const syncTarget=()=>setPortalTarget(document.querySelector(".heading-actions")||document.querySelector(".player-secondary-actions"));
     syncTarget();
+    const root=document.querySelector(".app-shell")||document.body;
     const observer=new MutationObserver(syncTarget);
-    observer.observe(document.body,{subtree:true,childList:true});
-    return()=>observer.disconnect();
+    observer.observe(root,{subtree:true,childList:true});
+    const stopWatching=watchAppNavigation(()=>window.requestAnimationFrame(syncTarget));
+    return()=>{observer.disconnect();stopWatching();};
   },[]);
 
   useEffect(()=>{
