@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { database } from "@/db/postgres";
 import GreekTubePlayer from "./GreekTubePlayer";
 import TranscriptPerformanceEnhancer from "./TranscriptPerformanceEnhancer";
+import ThemeToggleEnhancer from "./ThemeToggleEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
@@ -78,6 +79,7 @@ export default function Home() {
     <>
       <GreekTubePlayer />
       <TranscriptPerformanceEnhancer />
+      <ThemeToggleEnhancer />
     </>
   );
 }
