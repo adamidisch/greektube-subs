@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 import { database } from "@/db/postgres";
 import GreekTubePlayer from "./GreekTubePlayer";
-import CueEditEnhancer from "./CueEditEnhancer";
-import PlayerUXEnhancer from "./PlayerUXEnhancer";
-import FullscreenExitEnhancer from "./FullscreenExitEnhancer";
-import PlayerInteractionEnhancer from "./PlayerInteractionEnhancer";
-import SkipRangesEnhancer from "./SkipRangesEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
@@ -78,14 +73,5 @@ export async function generateMetadata({
 }
 
 export default function Home() {
-  return (
-    <>
-      <GreekTubePlayer />
-      <CueEditEnhancer />
-      <PlayerUXEnhancer />
-      <FullscreenExitEnhancer />
-      <PlayerInteractionEnhancer />
-      <SkipRangesEnhancer />
-    </>
-  );
+  return <GreekTubePlayer />;
 }
