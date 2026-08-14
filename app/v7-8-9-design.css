@@ -1,0 +1,91 @@
+/* v7.8.9-design — standalone, additive-only file. Contains the entire
+   design pass in one place: font-family fixes for the player view,
+   "Επόμενα βίντεο" redesign, and Subs/Edit/Favorite icon colors for both
+   dark and light mode. Does not modify any existing CSS file — import
+   this alone (after v7-6-1.css in app/layout.tsx) to get the whole
+   update, or remove the import line to roll it all back at once.
+   No TSX/functional changes. */
+
+/* ---------- Font-family fixes (player view) ----------
+   The old "v6" serif system (Fraunces/Iowan Old Style, both !important,
+   ".viewer X" 2-class specificity) still wins in the player view over
+   any un-prefixed or lower-specificity rule. Matching that specificity
+   here, with explicit font-family on every rule. */
+.viewer .section-title h2{
+  font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  font-size:15px!important;
+  font-weight:620!important;
+  letter-spacing:-.01em!important;
+  color:var(--text)!important;
+}
+.viewer .player-greek-title{
+  font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  font-size:20px!important;
+  font-weight:650!important;
+  line-height:1.25!important;
+  letter-spacing:-.015em!important;
+  color:var(--text)!important;
+}
+.viewer .player-original-title{
+  font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  font-size:11px!important;
+  font-weight:450!important;
+  color:var(--muted)!important;
+}
+
+/* ---------- "Επόμενα βίντεο" redesign ---------- */
+.next-videos{
+  margin-top:28px;
+  margin-bottom:12px;
+  padding:16px 16px 22px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--panel);
+}
+.next-videos .section-title{margin:0 0 14px}
+.next-video-row{gap:14px}
+.next-video-row>button{transition:transform .16s ease,border-color .16s ease}
+.next-video-row>button:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.18)}
+:root[data-theme="light"] .next-video-row>button:hover{border-color:rgba(34,45,24,.22)}
+
+/* ---------- Header icons: Subs / edit / favorite ----------
+   Soft purple tint tied to the brand accent (dark mode), kept quiet —
+   these are secondary utility actions, not primary CTAs. */
+.heading-actions .subtitle-manage,
+.heading-actions .edit-video,
+.heading-actions .favorite{
+  background:#191b22;
+  border-color:rgba(143,127,240,.2);
+  color:#a79cf0;
+}
+.heading-actions .subtitle-manage:hover,
+.heading-actions .edit-video:hover,
+.heading-actions .favorite:hover{
+  border-color:rgba(143,127,240,.36);
+  background:#1e2029;
+}
+.heading-actions .favorite.active{
+  background:rgba(220,102,92,.12);
+  border-color:transparent;
+  color:var(--accent);
+}
+
+/* Light-mode counterpart — do not leave the dark #191b22/#1e2029 active. */
+:root[data-theme="light"] .heading-actions .subtitle-manage,
+:root[data-theme="light"] .heading-actions .edit-video,
+:root[data-theme="light"] .heading-actions .favorite{
+  background:#f2effc;
+  border-color:rgba(111,97,224,.28);
+  color:#6c5ce7;
+}
+:root[data-theme="light"] .heading-actions .subtitle-manage:hover,
+:root[data-theme="light"] .heading-actions .edit-video:hover,
+:root[data-theme="light"] .heading-actions .favorite:hover{
+  background:#e9e4fa;
+  border-color:rgba(111,97,224,.42);
+}
+:root[data-theme="light"] .heading-actions .favorite.active{
+  background:rgba(220,102,92,.12);
+  border-color:transparent;
+  color:var(--accent);
+}
