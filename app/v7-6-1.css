@@ -88,3 +88,22 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-page sele
 .skip-editor-modal h2{font-size:15px!important;font-weight:620!important}
 .skip-editor-modal>footer .primary{border-color:rgba(143,127,240,.45)!important;background:var(--accent2)!important;color:#fff!important}
 html[data-theme="light"] .skip-editor-modal>footer .primary{border-color:#2f6b4f!important;background:linear-gradient(150deg,#3d8563,#1f4f38)!important}
+
+/* v7.8.3 — typography normalization for player sections, moments and next-video cards */
+.section-title h2{font-size:15px!important;font-weight:620!important;letter-spacing:-.01em!important}
+.player-tools-label{font-size:9.5px!important;font-weight:650!important;letter-spacing:.08em!important;color:var(--muted)!important}
+.player-actions .cc-toggle>span{font-size:12px!important;font-weight:600!important}
+.player-actions .cc-toggle>small{font-size:9.5px!important;font-weight:500!important}
+.fullscreen-toggle span,.moment-save span,.transcript-toggle span{font-size:11px;font-weight:600}
+.video-meta-kicker{font-size:11px!important;font-weight:450!important;letter-spacing:0!important}
+.video-meta-kicker strong{font-size:13px!important;font-weight:600!important;color:var(--text)!important}
+.video-category-label{font-size:9.5px!important;font-weight:650!important;letter-spacing:.06em!important}
+.player-greek-title{font-size:20px!important;font-weight:650!important;line-height:1.25!important;letter-spacing:-.015em!important}
+.video-source-row{font-size:11px;font-weight:450}
+.video-source-row>span{font-size:9px;font-weight:650;letter-spacing:.06em}
+.video-source-row a,.video-source-row strong{font-size:11px;font-weight:500}
+.moment strong{font-size:13px!important;font-weight:600!important}
+.moment p{font-size:12px!important;font-weight:450!important}
+.moment-actions button{font-size:11px!important;font-weight:600!important}
+.card-info strong{font-size:13px!important;font-weight:600!important;line-height:1.35!important}
+.card-info span,.card-info small,.card-info p{font-size:11px!important;font-weight:450!important}
