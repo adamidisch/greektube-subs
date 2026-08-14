@@ -91,11 +91,25 @@ export default function TranscriptPerformanceEnhancer(){
       const next=cueAt(cues,time);
       if(next===activeRef.current)return;
       const root=transcriptRef.current;
+      const previous=activeRef.current;
       if(root){
-        if(activeRef.current>=0)root.querySelector<HTMLElement>(`button[data-cue="${activeRef.current}"]`)?.classList.remove("active");
+        if(previous>=0)root.querySelector<HTMLElement>(`button[data-cue="${previous}"]`)?.classList.remove("active");
         const row=next>=0?root.querySelector<HTMLElement>(`button[data-cue="${next}"]`):null;
+        row?.classList.remove("past");
         row?.classList.add("active");
         row?.scrollIntoView({block:"nearest"});
+        // Only touch the delta range between previous and next active index —
+        // never the full cue list — so this stays correct (and cheap) on
+        // both forward and backward seeks.
+        if(next>previous){
+          for(let index=Math.max(previous,0);index<next;index+=1){
+            root.querySelector<HTMLElement>(`button[data-cue="${index}"]`)?.classList.add("past");
+          }
+        }else if(next<previous){
+          for(let index=Math.max(next+1,0);index<=previous;index+=1){
+            root.querySelector<HTMLElement>(`button[data-cue="${index}"]`)?.classList.remove("past");
+          }
+        }
       }
       activeRef.current=next;
       if(activeTimeRef.current)activeTimeRef.current.textContent=next>=0?clock(cues[next]?.start||0):"0:00";
