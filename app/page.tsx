@@ -6,6 +6,7 @@ import PlayerUXEnhancer from "./PlayerUXEnhancer";
 import FullscreenExitEnhancer from "./FullscreenExitEnhancer";
 import PlayerInteractionEnhancer from "./PlayerInteractionEnhancer";
 import SkipRangesEnhancer from "./SkipRangesEnhancer";
+import TranscriptPerformanceEnhancer from "./TranscriptPerformanceEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
@@ -86,6 +87,7 @@ export default function Home() {
       <FullscreenExitEnhancer />
       <PlayerInteractionEnhancer />
       <SkipRangesEnhancer />
+      <TranscriptPerformanceEnhancer />
     </>
   );
 }
