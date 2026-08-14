@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { database } from "@/db/postgres";
 import GreekTubePlayer from "./GreekTubePlayer";
+import TranscriptPerformanceEnhancer from "./TranscriptPerformanceEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
@@ -73,5 +74,10 @@ export async function generateMetadata({
 }
 
 export default function Home() {
-  return <GreekTubePlayer />;
+  return (
+    <>
+      <GreekTubePlayer />
+      <TranscriptPerformanceEnhancer />
+    </>
+  );
 }
