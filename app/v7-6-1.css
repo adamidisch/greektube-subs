@@ -107,3 +107,37 @@ html[data-theme="light"] .skip-editor-modal>footer .primary{border-color:#2f6b4f
 .moment-actions button{font-size:11px!important;font-weight:600!important}
 .card-info strong{font-size:13px!important;font-weight:600!important;line-height:1.35!important}
 .card-info span,.card-info small,.card-info p{font-size:11px!important;font-weight:450!important}
+
+/* v7.8.6 — remove the legacy v6 serif typography from the player view. */
+.viewer .section-title h2{
+  font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  font-size:15px!important;
+  font-weight:620!important;
+  letter-spacing:-.01em!important;
+  color:var(--text)!important;
+}
+.viewer .player-greek-title{
+  font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  font-size:20px!important;
+  font-weight:650!important;
+  line-height:1.25!important;
+  letter-spacing:-.015em!important;
+}
+
+/* v7.8.6 — source metadata as a compact card. */
+.video-source-row{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:10px 0 0;padding:9px 12px;
+  border:1px solid var(--line);border-radius:10px;
+  background:var(--panel);
+}
+.video-source-row>span{padding:3px 8px;border-radius:6px;background:var(--raised);color:var(--muted);flex-shrink:0}
+.video-source-row a,.video-source-row strong{color:var(--text);text-decoration:none}
+.video-source-row a:hover{color:var(--accent2)}
+
+/* The isolated transcript keeps every protected cue node but lets the browser
+   skip paint/layout work for rows far outside the viewport. */
+.transcript[data-gts-performance-transcript-list="1"]>button{
+  content-visibility:auto;
+  contain-intrinsic-size:48px;
+}
