@@ -1,0 +1,45 @@
+/* v7.8.10-polish — standalone, additive-only file. Past-cue transcript
+   styling, source/original-title editorial card, and player header strip
+   refinement. No JS/timing/observer changes — purely visual. */
+
+/* ---------- 1. Transcript past cues ---------- */
+.transcript>button.past span{color:var(--muted)}
+.transcript>button.past time{color:var(--soft)}
+.transcript>button.past i{opacity:.45}
+/* Light mode has a boosted-specificity rule elsewhere
+   (html[data-theme="light"] body .app-shell.app-shell.app-shell
+   .transcript span/time, both !important) that would otherwise silently
+   win over the plain rules above. Matching that exact specificity +
+   !important here, scoped only to .past, so it never affects the
+   active/future cue colors those rules are responsible for. */
+html[data-theme="light"] body .app-shell.app-shell.app-shell .transcript>button.past span{color:var(--muted)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .transcript>button.past time{color:var(--soft)!important}
+
+/* ---------- 2. Source / original-title editorial card ---------- */
+.video-source-row{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;
+  margin:12px 0 0;padding:12px 14px;
+  border:1px solid var(--line);border-left:3px solid var(--accent2);
+  border-radius:4px 10px 10px 4px;
+  background:var(--panel);
+}
+.video-source-row>span{
+  padding:3px 8px;border-radius:6px;background:var(--raised);
+  color:var(--muted);flex-shrink:0;font-size:9px;font-weight:650;letter-spacing:.06em;
+}
+.video-source-row a,.video-source-row strong{color:var(--text);text-decoration:none;font-size:11px}
+.video-source-row a:hover{color:var(--accent2)}
+.video-source-row>a+a,
+.video-source-row>strong+a{
+  flex-basis:100%;
+  font-size:13px;font-weight:550;font-style:italic;color:var(--text);
+}
+
+/* ---------- 3. Player header strip (speaker + actions) ---------- */
+.mobile-video-byline{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 2px 14px;
+  border-bottom:1px solid var(--line);
+}
+.mobile-video-byline>strong{font-size:13px;font-weight:600;color:var(--text)}
+.mobile-video-byline>span{display:flex;align-items:center;gap:8px}
