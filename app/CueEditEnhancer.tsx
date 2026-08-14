@@ -119,11 +119,37 @@ export default function CueEditEnhancer(){
   },[authorized]);
 
   useEffect(()=>{
-    patchRecentOverrides();
-    const observer=new MutationObserver(()=>patchRecentOverrides());
-    observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:["class"]});
-    const navigation=window.setInterval(()=>patchRecentOverrides(),1200);
-    return()=>{observer.disconnect();window.clearInterval(navigation);};
+    let transcript:Element|null=null;
+    let observer:MutationObserver|null=null;
+    let raf=0;
+
+    const schedulePatch=()=>{
+      if(raf)return;
+      raf=window.requestAnimationFrame(()=>{
+        raf=0;
+        patchRecentOverrides();
+      });
+    };
+
+    const attachTranscriptObserver=()=>{
+      const next=document.querySelector(".transcript");
+      if(next===transcript)return;
+      observer?.disconnect();
+      observer=null;
+      transcript=next;
+      if(!transcript)return;
+      observer=new MutationObserver(schedulePatch);
+      observer.observe(transcript,{subtree:true,childList:true});
+      schedulePatch();
+    };
+
+    attachTranscriptObserver();
+    const navigation=window.setInterval(attachTranscriptObserver,500);
+    return()=>{
+      observer?.disconnect();
+      window.clearInterval(navigation);
+      if(raf)window.cancelAnimationFrame(raf);
+    };
   },[]);
 
   async function save(){
