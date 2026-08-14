@@ -1,0 +1,183 @@
+/* v7.8.11 — focused light-mode polish only.
+   Unifies library filters, video-details actions and saved-moment controls.
+   No player/transcript behavior changes. */
+
+/* --- Library toolbar: one calm light-mode control system --- */
+html[data-theme="light"] body .app-shell.app-shell.app-shell .clean-library-tools{
+  background:#f7f9f1!important;
+  border:1px solid rgba(34,45,24,.10)!important;
+  box-shadow:0 8px 24px rgba(34,45,24,.055)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .search,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .clean-library-tools>select{
+  background:#fff!important;
+  border:1px solid rgba(34,45,24,.13)!important;
+  color:#1c2116!important;
+  box-shadow:0 1px 0 rgba(34,45,24,.025)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .search:focus-within,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .clean-library-tools>select:focus{
+  border-color:rgba(108,92,231,.38)!important;
+  box-shadow:0 0 0 3px rgba(108,92,231,.08)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .quick-filters{
+  display:flex!important;
+  gap:4px!important;
+  padding:4px!important;
+  border:1px solid rgba(34,45,24,.11)!important;
+  border-radius:12px!important;
+  background:#eef2e4!important;
+  box-shadow:none!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .quick-filters button{
+  min-height:34px!important;
+  border:1px solid transparent!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:#46503f!important;
+  box-shadow:none!important;
+  font-weight:600!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .quick-filters button:hover{
+  background:#fff!important;
+  border-color:rgba(34,45,24,.10)!important;
+  color:#1f4f38!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .quick-filters button.active{
+  background:#fff!important;
+  border-color:rgba(47,107,79,.20)!important;
+  color:#1f4f38!important;
+  box-shadow:0 2px 7px rgba(34,45,24,.07)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .sync-library{
+  min-height:32px!important;
+  padding:0 12px!important;
+  border:1px solid rgba(108,92,231,.24)!important;
+  border-radius:9px!important;
+  background:#f2effc!important;
+  color:#5f52ca!important;
+  font-weight:650!important;
+  box-shadow:none!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .sync-library:hover{
+  background:#e9e4fa!important;
+  border-color:rgba(108,92,231,.38)!important;
+}
+
+/* --- Video details: stronger contrast + consistent CTA hierarchy --- */
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details{
+  color:#1c2116!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-info h1,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-source h2,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-translate h2{
+  color:#1c2116!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-original,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-description,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-translate-intro,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-option p{
+  color:#5e6656!important;
+  opacity:1!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-meta dt,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-source h2,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-translate h2,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-option>small{
+  color:#747c6b!important;
+  opacity:1!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-meta dd,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-meta dd a{
+  color:#293122!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-source,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-option{
+  border-color:rgba(34,45,24,.11)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-option.recommended{
+  background:linear-gradient(135deg,#fbfaff 0%,#f6f5fd 100%)!important;
+  border:1px solid rgba(108,92,231,.24)!important;
+  box-shadow:0 10px 28px rgba(68,58,150,.06)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-option.recommended>small{
+  color:#6c5ce7!important;
+}
+
+/* Primary actions: only the recommended translation pair. */
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-option.recommended .primary{
+  min-height:42px!important;
+  border:1px solid #6c5ce7!important;
+  border-radius:10px!important;
+  background:#6c5ce7!important;
+  color:#fff!important;
+  box-shadow:0 7px 18px rgba(108,92,231,.18)!important;
+  font-weight:650!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-option.recommended .primary:hover{
+  background:#5f52cf!important;
+  border-color:#5f52cf!important;
+  transform:translateY(-1px)!important;
+}
+
+/* Secondary / utility actions: same neutral family everywhere in details. */
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-edit,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-source-row .secondary,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-option:not(.recommended)>.secondary{
+  min-height:40px!important;
+  padding:0 14px!important;
+  border:1px solid rgba(34,45,24,.15)!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  color:#293122!important;
+  box-shadow:0 2px 7px rgba(34,45,24,.045)!important;
+  font-weight:620!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-edit:hover,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-source-row .secondary:hover,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .video-details-option:not(.recommended)>.secondary:hover{
+  background:#eef2e4!important;
+  border-color:rgba(47,107,79,.24)!important;
+  color:#1f4f38!important;
+}
+
+/* --- Saved moments: real compact action buttons, not text links --- */
+@media(min-width:621px){
+  html[data-theme="light"] body .app-shell.app-shell.app-shell .moment-actions{
+    gap:7px!important;
+  }
+  html[data-theme="light"] body .app-shell.app-shell.app-shell .moment-actions button{
+    width:auto!important;
+    min-height:32px!important;
+    padding:0 10px!important;
+    border:1px solid rgba(34,45,24,.12)!important;
+    border-radius:8px!important;
+    background:#f8faf5!important;
+    color:#344232!important;
+    font-size:11.5px!important;
+    font-weight:620!important;
+    line-height:1!important;
+    box-shadow:none!important;
+    transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease!important;
+  }
+  html[data-theme="light"] body .app-shell.app-shell.app-shell .moment-actions button:hover{
+    background:#eef2e4!important;
+    border-color:rgba(47,107,79,.24)!important;
+    color:#1f4f38!important;
+    transform:translateY(-1px)!important;
+  }
+  html[data-theme="light"] body .app-shell.app-shell.app-shell .moment-actions button:focus-visible{
+    outline:2px solid rgba(108,92,231,.45)!important;
+    outline-offset:2px!important;
+  }
+  html[data-theme="light"] body .app-shell.app-shell.app-shell .moment-actions button:last-child{
+    border-color:rgba(184,74,65,.16)!important;
+    background:#fff8f7!important;
+    color:#9f4942!important;
+  }
+  html[data-theme="light"] body .app-shell.app-shell.app-shell .moment-actions button:last-child:hover{
+    border-color:rgba(184,74,65,.28)!important;
+    background:#fceceb!important;
+    color:#8e3e38!important;
+  }
+}
