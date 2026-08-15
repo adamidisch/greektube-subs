@@ -1,0 +1,26 @@
+/* v7-8-16 — home identity typography polish.
+   Makes the main GreekTube Subs headline calmer and more premium while
+   preserving the existing hierarchy and responsive layout. */
+
+html body .app-shell.app-shell.app-shell .home-intro h1{
+  max-width:760px!important;
+  font-size:clamp(23px,2.5vw,30px)!important;
+  line-height:1.18!important;
+  font-weight:670!important;
+  letter-spacing:-.028em!important;
+}
+
+@media(max-width:620px){
+  html body .app-shell.app-shell.app-shell .home-intro h1{
+    max-width:330px!important;
+    font-size:clamp(21px,6.2vw,24px)!important;
+    line-height:1.2!important;
+    letter-spacing:-.024em!important;
+  }
+}
+
+@media(max-width:380px){
+  html body .app-shell.app-shell.app-shell .home-intro h1{
+    font-size:21px!important;
+  }
+}
