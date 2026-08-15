@@ -25,6 +25,7 @@ import "./v7-8-10-caption-icons.css";
 import "./v7-8-11-light-polish.css";
 import "./v7-8-12-theme-toggle.css";
 import "./v7-8-13-designerui.css";
+import "./v7-8-13-reference-controls-footer.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
