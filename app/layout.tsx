@@ -41,16 +41,37 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://greektubesubs.com";
+const DEFAULT_SHARE_IMAGE = `${SITE_URL}/api/share-card?title=${encodeURIComponent("YouTube με ελληνικούς υπότιτλους")}`;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  applicationName: "GreekTube Subs",
   title: "GreekTube Subs — YouTube με ελληνικούς υπότιτλους",
   description:
     "Παίξε δημόσια YouTube videos με αυτόματα μεταφρασμένους ελληνικούς υπότιτλους και συγχρονισμένο transcript.",
+  manifest: "/manifest.webmanifest",
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "GreekTube Subs",
+    title: "GreekTube Subs — YouTube με ελληνικούς υπότιτλους",
+    description:
+      "Παίξε δημόσια YouTube videos με αυτόματα μεταφρασμένους ελληνικούς υπότιτλους και συγχρονισμένο transcript.",
+    images: [{ url: DEFAULT_SHARE_IMAGE, width: 1200, height: 630, alt: "GreekTube Subs" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GreekTube Subs — YouTube με ελληνικούς υπότιτλους",
+    description: "YouTube με αυτόματα μεταφρασμένους ελληνικούς υπότιτλους.",
+    images: [DEFAULT_SHARE_IMAGE],
+  },
   other: {
     "codex-preview": `v${APP_VERSION}-production-cleanup`,
     "app-version": APP_VERSION,
   },
   icons: {
-    icon: "/brand-mark.svg",
+    icon: [{ url: "/brand-mark.svg", type: "image/svg+xml" }],
     shortcut: "/brand-mark.svg",
   },
 };
