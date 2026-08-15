@@ -1,0 +1,97 @@
+/* v7-8-15 — reviewed modal shell.
+   Based on the supplied Claude proposal: centered title, soft brand wash,
+   round close control and calmer shared modal chrome.
+   Adjusted after review for mobile touch targets and tighter responsive spacing. */
+
+html body .app-shell.app-shell.app-shell .modal{
+  overflow:hidden!important;
+  border-radius:22px!important;
+}
+html body .app-shell.app-shell.app-shell .modal>header{
+  position:relative!important;
+  height:auto!important;
+  min-height:78px!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:4px!important;
+  padding:28px 52px 18px!important;
+  text-align:center!important;
+  background:linear-gradient(180deg,rgba(122,110,242,.18) 0%,rgba(31,100,120,.07) 65%,transparent 100%)!important;
+}
+html body .app-shell.app-shell.app-shell .modal h2{
+  margin:0!important;
+  max-width:100%!important;
+  font-size:17px!important;
+  font-weight:650!important;
+  letter-spacing:-.01em!important;
+  line-height:1.25!important;
+}
+html body .app-shell.app-shell.app-shell .modal header button{
+  position:absolute!important;
+  top:13px!important;
+  right:13px!important;
+  width:34px!important;
+  height:34px!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  border:1px solid var(--line)!important;
+  border-radius:50%!important;
+  background:rgba(255,255,255,.07)!important;
+  color:var(--muted)!important;
+  font-size:16px!important;
+  line-height:1!important;
+  transition:background .15s ease,border-color .15s ease,color .15s ease,transform .15s ease!important;
+}
+html body .app-shell.app-shell.app-shell .modal header button:hover{
+  background:rgba(255,255,255,.13)!important;
+  border-color:rgba(142,132,235,.32)!important;
+  color:var(--text)!important;
+}
+html body .app-shell.app-shell.app-shell .modal header button:active{
+  transform:scale(.96)!important;
+}
+html body .app-shell.app-shell.app-shell .modal header button:focus-visible{
+  outline:2px solid rgba(143,127,245,.48)!important;
+  outline-offset:2px!important;
+}
+
+html[data-theme="light"] body .app-shell.app-shell.app-shell .modal>header{
+  background:linear-gradient(180deg,rgba(143,127,245,.16) 0%,rgba(43,167,201,.08) 65%,transparent 100%)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .modal header button{
+  background:rgba(20,26,15,.05)!important;
+  color:#66767f!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .modal header button:hover{
+  background:rgba(20,26,15,.09)!important;
+  color:#23343d!important;
+}
+
+@media(max-width:620px){
+  html body .app-shell.app-shell.app-shell .modal{
+    border-radius:20px!important;
+  }
+  html body .app-shell.app-shell.app-shell .modal>header{
+    min-height:76px!important;
+    padding:24px 58px 16px!important;
+  }
+  html body .app-shell.app-shell.app-shell .modal h2{
+    font-size:16px!important;
+  }
+  html body .app-shell.app-shell.app-shell .modal header button{
+    top:10px!important;
+    right:10px!important;
+    width:44px!important;
+    height:44px!important;
+    font-size:17px!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  html body .app-shell.app-shell.app-shell .modal,
+  html body .app-shell.app-shell.app-shell .modal header button{
+    transition:none!important;
+  }
+}
