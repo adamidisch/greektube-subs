@@ -1,12 +1,11 @@
-/* v7-8-14 — reviewed brand mark integration.
-   Keeps the current GreekTubePlayer DOM untouched and renders the approved
-   play + three tapered subtitle lines as a crisp embedded SVG layer.
-   This avoids a risky edit to the large player component while preserving
-   the exact visual concept from the Claude proposal.
+/* v7-8-14 — approved GreekTube Subs brand mark.
+   The original identity is three subtitle/text lines on the LEFT followed
+   by the play triangle on the RIGHT: top line longest, middle medium,
+   bottom shortest. This file keeps the large GreekTubePlayer component
+   untouched and renders the mark as a crisp embedded SVG layer.
 
-   Important: the previous .brand-mark:before triangle and inner <i> rules
-   remain in older stylesheets. They are explicitly disabled here so there
-   is never a duplicated play glyph or leftover two-line mark. */
+   Legacy pseudo/glyph constructions are explicitly disabled below so the
+   mark stays singular across header, footer and viewer variants. */
 
 html body .app-shell.app-shell.app-shell .brand-mark{
   display:flex!important;
@@ -16,21 +15,21 @@ html body .app-shell.app-shell.app-shell .brand-mark{
   color:transparent!important;
   font-size:0!important;
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'%3E%3Cpath d='M3 4 L3 20 L15 12 Z' fill='%23ffffff'/%3E%3Cline x1='19' y1='6.5' x2='29' y2='6.5' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round'/%3E%3Cline x1='19' y1='12' x2='26.5' y2='12' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round'/%3E%3Cline x1='19' y1='17.5' x2='24' y2='17.5' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E"),
-    linear-gradient(135deg,#7a6ef2 0%,#4f42c2 50%,#1f6478 130%)!important;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'%3E%3Cline x1='3' y1='6.5' x2='13' y2='6.5' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cline x1='3' y1='12' x2='10.5' y2='12' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cline x1='3' y1='17.5' x2='8' y2='17.5' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cpath d='M18 4 L18 20 L30 12 Z' fill='%23ffffff'/%3E%3C/svg%3E"),
+    linear-gradient(135deg,#7468e8 0%,#584bc6 53%,#287f9c 132%)!important;
   background-repeat:no-repeat,no-repeat!important;
   background-position:center,center!important;
-  background-size:20px 15px,100% 100%!important;
+  background-size:21px 16px,100% 100%!important;
 }
 
 html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-mark{
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'%3E%3Cpath d='M3 4 L3 20 L15 12 Z' fill='%23ffffff'/%3E%3Cline x1='19' y1='6.5' x2='29' y2='6.5' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round'/%3E%3Cline x1='19' y1='12' x2='26.5' y2='12' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round'/%3E%3Cline x1='19' y1='17.5' x2='24' y2='17.5' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E"),
-    linear-gradient(135deg,#8f7ff5 0%,#6a5cf0 50%,#2ba7c9 130%)!important;
-  box-shadow:0 7px 20px rgba(90,80,220,.22),inset 0 1px 0 rgba(255,255,255,.18)!important;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'%3E%3Cline x1='3' y1='6.5' x2='13' y2='6.5' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cline x1='3' y1='12' x2='10.5' y2='12' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cline x1='3' y1='17.5' x2='8' y2='17.5' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cpath d='M18 4 L18 20 L30 12 Z' fill='%23ffffff'/%3E%3C/svg%3E"),
+    linear-gradient(135deg,#8a7bf4 0%,#6658e8 50%,#2b9fbe 132%)!important;
+  box-shadow:0 7px 20px rgba(90,80,220,.20),inset 0 1px 0 rgba(255,255,255,.20)!important;
 }
 
-/* Disable the previous pseudo/glyph construction so the new mark is singular. */
+/* Disable all previous pseudo/glyph constructions. */
 html body .app-shell.app-shell.app-shell .brand-mark:before,
 html body .app-shell.app-shell.app-shell .brand-mark>i{
   content:none!important;
@@ -38,21 +37,21 @@ html body .app-shell.app-shell.app-shell .brand-mark>i{
 }
 
 html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
-  background-size:17px 13px,100% 100%!important;
+  background-size:18px 14px,100% 100%!important;
 }
 
-/* Quiet brand shine. */
+/* Keep animation extremely quiet so the icon reads as a logo first. */
 html body .app-shell.app-shell.app-shell .brand-mark:after{
   content:""!important;
   position:absolute!important;
   inset:-45% -70%!important;
-  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.20) 50%,transparent 58%)!important;
+  background:linear-gradient(115deg,transparent 44%,rgba(255,255,255,.14) 50%,transparent 56%)!important;
   transform:translateX(-55%)!important;
-  animation:brand-shine-unify 6s ease-in-out infinite!important;
+  animation:brand-shine-unify 7s ease-in-out infinite!important;
   pointer-events:none!important;
 }
 @keyframes brand-shine-unify{
-  0%,55%{transform:translateX(-55%)}
+  0%,62%{transform:translateX(-55%)}
   100%{transform:translateX(65%)}
 }
 
