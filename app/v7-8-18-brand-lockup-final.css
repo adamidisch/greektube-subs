@@ -1,0 +1,145 @@
+/* v7.8.16 — FINAL GreekTube Subs brand lockup.
+   One identity everywhere: dark rounded square, purple outline,
+   three descending subtitle lines on the LEFT + play triangle on the RIGHT.
+   Same geometry in home, viewer, settings and footer. Only physical size may scale.
+   This file is intentionally loaded last and overrides every legacy logo generation. */
+
+html body .app-shell.app-shell.app-shell .brand-mark{
+  position:relative!important;
+  width:36px!important;
+  height:36px!important;
+  flex:0 0 36px!important;
+  display:block!important;
+  overflow:hidden!important;
+  padding:0!important;
+  border:1px solid rgba(124,116,224,.72)!important;
+  border-radius:11px!important;
+  background:#11131a!important;
+  background-image:none!important;
+  color:transparent!important;
+  font-size:0!important;
+  line-height:0!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 5px 16px rgba(35,29,84,.16)!important;
+}
+
+/* Remove all legacy pseudo constructions. */
+html body .app-shell.app-shell.app-shell .brand-mark:before{
+  content:none!important;
+  display:none!important;
+}
+
+/* Three subtitle lines. The existing <i> is the single line-group primitive. */
+html body .app-shell.app-shell.app-shell .brand-mark>i{
+  position:absolute!important;
+  left:7px!important;
+  top:9px!important;
+  width:11px!important;
+  height:18px!important;
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:
+    linear-gradient(#f7f7fb,#f7f7fb) 0 1px/11px 2.4px no-repeat,
+    linear-gradient(#f7f7fb,#f7f7fb) 0 7.8px/8px 2.4px no-repeat,
+    linear-gradient(#f7f7fb,#f7f7fb) 0 14.6px/5px 2.4px no-repeat!important;
+  transform:none!important;
+  opacity:1!important;
+}
+html body .app-shell.app-shell.app-shell .brand-mark>i:before,
+html body .app-shell.app-shell.app-shell .brand-mark>i:after{
+  content:none!important;
+  display:none!important;
+}
+
+/* Play triangle. */
+html body .app-shell.app-shell.app-shell .brand-mark:after{
+  content:""!important;
+  position:absolute!important;
+  top:50%!important;
+  right:6px!important;
+  left:auto!important;
+  bottom:auto!important;
+  width:0!important;
+  height:0!important;
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  border-top:7px solid transparent!important;
+  border-bottom:7px solid transparent!important;
+  border-left:10px solid #f7f7fb!important;
+  border-right:0!important;
+  border-radius:0!important;
+  background:none!important;
+  transform:translateY(-50%)!important;
+  animation:none!important;
+  filter:none!important;
+  opacity:1!important;
+  pointer-events:none!important;
+}
+
+/* The icon itself never changes between dark and light mode. */
+html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-mark{
+  border-color:rgba(108,92,231,.72)!important;
+  background:#11131a!important;
+  background-image:none!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 5px 16px rgba(62,53,143,.14)!important;
+}
+
+/* Lockup: GreekTube neutral, Subs purple. */
+html body .app-shell.app-shell.app-shell .brand>span:not(.brand-mark),
+html body .app-shell.app-shell.app-shell .app-footer-brand>span:not(.brand-mark){
+  color:var(--text)!important;
+}
+html body .app-shell.app-shell.app-shell .brand b,
+html body .app-shell.app-shell.app-shell .app-footer-brand b{
+  color:#9186f2!important;
+  font-weight:650!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .brand b,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer-brand b{
+  color:#685bd8!important;
+}
+
+/* Footer: identical mark, scaled only — no alternate geometry or colors. */
+html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
+  width:30px!important;
+  height:30px!important;
+  flex:0 0 30px!important;
+  border-radius:9px!important;
+}
+html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark>i{
+  left:5.5px!important;
+  top:7px!important;
+  width:9px!important;
+  height:16px!important;
+  background:
+    linear-gradient(#f7f7fb,#f7f7fb) 0 1px/9px 2px no-repeat,
+    linear-gradient(#f7f7fb,#f7f7fb) 0 7px/6.5px 2px no-repeat,
+    linear-gradient(#f7f7fb,#f7f7fb) 0 13px/4px 2px no-repeat!important;
+}
+html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark:after{
+  right:5px!important;
+  border-top-width:5.8px!important;
+  border-bottom-width:5.8px!important;
+  border-left-width:8px!important;
+}
+
+@media(max-width:620px){
+  /* Keep the exact same square mark in mobile headers. */
+  html body .app-shell.app-shell.app-shell .brand-mark{
+    width:36px!important;
+    height:36px!important;
+    flex:0 0 36px!important;
+    border-radius:11px!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  html body .app-shell.app-shell.app-shell .brand-mark,
+  html body .app-shell.app-shell.app-shell .brand-mark:after{
+    animation:none!important;
+    transition:none!important;
+  }
+}
