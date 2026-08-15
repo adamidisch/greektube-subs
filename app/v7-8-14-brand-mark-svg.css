@@ -1,63 +1,112 @@
-/* v7-8-14 — approved GreekTube Subs brand mark.
-   The original identity is three subtitle/text lines on the LEFT followed
-   by the play triangle on the RIGHT: top line longest, middle medium,
-   bottom shortest. This file keeps the large GreekTubePlayer component
-   untouched and renders the mark as a crisp embedded SVG layer.
-
-   Legacy pseudo/glyph constructions are explicitly disabled below so the
-   mark stays singular across header, footer and viewer variants. */
+/* v7.8.15 — GreekTube Subs brand mark correction.
+   Approved identity: three descending subtitle/text lines on the LEFT and
+   a play triangle on the RIGHT. The mark is drawn with CSS geometry so it
+   stays crisp at the small sizes used in header, viewer and footer.
+   No glyph, embedded SVG or shine animation is used. */
 
 html body .app-shell.app-shell.app-shell .brand-mark{
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
+  position:relative!important;
+  width:38px!important;
+  height:30px!important;
+  flex:0 0 38px!important;
+  display:block!important;
   overflow:hidden!important;
+  padding:0!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  border-radius:10px!important;
+  background:linear-gradient(135deg,#7769e8 0%,#5b4fd0 52%,#2d8da8 132%)!important;
+  background-image:none!important;
   color:transparent!important;
   font-size:0!important;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'%3E%3Cline x1='3' y1='6.5' x2='13' y2='6.5' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cline x1='3' y1='12' x2='10.5' y2='12' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cline x1='3' y1='17.5' x2='8' y2='17.5' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cpath d='M18 4 L18 20 L30 12 Z' fill='%23ffffff'/%3E%3C/svg%3E"),
-    linear-gradient(135deg,#7468e8 0%,#584bc6 53%,#287f9c 132%)!important;
-  background-repeat:no-repeat,no-repeat!important;
-  background-position:center,center!important;
-  background-size:21px 16px,100% 100%!important;
+  line-height:0!important;
+  box-shadow:0 7px 20px rgba(69,59,153,.22),inset 0 1px 0 rgba(255,255,255,.18)!important;
 }
 
-html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-mark{
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'%3E%3Cline x1='3' y1='6.5' x2='13' y2='6.5' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cline x1='3' y1='12' x2='10.5' y2='12' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cline x1='3' y1='17.5' x2='8' y2='17.5' stroke='%23ffffff' stroke-width='2.35' stroke-linecap='round'/%3E%3Cpath d='M18 4 L18 20 L30 12 Z' fill='%23ffffff'/%3E%3C/svg%3E"),
-    linear-gradient(135deg,#8a7bf4 0%,#6658e8 50%,#2b9fbe 132%)!important;
-  box-shadow:0 7px 20px rgba(90,80,220,.20),inset 0 1px 0 rgba(255,255,255,.20)!important;
+/* Three subtitle lines: long / medium / short. */
+html body .app-shell.app-shell.app-shell .brand-mark:before{
+  content:""!important;
+  position:absolute!important;
+  left:7px!important;
+  top:7px!important;
+  width:12px!important;
+  height:16px!important;
+  display:block!important;
+  border:0!important;
+  background:
+    linear-gradient(#fff,#fff) 0 1px/12px 2px no-repeat,
+    linear-gradient(#fff,#fff) 0 7px/9px 2px no-repeat,
+    linear-gradient(#fff,#fff) 0 13px/6px 2px no-repeat!important;
+  border-radius:0!important;
+  filter:none!important;
+  transform:none!important;
+  opacity:.96!important;
 }
 
-/* Disable all previous pseudo/glyph constructions. */
-html body .app-shell.app-shell.app-shell .brand-mark:before,
+/* Play triangle. */
+html body .app-shell.app-shell.app-shell .brand-mark:after{
+  content:""!important;
+  position:absolute!important;
+  top:50%!important;
+  right:7px!important;
+  left:auto!important;
+  bottom:auto!important;
+  width:0!important;
+  height:0!important;
+  display:block!important;
+  border-top:6px solid transparent!important;
+  border-bottom:6px solid transparent!important;
+  border-left:9px solid #fff!important;
+  border-right:0!important;
+  background:none!important;
+  transform:translateY(-50%)!important;
+  animation:none!important;
+  opacity:.98!important;
+  pointer-events:none!important;
+}
+
+/* Remove every legacy inner-line construction and the literal ▶ glyph. */
 html body .app-shell.app-shell.app-shell .brand-mark>i{
   content:none!important;
   display:none!important;
 }
 
+html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-mark{
+  border-color:rgba(50,65,126,.15)!important;
+  background:linear-gradient(135deg,#8878f1 0%,#6558df 50%,#2ca1bd 132%)!important;
+  background-image:none!important;
+  box-shadow:0 6px 17px rgba(72,68,170,.18),inset 0 1px 0 rgba(255,255,255,.22)!important;
+}
+
+/* Footer uses the same geometry at a quieter size. */
 html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
-  background-size:18px 14px,100% 100%!important;
+  width:31px!important;
+  height:25px!important;
+  flex-basis:31px!important;
+  border-radius:8px!important;
+}
+html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark:before{
+  left:5px!important;
+  top:5px!important;
+  width:10px!important;
+  height:15px!important;
+  background:
+    linear-gradient(#fff,#fff) 0 1px/10px 1.8px no-repeat,
+    linear-gradient(#fff,#fff) 0 6.5px/7.5px 1.8px no-repeat,
+    linear-gradient(#fff,#fff) 0 12px/5px 1.8px no-repeat!important;
+}
+html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark:after{
+  right:5px!important;
+  border-top-width:5px!important;
+  border-bottom-width:5px!important;
+  border-left-width:7px!important;
 }
 
-/* Keep animation extremely quiet so the icon reads as a logo first. */
-html body .app-shell.app-shell.app-shell .brand-mark:after{
-  content:""!important;
-  position:absolute!important;
-  inset:-45% -70%!important;
-  background:linear-gradient(115deg,transparent 44%,rgba(255,255,255,.14) 50%,transparent 56%)!important;
-  transform:translateX(-55%)!important;
-  animation:brand-shine-unify 7s ease-in-out infinite!important;
-  pointer-events:none!important;
-}
-@keyframes brand-shine-unify{
-  0%,62%{transform:translateX(-55%)}
-  100%{transform:translateX(65%)}
-}
-
-@media(prefers-reduced-motion:reduce){
-  html body .app-shell.app-shell.app-shell .brand-mark:after{
-    animation:none!important;
-    display:none!important;
+@media(max-width:620px){
+  html body .app-shell.app-shell.app-shell .brand-mark{
+    width:36px!important;
+    height:30px!important;
+    flex-basis:36px!important;
   }
+  html body .app-shell.app-shell.app-shell .brand-mark:before{left:6px!important}
+  html body .app-shell.app-shell.app-shell .brand-mark:after{right:6px!important}
 }
