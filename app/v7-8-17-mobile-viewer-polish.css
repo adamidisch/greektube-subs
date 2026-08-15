@@ -1,0 +1,397 @@
+/* v7.8.15 — mobile viewer production polish.
+   Fixes the crowded viewer header, restores 44px touch targets, gives the
+   primary playback controls enough room on phones and makes light mode a
+   complete viewer theme instead of a light header over a dark page.
+   Visual-only: no player, subtitle, timing or persistence behavior changes. */
+
+/* ---------- Mobile viewer header ---------- */
+@media(max-width:620px){
+  html body .viewer.viewer.viewer>.app-header{
+    position:relative!important;
+    min-height:64px!important;
+    height:64px!important;
+    display:flex!important;
+    align-items:center!important;
+    gap:8px!important;
+    padding:8px 0!important;
+    border-bottom:1px solid rgba(255,255,255,.08)!important;
+    background:rgba(10,12,16,.94)!important;
+    box-shadow:none!important;
+    backdrop-filter:blur(18px)!important;
+  }
+
+  /* Center the identity independently of the left/right utilities. */
+  html body .viewer.viewer.viewer>.app-header>.brand{
+    position:absolute!important;
+    left:50%!important;
+    top:50%!important;
+    z-index:3!important;
+    min-width:44px!important;
+    min-height:44px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    margin:0!important;
+    padding:0!important;
+    transform:translate(-50%,-50%)!important;
+  }
+  html body .viewer.viewer.viewer>.app-header>.brand>span:not(.brand-mark),
+  html body .viewer.viewer.viewer>.app-header>.brand .brand-version{
+    display:none!important;
+  }
+  html body .viewer.viewer.viewer>.app-header>.brand .brand-mark{
+    width:36px!important;
+    height:30px!important;
+    flex-basis:36px!important;
+  }
+
+  html body .viewer.viewer.viewer>.app-header>.back-library,
+  html body .viewer.viewer.viewer>.app-header>.back-to-video{
+    min-width:0!important;
+    width:auto!important;
+    height:44px!important;
+    min-height:44px!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:5px!important;
+    margin:0!important;
+    padding:0 10px!important;
+    border:1px solid rgba(255,255,255,.09)!important;
+    border-radius:11px!important;
+    background:rgba(255,255,255,.035)!important;
+    color:#c8cdd5!important;
+    font-size:13px!important;
+    font-weight:620!important;
+    line-height:1!important;
+    white-space:nowrap!important;
+    box-shadow:none!important;
+  }
+  html body .viewer.viewer.viewer>.app-header>.back-library>span{
+    font-size:18px!important;
+    line-height:1!important;
+  }
+
+  html body .viewer.viewer.viewer>.app-header>.icon-button{
+    width:44px!important;
+    min-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
+    flex:0 0 44px!important;
+    display:grid!important;
+    place-items:center!important;
+    margin-left:auto!important;
+    padding:0!important;
+    border-radius:11px!important;
+  }
+  html body .viewer.viewer.viewer>.app-header>.theme-quick-toggle{
+    position:static!important;
+    width:44px!important;
+    min-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
+    flex:0 0 44px!important;
+    margin:0!important;
+    transform:none!important;
+    border-radius:11px!important;
+  }
+  html body .viewer.viewer.viewer>.app-header>.theme-quick-toggle:active{
+    transform:scale(.96)!important;
+  }
+
+  /* ---------- Mobile controls: stop squeezing four playback actions ---------- */
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools{
+    padding:11px 11px 13px!important;
+    border-radius:16px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    grid-template-rows:auto auto!important;
+    grid-auto-flow:row!important;
+    gap:8px!important;
+    margin:0 0 8px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.player-toolbar{
+    grid-column:1/-1!important;
+    grid-row:1!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.fullscreen-primary{
+    grid-column:1!important;
+    grid-row:2!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.speed-control{
+    grid-column:2!important;
+    grid-row:2!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{
+    min-height:56px!important;
+    width:100%!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:12px!important;
+    padding:6px 10px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button{
+    width:44px!important;
+    min-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
+    flex:0 0 44px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .play-toggle{
+    width:46px!important;
+    min-width:46px!important;
+    height:46px!important;
+    min-height:46px!important;
+    flex:0 0 46px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-control{
+    flex:0 0 44px!important;
+    width:44px!important;
+    min-width:44px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-toggle{
+    width:44px!important;
+    min-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary,
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control{
+    width:100%!important;
+    min-width:0!important;
+    height:48px!important;
+    min-height:48px!important;
+    margin:0!important;
+    border:1px solid #2b313b!important;
+    border-radius:12px!important;
+    background:#1b1f26!important;
+    color:#f6f3ec!important;
+    box-shadow:none!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:8px!important;
+    padding:0 9px 0 12px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>span{
+    display:block!important;
+    color:#aeb3bd!important;
+    font-size:11px!important;
+    font-weight:600!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>select{
+    min-width:58px!important;
+    height:34px!important;
+    padding:0 8px!important;
+    border:1px solid #343a44!important;
+    border-radius:9px!important;
+    background:#252a32!important;
+    color:#f6f3ec!important;
+    font-size:12px!important;
+    font-weight:650!important;
+    outline:0!important;
+  }
+
+  html body .viewer.viewer.viewer .video-heading{
+    margin-top:18px!important;
+  }
+  html body .viewer.viewer.viewer .player-greek-title{
+    font-size:22px!important;
+    line-height:1.24!important;
+    letter-spacing:-.025em!important;
+  }
+}
+
+/* ---------- Complete light viewer theme ---------- */
+html[data-theme="light"] body .viewer.viewer.viewer{
+  --v6-ink:#f3f6f7!important;
+  --v6-panel:#ffffff!important;
+  --v6-panel-2:#f4f7f8!important;
+  --v6-line:#d9e1e5!important;
+  --v6-paper:#17252d!important;
+  --v6-muted:#596a73!important;
+  --v6-soft:#798991!important;
+  --v6-sage:#4f8a72!important;
+  --text:#17252d!important;
+  --muted:#596a73!important;
+  --soft:#798991!important;
+  --line:#d9e1e5!important;
+  --panel:#ffffff!important;
+  --raised:#f3f6f7!important;
+  background:#f3f6f7!important;
+  color:#17252d!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer>.app-header{
+  border-bottom-color:rgba(26,52,65,.10)!important;
+  background:rgba(248,250,251,.96)!important;
+  box-shadow:0 5px 18px rgba(31,54,66,.055)!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer>.app-header>.back-library,
+html[data-theme="light"] body .viewer.viewer.viewer>.app-header>.back-to-video,
+html[data-theme="light"] body .viewer.viewer.viewer>.app-header>.icon-button,
+html[data-theme="light"] body .viewer.viewer.viewer>.app-header>.theme-quick-toggle{
+  border-color:rgba(28,55,68,.13)!important;
+  background:#fff!important;
+  color:#314750!important;
+  box-shadow:0 2px 8px rgba(29,55,67,.045)!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer>.app-header>.back-library:hover,
+html[data-theme="light"] body .viewer.viewer.viewer>.app-header>.back-to-video:hover,
+html[data-theme="light"] body .viewer.viewer.viewer>.app-header>.icon-button:hover,
+html[data-theme="light"] body .viewer.viewer.viewer>.app-header>.theme-quick-toggle:hover{
+  border-color:rgba(101,88,222,.25)!important;
+  background:#f6f4ff!important;
+  color:#5c51be!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer .speaker-row{
+  border-color:#dbe2e5!important;
+  background:transparent!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .speaker-row strong,
+html[data-theme="light"] body .viewer.viewer.viewer .speaker-row span,
+html[data-theme="light"] body .viewer.viewer.viewer .speaker-row small{
+  color:#26363e!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .speaker-row:before{
+  background:#68a879!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools{
+  border-color:#d8e0e4!important;
+  border-top-color:#d8e0e4!important;
+  background:#ffffff!important;
+  box-shadow:0 8px 26px rgba(28,50,60,.055)!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls,
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary,
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control{
+  border-color:#dbe2e5!important;
+  background:#f6f8f9!important;
+  color:#25353d!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button,
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-toggle{
+  color:#66777f!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button small{
+  color:#75858d!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary span{
+  color:#25353d!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>span{
+  color:#687880!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>select{
+  border-color:#d5dde1!important;
+  background:#fff!important;
+  color:#223139!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
+html[data-theme="light"] body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions.player-secondary-actions>button.transcript-toggle,
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control>.cc-toggle{
+  border-color:rgba(101,88,222,.28)!important;
+  background:#f5f3ff!important;
+  color:#5d52bd!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save>span:not(.moment-count),
+html[data-theme="light"] body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions.player-secondary-actions>button.transcript-toggle>span:not(.moment-count):not(.cc-active-tag),
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-label,
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-card-icon{
+  color:#5d52bd!important;
+  stroke:#5d52bd!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-toggle>small{
+  color:#4e866c!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer .video-heading,
+html[data-theme="light"] body .viewer.viewer.viewer .video-heading h1,
+html[data-theme="light"] body .viewer.viewer.viewer .player-greek-title,
+html[data-theme="light"] body .viewer.viewer.viewer .section-title h2{
+  color:#17252d!important;
+  -webkit-text-fill-color:#17252d!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-original-title{
+  color:#397b98!important;
+  -webkit-text-fill-color:#397b98!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-video-description,
+html[data-theme="light"] body .viewer.viewer.viewer .guide-intro,
+html[data-theme="light"] body .viewer.viewer.viewer .muted{
+  color:#61717a!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .video-heading a,
+html[data-theme="light"] body .viewer.viewer.viewer .speaker-row a{
+  color:#397b98!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-watch-summary section{
+  border-color:#d9e1e5!important;
+  background:#fff!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-watch-summary strong{color:#17252d!important}
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-watch-summary small{color:#65757d!important}
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-watch-summary button{
+  border-color:#d9e1e5!important;
+  background:#f4f7f8!important;
+  color:#283941!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer .transcript{
+  background:#fff!important;
+  border-color:#d9e1e5!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .transcript>button:hover{
+  border-color:#dbe2e5!important;
+  background:#f4f7f8!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .transcript>button.active{
+  border-color:rgba(101,88,222,.28)!important;
+  background:#f4f1ff!important;
+  box-shadow:none!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .transcript span{color:#26363e!important}
+html[data-theme="light"] body .viewer.viewer.viewer .transcript time{
+  border-color:#ddd9f4!important;
+  background:#f5f3ff!important;
+  color:#6559c8!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer .next-video-row button{
+  border-color:#d9e1e5!important;
+  background:#fff!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .next-video-row strong{color:#17252d!important}
+html[data-theme="light"] body .viewer.viewer.viewer .next-video-row small{color:#65757d!important}
+
+@media(max-width:360px){
+  html body .viewer.viewer.viewer>.app-header>.back-library,
+  html body .viewer.viewer.viewer>.app-header>.back-to-video{
+    padding-inline:8px!important;
+    font-size:12.5px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{
+    gap:7px!important;
+    padding-inline:6px!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>span{
+    display:none!important;
+  }
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control{
+    justify-content:center!important;
+    padding:0 7px!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  html body .viewer.viewer.viewer>.app-header>*{transition:none!important}
+}
