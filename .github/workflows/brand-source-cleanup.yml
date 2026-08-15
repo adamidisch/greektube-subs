@@ -1,0 +1,43 @@
+name: Brand source cleanup
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ !contains(github.event.head_commit.message, '[brand-cleanup]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Remove legacy logo source rules
+        run: node scripts/brand-cleanup.mjs
+
+      - name: Commit cleaned sources
+        shell: bash
+        run: |
+          if git diff --quiet -- app/GreekTubePlayer.tsx app/*.css; then
+            echo "No legacy logo source rules remain."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/GreekTubePlayer.tsx app/*.css
+          git commit -m "chore: remove legacy logo source rules [brand-cleanup]"
+          git push origin HEAD:main
