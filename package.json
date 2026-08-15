@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/brand-cleanup.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "test:caption-integrity": "node --experimental-strip-types scripts/caption-numeric-integrity.test.mjs",
