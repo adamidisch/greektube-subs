@@ -50,7 +50,10 @@ export async function generateMetadata({
     if (value) shareUrl.searchParams.set(key, value);
   }
 
-  const image = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  const shareImage = new URL("/api/share-card", SITE_URL);
+  shareImage.searchParams.set("video", videoId);
+  shareImage.searchParams.set("title", videoTitle);
+
   const description = "Δες το με ελληνικούς υπότιτλους στο GreekTube Subs · greektubesubs.com";
 
   return {
@@ -63,13 +66,18 @@ export async function generateMetadata({
       siteName: "GreekTube Subs",
       title: videoTitle,
       description,
-      images: [{ url: image, width: 480, height: 360, alt: videoTitle }],
+      images: [{
+        url: shareImage.toString(),
+        width: 1200,
+        height: 630,
+        alt: `${videoTitle} · GreekTube Subs`,
+      }],
     },
     twitter: {
       card: "summary_large_image",
       title: videoTitle,
       description,
-      images: [image],
+      images: [shareImage.toString()],
     },
   };
 }
