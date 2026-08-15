@@ -29,6 +29,7 @@ import "./v7-8-13-reference-controls-footer.css";
 import "./v7-8-14-brand-mark-svg.css";
 import "./v7-8-15-modal-shell.css";
 import "./v7-8-16-home-title-polish.css";
+import "./v7-8-17-mobile-viewer-polish.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
