@@ -1,0 +1,76 @@
+/* GreekTube Subs — canonical brand lockup.
+   ONE source of truth for the mark: /public/brand-mark.svg
+   The exact same mark is used in desktop, mobile, player, footer and favicon.
+   Only rendered size changes by context. */
+
+html body .app-shell.app-shell.app-shell .brand-mark{
+  position:relative!important;
+  width:38px!important;
+  height:32px!important;
+  flex:0 0 38px!important;
+  display:block!important;
+  overflow:visible!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent url("/brand-mark.svg") center/contain no-repeat!important;
+  color:transparent!important;
+  font-size:0!important;
+  line-height:0!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+
+/* Kill every historical CSS/glyph construction. */
+html body .app-shell.app-shell.app-shell .brand-mark:before,
+html body .app-shell.app-shell.app-shell .brand-mark:after,
+html body .app-shell.app-shell.app-shell .brand-mark>i,
+html body .app-shell.app-shell.app-shell .brand-mark>i:before,
+html body .app-shell.app-shell.app-shell .brand-mark>i:after{
+  content:none!important;
+  display:none!important;
+  background:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  animation:none!important;
+}
+
+/* Wordmark identity is also shared everywhere. */
+html body .app-shell.app-shell.app-shell .brand b,
+html body .app-shell.app-shell.app-shell .app-footer-brand b{
+  color:#8C83F7!important;
+  font-weight:620!important;
+}
+
+/* Footer: exact same mark, only smaller. */
+html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
+  width:32px!important;
+  height:26px!important;
+  flex:0 0 32px!important;
+}
+
+/* Player/header desktop uses the same asset with no visual variant. */
+html body .viewer.viewer.viewer .brand-mark{
+  width:38px!important;
+  height:32px!important;
+  flex:0 0 38px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent url("/brand-mark.svg") center/contain no-repeat!important;
+  box-shadow:none!important;
+}
+
+@media(max-width:620px){
+  html body .app-shell.app-shell.app-shell .brand-mark,
+  html body .viewer.viewer.viewer .brand-mark{
+    width:35px!important;
+    height:28px!important;
+    flex:0 0 35px!important;
+  }
+
+  html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
+    width:30px!important;
+    height:24px!important;
+    flex:0 0 30px!important;
+  }
+}
