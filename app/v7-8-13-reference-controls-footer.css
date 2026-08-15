@@ -1,0 +1,195 @@
+/* v7.8.13 — reference-driven controls + footer polish.
+   Inspired by the supplied compact top-bar controls and soft grey/lilac panel.
+   Visual-only: no player, translation or state behavior changes. */
+
+/* ---------- Premium Add Video CTA ---------- */
+html body .app-shell.app-shell.app-shell .app-header .add-top{
+  min-height:40px!important;
+  height:40px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  padding:0 15px!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  border-radius:12px!important;
+  background:linear-gradient(180deg,#242833 0%,#1a1e27 100%)!important;
+  color:#f4f5f8!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.055)!important;
+  font-size:12.5px!important;
+  font-weight:680!important;
+  letter-spacing:-.012em!important;
+  white-space:nowrap!important;
+  transform:none!important;
+  transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease,color .16s ease!important;
+}
+html body .app-shell.app-shell.app-shell .app-header .add-top:hover{
+  transform:translateY(-1px)!important;
+  border-color:rgba(151,139,238,.34)!important;
+  background:linear-gradient(180deg,#2a2e3a 0%,#1e222c 100%)!important;
+  box-shadow:0 8px 22px rgba(0,0,0,.22),0 0 0 1px rgba(124,116,224,.06)!important;
+}
+html body .app-shell.app-shell.app-shell .app-header .add-top:active{transform:translateY(0) scale(.985)!important}
+html body .app-shell.app-shell.app-shell .app-header .add-top:focus-visible{
+  outline:2px solid rgba(151,139,238,.5)!important;
+  outline-offset:2px!important;
+}
+
+html[data-theme="light"] body .app-shell.app-shell.app-shell .app-header .add-top{
+  border-color:rgba(35,43,48,.17)!important;
+  background:linear-gradient(180deg,#ffffff 0%,#f2f4f2 100%)!important;
+  color:#20262a!important;
+  box-shadow:0 3px 10px rgba(30,40,44,.06),inset 0 1px 0 rgba(255,255,255,.95)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .app-header .add-top:hover{
+  border-color:rgba(100,87,205,.31)!important;
+  background:linear-gradient(180deg,#fff 0%,#f2effb 100%)!important;
+  color:#4f45a3!important;
+  box-shadow:0 6px 17px rgba(57,49,124,.09),0 0 0 1px rgba(100,87,205,.035)!important;
+}
+
+/* Mobile add action uses the same product language while keeping a full touch target. */
+html body .app-shell.app-shell.app-shell .mobile-menu .mobile-add{
+  min-height:44px!important;
+  border:1px solid rgba(151,139,238,.24)!important;
+  border-radius:11px!important;
+  background:linear-gradient(180deg,rgba(124,116,224,.15),rgba(124,116,224,.08))!important;
+  color:#d9d5ff!important;
+  box-shadow:none!important;
+  font-size:13px!important;
+  font-weight:680!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .mobile-menu .mobile-add{
+  border-color:rgba(100,87,205,.22)!important;
+  background:#f1eefb!important;
+  color:#5147a4!important;
+}
+
+/* ---------- Reference-style utility controls ----------
+   Applies the compact Export/Share visual language only to utility actions.
+   Player transport controls and primary CTAs stay untouched. */
+html body .app-shell.app-shell.app-shell .secondary,
+html body .app-shell.app-shell.app-shell .ghost,
+html body .app-shell.app-shell.app-shell .icon-button,
+html body .app-shell.app-shell.app-shell .sync-library{
+  border-radius:11px!important;
+  box-shadow:none!important;
+  font-weight:620!important;
+  transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease,transform .15s ease!important;
+}
+html body .app-shell.app-shell.app-shell .secondary:hover,
+html body .app-shell.app-shell.app-shell .ghost:hover,
+html body .app-shell.app-shell.app-shell .icon-button:hover,
+html body .app-shell.app-shell.app-shell .sync-library:hover{
+  transform:translateY(-1px)!important;
+}
+html body .app-shell.app-shell.app-shell .secondary:active,
+html body .app-shell.app-shell.app-shell .ghost:active,
+html body .app-shell.app-shell.app-shell .icon-button:active,
+html body .app-shell.app-shell.app-shell .sync-library:active{
+  transform:translateY(0) scale(.985)!important;
+}
+
+html[data-theme="light"] body .app-shell.app-shell.app-shell .secondary,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .ghost,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .icon-button,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .sync-library{
+  border:1px solid rgba(34,42,46,.16)!important;
+  background:linear-gradient(180deg,#fdfefd 0%,#f1f3f1 100%)!important;
+  color:#293034!important;
+  box-shadow:0 2px 7px rgba(27,35,39,.035)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .secondary:hover,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .ghost:hover,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .icon-button:hover,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .sync-library:hover{
+  border-color:rgba(87,95,99,.25)!important;
+  background:#fff!important;
+  color:#171d20!important;
+  box-shadow:0 5px 14px rgba(28,36,40,.065)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .secondary:focus-visible,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .ghost:focus-visible,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .icon-button:focus-visible,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .sync-library:focus-visible{
+  outline:2px solid rgba(100,87,205,.36)!important;
+  outline-offset:2px!important;
+}
+
+/* Keep compact navigation/filter actions visually related without flattening selected states. */
+html[data-theme="light"] body .app-shell.app-shell.app-shell .desktop-nav button{
+  border:1px solid transparent!important;
+  border-radius:10px!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .desktop-nav button:hover{
+  border-color:rgba(34,42,46,.10)!important;
+  background:rgba(255,255,255,.74)!important;
+  box-shadow:0 2px 7px rgba(27,35,39,.035)!important;
+}
+
+/* ---------- Footer: distinct soft grey/lilac surface ---------- */
+html body main.app-shell.app-shell.app-shell:not(.viewer){padding-bottom:10px!important}
+html body .app-shell.app-shell.app-shell .app-footer{
+  position:relative!important;
+  overflow:hidden!important;
+  gap:7px!important;
+  margin:38px 0 0!important;
+  padding:22px 24px 20px!important;
+  border:1px solid rgba(255,255,255,.095)!important;
+  border-radius:18px!important;
+  background:linear-gradient(135deg,#1d2028 0%,#191c23 58%,#20232c 100%)!important;
+  box-shadow:0 9px 26px rgba(0,0,0,.17),inset 0 1px 0 rgba(255,255,255,.035)!important;
+  text-align:center!important;
+}
+html body .app-shell.app-shell.app-shell .app-footer:before{
+  content:""!important;
+  position:absolute!important;
+  inset:0 0 auto 0!important;
+  height:2px!important;
+  background:linear-gradient(90deg,rgba(124,116,224,.88),rgba(88,176,197,.72),rgba(124,116,224,.12))!important;
+  pointer-events:none!important;
+}
+html body .app-shell.app-shell.app-shell .app-footer-brand{
+  color:#f2f3f5!important;
+  font-size:12.5px!important;
+  font-weight:680!important;
+}
+html body .app-shell.app-shell.app-shell .app-footer-brand b{color:#9ca2ad!important}
+html body .app-shell.app-shell.app-shell .app-footer>p{color:#aeb4bd!important}
+html body .app-shell.app-shell.app-shell .app-footer-note{color:#7f8691!important}
+
+html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer{
+  border-color:rgba(64,69,77,.16)!important;
+  background:linear-gradient(135deg,#e4e7ea 0%,#eceef0 52%,#dfe3e7 100%)!important;
+  box-shadow:0 9px 25px rgba(45,54,61,.075),inset 0 1px 0 rgba(255,255,255,.72)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer:before{
+  background:linear-gradient(90deg,#7667df 0%,#8f83e7 34%,#79bdcb 72%,rgba(121,189,203,.12) 100%)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer-brand{color:#1d2429!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer-brand b{color:#646c73!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer>p{color:#5f6870!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer-note{color:#7b838a!important}
+
+/* Footer brand mark gets a quieter surface-specific shadow. */
+html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
+  box-shadow:0 4px 12px rgba(66,58,145,.16)!important;
+}
+
+@media(max-width:620px){
+  html body main.app-shell.app-shell.app-shell:not(.viewer){padding-bottom:8px!important}
+  html body .app-shell.app-shell.app-shell .app-footer{
+    margin-top:28px!important;
+    padding:19px 16px 17px!important;
+    border-radius:16px!important;
+  }
+  html body .app-shell.app-shell.app-shell .app-header .add-top{display:none!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html body .app-shell.app-shell.app-shell .app-header .add-top,
+  html body .app-shell.app-shell.app-shell .secondary,
+  html body .app-shell.app-shell.app-shell .ghost,
+  html body .app-shell.app-shell.app-shell .icon-button,
+  html body .app-shell.app-shell.app-shell .sync-library{transition:none!important}
+}
