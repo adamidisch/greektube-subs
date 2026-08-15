@@ -2,6 +2,13 @@
 
 These rules are the visual contract for every future change.
 
+## DesignerUI workflow
+
+- For every website, app, dashboard, responsive-layout or visual-polish task, read and apply `.agents/skills/designerui/SKILL.md` before editing UI code.
+- Treat supplied screenshots and visual references as design inputs: extract their palette, typography, icon language, density, spacing and hierarchy before deciding what belongs in GreekTube Subs.
+- Do not copy references literally. Preserve GreekTube Subs identity and translate only the useful design principles.
+- A successful build is not sufficient. Complete the visual and responsive quality gate from the DesignerUI skill before publishing.
+
 ## Product direction
 
 - Keep the interface premium, calm and mobile-first with native iPhone-style proportions.
