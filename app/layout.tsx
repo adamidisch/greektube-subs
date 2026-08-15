@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { APP_VERSION } from "./version";
+import UserProfileEnhancer from "./UserProfileEnhancer";
 import "./globals.css";
 import "./mobile-controls-fix.css";
 import "./ui-651.css";
@@ -23,6 +24,7 @@ import "./v7-8-10-polish.css";
 import "./v7-8-10-caption-icons.css";
 import "./v7-8-11-light-polish.css";
 import "./v7-8-12-theme-toggle.css";
+import "./v7-8-13-designerui.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,6 +61,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <UserProfileEnhancer />
       </body>
     </html>
   );
