@@ -76,14 +76,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   background:transparent;
   color:var(--ui-text);
 }
-.brand-mark{
-  width:34px;
-  height:26px;
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:9px;
-  background:linear-gradient(145deg,#8179e4,#57516f);
-  box-shadow:0 8px 22px rgba(124,116,224,.20);
-}
 .brand>span:nth-child(2){font-size:14px;font-weight:670;letter-spacing:-.025em}
 .brand>span:nth-child(2) b{color:var(--ui-muted);font-weight:520}
 .brand-version{

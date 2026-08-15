@@ -41,58 +41,6 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-version{
 html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-version::after{color:#282831!important}
 
 /* Unified premium brand mark in library and viewer. */
-html body .app-shell.app-shell.app-shell .brand-mark,
-html body .app-shell.app-shell.app-shell.viewer .brand-mark{
-  width:38px!important;
-  height:28px!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:flex-start!important;
-  position:relative!important;
-  overflow:hidden!important;
-  flex:none!important;
-  padding:0 0 0 7px!important;
-  border:1px solid rgba(255,255,255,.17)!important;
-  border-radius:10px!important;
-  background:linear-gradient(155deg,#9b8ff5 0%,#6b5fc7 45%,#3a3560 100%)!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -6px 10px rgba(0,0,0,.22),0 7px 22px rgba(111,96,207,.17)!important;
-  color:#fff!important;
-  font-size:0!important;
-}
-html body .app-shell.app-shell.app-shell .brand-mark i,
-html body .app-shell.app-shell.app-shell.viewer .brand-mark i{
-  display:block!important;
-  width:14px!important;
-  height:14px!important;
-  flex:none!important;
-  background:linear-gradient(#fff,#fff) 0 1px/14px 2px no-repeat,linear-gradient(#fff,#fff) 0 6.5px/10px 2px no-repeat,linear-gradient(#fff,#fff) 0 12px/6px 2px no-repeat!important;
-  opacity:1!important;
-  transform:none!important;
-  font-size:0!important;
-}
-html body .app-shell.app-shell.app-shell .brand-mark::before,
-html body .app-shell.app-shell.app-shell.viewer .brand-mark::before{
-  content:""!important;
-  position:absolute!important;
-  right:7px!important;
-  top:50%!important;
-  width:0!important;
-  height:0!important;
-  transform:translateY(-50%)!important;
-  border-top:5.5px solid transparent!important;
-  border-bottom:5.5px solid transparent!important;
-  border-left:8px solid #ded8ff!important;
-}
-html body .app-shell.app-shell.app-shell .brand-mark::after,
-html body .app-shell.app-shell.app-shell.viewer .brand-mark::after{
-  content:""!important;
-  position:absolute!important;
-  inset:-45% -70%!important;
-  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.24) 50%,transparent 58%)!important;
-  transform:translateX(-55%)!important;
-  animation:brand-shine-v753 6s ease-in-out infinite!important;
-  pointer-events:none!important;
-}
 @keyframes brand-shine-v753{0%,55%{transform:translateX(-55%)}100%{transform:translateX(65%)}}
 
 /*
@@ -163,7 +111,5 @@ html body .app-shell.app-shell.app-shell .video-details::after{
 }
 
 @media(prefers-reduced-motion:reduce){
-  html body .app-shell.app-shell.app-shell .brand-mark::after,
-  html body .app-shell.app-shell.app-shell.viewer .brand-mark::after{animation:none!important;display:none!important}
   html body .app-shell.app-shell.app-shell .video-details::before{animation:v753-ready-hide .01s linear 1.8s forwards!important}
 }

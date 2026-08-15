@@ -359,12 +359,6 @@ html body .app-shell.app-shell.app-shell .speaker-row strong{font-size:12px!impo
 html body .app-shell.app-shell.app-shell .speaker-row i{font-size:10.5px!important;font-style:normal!important;color:#8b9099!important}
 
 /* ---- brand-mark: one consistent size everywhere ---- */
-html body .app-shell.app-shell.app-shell .brand-mark{
-  width:32px!important;height:28px!important;display:flex!important;align-items:center!important;justify-content:center!important;
-  gap:2px!important;padding:0!important;border:1px solid rgba(255,255,255,.14)!important;border-radius:8px!important;
-  background:linear-gradient(135deg,#776bd1,#49435f)!important;color:#fff!important;font-size:9px!important;
-  box-shadow:0 7px 22px rgba(119,107,209,.24)!important;
-}
 
 /* ---- back-library / back-to-video nav buttons: height set 3-4 times
    (36/40/44px) and font-size 3 times (13/13.5/14px) ---- */
@@ -421,9 +415,6 @@ html body .app-shell.app-shell.app-shell .app-footer{
 html body .app-shell.app-shell.app-shell .app-footer-brand{
   display:flex!important;align-items:center!important;gap:9px!important;font-size:13px!important;font-weight:650!important;color:#f6f3ec!important;
 }
-html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
-  width:26px!important;height:22px!important;font-size:8px!important;box-shadow:0 6px 18px rgba(119,107,209,.24)!important;
-}
 html body .app-shell.app-shell.app-shell .app-footer-brand b{color:#8b9099!important;font-weight:520!important}
 html body .app-shell.app-shell.app-shell .app-footer>p{margin:0!important;max-width:360px!important;color:#8b9099!important;font-size:12px!important;line-height:1.5!important}
 html body .app-shell.app-shell.app-shell .app-footer-note{color:#5f6570!important;font-size:11px!important}
@@ -443,7 +434,6 @@ html body .app-shell.app-shell.app-shell .secondary{
 }
 html body .app-shell.app-shell.app-shell .secondary:hover{border-color:rgba(255,255,255,.2)!important}
 html body .app-shell.app-shell.app-shell .setting-row input:checked{background:#7c74e0!important}
-html body .app-shell.app-shell.app-shell .brand-mark{background:linear-gradient(135deg,#8f86e8,#5d54b8)!important}
 html body .app-shell.app-shell.app-shell .tabs button.active{background:#1b1930!important;color:#c9c4f5!important}
 html body .app-shell.app-shell.app-shell .category-row button.active,
 html body .app-shell.app-shell.app-shell .quick-filters button.active{color:#c9c4f5!important}

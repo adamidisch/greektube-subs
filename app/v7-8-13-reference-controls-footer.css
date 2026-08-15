@@ -172,9 +172,6 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer>p{color
 html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer-note{color:#7b838a!important}
 
 /* Footer brand mark gets a quieter surface-specific shadow. */
-html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
-  box-shadow:0 4px 12px rgba(66,58,145,.16)!important;
-}
 
 @media(max-width:620px){
   html body main.app-shell.app-shell.app-shell:not(.viewer){padding-bottom:8px!important}

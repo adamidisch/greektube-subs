@@ -35,14 +35,8 @@
     padding:0!important;
     transform:translate(-50%,-50%)!important;
   }
-  html body .viewer.viewer.viewer>.app-header>.brand>span:not(.brand-mark),
   html body .viewer.viewer.viewer>.app-header>.brand .brand-version{
     display:none!important;
-  }
-  html body .viewer.viewer.viewer>.app-header>.brand .brand-mark{
-    width:36px!important;
-    height:30px!important;
-    flex-basis:36px!important;
   }
 
   html body .viewer.viewer.viewer>.app-header>.back-library,
