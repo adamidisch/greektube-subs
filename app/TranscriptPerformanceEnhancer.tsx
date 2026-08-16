@@ -26,9 +26,16 @@ function cachedCaptions(videoId:string):Captions|null{
     return raw?JSON.parse(raw) as Captions:null;
   }catch{return null;}
 }
+function setNativeRangeValue(input:HTMLInputElement,value:number){
+  const descriptor=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value");
+  descriptor?.set?.call(input,String(value));
+  input.dispatchEvent(new Event("input",{bubbles:true}));
+  input.dispatchEvent(new Event("change",{bubbles:true}));
+}
 
 export default function TranscriptPerformanceEnhancer(){
   const [open,setOpen]=useState(false);
+  const [videoId,setVideoId]=useState("");
   const [cues,setCues]=useState<Cue[]>([]);
   const [loading,setLoading]=useState(false);
   const [portalTarget,setPortalTarget]=useState<Element|null>(null);
@@ -37,10 +44,47 @@ export default function TranscriptPerformanceEnhancer(){
   const activeTimeRef=useRef<HTMLElement|null>(null);
 
   useEffect(()=>{
+    let appRoot:Element|null=null;
+    let appObserver:MutationObserver|null=null;
+
+    const syncLifecycle=()=>{
+      const nextRoot=document.querySelector("main.app-shell");
+      if(nextRoot!==appRoot){
+        appObserver?.disconnect();
+        appRoot=nextRoot;
+        if(appRoot){
+          appObserver=new MutationObserver(syncLifecycle);
+          appObserver.observe(appRoot,{childList:true,subtree:true});
+        }
+      }
+      const nextTarget=document.querySelector(".watch-layout");
+      const nextVideoId=nextTarget?currentVideoId():"";
+      setPortalTarget(current=>current===nextTarget?current:nextTarget);
+      setVideoId(current=>current===nextVideoId?current:nextVideoId);
+      if(!nextTarget){
+        setOpen(false);
+        setCues([]);
+        setLoading(false);
+        activeRef.current=-1;
+      }
+    };
+
+    syncLifecycle();
+    const bodyObserver=new MutationObserver(syncLifecycle);
+    bodyObserver.observe(document.body,{childList:true});
+    window.addEventListener("popstate",syncLifecycle);
+    return()=>{
+      appObserver?.disconnect();
+      bodyObserver.disconnect();
+      window.removeEventListener("popstate",syncLifecycle);
+    };
+  },[]);
+
+  useEffect(()=>{
     const intercept=(event:MouseEvent)=>{
       const element=event.target as Element|null;
       const toggle=element?.closest(".transcript-toggle,.mobile-transcript-toggle");
-      if(!toggle)return;
+      if(!toggle||!document.querySelector(".watch-layout"))return;
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
@@ -51,12 +95,11 @@ export default function TranscriptPerformanceEnhancer(){
   },[]);
 
   useEffect(()=>{
-    const target=document.querySelector(".watch-layout");
-    setPortalTarget(target);
+    const target=portalTarget;
     if(!target)return;
     if(open){target.classList.add("transcript-open");target.classList.remove("player-only");}
     else{target.classList.remove("transcript-open");target.classList.add("player-only");}
-    document.querySelectorAll<HTMLElement>(".transcript-toggle,.mobile-transcript-toggle").forEach(button=>{
+    target.querySelectorAll<HTMLElement>(".transcript-toggle,.mobile-transcript-toggle").forEach(button=>{
       button.classList.toggle("active",open);
       button.setAttribute("aria-pressed",open?"true":"false");
       const label=button.querySelector("span:last-child");
@@ -66,28 +109,36 @@ export default function TranscriptPerformanceEnhancer(){
       target.classList.remove("transcript-open");
       target.classList.add("player-only");
     };
-  },[open]);
+  },[open,portalTarget]);
 
   useEffect(()=>{
-    if(!open)return;
-    const videoId=currentVideoId();
-    if(!videoId)return;
+    activeRef.current=-1;
+    setCues([]);
+    setLoading(false);
+    if(!open||!videoId)return;
     let cancelled=false;
     const cached=cachedCaptions(videoId);
-    if(Array.isArray(cached?.cues)&&cached!.cues!.length)setCues(cached!.cues!);
-    setLoading(!cached?.cues?.length);
+    const cachedCues=Array.isArray(cached?.cues)?cached!.cues!:[];
+    if(cachedCues.length)setCues(cachedCues);
+    setLoading(!cachedCues.length);
     void fetch(`/api/captions?videoId=${encodeURIComponent(videoId)}`,{cache:"no-store"})
       .then(async response=>response.ok?await response.json() as Captions:null)
-      .then(record=>{if(!cancelled&&Array.isArray(record?.cues)){setCues(record!.cues!);setLoading(false);}})
+      .then(record=>{
+        if(cancelled)return;
+        if(Array.isArray(record?.cues))setCues(record!.cues!);
+        setLoading(false);
+      })
       .catch(()=>{if(!cancelled)setLoading(false);});
     return()=>{cancelled=true;};
-  },[open]);
+  },[open,videoId]);
 
   useEffect(()=>{
-    if(!open||!cues.length)return;
+    if(!open||!cues.length||!portalTarget)return;
+    activeRef.current=-1;
     const update=()=>{
-      const seek=document.querySelector<HTMLInputElement>(".player-seek-bar");
-      const time=Number(seek?.value)||0;
+      const seek=portalTarget.querySelector<HTMLInputElement>(".player-seek-bar");
+      if(!seek)return;
+      const time=Number(seek.value)||0;
       const next=cueAt(cues,time);
       if(next===activeRef.current)return;
       const root=transcriptRef.current;
@@ -98,17 +149,10 @@ export default function TranscriptPerformanceEnhancer(){
         row?.classList.remove("past");
         row?.classList.add("active");
         row?.scrollIntoView({block:"nearest"});
-        // Only touch the delta range between previous and next active index —
-        // never the full cue list — so this stays correct (and cheap) on
-        // both forward and backward seeks.
         if(next>previous){
-          for(let index=Math.max(previous,0);index<next;index+=1){
-            root.querySelector<HTMLElement>(`button[data-cue="${index}"]`)?.classList.add("past");
-          }
+          for(let index=Math.max(previous,0);index<next;index+=1)root.querySelector<HTMLElement>(`button[data-cue="${index}"]`)?.classList.add("past");
         }else if(next<previous){
-          for(let index=Math.max(next+1,0);index<=previous;index+=1){
-            root.querySelector<HTMLElement>(`button[data-cue="${index}"]`)?.classList.remove("past");
-          }
+          for(let index=Math.max(next+1,0);index<=previous;index+=1)root.querySelector<HTMLElement>(`button[data-cue="${index}"]`)?.classList.remove("past");
         }
       }
       activeRef.current=next;
@@ -117,7 +161,7 @@ export default function TranscriptPerformanceEnhancer(){
     update();
     const timer=window.setInterval(update,250);
     return()=>window.clearInterval(timer);
-  },[open,cues]);
+  },[open,cues,portalTarget]);
 
   const rows=useMemo(()=>cues.map((cue,index)=><button key={`${cue.start}-${index}`} data-cue={index}><time>{clock(cue.start)}</time><span>{cue.text}</span><i aria-label="Αποθήκευση στιγμής">＋</i></button>),[cues]);
 
@@ -135,11 +179,11 @@ export default function TranscriptPerformanceEnhancer(){
       row.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:event.clientX,clientY:event.clientY}));
       return;
     }
-    const seek=document.querySelector<HTMLInputElement>(".player-seek-bar");
-    if(!seek)return;
-    seek.value=String(cue.start);
-    seek.dispatchEvent(new Event("input",{bubbles:true}));
-    seek.dispatchEvent(new Event("change",{bubbles:true}));
+    const seek=portalTarget.querySelector<HTMLInputElement>(".player-seek-bar");
+    if(!seek||seek.disabled)return;
+    const max=Number(seek.max)||0;
+    const target=Math.max(0,max>0?Math.min(max,cue.start):cue.start);
+    setNativeRangeValue(seek,target);
   };
 
   return createPortal(<aside className="side-panel transcript-drawer" data-gts-performance-transcript="1">
