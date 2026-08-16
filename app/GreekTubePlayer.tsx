@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { APP_VERSION } from "./version";
+import { canonicalSpeakerForVideo } from "./speaker-catalog";
 
 type Cue = { start: number; duration: number; text: string };
 type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
@@ -100,17 +101,15 @@ const SEED: Video[] = [
   favorite:false, lastPosition:0, progress:0,
 })) as Video[];
 
-const SPEAKERS:Record<string,SpeakerProfile>={
-  BbGv7GTbRN8:{name:"Dr. Stasha Gominak",role:"Neurologist",importance:"",currentWork:"",highlights:[]},
-  ATKu1Cxs2Pc:{name:"Dr. Philip Ovadia",role:"Cardiothoracic Surgeon",importance:"Γνωστός για το έργο του στην πρόληψη της καρδιοπάθειας μέσω της μεταβολικής υγείας.",currentWork:"",highlights:[]},
-  NqLpQhii_fU:{name:"Dr. Sarah Myhill",role:"Physician",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
-  KkBy__7d9Fs:{name:"Dr. Sarah Myhill",role:"Physician",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
-  "0_adZSC0sFI":{name:"Dr. Sarah Myhill",role:"Physician",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
-  D2RjneeG_xA:{name:"Dr. Sarah Myhill",role:"Physician",importance:"Γνωστή για το έργο της στη χρόνια κόπωση και στη μιτοχονδριακή λειτουργία.",currentWork:"",highlights:[]},
-  "fX2z-BF8Jac":{name:"Dr. Natasha Campbell-McBride",role:"Physician",importance:"Γνωστή για την προσέγγιση GAPS και τη σχέση εντέρου και εγκεφάλου.",currentWork:"",highlights:[]},
-  HDK3Y9mGMiA:{name:"Dr. Natasha Campbell-McBride",role:"Physician",importance:"Γνωστή για την προσέγγιση GAPS και τη σχέση εντέρου και εγκεφάλου.",currentWork:"",highlights:[]},
-};
-function speakerForVideo(id:string,channel:string):SpeakerProfile{return SPEAKERS[id]||{name:channel||"Ομιλητής του βίντεο",role:"Ομιλητής και δημιουργός του περιεχομένου",importance:"Το επαγγελματικό προφίλ του ομιλητή δεν έχει ακόμη επιβεβαιωθεί.",currentWork:"Θα προστεθούν περισσότερα στοιχεία μόλις επιβεβαιωθεί η ταυτότητά του.",highlights:["Ταυτότητα ομιλητή","Επαγγελματική ιδιότητα","Κύριο έργο","Σημερινή δραστηριότητα"]};}
+function speakerForVideo(id:string,_channel:string):SpeakerProfile{
+  return canonicalSpeakerForVideo(id)||{
+    name:"Ομιλητής προς επιβεβαίωση",
+    role:"",
+    importance:"Η ταυτότητα του ομιλητή δεν έχει ακόμη επιβεβαιωθεί.",
+    currentWork:"",
+    highlights:[],
+  };
+}
 const GREEK_TITLES:Record<string,string>={
   ATKu1Cxs2Pc:"Καρδιοχειρουργός: Ο μεγαλύτερος παράγοντας κινδύνου για καρδιακή νόσο",
   NqLpQhii_fU:"Αν θέλεις να μειώσεις τους υδατάνθρακες δες αυτό!",

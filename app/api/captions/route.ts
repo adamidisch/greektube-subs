@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canonicalSpeakerForVideo } from "@/app/speaker-catalog";
 import { publishTranscript, readPublishedTranscript, transcriptBlobConfigured } from "../transcript-blob";
 import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
 import { splitSubtitleSentences } from "./sentence-split";
@@ -73,63 +74,30 @@ type SpeakerProfile = {
   highlights: string[];
 };
 
-const SPEAKERS_BY_VIDEO: Record<string, SpeakerProfile> = {
-  ATKu1Cxs2Pc: {
-    name: "Dr Philip Ovadia",
-    role: "Καρδιοθωρακοχειρουργός και ειδικός στη μεταβολική υγεία",
-    importance: "Έχει πραγματοποιήσει χιλιάδες καρδιοχειρουργικές επεμβάσεις και είναι γνωστός για τη σύνδεση της μεταβολικής υγείας με την πρόληψη της καρδιοπάθειας.",
-    currentWork: "Συνεχίζει ως καρδιοθωρακοχειρουργός και διευθύνει την Ovadia Heart Health με εξ αποστάσεως προγράμματα πρόληψης.",
-    highlights: ["Καρδιοχειρουργική εμπειρία", "Πρόληψη καρδιοπάθειας", "Μεταβολική υγεία", "Διατροφή και τρόπος ζωής"],
-  },
-  NqLpQhii_fU: {
-    name: "Dr Sarah Myhill",
-    role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
-    importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
-    currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
-    highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
-  },
-  KkBy__7d9Fs: {
-    name: "Dr Sarah Myhill",
-    role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
-    importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
-    currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
-    highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
-  },
-  "0_adZSC0sFI": {
-    name: "Dr Sarah Myhill",
-    role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
-    importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
-    currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
-    highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
-  },
-  D2RjneeG_xA: {
-    name: "Dr Sarah Myhill",
-    role: "Ιατρός με πολυετή ενασχόληση στη χρόνια κόπωση και στην οικολογική ιατρική",
-    importance: "Είναι ευρέως γνωστή για το εκπαιδευτικό της έργο γύρω από το ME/CFS τη μιτοχονδριακή λειτουργία τη διατροφή και τον τρόπο ζωής.",
-    currentWork: "Σήμερα γράφει διδάσκει και δημοσιεύει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη διατροφή και τη μεταβολική υγεία.",
-    highlights: ["ME/CFS και χρόνια κόπωση", "Μιτοχόνδρια και ενέργεια", "Διατροφή και μικροθρεπτικά", "Περιβαλλοντικοί παράγοντες"],
-  },
-  "fX2z-BF8Jac": {
-    name: "Dr Natasha Campbell-McBride",
-    role: "Ιατρός με μεταπτυχιακή εκπαίδευση στη νευρολογία και στην ανθρώπινη διατροφή",
-    importance: "Είναι γνωστή διεθνώς ως δημιουργός της προσέγγισης GAPS και για το έργο της γύρω από τη σχέση εντέρου εγκεφάλου και διατροφής.",
-    currentWork: "Σήμερα γράφει εκπαιδεύει επαγγελματίες και αναπτύσσει το διεθνές εκπαιδευτικό πρόγραμμα GAPS.",
-    highlights: ["Σχέση εντέρου και εγκεφάλου", "Ανθρώπινη διατροφή", "Μικροβίωμα", "Εκπαίδευση GAPS"],
-  },
-};
-
-function speakerProfile(videoId: string, description = "", channel = ""): SpeakerProfile {
-  const known = SPEAKERS_BY_VIDEO[videoId];
+function speakerProfile(videoId: string, description = "", _channel = ""): SpeakerProfile {
+  const known = canonicalSpeakerForVideo(videoId);
   if (known) return known;
   const match = description.match(/\b(?:Dr\.?|Doctor)\s+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,3})/);
-  const name = match ? `Dr ${match[1]}` : channel;
+  const name = match ? `Dr. ${match[1]}` : "";
   return {
-    name: name || "Ομιλητής του βίντεο",
-    role: "Ομιλητής και δημιουργός του περιεχομένου",
-    importance: "Το προφίλ του ομιλητή δεν έχει ακόμη επιβεβαιωθεί από αρκετές αξιόπιστες πληροφορίες.",
-    currentWork: "Θα προστεθούν περισσότερα στοιχεία μόλις επιβεβαιωθεί η ταυτότητα και η σημερινή δραστηριότητά του.",
-    highlights: ["Ταυτότητα ομιλητή", "Επαγγελματική ιδιότητα", "Κύριο έργο", "Σημερινή δραστηριότητα"],
+    name: name || "Ομιλητής προς επιβεβαίωση",
+    role: name ? "Ιατρός / ομιλητής" : "",
+    importance: "Η ταυτότητα του ομιλητή δεν έχει ακόμη επιβεβαιωθεί από τα διαθέσιμα metadata.",
+    currentWork: "",
+    highlights: [],
   };
+}
+
+function normalizedPublishedSpeaker(videoId: string, payload: unknown): SpeakerProfile {
+  const canonical = canonicalSpeakerForVideo(videoId);
+  if (canonical) return canonical;
+  const record = payload && typeof payload === "object"
+    ? payload as { speaker?: SpeakerProfile; channel?: unknown }
+    : {};
+  const channel = typeof record.channel === "string" ? record.channel.trim() : "";
+  const existing = record.speaker;
+  if (existing?.name && (!channel || existing.name.trim().toLowerCase() !== channel.toLowerCase())) return existing;
+  return speakerProfile(videoId);
 }
 
 const API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
@@ -1451,7 +1419,7 @@ export async function GET(request: Request) {
       const publishedCues = published.cues as CaptionCue[];
       const publishedDuration = typeof published.duration === "number" ? published.duration : 0;
       validateCompleteGreekTranscript(publishedCues, publishedDuration);
-      return NextResponse.json(published, {
+      return NextResponse.json({ ...published, speaker: normalizedPublishedSpeaker(videoId, published) }, {
         headers: {
           "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
           "X-GreekTube-Transcript-Source": "blob",

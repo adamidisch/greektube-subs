@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { database } from "@/db/postgres";
+import { canonicalSpeakerForVideo, speakerMatchesChannel } from "@/app/speaker-catalog";
 
 const LEGACY_KEY = "greektube-library-v2";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
@@ -70,6 +71,23 @@ async function isAdminRequest(request: Request) {
   return safeEqual(cookie, await adminSessionToken(password));
 }
 
+function normalizeSpeakerFields(video: VideoRecord) {
+  const normalized = { ...video };
+  const id = typeof video.id === "string" ? video.id : "";
+  const canonical = canonicalSpeakerForVideo(id);
+  if (canonical) {
+    normalized.speakerName = canonical.name;
+    normalized.speakerRole = canonical.role;
+  } else if (speakerMatchesChannel(
+    typeof normalized.speakerName === "string" ? normalized.speakerName : undefined,
+    typeof normalized.channel === "string" ? normalized.channel : undefined,
+  )) {
+    delete normalized.speakerName;
+    delete normalized.speakerRole;
+  }
+  return normalized;
+}
+
 function sanitizePersonalState(input: unknown) {
   if (!input || typeof input !== "object") return input;
   const state = structuredClone(input) as PersonalState;
@@ -84,7 +102,7 @@ function sanitizePersonalState(input: unknown) {
 }
 
 function sanitizeSharedVideo(video: VideoRecord) {
-  const sharedVideo = { ...video };
+  const sharedVideo = normalizeSpeakerFields(video);
   delete sharedVideo.captions;
   sharedVideo.favorite = false;
   sharedVideo.lastPosition = 0;
@@ -104,7 +122,7 @@ function mergeState(personal: PersonalState | null, sharedVideos: VideoRecord[])
   const videos = Array.from(sharedById.values()).map(video => {
     const personalVideo = typeof video.id === "string" ? personalById.get(video.id) : null;
     return {
-      ...video,
+      ...normalizeSpeakerFields(video),
       favorite: Boolean(personalVideo?.favorite),
       lastPosition: Number(personalVideo?.lastPosition || 0),
       progress: Number(personalVideo?.progress || 0),

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canonicalSpeakerForVideo } from "@/app/speaker-catalog";
 
 function extractVideoId(value: string) {
   try {
@@ -173,9 +174,6 @@ async function oEmbedDetails(id: string) {
   }
 }
 
-const KNOWN_SPEAKER_NAMES: Record<string, string> = {
-  BbGv7GTbRN8: "Dr. Stasha Gominak",
-};
 
 function speakerNameFromMetadata(title: string, description: string) {
   const source = `${title}\n${description.slice(0, 2600)}`;
@@ -264,8 +262,9 @@ export async function POST(request: Request) {
       });
     }
     const title = await greekTitle(originalTitle);
-    const speakerName = KNOWN_SPEAKER_NAMES[id] || speakerNameFromMetadata(originalTitle, details.description);
-    const speakerRole = speakerRoleFromMetadata(details.description, speakerName);
+    const canonicalSpeaker = canonicalSpeakerForVideo(id);
+    const speakerName = canonicalSpeaker?.name || speakerNameFromMetadata(originalTitle, details.description);
+    const speakerRole = canonicalSpeaker?.role || speakerRoleFromMetadata(details.description, speakerName);
     const category = categoryFor(originalTitle, details.description, speakerName);
     const creatorChapterSource = creatorChaptersFromDescription(details.description, details.duration);
     const creatorChapters = await Promise.all(creatorChapterSource.map(async chapter => ({
