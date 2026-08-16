@@ -32,8 +32,8 @@
     <path d="M7 18H33C35.9 18 37.45 19.25 38.15 21.35C37.95 24.7 36.1 26.5 33 26.5H18L11.5 31V26.5H7C3.9 26.5 2.05 24.8 1.85 21.55C2.45 19.25 4.1 18 7 18Z" fill="url(#gts-bottom)"/>
   </g>
 
-  <path d="M8 10.2H11.5" stroke="#FFFFFF" stroke-width="2.15" stroke-linecap="round"/>
-  <path d="M8 16H14.8" stroke="#FFFFFF" stroke-width="2.15" stroke-linecap="round"/>
-  <path d="M8 21.8H18.2" stroke="#FFFFFF" stroke-width="2.15" stroke-linecap="round"/>
+  <path d="M8.4 11H13.6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <path d="M8.4 16H16.1" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  <path d="M8.4 21H18.6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
   <path d="M25 9.4L33.2 15.6L25 21.8V9.4Z" fill="#FFFFFF"/>
 </svg>
