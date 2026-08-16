@@ -1,0 +1,47 @@
+/* Settings opened from a playing video are a separate fixed screen layer.
+   The mounted player stays underneath so playback/timing state is preserved,
+   while this layer owns its own scroll and input surface. */
+.settings-screen-layer{
+  position:fixed;
+  inset:0;
+  z-index:9000;
+  overflow:hidden;
+  overscroll-behavior:contain;
+  background:var(--bg);
+}
+.settings-screen-shell{
+  width:100%;
+  height:100dvh;
+  min-height:0!important;
+  max-height:100dvh;
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  overflow:hidden!important;
+  background:var(--bg)!important;
+}
+.settings-screen-scroll{
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-gutter:stable;
+}
+.viewer-settings-open{
+  pointer-events:none;
+  user-select:none;
+}
+.settings-screen-layer .settings-page{
+  min-height:100%;
+}
+.settings-screen-layer .app-header{
+  flex:0 0 auto;
+}
+.settings-screen-layer .settings-grid input[type="range"]{
+  touch-action:pan-y;
+}
+@media(max-width:620px){
+  .settings-screen-scroll{
+    padding-bottom:max(24px,env(safe-area-inset-bottom));
+  }
+}
