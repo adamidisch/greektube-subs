@@ -31,7 +31,7 @@ player = replace_once(
 
 speaker_block = re.compile(r'const SPEAKERS:Record<string,SpeakerProfile>=\{[\s\S]*?\n\};\nfunction speakerForVideo\(id:string,channel:string\):SpeakerProfile\{[^\n]*\}\n')
 replacement = '''function speakerForVideo(id:string,_channel:string):SpeakerProfile{\n  return canonicalSpeakerForVideo(id)||{\n    name:"Ομιλητής προς επιβεβαίωση",\n    role:"",\n    importance:"Η ταυτότητα του ομιλητή δεν έχει ακόμη επιβεβαιωθεί.",\n    currentWork:"",\n    highlights:[],\n  };\n}\n'''
-player, count = speaker_block.subn(replacement, player, count=1)
+player, count = speaker_block.subn(lambda _match: replacement, player, count=1)
 if count != 1:
     raise SystemExit(f'player speaker block: expected 1 match, found {count}')
 
@@ -65,7 +65,7 @@ captions = replace_once(
 )
 caption_speaker_block = re.compile(r'const SPEAKERS_BY_VIDEO: Record<string, SpeakerProfile> = \{[\s\S]*?\n\};\n\nfunction speakerProfile\(videoId: string, description = "", channel = ""\): SpeakerProfile \{[\s\S]*?\n\}\n\nconst API_KEY')
 caption_replacement = '''function speakerProfile(videoId: string, description = "", _channel = ""): SpeakerProfile {\n  const known = canonicalSpeakerForVideo(videoId);\n  if (known) return known;\n  const match = description.match(/\\b(?:Dr\\.?|Doctor)\\s+([A-Z][A-Za-z'-]+(?:\\s+[A-Z][A-Za-z'-]+){1,3})/);\n  const name = match ? `Dr. ${match[1]}` : "";\n  return {\n    name: name || "Ομιλητής προς επιβεβαίωση",\n    role: name ? "Ιατρός / ομιλητής" : "",\n    importance: "Η ταυτότητα του ομιλητή δεν έχει ακόμη επιβεβαιωθεί από τα διαθέσιμα metadata.",\n    currentWork: "",\n    highlights: [],\n  };\n}\n\nfunction normalizedPublishedSpeaker(videoId: string, payload: unknown): SpeakerProfile {\n  const canonical = canonicalSpeakerForVideo(videoId);\n  if (canonical) return canonical;\n  const record = payload && typeof payload === "object"\n    ? payload as { speaker?: SpeakerProfile; channel?: unknown }\n    : {};\n  const channel = typeof record.channel === "string" ? record.channel.trim() : "";\n  const existing = record.speaker;\n  if (existing?.name && (!channel || existing.name.trim().toLowerCase() !== channel.toLowerCase())) return existing;\n  return speakerProfile(videoId);\n}\n\nconst API_KEY'''
-captions, count = caption_speaker_block.subn(caption_replacement, captions, count=1)
+captions, count = caption_speaker_block.subn(lambda _match: caption_replacement, captions, count=1)
 if count != 1:
     raise SystemExit(f'captions speaker block: expected 1 match, found {count}')
 
