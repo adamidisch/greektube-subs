@@ -86,7 +86,7 @@ export default function ThemeToggleEnhancer() {
     );
     syncHeader();
     const observer = new MutationObserver(syncHeader);
-    observer.observe(document.body, { childList: true });
+    observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
 

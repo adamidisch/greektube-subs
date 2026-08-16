@@ -31,38 +31,11 @@ export default function NavigationUXEnhancer() {
       closeButton.click();
     };
 
-    const handleClick = (event: MouseEvent) => {
-      const closeButton = getCloseButton();
-      if (!closeButton) return;
-
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const button = target.closest("button") as HTMLButtonElement | null;
-      if (!button || button === closeButton || !button.closest(".app-header")) return;
-
-      const label = button.textContent?.trim();
-      const isSettingsButton = button.getAttribute("aria-label") === "Ρυθμίσεις" || label === "Ρυθμίσεις";
-      if (!isSettingsButton) return;
-
-      const cameFromMobileMenu = Boolean(button.closest(".mobile-menu"));
-      event.preventDefault();
-      event.stopPropagation();
-      closeButton.click();
-
-      if (cameFromMobileMenu) {
-        requestAnimationFrame(() => {
-          document.querySelector<HTMLButtonElement>(".mobile-menu-toggle.active")?.click();
-        });
-      }
-    };
-
     document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("click", handleClick, true);
 
     return () => {
       observer.disconnect();
       document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("click", handleClick, true);
     };
   }, []);
 

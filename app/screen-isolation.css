@@ -27,7 +27,8 @@
   -webkit-overflow-scrolling:touch;
   scrollbar-gutter:stable;
 }
-.viewer-settings-open{
+.viewer-settings-open,
+.library-settings-open{
   pointer-events:none;
   user-select:none;
 }

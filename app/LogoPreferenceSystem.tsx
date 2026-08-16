@@ -69,7 +69,7 @@ export default function LogoPreferenceSystem() {
 
     attachToAppRoot();
     const bodyObserver = new MutationObserver(attachToAppRoot);
-    bodyObserver.observe(document.body, { childList: true });
+    bodyObserver.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       appObserver?.disconnect();

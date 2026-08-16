@@ -518,7 +518,7 @@ export default function GreekTubePlayer() {
     return()=>{document.body.style.overflow=previousOverflow;};
   },[isPseudoFullscreen]);
   useEffect(()=>{
-    if(!selectedId||view!=="settings")return;
+    if(view!=="settings")return;
     const body=document.body;
     const previousOverflow=body.style.overflow;
     const previousPaddingRight=body.style.paddingRight;
@@ -530,7 +530,7 @@ export default function GreekTubePlayer() {
       body.style.paddingRight=previousPaddingRight;
       window.requestAnimationFrame(()=>window.scrollTo(0,playerScrollPosition.current));
     };
-  },[view,selectedId]);
+  },[view]);
   useEffect(()=>{
     const syncQuickTheme=(event:Event)=>{
       const next=(event as CustomEvent<{theme?:Settings["theme"]}>).detail?.theme;
@@ -613,6 +613,10 @@ export default function GreekTubePlayer() {
   useEffect(()=>{const reset=window.setTimeout(()=>setVisibleCount(PAGE_SIZE),0);return()=>window.clearTimeout(reset);},[search,category,sort,filter]);
 
   function patchVideo(id:string,patch:Partial<Video>){setState(s=>({...s,videos:s.videos.map(v=>v.id===id?{...v,...patch}:v)}));}
+  function patchSettings(patch:Partial<Settings>){
+    setState(current=>({...current,settings:{...current.settings,...patch}}));
+    if(typeof patch.speed==="number")currentPlayer()?.setPlaybackRate(patch.speed);
+  }
   async function requestEdit(video:Video){
     try{
       const response=await fetch("/api/admin-auth",{cache:"no-store"});
@@ -991,6 +995,12 @@ export default function GreekTubePlayer() {
     if(!selectedId)return;
     setView("library");
   }
+  function openLibrarySettings(){
+    playerScrollPosition.current=window.scrollY;
+    setMobileMenu(false);
+    setView("settings");
+  }
+  function returnToLibrary(){setView("library");}
   function goHome(){close();setView("library");setMobileMenu(false);}
   async function rebuildTranslation(video:Video){
     localStorage.removeItem(`greektube-transcript:${video.id}:v3`);
@@ -1180,13 +1190,15 @@ export default function GreekTubePlayer() {
       {proImportVideo&&<ManualTranslateModal video={proImportVideo} authorizationRequired={()=>{setManualImportRequest(proImportVideo);setProImportVideo(null);}} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video,undefined,false,false,result);}}/>}
       {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenManual={()=>void requestManualImport(translationChoiceVideo)}/>}
     </main>
-    {settingsFromPlayer&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-player settings-screen-shell"><header className="app-header"><button className="ghost back-to-video" onClick={returnToVideo}>← Πίσω στο βίντεο</button><Brand home={goHome}/><button className="icon-button active" aria-label="Ρυθμίσεις">⚙</button></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patch=>setState(current=>({...current,settings:{...current.settings,...patch}}))} close={returnToVideo}/></div></div></div>}
+    {settingsFromPlayer&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-player settings-screen-shell"><header className="app-header"><button className="ghost back-to-video" autoFocus onClick={returnToVideo}>← Πίσω στο βίντεο</button><Brand home={goHome}/><button className="icon-button active" aria-label="Ρυθμίσεις" onClick={returnToVideo}>⚙</button></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patchSettings} close={returnToVideo}/></div></div></div>}
     </>;
   }
 
-  return <main className="app-shell">
-    <header className="app-header"><Brand home={goHome}/><nav className="desktop-nav"><button className={view==="library"?"active":""} onClick={()=>setView("library")}>Βιβλιοθήκη</button><button className={view==="settings"?"active":""} onClick={()=>setView("settings")}>Ρυθμίσεις</button></nav><button className="primary compact add-top" onClick={()=>void requestAdd()}>＋ Προσθήκη βίντεο</button><button className={`mobile-menu-toggle ${mobileMenu?"active":""}`} aria-label={mobileMenu?"Κλείσιμο μενού":"Άνοιγμα μενού"} aria-expanded={mobileMenu} onClick={()=>setMobileMenu(value=>!value)}><i/><i/><i/></button>{mobileMenu&&<div className="mobile-menu"><button className={view==="library"?"active":""} onClick={goHome}>Βιβλιοθήκη</button><button className={view==="settings"?"active":""} onClick={()=>{setView("settings");setMobileMenu(false)}}>Ρυθμίσεις</button><button className="primary mobile-add" onClick={()=>{setMobileMenu(false);void requestAdd();}}>＋ Προσθήκη βίντεο</button></div>}</header>
-    {view==="settings"?<SettingsPage settings={state.settings} update={patch=>setState(s=>({...s,settings:{...s.settings,...patch}}))} close={()=>setView("library")}/>:<>
+  const settingsFromLibrary=view==="settings";
+  return <>
+  <main className={`app-shell ${settingsFromLibrary?"library-settings-open":""}`} aria-hidden={settingsFromLibrary?true:undefined}>
+    <header className="app-header"><Brand home={goHome}/><nav className="desktop-nav"><button className={!settingsFromLibrary?"active":""} onClick={returnToLibrary}>Βιβλιοθήκη</button><button className={settingsFromLibrary?"active":""} onClick={openLibrarySettings}>Ρυθμίσεις</button></nav><button className="primary compact add-top" onClick={()=>void requestAdd()}>＋ Προσθήκη βίντεο</button><button className={`mobile-menu-toggle ${mobileMenu?"active":""}`} aria-label={mobileMenu?"Κλείσιμο μενού":"Άνοιγμα μενού"} aria-expanded={mobileMenu} onClick={()=>setMobileMenu(value=>!value)}><i/><i/><i/></button>{mobileMenu&&<div className="mobile-menu"><button className={!settingsFromLibrary?"active":""} onClick={goHome}>Βιβλιοθήκη</button><button className={settingsFromLibrary?"active":""} onClick={openLibrarySettings}>Ρυθμίσεις</button><button className="primary mobile-add" onClick={()=>{setMobileMenu(false);void requestAdd();}}>＋ Προσθήκη βίντεο</button></div>}</header>
+    <>
       <section className="home-intro"><span>ΒΙΝΤΕΟ ΒΙΒΛΙΟΘΗΚΗ</span><h1>Αυτόματοι ελληνικοί υπότιτλοι</h1></section>
       {featured&&<section className={`featured ${newVideoIds.has(featured.id)?"featured-new":""}`} aria-label="Προτεινόμενο βίντεο">
         <button className="featured-media" onClick={()=>void openVideo(featured,featured.lastPosition)} aria-label={`Συνέχεια προβολής: ${greekTitle(featured)}`}>
@@ -1215,7 +1227,7 @@ export default function GreekTubePlayer() {
       {hydrated&&visibleVideos.length<filtered.length&&<div className="load-more-wrap"><button className="load-more-button" type="button" onClick={()=>setVisibleCount(count=>count+PAGE_SIZE)}><span>Δείτε περισσότερα</span><small>{filtered.length-visibleVideos.length} ακόμη βίντεο</small></button></div>}
       {hydrated&&filtered.length===0&&<div className="empty polished-empty"><b>⌕</b><h2>Δεν βρέθηκαν βίντεο</h2><p>Δοκίμασε διαφορετική κατηγορία, ομιλητή ή λέξη αναζήτησης.</p></div>}
       <footer className="app-footer"><div className="app-footer-brand"><span className="brand-mark" aria-hidden="true" /><span>GreekTube <b>Subs</b></span></div><p>Αυτόματοι ελληνικοί υπότιτλοι για δημόσια βίντεο YouTube.</p><span className="app-footer-note">Φτιαγμένο με ♥ για ελληνόφωνους θεατές</span></footer>
-    </>}
+    </>
     {modal&&<AddVideo existingIds={state.videos.map(video=>video.id)} close={()=>setModal(false)} add={async(video,translate,openProImport)=>{const next={...stateRef.current,videos:[video,...stateRef.current.videos.filter(item=>item.id!==video.id)]};const saved=await saveStateToServer(next,false,true);if(!saved?.ok||!saved.sharedSaved)throw new Error(saved?.error||"Δεν αποθηκεύτηκε η κοινή βιβλιοθήκη.");setState(next);setModal(false);if(translate||openProImport){setTranslationChoiceVideo(video);return;}}}/>}
     {addRequest&&<EditPassword close={()=>setAddRequest(false)} authorized={()=>{setAddRequest(false);window.setTimeout(()=>void syncLibraryToServer(),350);setModal(true);}}/>}
     {syncRequest&&<EditPassword close={()=>setSyncRequest(false)} authorized={()=>{setSyncRequest(false);window.setTimeout(()=>void syncLibraryToServer(),350);}}/>}
@@ -1224,7 +1236,9 @@ export default function GreekTubePlayer() {
     {manualImportRequest&&<EditPassword close={()=>setManualImportRequest(null)} authorized={()=>{setProImportVideo(manualImportRequest);setManualImportRequest(null);}}/>}
     {proImportVideo&&<ManualTranslateModal video={proImportVideo} authorizationRequired={()=>{setManualImportRequest(proImportVideo);setProImportVideo(null);}} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video,undefined,false,false,result);}}/>}
     {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenManual={()=>void requestManualImport(translationChoiceVideo)}/>}
-  </main>;
+  </main>
+  {settingsFromLibrary&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-library settings-screen-shell"><header className="app-header"><button className="ghost back-library" autoFocus onClick={returnToLibrary}>← Βιβλιοθήκη</button><Brand home={goHome}/><button className="icon-button active" aria-label="Ρυθμίσεις" onClick={returnToLibrary}>⚙</button></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patchSettings} close={returnToLibrary}/></div></div></div>}
+  </>;
 }
 
 function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark" aria-hidden="true" /><span>GreekTube <b>Subs</b></span><small className="brand-version">{`ver ${APP_VERSION}`}</small></button>;}

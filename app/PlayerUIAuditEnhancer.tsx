@@ -90,7 +90,7 @@ export default function PlayerUIAuditEnhancer() {
 
     attach();
     const lifecycleObserver = new MutationObserver(attach);
-    lifecycleObserver.observe(document.body, { childList: true });
+    lifecycleObserver.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       observer?.disconnect();
