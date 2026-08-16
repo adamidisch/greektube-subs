@@ -32,7 +32,8 @@ async function loadState(): Promise<PersonalState | null> {
   try {
     const response = await fetch("/api/state", { credentials: "same-origin", cache: "no-store" });
     if (!response.ok) return null;
-    return await response.json() as PersonalState;
+    const payload = await response.json() as { state?: PersonalState | null };
+    return payload.state || null;
   } catch {
     return null;
   }
@@ -79,10 +80,13 @@ export default function ThemeToggleEnhancer() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
-    const syncHeader = () => setHeader(document.querySelector<HTMLElement>(".app-header"));
+    const syncHeader = () => setHeader(
+      document.querySelector<HTMLElement>(".settings-screen-layer .app-header") ||
+      document.querySelector<HTMLElement>(".app-header"),
+    );
     syncHeader();
     const observer = new MutationObserver(syncHeader);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true });
     return () => observer.disconnect();
   }, []);
 
@@ -100,26 +104,6 @@ export default function ThemeToggleEnhancer() {
     syncTheme();
     const observer = new MutationObserver(syncTheme);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const syncSettingsSelect = () => {
-      const selects = Array.from(document.querySelectorAll<HTMLSelectElement>(".settings-page select"));
-      const themeSelect = selects.find(select => {
-        const values = Array.from(select.options).map(option => option.value);
-        return values.includes("dark") && values.includes("light") && values.includes("system");
-      });
-      if (!themeSelect) return;
-      const stored = localStorage.getItem(QUICK_THEME_KEY);
-      if ((stored === "dark" || stored === "light") && themeSelect.value !== stored) {
-        themeSelect.value = stored;
-        themeSelect.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    };
-    syncSettingsSelect();
-    const observer = new MutationObserver(syncSettingsSelect);
-    observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
 
@@ -157,6 +141,7 @@ export default function ThemeToggleEnhancer() {
             const next = theme === "dark" ? "light" : "dark";
             setTheme(next);
             applyTheme(next);
+            window.dispatchEvent(new CustomEvent("gts:themechange", { detail: { theme: next } }));
             void persistTheme(next);
           }}
         >
