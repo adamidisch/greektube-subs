@@ -42,7 +42,8 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_URL = "https://greektubesubs.com";
-const DEFAULT_SHARE_IMAGE = `${SITE_URL}/api/share-card?title=${encodeURIComponent("YouTube με ελληνικούς υπότιτλους")}`;
+const BRAND_REV = "7820";
+const DEFAULT_SHARE_IMAGE = `${SITE_URL}/api/share-card?v=${BRAND_REV}&title=${encodeURIComponent("YouTube με ελληνικούς υπότιτλους")}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -71,9 +72,9 @@ export const metadata: Metadata = {
     "app-version": APP_VERSION,
   },
   icons: {
-    icon: [{ url: "/gtslogo.svg", type: "image/svg+xml" }],
-    shortcut: "/gtslogo.svg",
-    apple: [{ url: "/gtslogo.svg", type: "image/svg+xml" }],
+    icon: [{ url: `/gtslogo.svg?v=${BRAND_REV}`, type: "image/svg+xml" }],
+    shortcut: `/gtslogo.svg?v=${BRAND_REV}`,
+    apple: [{ url: `/gtslogo.svg?v=${BRAND_REV}`, type: "image/svg+xml" }],
   },
 };
 
