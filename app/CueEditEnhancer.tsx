@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
+import {watchAppNavigation} from "./navigation-events";
 
 type Cue={start?:number;duration?:number;text?:string};
 type Captions={transcriptVersion?:number;cues?:Cue[]};
@@ -144,10 +145,14 @@ export default function CueEditEnhancer(){
     };
 
     attachTranscriptObserver();
-    const navigation=window.setInterval(attachTranscriptObserver,500);
+    const lifecycleRoot=document.querySelector(".app-shell")||document.body;
+    const lifecycleObserver=new MutationObserver(attachTranscriptObserver);
+    lifecycleObserver.observe(lifecycleRoot,{subtree:true,childList:true});
+    const stopWatching=watchAppNavigation(()=>window.requestAnimationFrame(attachTranscriptObserver));
     return()=>{
       observer?.disconnect();
-      window.clearInterval(navigation);
+      lifecycleObserver.disconnect();
+      stopWatching();
       if(raf)window.cancelAnimationFrame(raf);
     };
   },[]);
