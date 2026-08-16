@@ -5,6 +5,7 @@ import TranscriptPerformanceEnhancer from "./TranscriptPerformanceEnhancer";
 import ThemeToggleEnhancer from "./ThemeToggleEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
+const BRAND_REV = "7820";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
 
 type SharedVideo = {
@@ -53,6 +54,7 @@ export async function generateMetadata({
   const shareImage = new URL("/api/share-card", SITE_URL);
   shareImage.searchParams.set("video", videoId);
   shareImage.searchParams.set("title", videoTitle);
+  shareImage.searchParams.set("v", BRAND_REV);
 
   const description = "Δες το με ελληνικούς υπότιτλους στο GreekTube Subs · greektubesubs.com";
 
