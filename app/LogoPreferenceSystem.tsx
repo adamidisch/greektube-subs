@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-type LogoStyle = "official" | "classic" | "reverse" | "wordmark";
+type LogoStyle = "official" | "classic" | "reverse" | "premium";
 
 const STORAGE_KEY = "greektube-logo-style:v1";
-const LOGO_STYLES: readonly LogoStyle[] = ["official", "classic", "reverse", "wordmark"];
+const LOGO_STYLES: readonly LogoStyle[] = ["official", "classic", "reverse", "premium"];
 
 const OPTIONS: ReadonlyArray<{
   id: LogoStyle;
@@ -17,7 +17,7 @@ const OPTIONS: ReadonlyArray<{
   { id: "official", title: "Επίσημο", detail: "Bubble · subtitles + play", src: "/gtslogo.svg" },
   { id: "classic", title: "Classic", detail: "Γραμμές → play", src: "/gtslogo-classic.svg" },
   { id: "reverse", title: "Alternate", detail: "Play → γραμμές", src: "/gtslogo-reverse.svg" },
-  { id: "wordmark", title: "Μόνο κείμενο", detail: "Minimal GreekTube Subs" },
+  { id: "premium", title: "Premium", detail: "Βαθύ gradient + glow", src: "/gtslogo-premium.svg" },
 ];
 
 function isLogoStyle(value: string | null): value is LogoStyle {
@@ -133,12 +133,10 @@ export default function LogoPreferenceSystem() {
           display:block!important;
           background:transparent url("/gtslogo-reverse.svg") center/contain no-repeat!important;
         }
-        html[data-gts-logo="wordmark"] body .app-shell.app-shell.app-shell .brand-mark,
-        html[data-gts-logo="wordmark"] body .viewer.viewer.viewer .brand-mark{
-          display:none!important;
-          width:0!important;
-          height:0!important;
-          flex:0 0 0!important;
+        html[data-gts-logo="premium"] body .app-shell.app-shell.app-shell .brand-mark,
+        html[data-gts-logo="premium"] body .viewer.viewer.viewer .brand-mark{
+          display:block!important;
+          background:transparent url("/gtslogo-premium.svg") center/contain no-repeat!important;
         }
 
         .logo-preference-panel{

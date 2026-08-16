@@ -5,9 +5,9 @@
 
 html body .app-shell.app-shell.app-shell .brand-mark{
   position:relative!important;
-  width:40px!important;
-  height:32px!important;
-  flex:0 0 40px!important;
+  width:32px!important;
+  height:26px!important;
+  flex:0 0 32px!important;
   display:block!important;
   overflow:visible!important;
   padding:0!important;
@@ -50,9 +50,9 @@ html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
 
 /* Player/header desktop uses the same asset with no visual variant. */
 html body .viewer.viewer.viewer .brand-mark{
-  width:40px!important;
-  height:32px!important;
-  flex:0 0 40px!important;
+  width:32px!important;
+  height:26px!important;
+  flex:0 0 32px!important;
   border:0!important;
   border-radius:0!important;
   background:transparent url("/gtslogo.svg") center/contain no-repeat!important;
@@ -142,9 +142,9 @@ html body .app-shell.app-shell.app-shell .icon-button{
 @media(max-width:620px){
   html body .app-shell.app-shell.app-shell .brand-mark,
   html body .viewer.viewer.viewer .brand-mark{
-    width:37px!important;
-    height:30px!important;
-    flex:0 0 37px!important;
+    width:30px!important;
+    height:24px!important;
+    flex:0 0 30px!important;
   }
 
   html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
@@ -154,12 +154,16 @@ html body .app-shell.app-shell.app-shell .icon-button{
   }
 }
 
-/* Viewer header root-cause fix: keep back action, brand and settings in three
-   independent columns so legacy absolute brand rules can never overlap the
-   settings button with the wordmark/version block. */
+/* Viewer header root-cause fix: keep back action, brand, theme toggle and
+   settings in four independent columns so legacy absolute brand rules can
+   never overlap the settings button with the wordmark/version block, and
+   the portaled theme-toggle button (appended as a plain .app-header child
+   by ThemeToggleEnhancer) has an explicit place instead of falling to an
+   implicit new grid row. */
 html body .app-shell.app-shell.app-shell.viewer>.app-header{
   display:grid!important;
-  grid-template-columns:minmax(0,auto) minmax(0,auto) minmax(0,auto)!important;
+  grid-template-columns:minmax(0,auto) minmax(0,1fr) auto auto!important;
+  column-gap:10px!important;
   justify-content:space-between!important;
   align-items:center!important;
 }
@@ -177,8 +181,33 @@ html body .app-shell.app-shell.app-shell.viewer>.app-header>.back-to-video{
   grid-column:1!important;
   justify-self:start!important;
 }
-html body .app-shell.app-shell.app-shell.viewer>.app-header>.icon-button{
+html body .app-shell.app-shell.app-shell.viewer>.app-header>.theme-quick-toggle{
   grid-column:3!important;
   justify-self:end!important;
-  margin-left:auto!important;
+}
+html body .app-shell.app-shell.app-shell.viewer>.app-header>.icon-button{
+  grid-column:4!important;
+  justify-self:end!important;
+  margin-left:0!important;
+}
+
+/* Fix: .mobile-menu (hamburger dropdown) had no light-mode coverage
+   anywhere in the codebase — it always rendered with its hardcoded
+   near-black background/border, which is inconsistent with the rest of
+   light mode (though button text stayed a light, readable gray so this
+   was a "wrong theme" bug rather than a true invisible-text bug). */
+:root[data-theme="light"] .mobile-menu{
+  background:rgba(255,255,255,.98)!important;
+  border-color:rgba(20,22,28,.1)!important;
+  box-shadow:0 22px 70px rgba(20,22,28,.14),inset 0 1px 0 rgba(255,255,255,.5)!important;
+}
+:root[data-theme="light"] .mobile-menu>button:not(.mobile-add){
+  color:#3d4436!important;
+}
+:root[data-theme="light"] .mobile-menu>button:not(.mobile-add):hover{
+  background:rgba(20,22,28,.05)!important;
+}
+:root[data-theme="light"] .mobile-menu>button:not(.mobile-add).active{
+  background:rgba(143,127,240,.14)!important;
+  color:#4a3fa8!important;
 }
