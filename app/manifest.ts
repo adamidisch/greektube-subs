@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+const BRAND_REV = "7820";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "GreekTube Subs",
@@ -11,7 +13,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#7967F1",
     icons: [
       {
-        src: "/gtslogo.svg",
+        src: `/gtslogo.svg?v=${BRAND_REV}`,
         sizes: "any",
         type: "image/svg+xml",
         purpose: "any",
