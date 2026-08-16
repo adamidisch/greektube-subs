@@ -62,20 +62,21 @@ html body .viewer.viewer.viewer .brand-mark{
 /* Viewer utility icons: clearer lavender contrast on the dark byline. */
 html body .viewer.viewer.viewer .mobile-video-byline button,
 html body .viewer.viewer.viewer .mobile-watch-summary button{
-  border-color:rgba(155,137,255,.34)!important;
-  background:rgba(126,105,241,.10)!important;
-  color:#CFC8FF!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+  border-color:rgba(166,151,255,.5)!important;
+  background:rgba(132,112,244,.2)!important;
+  color:#E4DFFF!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important;
 }
 html body .viewer.viewer.viewer .mobile-video-byline button:hover,
 html body .viewer.viewer.viewer .mobile-watch-summary button:hover{
-  border-color:rgba(166,151,255,.56)!important;
-  background:rgba(132,112,244,.17)!important;
+  border-color:rgba(177,163,255,.68)!important;
+  background:rgba(140,120,250,.3)!important;
   color:#F1EEFF!important;
 }
 html body .viewer.viewer.viewer .mobile-video-byline button.active,
 html body .viewer.viewer.viewer .mobile-watch-summary button.active{
-  border-color:rgba(191,115,151,.48)!important;
+  border-color:rgba(191,115,151,.58)!important;
+  background:rgba(191,115,151,.16)!important;
   color:#F29AB6!important;
 }
 
@@ -132,6 +133,12 @@ html[data-theme="light"] body .viewer.viewer.viewer .mobile-watch-summary button
   border-left-color:#6655D0!important;
 }
 
+html body .app-shell.app-shell.app-shell .icon-button{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+
 @media(max-width:620px){
   html body .app-shell.app-shell.app-shell .brand-mark,
   html body .viewer.viewer.viewer .brand-mark{
@@ -145,4 +152,33 @@ html[data-theme="light"] body .viewer.viewer.viewer .mobile-watch-summary button
     height:25px!important;
     flex:0 0 32px!important;
   }
+}
+
+/* Viewer header root-cause fix: keep back action, brand and settings in three
+   independent columns so legacy absolute brand rules can never overlap the
+   settings button with the wordmark/version block. */
+html body .app-shell.app-shell.app-shell.viewer>.app-header{
+  display:grid!important;
+  grid-template-columns:minmax(0,auto) minmax(0,auto) minmax(0,auto)!important;
+  justify-content:space-between!important;
+  align-items:center!important;
+}
+html body .app-shell.app-shell.app-shell.viewer>.app-header>.brand{
+  position:static!important;
+  left:auto!important;
+  top:auto!important;
+  transform:none!important;
+  grid-column:2!important;
+  justify-self:center!important;
+  margin:0!important;
+}
+html body .app-shell.app-shell.app-shell.viewer>.app-header>.back-library,
+html body .app-shell.app-shell.app-shell.viewer>.app-header>.back-to-video{
+  grid-column:1!important;
+  justify-self:start!important;
+}
+html body .app-shell.app-shell.app-shell.viewer>.app-header>.icon-button{
+  grid-column:3!important;
+  justify-self:end!important;
+  margin-left:auto!important;
 }
