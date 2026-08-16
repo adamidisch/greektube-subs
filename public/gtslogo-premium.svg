@@ -1,0 +1,39 @@
+<svg width="40" height="32" viewBox="0 0 40 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GreekTube Subs">
+  <defs>
+    <linearGradient id="gts3-body" x1="20" y1="2" x2="20" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C3B3F7"/>
+      <stop offset="0.55" stop-color="#9A85EA"/>
+      <stop offset="1" stop-color="#6F5CD6"/>
+    </linearGradient>
+    <linearGradient id="gts3-edge" x1="20" y1="1" x2="20" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2F247F" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#2F247F" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gts3-gloss" x1="20" y1="2" x2="20" y2="15" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.65"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="gts3-bottomglow" x1="20" y1="20" x2="20" y2="29" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.28"/>
+    </linearGradient>
+    <filter id="gts3-lift" x="-20%" y="-28%" width="145%" height="170%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="2" dy="6" stdDeviation="3" flood-color="#5A46C8" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#gts3-lift)">
+    <path d="M8 2H32C35.6 2 38 4.4 38 8V21C38 24.6 35.6 27 32 27H14.5L6.5 33V27H8C4.4 27 2 24.6 2 21V8C2 4.4 4.4 2 8 2Z" fill="url(#gts3-body)"/>
+    <path d="M8 2H32C35.6 2 38 4.4 38 8V21C38 24.6 35.6 27 32 27H14.5L6.5 33V27H8C4.4 27 2 24.6 2 21V8C2 4.4 4.4 2 8 2Z" fill="url(#gts3-edge)"/>
+    <path d="M8 2H32C35.6 2 38 4.4 38 8V21C38 24.6 35.6 27 32 27H14.5L6.5 33V27H8C4.4 27 2 24.6 2 21V8C2 4.4 4.4 2 8 2Z" fill="url(#gts3-bottomglow)"/>
+    <path d="M8 2H32C35.6 2 38 4.4 38 8V17C38 20.6 35.6 23 32 23H8C4.4 23 2 20.6 2 17V8C2 4.4 4.4 2 8 2Z" fill="url(#gts3-gloss)"/>
+    <path d="M9 3H31A5 5 0 0136 8" fill="none" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="1" stroke-linecap="round"/>
+  </g>
+
+  <line x1="9.5" y1="10.5" x2="14" y2="10.5" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round"/>
+  <line x1="9.5" y1="15" x2="16.5" y2="15" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round"/>
+  <line x1="9.5" y1="19.5" x2="19.5" y2="19.5" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round"/>
+  <path d="M25 11.5L25 19.5L32 15.5Z" fill="#FFFFFF"/>
+</svg>
