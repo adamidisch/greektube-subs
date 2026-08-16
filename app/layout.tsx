@@ -67,12 +67,13 @@ export const metadata: Metadata = {
     images: [DEFAULT_SHARE_IMAGE],
   },
   other: {
-    "codex-preview": `v${APP_VERSION}-production-cleanup`,
+    "codex-preview": `v${APP_VERSION}-gtslogo-final`,
     "app-version": APP_VERSION,
   },
   icons: {
-    icon: [{ url: "/brand-mark.svg", type: "image/svg+xml" }],
-    shortcut: "/brand-mark.svg",
+    icon: [{ url: "/gtslogo.svg", type: "image/svg+xml" }],
+    shortcut: "/gtslogo.svg",
+    apple: [{ url: "/gtslogo.svg", type: "image/svg+xml" }],
   },
 };
 

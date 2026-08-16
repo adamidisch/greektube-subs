@@ -1,19 +1,19 @@
-/* GreekTube Subs — canonical brand lockup.
-   ONE source of truth for the mark: /public/brand-mark.svg
-   The exact same mark is used in desktop, mobile, player, footer and favicon.
+/* GreekTube Subs — canonical brand system.
+   ONE source of truth for the official mark: /public/gtslogo.svg
+   Same geometry, color and raised treatment in every product surface.
    Only rendered size changes by context. */
 
 html body .app-shell.app-shell.app-shell .brand-mark{
   position:relative!important;
-  width:38px!important;
+  width:40px!important;
   height:32px!important;
-  flex:0 0 38px!important;
+  flex:0 0 40px!important;
   display:block!important;
   overflow:visible!important;
   padding:0!important;
   border:0!important;
   border-radius:0!important;
-  background:transparent url("/brand-mark.svg") center/contain no-repeat!important;
+  background:transparent url("/gtslogo.svg") center/contain no-repeat!important;
   color:transparent!important;
   font-size:0!important;
   line-height:0!important;
@@ -21,7 +21,7 @@ html body .app-shell.app-shell.app-shell .brand-mark{
   filter:none!important;
 }
 
-/* Kill every historical CSS/glyph construction. */
+/* Historical CSS/glyph constructions stay disabled. */
 html body .app-shell.app-shell.app-shell .brand-mark:before,
 html body .app-shell.app-shell.app-shell .brand-mark:after,
 html body .app-shell.app-shell.app-shell .brand-mark>i,
@@ -35,42 +35,114 @@ html body .app-shell.app-shell.app-shell .brand-mark>i:after{
   animation:none!important;
 }
 
-/* Wordmark identity is also shared everywhere. */
 html body .app-shell.app-shell.app-shell .brand b,
 html body .app-shell.app-shell.app-shell .app-footer-brand b{
-  color:#8C83F7!important;
+  color:#8F7CF6!important;
   font-weight:620!important;
 }
 
 /* Footer: exact same mark, only smaller. */
 html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
-  width:32px!important;
-  height:26px!important;
-  flex:0 0 32px!important;
+  width:34px!important;
+  height:27px!important;
+  flex:0 0 34px!important;
 }
 
 /* Player/header desktop uses the same asset with no visual variant. */
 html body .viewer.viewer.viewer .brand-mark{
-  width:38px!important;
+  width:40px!important;
   height:32px!important;
-  flex:0 0 38px!important;
+  flex:0 0 40px!important;
   border:0!important;
   border-radius:0!important;
-  background:transparent url("/brand-mark.svg") center/contain no-repeat!important;
+  background:transparent url("/gtslogo.svg") center/contain no-repeat!important;
   box-shadow:none!important;
+}
+
+/* Viewer utility icons: clearer lavender contrast on the dark byline. */
+html body .viewer.viewer.viewer .mobile-video-byline button,
+html body .viewer.viewer.viewer .mobile-watch-summary button{
+  border-color:rgba(155,137,255,.34)!important;
+  background:rgba(126,105,241,.10)!important;
+  color:#CFC8FF!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+}
+html body .viewer.viewer.viewer .mobile-video-byline button:hover,
+html body .viewer.viewer.viewer .mobile-watch-summary button:hover{
+  border-color:rgba(166,151,255,.56)!important;
+  background:rgba(132,112,244,.17)!important;
+  color:#F1EEFF!important;
+}
+html body .viewer.viewer.viewer .mobile-video-byline button.active,
+html body .viewer.viewer.viewer .mobile-watch-summary button.active{
+  border-color:rgba(191,115,151,.48)!important;
+  color:#F29AB6!important;
+}
+
+/* The subtitles action uses the GreekTube Subs lines + play glyph instead of CC. */
+html body .viewer.viewer.viewer .mobile-video-byline button[aria-label="Διαχείριση υποτίτλων"],
+html body .viewer.viewer.viewer .mobile-watch-summary button[aria-label="Διαχείριση υποτίτλων"]{
+  position:relative!important;
+  font-size:0!important;
+}
+html body .viewer.viewer.viewer .mobile-video-byline button[aria-label="Διαχείριση υποτίτλων"]:before,
+html body .viewer.viewer.viewer .mobile-watch-summary button[aria-label="Διαχείριση υποτίτλων"]:before{
+  content:""!important;
+  position:absolute!important;
+  left:7px!important;
+  top:9px!important;
+  width:8px!important;
+  height:13px!important;
+  display:block!important;
+  background:
+    linear-gradient(#CFC8FF,#CFC8FF) 0 0/3.5px 1.7px no-repeat,
+    linear-gradient(#CFC8FF,#CFC8FF) 0 5.5px/5.5px 1.7px no-repeat,
+    linear-gradient(#CFC8FF,#CFC8FF) 0 11px/8px 1.7px no-repeat!important;
+  border-radius:0!important;
+}
+html body .viewer.viewer.viewer .mobile-video-byline button[aria-label="Διαχείριση υποτίτλων"]:after,
+html body .viewer.viewer.viewer .mobile-watch-summary button[aria-label="Διαχείριση υποτίτλων"]:after{
+  content:""!important;
+  position:absolute!important;
+  right:6px!important;
+  top:50%!important;
+  width:0!important;
+  height:0!important;
+  border-top:5px solid transparent!important;
+  border-bottom:5px solid transparent!important;
+  border-left:7px solid #CFC8FF!important;
+  transform:translateY(-50%)!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-video-byline button,
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-watch-summary button{
+  border-color:rgba(106,88,216,.24)!important;
+  background:#F5F2FF!important;
+  color:#6655D0!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-video-byline button[aria-label="Διαχείριση υποτίτλων"]:before,
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-watch-summary button[aria-label="Διαχείριση υποτίτλων"]:before{
+  background:
+    linear-gradient(#6655D0,#6655D0) 0 0/3.5px 1.7px no-repeat,
+    linear-gradient(#6655D0,#6655D0) 0 5.5px/5.5px 1.7px no-repeat,
+    linear-gradient(#6655D0,#6655D0) 0 11px/8px 1.7px no-repeat!important;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-video-byline button[aria-label="Διαχείριση υποτίτλων"]:after,
+html[data-theme="light"] body .viewer.viewer.viewer .mobile-watch-summary button[aria-label="Διαχείριση υποτίτλων"]:after{
+  border-left-color:#6655D0!important;
 }
 
 @media(max-width:620px){
   html body .app-shell.app-shell.app-shell .brand-mark,
   html body .viewer.viewer.viewer .brand-mark{
-    width:35px!important;
-    height:28px!important;
-    flex:0 0 35px!important;
+    width:37px!important;
+    height:30px!important;
+    flex:0 0 37px!important;
   }
 
   html body .app-shell.app-shell.app-shell .app-footer-brand .brand-mark{
-    width:30px!important;
-    height:24px!important;
-    flex:0 0 30px!important;
+    width:32px!important;
+    height:25px!important;
+    flex:0 0 32px!important;
   }
 }

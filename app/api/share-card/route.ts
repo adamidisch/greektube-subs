@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const thumbnail = videoId
     ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
     : null;
-  const brandMark = new URL("/brand-mark.svg", url.origin).toString();
+  const gtslogo = new URL("/gtslogo.svg", url.origin).toString();
 
   return new ImageResponse(
     h(
@@ -66,13 +66,13 @@ export async function GET(request: Request) {
             padding: "12px 18px 12px 12px",
             borderRadius: 18,
             background: "rgba(8,10,15,.84)",
-            border: "1px solid rgba(255,255,255,.16)",
+            border: "1px solid rgba(175,160,255,.25)",
           },
         },
         h("img", {
-          src: brandMark,
-          width: 60,
-          height: 48,
+          src: gtslogo,
+          width: 66,
+          height: 53,
           style: { objectFit: "contain" },
         }),
         h(
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
           "GreekTube ",
           h(
             "span",
-            { style: { color: "#A79FFF", marginLeft: 7 } },
+            { style: { color: "#B0A2FF", marginLeft: 7 } },
             "Subs",
           ),
         ),
@@ -132,7 +132,7 @@ export async function GET(request: Request) {
               color: "#DDDFF0",
             },
           },
-          h("span", { style: { color: "#A79FFF", fontWeight: 700 } }, "Ελληνικοί υπότιτλοι"),
+          h("span", { style: { color: "#B0A2FF", fontWeight: 700 } }, "Ελληνικοί υπότιτλοι"),
           h("span", { style: { color: "#8B91A5" } }, "·"),
           h("span", null, "greektubesubs.com"),
         ),
