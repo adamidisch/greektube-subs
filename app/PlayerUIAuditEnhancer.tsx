@@ -12,7 +12,7 @@ const CURATED_SPEAKERS: Record<string, string> = {
   KkBy__7d9Fs: "Dr. Sarah Myhill",
   "0_adZSC0sFI": "Dr. Sarah Myhill",
   D2RjneeG_xA: "Dr. Sarah Myhill",
-  fX2z_BF8Jac: "Dr. Natasha Campbell-McBride",
+  "fX2z-BF8Jac": "Dr. Natasha Campbell-McBride",
   HDK3Y9mGMiA: "Dr. Natasha Campbell-McBride",
 };
 
