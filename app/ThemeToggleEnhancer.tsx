@@ -145,21 +145,67 @@ export default function ThemeToggleEnhancer() {
   );
 
   if (!header) return null;
-  return createPortal(
-    <button
-      type="button"
-      className="theme-quick-toggle"
-      aria-label={label}
-      title={label}
-      onClick={() => {
-        const next = theme === "dark" ? "light" : "dark";
-        setTheme(next);
-        applyTheme(next);
-        void persistTheme(next);
-      }}
-    >
-      <ThemeIcon theme={theme} />
-    </button>,
-    header,
+  return (
+    <>
+      {createPortal(
+        <button
+          type="button"
+          className="theme-quick-toggle"
+          aria-label={label}
+          title={label}
+          onClick={() => {
+            const next = theme === "dark" ? "light" : "dark";
+            setTheme(next);
+            applyTheme(next);
+            void persistTheme(next);
+          }}
+        >
+          <ThemeIcon theme={theme} />
+        </button>,
+        header,
+      )}
+      <style>{`
+        /* Player/viewer headers always reserve one fixed action zone on the right.
+           Theme sits immediately left of Settings and Settings remains the final control. */
+        .app-shell.viewer > .app-header {
+          grid-template-columns: minmax(0,auto) minmax(0,1fr) 92px !important;
+          column-gap: 10px !important;
+          padding-right: 0 !important;
+        }
+        .app-shell.viewer > .app-header > .brand {
+          grid-column: 2 !important;
+          justify-self: center !important;
+        }
+        .app-shell.viewer > .app-header > .back-library,
+        .app-shell.viewer > .app-header > .back-to-video {
+          grid-column: 1 !important;
+          justify-self: start !important;
+        }
+        .app-shell.viewer > .app-header > .theme-quick-toggle,
+        .app-shell.viewer > .app-header > .icon-button[aria-label="Ρυθμίσεις"] {
+          position: absolute !important;
+          top: 50% !important;
+          margin: 0 !important;
+          z-index: 6 !important;
+          transform: translateY(-50%) !important;
+          grid-column: auto !important;
+          justify-self: auto !important;
+        }
+        .app-shell.viewer > .app-header > .theme-quick-toggle {
+          right: 46px !important;
+        }
+        .app-shell.viewer > .app-header > .icon-button[aria-label="Ρυθμίσεις"] {
+          right: 0 !important;
+        }
+        @media (max-width: 620px) {
+          .app-shell.viewer > .app-header {
+            grid-template-columns: minmax(0,auto) minmax(0,1fr) 94px !important;
+          }
+          .app-shell.viewer > .app-header > .theme-quick-toggle {
+            right: 48px !important;
+          }
+        }
+      `}</style>
+    </>
   );
 }
