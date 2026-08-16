@@ -4,6 +4,7 @@ import { ImageResponse } from "next/og";
 export const runtime = "edge";
 
 const h = React.createElement;
+const BRAND_REV = "7820";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
   const thumbnail = videoId
     ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
     : null;
-  const gtslogo = new URL("/gtslogo.svg", url.origin).toString();
+  const gtslogo = new URL(`/gtslogo.svg?v=${BRAND_REV}`, url.origin).toString();
 
   return new ImageResponse(
     h(
