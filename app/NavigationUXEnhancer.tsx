@@ -102,6 +102,35 @@ export default function NavigationUXEnhancer() {
         outline-offset: 3px;
       }
 
+      .viewer .mobile-video-byline > span > button[aria-label="Διαχείριση υποτίτλων"] {
+        display: none !important;
+      }
+
+      .viewer .mobile-video-byline > span > button[aria-label="Επεξεργασία βίντεο"] {
+        color: #f1f2f6 !important;
+        border-color: rgba(255,255,255,.14) !important;
+        background: #1b1f27 !important;
+        text-shadow: 0 0 10px rgba(255,255,255,.12);
+      }
+
+      .viewer .mobile-video-byline > span > button[aria-label="Αγαπημένο"] {
+        color: #d7dae3 !important;
+        border-color: rgba(255,255,255,.14) !important;
+        background: #1b1f27 !important;
+      }
+
+      .viewer .mobile-video-byline > span > button[aria-label="Αγαπημένο"].active {
+        color: #ff8b82 !important;
+        border-color: rgba(255,139,130,.34) !important;
+        background: rgba(255,139,130,.08) !important;
+      }
+
+      .viewer .mobile-video-byline > span > button[aria-label="Επεξεργασία βίντεο"]:hover,
+      .viewer .mobile-video-byline > span > button[aria-label="Αγαπημένο"]:hover {
+        border-color: rgba(143,127,240,.42) !important;
+        background: rgba(143,127,240,.10) !important;
+      }
+
       @media (max-width: 700px) {
         .settings-page-header {
           padding-right: 62px;
