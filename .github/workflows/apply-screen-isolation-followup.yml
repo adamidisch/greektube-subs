@@ -1,0 +1,32 @@
+name: Apply Screen Isolation Followup
+on:
+  push:
+    branches: [audit/screen-isolation-ux]
+    paths:
+      - scripts/apply_screen_isolation_followup.py
+      - .github/workflows/apply-screen-isolation-followup.yml
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/screen-isolation-ux
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - run: python scripts/apply_screen_isolation_followup.py
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app/GreekTubePlayer.tsx app/NavigationUXEnhancer.tsx app/ThemeToggleEnhancer.tsx app/LogoPreferenceSystem.tsx app/PlayerUIAuditEnhancer.tsx app/screen-isolation.css
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "fix: isolate library and player settings state"
+            git push origin HEAD:audit/screen-isolation-ux
+          fi
