@@ -1,0 +1,24 @@
+/* v7.8.23 — reliable iPhone fullscreen exit control and viewer footer. */
+
+/* The exit control is conditionally mounted by React. This rule protects the
+   hidden state from older pseudo-fullscreen declarations that force opacity. */
+html body .app-shell.app-shell.app-shell .video-frame .custom-fullscreen.fs-exit-hidden{
+  display:none!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+html body main.app-shell.app-shell.app-shell.viewer .app-footer{
+  margin-top:34px!important;
+  margin-bottom:max(8px,env(safe-area-inset-bottom))!important;
+}
+
+html body main.app-shell.app-shell.app-shell.viewer.viewer-settings-open .app-footer{
+  visibility:hidden!important;
+}
+
+@media(max-width:620px){
+  html body main.app-shell.app-shell.app-shell.viewer .app-footer{
+    margin-top:26px!important;
+  }
+}
