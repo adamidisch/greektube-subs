@@ -2,20 +2,6 @@
 
 import { useEffect } from "react";
 
-type CaptionSpeaker = { name?: string; role?: string };
-type CaptionPayload = { speaker?: CaptionSpeaker };
-
-const CURATED_SPEAKERS: Record<string, string> = {
-  BbGv7GTbRN8: "Dr. Stasha Gominak",
-  ATKu1Cxs2Pc: "Dr. Philip Ovadia",
-  NqLpQhii_fU: "Dr. Sarah Myhill",
-  KkBy__7d9Fs: "Dr. Sarah Myhill",
-  "0_adZSC0sFI": "Dr. Sarah Myhill",
-  D2RjneeG_xA: "Dr. Sarah Myhill",
-  "fX2z-BF8Jac": "Dr. Natasha Campbell-McBride",
-  HDK3Y9mGMiA: "Dr. Natasha Campbell-McBride",
-};
-
 function settingsIcon() {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
@@ -69,50 +55,47 @@ function replaceIcon(button: HTMLButtonElement, kind: "settings" | "edit" | "fav
 
 export default function PlayerUIAuditEnhancer() {
   useEffect(() => {
-    let activeVideoId = "";
-    let requestSerial = 0;
+    let root: Element | null = null;
+    let observer: MutationObserver | null = null;
+    let raf = 0;
 
     const decorate = () => {
-      document.querySelectorAll<HTMLButtonElement>('.viewer .icon-button[aria-label="Ρυθμίσεις"]').forEach(button => replaceIcon(button, "settings"));
-
-      document.querySelectorAll<HTMLButtonElement>('.viewer .mobile-video-byline button[aria-label="Διαχείριση υποτίτλων"]').forEach(button => button.remove());
-      document.querySelectorAll<HTMLButtonElement>('.viewer .mobile-video-byline button[aria-label="Επεξεργασία βίντεο"], .viewer .mobile-watch-summary button[aria-label="Επεξεργασία βίντεο"]').forEach(button => replaceIcon(button, "edit"));
-      document.querySelectorAll<HTMLButtonElement>('.viewer .mobile-video-byline button[aria-label="Αγαπημένο"], .viewer .mobile-watch-summary button[aria-label="Αγαπημένο"]').forEach(button => replaceIcon(button, "favorite"));
-
-      const videoId = new URLSearchParams(location.search).get("video") || "";
-      if (!videoId || videoId === activeVideoId) return;
-      activeVideoId = videoId;
-      const serial = ++requestSerial;
-
-      const applySpeaker = (name: string) => {
-        if (!name || serial !== requestSerial) return;
-        document.querySelectorAll<HTMLElement>(".viewer .mobile-video-byline > strong").forEach(node => { node.textContent = name; });
-        document.querySelectorAll<HTMLElement>(".viewer .mobile-watch-summary section > div > strong").forEach(node => { node.textContent = name; });
-        document.querySelectorAll<HTMLElement>(".viewer .video-meta-kicker > strong").forEach(node => { node.textContent = name; });
-        document.querySelectorAll<HTMLElement>(".viewer .cover-caption > small").forEach(node => { node.textContent = name; });
-      };
-
-      const curated = CURATED_SPEAKERS[videoId];
-      if (curated) applySpeaker(curated);
-
-      void fetch(`/api/captions?videoId=${encodeURIComponent(videoId)}`, { cache: "no-store" })
-        .then(async response => response.ok ? await response.json() as CaptionPayload : null)
-        .then(payload => {
-          const captionSpeaker = payload?.speaker?.name?.trim();
-          if (captionSpeaker) applySpeaker(captionSpeaker);
-          else if (curated) applySpeaker(curated);
-        })
-        .catch(() => { if (curated) applySpeaker(curated); });
+      raf = 0;
+      const viewer = document.querySelector("main.app-shell.viewer");
+      if (!viewer) return;
+      viewer.querySelectorAll<HTMLButtonElement>('.icon-button[aria-label="Ρυθμίσεις"]').forEach(button => replaceIcon(button, "settings"));
+      viewer.querySelectorAll<HTMLButtonElement>('.mobile-video-byline button[aria-label="Επεξεργασία βίντεο"], .mobile-watch-summary button[aria-label="Επεξεργασία βίντεο"]').forEach(button => replaceIcon(button, "edit"));
+      viewer.querySelectorAll<HTMLButtonElement>('.mobile-video-byline button[aria-label="Αγαπημένο"], .mobile-watch-summary button[aria-label="Αγαπημένο"]').forEach(button => replaceIcon(button, "favorite"));
     };
 
-    decorate();
-    const observer = new MutationObserver(decorate);
-    observer.observe(document.body, { childList: true, subtree: true });
-    window.addEventListener("popstate", decorate);
+    const schedule = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(decorate);
+    };
+
+    const attach = () => {
+      const next = document.querySelector("main.app-shell.viewer");
+      if (next === root) {
+        schedule();
+        return;
+      }
+      observer?.disconnect();
+      root = next;
+      if (root) {
+        observer = new MutationObserver(schedule);
+        observer.observe(root, { childList: true, subtree: true });
+      }
+      schedule();
+    };
+
+    attach();
+    const lifecycleObserver = new MutationObserver(attach);
+    lifecycleObserver.observe(document.body, { childList: true });
 
     return () => {
-      observer.disconnect();
-      window.removeEventListener("popstate", decorate);
+      observer?.disconnect();
+      lifecycleObserver.disconnect();
+      if (raf) window.cancelAnimationFrame(raf);
     };
   }, []);
 
