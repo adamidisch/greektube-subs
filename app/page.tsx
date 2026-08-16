@@ -4,6 +4,7 @@ import GreekTubePlayer from "./GreekTubePlayer";
 import TranscriptPerformanceEnhancer from "./TranscriptPerformanceEnhancer";
 import ThemeToggleEnhancer from "./ThemeToggleEnhancer";
 import NavigationUXEnhancer from "./NavigationUXEnhancer";
+import VersionAboutSystem from "./VersionAboutSystem";
 
 const SITE_URL = "https://greektubesubs.com";
 const BRAND_REV = "7820";
@@ -92,6 +93,7 @@ export default function Home() {
       <TranscriptPerformanceEnhancer />
       <ThemeToggleEnhancer />
       <NavigationUXEnhancer />
+      <VersionAboutSystem />
     </>
   );
 }
