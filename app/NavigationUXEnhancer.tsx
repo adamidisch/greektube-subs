@@ -22,6 +22,9 @@ export default function NavigationUXEnhancer() {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
+      const target = event.target;
+      if (target instanceof Element && target.closest(".modal-backdrop,.version-about-backdrop")) return;
+      if (document.querySelector(".modal-backdrop,.version-about-backdrop")) return;
       const closeButton = getCloseButton();
       if (!closeButton) return;
       event.preventDefault();

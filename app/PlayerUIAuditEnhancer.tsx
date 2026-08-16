@@ -61,11 +61,11 @@ export default function PlayerUIAuditEnhancer() {
 
     const decorate = () => {
       raf = 0;
-      const viewer = document.querySelector("main.app-shell.viewer");
-      if (!viewer) return;
-      viewer.querySelectorAll<HTMLButtonElement>('.icon-button[aria-label="Ρυθμίσεις"]').forEach(button => replaceIcon(button, "settings"));
-      viewer.querySelectorAll<HTMLButtonElement>('.mobile-video-byline button[aria-label="Επεξεργασία βίντεο"], .mobile-watch-summary button[aria-label="Επεξεργασία βίντεο"]').forEach(button => replaceIcon(button, "edit"));
-      viewer.querySelectorAll<HTMLButtonElement>('.mobile-video-byline button[aria-label="Αγαπημένο"], .mobile-watch-summary button[aria-label="Αγαπημένο"]').forEach(button => replaceIcon(button, "favorite"));
+      document.querySelectorAll<Element>(".app-shell.viewer").forEach(viewer => {
+        viewer.querySelectorAll<HTMLButtonElement>('.icon-button[aria-label="Ρυθμίσεις"]').forEach(button => replaceIcon(button, "settings"));
+        viewer.querySelectorAll<HTMLButtonElement>('.mobile-video-byline button[aria-label="Επεξεργασία βίντεο"], .mobile-watch-summary button[aria-label="Επεξεργασία βίντεο"]').forEach(button => replaceIcon(button, "edit"));
+        viewer.querySelectorAll<HTMLButtonElement>('.mobile-video-byline button[aria-label="Αγαπημένο"], .mobile-watch-summary button[aria-label="Αγαπημένο"]').forEach(button => replaceIcon(button, "favorite"));
+      });
     };
 
     const schedule = () => {

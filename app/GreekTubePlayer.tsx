@@ -410,6 +410,7 @@ export default function GreekTubePlayer() {
   const volumeDragging=useRef(false);
   const keyboardSeekTarget=useRef<number|null>(null);
   const keyboardSeekTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const playerScrollPosition=useRef(0);
   const [subtitleMenuOpen,setSubtitleMenuOpen]=useState(false);
   const [guideOpen,setGuideOpen]=useState(false);
   const playerHost=useRef<HTMLDivElement>(null);
@@ -516,6 +517,29 @@ export default function GreekTubePlayer() {
     document.body.style.overflow="hidden";
     return()=>{document.body.style.overflow=previousOverflow;};
   },[isPseudoFullscreen]);
+  useEffect(()=>{
+    if(!selectedId||view!=="settings")return;
+    const body=document.body;
+    const previousOverflow=body.style.overflow;
+    const previousPaddingRight=body.style.paddingRight;
+    const scrollbarGap=Math.max(0,window.innerWidth-document.documentElement.clientWidth);
+    if(scrollbarGap>0)body.style.paddingRight=`${scrollbarGap}px`;
+    body.style.overflow="hidden";
+    return()=>{
+      body.style.overflow=previousOverflow;
+      body.style.paddingRight=previousPaddingRight;
+      window.requestAnimationFrame(()=>window.scrollTo(0,playerScrollPosition.current));
+    };
+  },[view,selectedId]);
+  useEffect(()=>{
+    const syncQuickTheme=(event:Event)=>{
+      const next=(event as CustomEvent<{theme?:Settings["theme"]}>).detail?.theme;
+      if(next!=="dark"&&next!=="light"&&next!=="system")return;
+      setState(current=>current.settings.theme===next?current:{...current,settings:{...current.settings,theme:next}});
+    };
+    window.addEventListener("gts:themechange",syncQuickTheme as EventListener);
+    return()=>window.removeEventListener("gts:themechange",syncQuickTheme as EventListener);
+  },[]);
   useEffect(()=>{
     if(!isFullscreen&&!isPseudoFullscreen){
       if(fsExitTimer.current)clearTimeout(fsExitTimer.current);
@@ -955,15 +979,17 @@ export default function GreekTubePlayer() {
   }
   function close(){player.current?.destroy();player.current=null;setIsPseudoFullscreen(false);setCheckingReady(false);setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
   function goToSettings(){
+    playerScrollPosition.current=window.scrollY;
     const time=currentPlayer()?.getCurrentTime()||selected?.lastPosition||0;
     if(selectedId)patchVideo(selectedId,{lastPosition:time});
-    player.current?.destroy();player.current=null;setTranscriptOpen(false);setError("");setView("settings");
+    setMobileMenu(false);
+    setSubtitleMenuOpen(false);
+    setVolumeSliderOpen(false);
+    setView("settings");
   }
   function returnToVideo(){
     if(!selectedId)return;
-    const position=state.videos.find(video=>video.id===selectedId)?.lastPosition||0;
     setView("library");
-    window.setTimeout(()=>initPlayer(selectedId,position),120);
   }
   function goHome(){close();setView("library");setMobileMenu(false);}
   async function rebuildTranslation(video:Video){
@@ -979,7 +1005,11 @@ export default function GreekTubePlayer() {
     const moments=state.moments.filter(m=>m.videoId===selected.id);
     const fallbackSpeaker=speakerForVideo(selected.id,selected.channel);
     const speaker=captions?.speaker||fallbackSpeaker;
-    const displaySpeakerName=selected.speakerName||speaker.name||fallbackSpeaker.name||selected.channel;
+    const storedSpeaker=(selected.speakerName||"").trim();
+    const normalizedStoredSpeaker=searchText(storedSpeaker);
+    const normalizedChannel=searchText(selected.channel);
+    const speakerNeedsFallback=!storedSpeaker||normalizedStoredSpeaker===normalizedChannel||normalizedStoredSpeaker==="αγνωστος ομιλητης"||normalizedStoredSpeaker==="unknown speaker";
+    const displaySpeakerName=speakerNeedsFallback?(captions?.speaker?.name||fallbackSpeaker.name||selected.channel):storedSpeaker;
     const displaySpeakerRole=[selected.speakerRole,captions?.speaker?.role,fallbackSpeaker.role].map(cleanSpeakerRole).find(Boolean)||"";
     const displaySpeakerLabel=displaySpeakerRole?`${displaySpeakerName} | ${displaySpeakerRole}`:displaySpeakerName;
     const sourceVideoUrl=selected.originalVideoUrl||selected.url||`https://www.youtube.com/watch?v=${selected.id}`;
@@ -1003,8 +1033,9 @@ export default function GreekTubePlayer() {
       catch(problem){setDetailsSrtError(problem instanceof Error?problem.message:"Δεν ήταν δυνατή η λήψη του αγγλικού transcript.");}
       finally{setDetailsSrtDownloading(false);}
     }
-    if(view==="settings")return <main className="app-shell viewer settings-from-player"><header className="app-header"><button className="ghost back-to-video" onClick={returnToVideo}>← Πίσω στο βίντεο</button><Brand home={goHome}/><button className="icon-button active" aria-label="Ρυθμίσεις">⚙</button></header><SettingsPage settings={state.settings} update={patch=>setState(current=>({...current,settings:{...current.settings,...patch}}))} close={returnToVideo}/></main>;
-    return <main className="app-shell viewer">
+    const settingsFromPlayer=view==="settings";
+    return <>
+    <main className={`app-shell viewer ${settingsFromPlayer?"viewer-settings-open":""}`} aria-hidden={settingsFromPlayer?true:undefined}>
       <header className="app-header"><button className="ghost back-library" onClick={close}><span aria-hidden="true">‹</span> Βιβλιοθήκη</button><Brand home={goHome}/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}>⚙</button></header>
       {checkingReady&&<section className="readiness-check" role="status" aria-live="polite"><span className="readiness-spinner" aria-hidden="true"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18"/></svg></span><small>ΕΛΕΓΧΟΣ ΕΛΛΗΝΙΚΩΝ ΥΠΟΤΙΤΛΩΝ</small></section>}
       {!checkingReady&&loading&&<section className="content-loading">
@@ -1148,7 +1179,9 @@ export default function GreekTubePlayer() {
       {manualImportRequest&&<EditPassword close={()=>setManualImportRequest(null)} authorized={()=>{setProImportVideo(manualImportRequest);setManualImportRequest(null);}}/>}
       {proImportVideo&&<ManualTranslateModal video={proImportVideo} authorizationRequired={()=>{setManualImportRequest(proImportVideo);setProImportVideo(null);}} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video,undefined,false,false,result);}}/>}
       {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"google" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"google"});void rebuildTranslation(next);}} onOpenManual={()=>void requestManualImport(translationChoiceVideo)}/>}
-    </main>;
+    </main>
+    {settingsFromPlayer&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-player settings-screen-shell"><header className="app-header"><button className="ghost back-to-video" onClick={returnToVideo}>← Πίσω στο βίντεο</button><Brand home={goHome}/><button className="icon-button active" aria-label="Ρυθμίσεις">⚙</button></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patch=>setState(current=>({...current,settings:{...current.settings,...patch}}))} close={returnToVideo}/></div></div></div>}
+    </>;
   }
 
   return <main className="app-shell">
@@ -1442,6 +1475,8 @@ function AddVideo({close,add,existingIds}:{close:()=>void;add:(v:Video,t:boolean
 }
 
 function SettingsPage({settings,update,close}:{settings:Settings;update:(p:Partial<Settings>)=>void;close:()=>void}) {
-  const toggle=(key:keyof Settings,label:string)=><label className="setting-row"><span>{label}</span><input type="checkbox" checked={Boolean(settings[key])} onChange={e=>update({[key]:e.target.checked})}/></label>;
-  return <section className="settings-page"><header className="settings-page-header"><button type="button" className="settings-close" aria-label="Κλείσιμο ρυθμίσεων" onClick={close}>×</button><span>ΠΡΟΤΙΜΗΣΕΙΣ ΕΦΑΡΜΟΓΗΣ</span><h1>Ρυθμίσεις</h1><p>Οι αλλαγές αποθηκεύονται αυτόματα και εφαρμόζονται σε όλα τα βίντεο.</p></header><div className="settings-grid"><section><h2>Υπότιτλοι</h2><label>Προεπιλεγμένη γλώσσα<select value={settings.subtitleMode} onChange={e=>update({subtitleMode:e.target.value as Settings["subtitleMode"]})}><option value="el">Ελληνικά</option><option value="en">Αγγλικά</option><option value="dual">Διπλοί υπότιτλοι</option></select></label><label>Μέγεθος γραμματοσειράς<input type="range" min="13" max="28" value={settings.subtitleSize} onChange={e=>update({subtitleSize:+e.target.value,subtitleSizeVersion:2})}/><output>{settings.subtitleSize}px · αποθηκεύεται ως προεπιλογή</output></label><label>Θέση<select value={settings.subtitlePosition} onChange={e=>update({subtitlePosition:e.target.value as "top"|"bottom"})}><option value="bottom">Κάτω</option><option value="top">Πάνω</option></select></label><label>Διαφάνεια φόντου<input type="range" min="0" max="1" step=".1" value={settings.opacity} onChange={e=>update({opacity:+e.target.value})}/></label><label>Καθυστέρηση υποτίτλων<input type="range" min="-5" max="5" step=".1" value={settings.delay} onChange={e=>update({delay:+e.target.value})}/><output>{settings.delay}s</output></label>{toggle("subtitles","Εμφάνιση υποτίτλων")}{toggle("autoScroll","Αυτόματη κύλιση μεταγραφής")}{toggle("highlight","Επισήμανση ενεργής γραμμής")}</section><section><h2>Αναπαραγωγή</h2>{toggle("autoplay","Αυτόματη αναπαραγωγή")}<label>Προεπιλεγμένη ταχύτητα<select value={settings.speed} onChange={e=>update({speed:+e.target.value})}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>{toggle("autoTranslate","Αυτόματη μετάφραση")}{toggle("autoCategory","Αυτόματη κατηγοριοποίηση")}{toggle("continueWatching","Συνέχιση προβολής")}</section><section><h2>Εμφάνιση</h2><label>Διάταξη βιβλιοθήκης<select value={settings.layout} onChange={e=>update({layout:e.target.value as "grid"|"list"})}><option value="grid">Πλέγμα</option><option value="list">Λίστα</option></select></label><label>Θέμα<select value={settings.theme} onChange={e=>update({theme:e.target.value as Settings["theme"]})}><option value="dark">Σκούρο</option><option value="light">Φωτεινό</option><option value="system">Σύστημα</option></select></label>{toggle("compact","Συμπαγείς κάρτες")}{toggle("descriptions","Εμφάνιση περιγραφών")}</section></div></section>;
+  const blurAfterPointer=<T extends HTMLElement>(event:React.PointerEvent<T>)=>event.currentTarget.blur();
+  const toggle=(key:keyof Settings,label:string)=><label className="setting-row"><span>{label}</span><input type="checkbox" checked={Boolean(settings[key])} onPointerUp={blurAfterPointer} onChange={e=>update({[key]:e.target.checked})}/></label>;
+  const transparency=Math.round((1-settings.opacity)*100);
+  return <section className="settings-page"><header className="settings-page-header"><button type="button" className="settings-close" aria-label="Κλείσιμο ρυθμίσεων" onClick={close}>×</button><span>ΠΡΟΤΙΜΗΣΕΙΣ ΕΦΑΡΜΟΓΗΣ</span><h1>Ρυθμίσεις</h1><p>Οι αλλαγές αποθηκεύονται αυτόματα και εφαρμόζονται σε όλα τα βίντεο.</p></header><div className="settings-grid"><section><h2>Υπότιτλοι</h2><label>Προεπιλεγμένη γλώσσα<select value={settings.subtitleMode} onPointerUp={blurAfterPointer} onChange={e=>update({subtitleMode:e.target.value as Settings["subtitleMode"]})}><option value="el">Ελληνικά</option><option value="en">Αγγλικά</option><option value="dual">Διπλοί υπότιτλοι</option></select></label><label>Μέγεθος γραμματοσειράς<input type="range" min="13" max="28" value={settings.subtitleSize} onPointerUp={blurAfterPointer} onChange={e=>update({subtitleSize:+e.target.value,subtitleSizeVersion:2})}/><output>{settings.subtitleSize}px · αποθηκεύεται ως προεπιλογή</output></label><label>Θέση<select value={settings.subtitlePosition} onPointerUp={blurAfterPointer} onChange={e=>update({subtitlePosition:e.target.value as "top"|"bottom"})}><option value="bottom">Κάτω</option><option value="top">Πάνω</option></select></label><label>Διαφάνεια φόντου<input type="range" min="0" max="100" step="10" value={transparency} onPointerUp={blurAfterPointer} onChange={e=>update({opacity:1-(+e.target.value/100)})}/><output>{transparency}% διαφάνεια</output></label><div className="subtitle-settings-preview" aria-label="Προεπισκόπηση υποτίτλων"><span style={{background:`rgba(0,0,0,${settings.opacity})`,fontSize:`${Math.min(22,settings.subtitleSize)}px`}}>Προεπισκόπηση ελληνικών υποτίτλων</span></div><label>Καθυστέρηση υποτίτλων<input type="range" min="-5" max="5" step=".1" value={settings.delay} onPointerUp={blurAfterPointer} onChange={e=>update({delay:+e.target.value})}/><output>{settings.delay}s</output></label>{toggle("subtitles","Εμφάνιση υποτίτλων")}{toggle("autoScroll","Αυτόματη κύλιση μεταγραφής")}{toggle("highlight","Επισήμανση ενεργής γραμμής")}</section><section><h2>Αναπαραγωγή</h2>{toggle("autoplay","Αυτόματη αναπαραγωγή")}<label>Προεπιλεγμένη ταχύτητα<select value={settings.speed} onPointerUp={blurAfterPointer} onChange={e=>update({speed:+e.target.value})}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>{toggle("autoTranslate","Αυτόματη μετάφραση")}{toggle("autoCategory","Αυτόματη κατηγοριοποίηση")}{toggle("continueWatching","Συνέχιση προβολής")}</section><section><h2>Εμφάνιση</h2><label>Διάταξη βιβλιοθήκης<select value={settings.layout} onPointerUp={blurAfterPointer} onChange={e=>update({layout:e.target.value as "grid"|"list"})}><option value="grid">Πλέγμα</option><option value="list">Λίστα</option></select></label><label>Θέμα<select value={settings.theme} onPointerUp={blurAfterPointer} onChange={e=>update({theme:e.target.value as Settings["theme"]})}><option value="dark">Σκούρο</option><option value="light">Φωτεινό</option><option value="system">Σύστημα</option></select></label>{toggle("compact","Συμπαγείς κάρτες")}{toggle("descriptions","Εμφάνιση περιγραφών")}</section></div></section>;
 }
