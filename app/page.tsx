@@ -6,6 +6,7 @@ import ThemeToggleEnhancer from "./ThemeToggleEnhancer";
 import NavigationUXEnhancer from "./NavigationUXEnhancer";
 import VersionAboutSystem from "./VersionAboutSystem";
 import LogoPreferenceSystem from "./LogoPreferenceSystem";
+import PlayerUIAuditEnhancer from "./PlayerUIAuditEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
 const BRAND_REV = "7820";
@@ -96,6 +97,7 @@ export default function Home() {
       <NavigationUXEnhancer />
       <VersionAboutSystem />
       <LogoPreferenceSystem />
+      <PlayerUIAuditEnhancer />
     </>
   );
 }
