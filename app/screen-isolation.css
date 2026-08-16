@@ -110,46 +110,7 @@
 }
 @keyframes gtsStartupSpin{to{transform:rotate(360deg)}}
 
-/* Media-title treatment: restrained brand gradient instead of document heading. */
-html:not([data-theme="light"]) body .viewer.viewer.viewer .player-greek-title{
-  background:linear-gradient(105deg,#ffffff 0%,#e8e7ff 34%,#b9b4ff 67%,#8b7cf6 100%)!important;
-  -webkit-background-clip:text!important;
-  background-clip:text!important;
-  -webkit-text-fill-color:transparent!important;
-  color:transparent!important;
-  font-size:24px!important;
-  font-weight:740!important;
-  line-height:1.16!important;
-  letter-spacing:-.032em!important;
-  text-wrap:balance;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .player-greek-title{
-  background:linear-gradient(105deg,#142638 0%,#304c68 48%,#6257b8 78%,#7565d8 100%)!important;
-  -webkit-background-clip:text!important;
-  background-clip:text!important;
-  -webkit-text-fill-color:transparent!important;
-  color:transparent!important;
-  font-size:24px!important;
-  font-weight:740!important;
-  line-height:1.16!important;
-  letter-spacing:-.032em!important;
-  text-wrap:balance;
-}
-@media(max-width:620px){
-  .player-startup-shell{margin:14px auto 26px;padding:0}
-  .player-startup-frame{border-radius:10px}
-  .player-startup-status strong{font-size:11px}
-  .player-startup-spinner{width:36px;height:36px}
-  html body .viewer.viewer.viewer .player-greek-title{
-    font-size:22px!important;
-    line-height:1.2!important;
-    letter-spacing:-.028em!important;
-  }
-}
-
-
-
-/* 7.8.21 distinct app and media title hierarchy */
+/* 7.8.21 — distinct app, featured-video and player-video hierarchy. */
 html body .app-shell.app-shell.app-shell:not(.viewer) .home-intro h1{
   max-width:860px!important;
   margin-top:5px!important;
@@ -173,7 +134,27 @@ html body .app-shell.app-shell.app-shell:not(.viewer) .home-intro h1:after{
   box-shadow:0 0 20px rgba(119,119,240,.2)!important;
 }
 
-html:not([data-theme="light"]) body .viewer.viewer.viewer .player-greek-title{
+/* Featured title: premium content title, deliberately quieter than the app identity. */
+html body .app-shell.app-shell.app-shell:not(.viewer) .featured-panel h2{
+  max-width:360px!important;
+  margin:11px 0 5px!important;
+  background:linear-gradient(102deg,#ffffff 0%,#f1f0ff 58%,#c9c4ff 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;
+  color:transparent!important;
+  font-size:clamp(21px,1.75vw,25px)!important;
+  font-weight:730!important;
+  line-height:1.15!important;
+  letter-spacing:-.032em!important;
+  text-wrap:balance;
+}
+html body .app-shell.app-shell.app-shell:not(.viewer) .featured-meta>span{
+  color:#aaa2f3!important;
+}
+
+/* Player title: editorial media title with its own slim brand marker. */
+html body .viewer.viewer.viewer .player-greek-title{
   position:relative!important;
   max-width:880px!important;
   margin-top:7px!important;
@@ -189,7 +170,7 @@ html:not([data-theme="light"]) body .viewer.viewer.viewer .player-greek-title{
   letter-spacing:-.032em!important;
   text-wrap:balance;
 }
-html:not([data-theme="light"]) body .viewer.viewer.viewer .player-greek-title:before{
+html body .viewer.viewer.viewer .player-greek-title:before{
   content:"";
   position:absolute;
   left:0;
@@ -201,6 +182,7 @@ html:not([data-theme="light"]) body .viewer.viewer.viewer .player-greek-title:be
   box-shadow:0 0 14px rgba(125,111,238,.25);
 }
 
+/* Explicit light palette — never reuse the dark gradients on a light surface. */
 html[data-theme="light"] body .app-shell.app-shell.app-shell:not(.viewer) .home-intro h1{
   background:linear-gradient(100deg,#10293a 0%,#315b75 40%,#6257b7 72%,#338fa7 100%)!important;
   -webkit-background-clip:text!important;
@@ -208,39 +190,73 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell:not(.viewer) .home-
   -webkit-text-fill-color:transparent!important;
   color:transparent!important;
 }
+html[data-theme="light"] body .app-shell.app-shell.app-shell:not(.viewer) .featured-panel h2{
+  background:linear-gradient(102deg,#122738 0%,#294760 65%,#6358b5 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;
+  color:transparent!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell:not(.viewer) .featured-meta>span{
+  color:#5f55b7!important;
+}
 html[data-theme="light"] body .viewer.viewer.viewer .player-greek-title{
-  position:relative!important;
-  max-width:880px!important;
-  margin-top:7px!important;
-  padding-left:15px!important;
   background:linear-gradient(104deg,#142638 0%,#29465f 58%,#6256b4 100%)!important;
   -webkit-background-clip:text!important;
   background-clip:text!important;
   -webkit-text-fill-color:transparent!important;
   color:transparent!important;
-  font-size:25px!important;
-  font-weight:735!important;
-  line-height:1.17!important;
-  letter-spacing:-.032em!important;
-  text-wrap:balance;
 }
 html[data-theme="light"] body .viewer.viewer.viewer .player-greek-title:before{
-  content:"";
-  position:absolute;
-  left:0;
-  top:.14em;
-  bottom:.12em;
-  width:3px;
-  border-radius:999px;
   background:linear-gradient(180deg,#7063d2 0%,#508ab7 55%,#45aec1 100%);
+  box-shadow:none;
+}
+
+/* System theme receives the same proper light treatment when the OS is light. */
+@media(prefers-color-scheme:light){
+  html[data-theme="system"] body .app-shell.app-shell.app-shell:not(.viewer) .home-intro h1{
+    background:linear-gradient(100deg,#10293a 0%,#315b75 40%,#6257b7 72%,#338fa7 100%)!important;
+    -webkit-background-clip:text!important;
+    background-clip:text!important;
+    -webkit-text-fill-color:transparent!important;
+    color:transparent!important;
+  }
+  html[data-theme="system"] body .app-shell.app-shell.app-shell:not(.viewer) .featured-panel h2{
+    background:linear-gradient(102deg,#122738 0%,#294760 65%,#6358b5 100%)!important;
+    -webkit-background-clip:text!important;
+    background-clip:text!important;
+    -webkit-text-fill-color:transparent!important;
+    color:transparent!important;
+  }
+  html[data-theme="system"] body .app-shell.app-shell.app-shell:not(.viewer) .featured-meta>span{color:#5f55b7!important}
+  html[data-theme="system"] body .viewer.viewer.viewer .player-greek-title{
+    background:linear-gradient(104deg,#142638 0%,#29465f 58%,#6256b4 100%)!important;
+    -webkit-background-clip:text!important;
+    background-clip:text!important;
+    -webkit-text-fill-color:transparent!important;
+    color:transparent!important;
+  }
+  html[data-theme="system"] body .viewer.viewer.viewer .player-greek-title:before{
+    background:linear-gradient(180deg,#7063d2 0%,#508ab7 55%,#45aec1 100%);
+    box-shadow:none;
+  }
 }
 
 @media(max-width:620px){
+  .player-startup-shell{margin:14px auto 26px;padding:0}
+  .player-startup-frame{border-radius:10px}
+  .player-startup-status strong{font-size:11px}
+  .player-startup-spinner{width:36px;height:36px}
   html body .app-shell.app-shell.app-shell:not(.viewer) .home-intro h1{
     max-width:360px!important;
     font-size:clamp(27px,8.1vw,32px)!important;
     line-height:1.08!important;
     letter-spacing:-.038em!important;
+  }
+  html body .app-shell.app-shell.app-shell:not(.viewer) .featured-panel h2{
+    max-width:100%!important;
+    font-size:20px!important;
+    line-height:1.18!important;
   }
   html body .viewer.viewer.viewer .player-greek-title{
     max-width:100%!important;
@@ -249,7 +265,5 @@ html[data-theme="light"] body .viewer.viewer.viewer .player-greek-title:before{
     line-height:1.2!important;
     letter-spacing:-.029em!important;
   }
-  html body .viewer.viewer.viewer .player-greek-title:before{
-    width:2px;
-  }
+  html body .viewer.viewer.viewer .player-greek-title:before{width:2px}
 }
