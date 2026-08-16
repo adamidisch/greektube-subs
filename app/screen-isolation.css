@@ -41,27 +41,6 @@
 .settings-screen-layer .settings-grid input[type="range"]{
   touch-action:pan-y;
 }
-.subtitle-settings-preview{
-  min-height:92px;
-  display:grid;
-  place-items:center;
-  margin-top:-2px;
-  padding:16px;
-  overflow:hidden;
-  border:1px solid var(--line);
-  border-radius:12px;
-  background:linear-gradient(145deg,#5e6570,#89919d);
-}
-.subtitle-settings-preview>span{
-  max-width:min(92%,560px);
-  padding:7px 12px;
-  border-radius:7px;
-  color:#fff;
-  font-weight:650;
-  line-height:1.35;
-  text-align:center;
-  text-shadow:0 1px 2px rgba(0,0,0,.4);
-}
 .modal-backdrop,
 .version-about-backdrop{
   z-index:10050!important;
@@ -71,3 +50,100 @@
     padding-bottom:max(24px,env(safe-area-inset-bottom));
   }
 }
+
+/* Fast player-open feedback. Keep loading inside the natural video surface. */
+.player-startup-shell{
+  width:min(100%,1120px);
+  margin:24px auto 40px;
+  padding:0 clamp(0px,1vw,10px);
+}
+.player-startup-frame{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#090a0d;
+  box-shadow:0 20px 55px rgba(0,0,0,.18);
+}
+.player-startup-frame>img{
+  width:100%;height:100%;display:block;object-fit:cover;
+  filter:saturate(.82) brightness(.72);
+  transform:scale(1.01);
+}
+.player-startup-scrim{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(5,6,9,.16),rgba(5,6,9,.46));
+}
+.player-startup-status{
+  position:absolute;inset:0;
+  display:grid;place-items:center;align-content:center;gap:8px;
+  padding:24px;text-align:center;color:#fff;
+}
+.player-startup-status strong{
+  font-size:13px;font-weight:760;letter-spacing:.08em;
+}
+.player-startup-status small{
+  color:rgba(255,255,255,.68);font-size:9px;font-weight:700;letter-spacing:.1em;
+}
+.player-startup-spinner{
+  width:42px;height:42px;display:block;margin-bottom:4px;
+}
+.player-startup-spinner svg{width:100%;height:100%;animation:gtsStartupSpin .85s linear infinite}
+.player-startup-spinner circle{fill:none;stroke:rgba(255,255,255,.22);stroke-width:3.5;stroke-linecap:round;stroke-dasharray:78 35}
+.player-cover.is-loading{cursor:progress}
+.player-cover .cover-loading{
+  position:absolute;left:50%;top:50%;z-index:3;
+  transform:translate(-50%,-50%);
+  display:grid;place-items:center;gap:9px;
+  color:#fff;text-align:center;pointer-events:none;
+}
+.player-cover .cover-loading i{
+  width:38px;height:38px;border-radius:50%;
+  border:3px solid rgba(255,255,255,.23);border-top-color:#fff;
+  animation:gtsStartupSpin .8s linear infinite;
+}
+.player-cover .cover-loading small{
+  font-size:9px;font-weight:760;letter-spacing:.09em;
+  text-shadow:0 2px 12px rgba(0,0,0,.55);
+}
+@keyframes gtsStartupSpin{to{transform:rotate(360deg)}}
+
+/* Media-title treatment: restrained brand gradient instead of document heading. */
+html:not([data-theme="light"]) body .viewer.viewer.viewer .player-greek-title{
+  background:linear-gradient(105deg,#ffffff 0%,#e8e7ff 34%,#b9b4ff 67%,#8b7cf6 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;
+  color:transparent!important;
+  font-size:24px!important;
+  font-weight:740!important;
+  line-height:1.16!important;
+  letter-spacing:-.032em!important;
+  text-wrap:balance;
+}
+html[data-theme="light"] body .viewer.viewer.viewer .player-greek-title{
+  background:linear-gradient(105deg,#142638 0%,#304c68 48%,#6257b8 78%,#7565d8 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;
+  color:transparent!important;
+  font-size:24px!important;
+  font-weight:740!important;
+  line-height:1.16!important;
+  letter-spacing:-.032em!important;
+  text-wrap:balance;
+}
+@media(max-width:620px){
+  .player-startup-shell{margin:14px auto 26px;padding:0}
+  .player-startup-frame{border-radius:10px}
+  .player-startup-status strong{font-size:11px}
+  .player-startup-spinner{width:36px;height:36px}
+  html body .viewer.viewer.viewer .player-greek-title{
+    font-size:22px!important;
+    line-height:1.2!important;
+    letter-spacing:-.028em!important;
+  }
+}
+
