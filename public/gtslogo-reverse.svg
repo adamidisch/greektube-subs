@@ -1,0 +1,23 @@
+<svg width="40" height="32" viewBox="0 0 40 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GreekTube Subs alternate logo">
+  <defs>
+    <linearGradient id="reverse-body" x1="5" y1="4" x2="35" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A997FF"/>
+      <stop offset="0.52" stop-color="#7464EC"/>
+      <stop offset="1" stop-color="#4035A8"/>
+    </linearGradient>
+    <linearGradient id="reverse-edge" x1="20" y1="3" x2="20" y2="29" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D6CFFF"/>
+      <stop offset="1" stop-color="#4B3EB2"/>
+    </linearGradient>
+    <filter id="reverse-lift" x="-20%" y="-28%" width="145%" height="170%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.2" flood-color="#332780" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <g filter="url(#reverse-lift)">
+    <rect x="1.5" y="3.5" width="37" height="25" rx="8" fill="url(#reverse-body)" stroke="url(#reverse-edge)" stroke-width="1.4"/>
+    <path d="M7 8L16 16L7 24V8Z" fill="white"/>
+    <path d="M22 10.2H32" stroke="white" stroke-width="2.15" stroke-linecap="round"/>
+    <path d="M22 16H29.5" stroke="white" stroke-width="2.15" stroke-linecap="round"/>
+    <path d="M22 21.8H27" stroke="white" stroke-width="2.15" stroke-linecap="round"/>
+  </g>
+</svg>

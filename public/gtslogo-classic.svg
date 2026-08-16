@@ -1,0 +1,23 @@
+<svg width="40" height="32" viewBox="0 0 40 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GreekTube Subs classic logo">
+  <defs>
+    <linearGradient id="classic-body" x1="5" y1="4" x2="35" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8F7FF5"/>
+      <stop offset="0.56" stop-color="#6558E5"/>
+      <stop offset="1" stop-color="#2A879F"/>
+    </linearGradient>
+    <linearGradient id="classic-edge" x1="20" y1="3" x2="20" y2="29" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C9C0FF"/>
+      <stop offset="1" stop-color="#4F45B8"/>
+    </linearGradient>
+    <filter id="classic-lift" x="-20%" y="-28%" width="145%" height="170%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.2" flood-color="#332780" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <g filter="url(#classic-lift)">
+    <rect x="1.5" y="3.5" width="37" height="25" rx="8" fill="url(#classic-body)" stroke="url(#classic-edge)" stroke-width="1.4"/>
+    <path d="M8 10.2H18" stroke="white" stroke-width="2.15" stroke-linecap="round"/>
+    <path d="M8 16H15.5" stroke="white" stroke-width="2.15" stroke-linecap="round"/>
+    <path d="M8 21.8H13" stroke="white" stroke-width="2.15" stroke-linecap="round"/>
+    <path d="M24 8L33 16L24 24V8Z" fill="white"/>
+  </g>
+</svg>
