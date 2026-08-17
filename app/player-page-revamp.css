@@ -649,6 +649,11 @@ html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.playe
   line-height:1.1!important;
   white-space:nowrap!important;
 }
+html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-control-deck .player-secondary-actions.player-control-secondary-row>button.transcript-toggle.revamp-seg-control>span:not(.moment-count){font-size:0!important}
+html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-control-deck .player-secondary-actions.player-control-secondary-row>button.transcript-toggle.revamp-seg-control>span:not(.moment-count):after{
+  content:"Κείμενο";
+  font-size:10.5px;
+}
 
 @media(prefers-reduced-motion:reduce){
   html body .viewer.viewer.viewer .description-toggle>span{transition:none}
