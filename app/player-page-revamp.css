@@ -50,7 +50,9 @@ html body .viewer.viewer.viewer .player-owner-strip{
   border:0!important;
   background:transparent!important;
 }
+html body .viewer.viewer.viewer .player-owner-strip:before{display:none!important;content:none!important}
 html body .viewer.viewer.viewer .player-owner-copy{
+  flex:1 1 auto;
   min-width:0;
   display:flex;
   align-items:center;
