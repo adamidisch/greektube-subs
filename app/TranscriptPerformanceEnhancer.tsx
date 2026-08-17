@@ -103,7 +103,7 @@ export default function TranscriptPerformanceEnhancer(){
       button.classList.toggle("active",open);
       button.setAttribute("aria-pressed",open?"true":"false");
       const label=button.querySelector("span:last-child");
-      if(label&&button.classList.contains("transcript-toggle"))label.textContent=open?"Κλείσιμο κειμένου":"Κείμενο μεταγραφής";
+      if(label&&button.classList.contains("transcript-toggle"))label.textContent=button.classList.contains("revamp-seg-control")?"Κείμενο":open?"Κλείσιμο κειμένου":"Κείμενο μεταγραφής";
     });
     return()=>{
       target.classList.remove("transcript-open");
