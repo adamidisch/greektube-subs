@@ -759,6 +759,8 @@ export default function GreekTubePlayer() {
     setProcessingTelemetry(next);
   }
   async function openVideo(video:Video,start?:number,showTranscript=false,forceTranslation=false,readyCaptions?:Captions){
+    window.scrollTo(0,0);
+    window.requestAnimationFrame(()=>window.scrollTo(0,0));
     const translationMode:TranslationMode=video.translationMode||"legacy";
     const knownPoints=transcriptHighlights(video.captions||[]);
     patchVideo(video.id,{views:(video.views||0)+1});
