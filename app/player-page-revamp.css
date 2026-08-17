@@ -619,6 +619,37 @@ html body .viewer.viewer.viewer .app-footer-version{
   }
 }
 
+/* Beat the legacy mobile-control selectors without changing their shared layer. */
+html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-control-deck .player-secondary-actions.player-control-secondary-row>button.revamp-seg-control{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  width:100%!important;
+  height:60px!important;
+  min-height:60px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:4px!important;
+  padding:6px 4px!important;
+  border:1px solid transparent!important;
+  border-radius:11px!important;
+  background:var(--pr-surface-2)!important;
+  color:var(--pr-dim)!important;
+}
+html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-control-deck .player-secondary-actions.player-control-secondary-row>button.revamp-seg-control.active{
+  border-color:rgba(199,154,93,.34)!important;
+  background:var(--pr-amber-soft)!important;
+  color:var(--pr-amber)!important;
+}
+html body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-control-deck .player-secondary-actions.player-control-secondary-row>button.revamp-seg-control>span:not(.moment-count){
+  color:inherit!important;
+  font-size:10.5px!important;
+  font-weight:650!important;
+  line-height:1.1!important;
+  white-space:nowrap!important;
+}
+
 @media(prefers-reduced-motion:reduce){
   html body .viewer.viewer.viewer .description-toggle>span{transition:none}
 }
