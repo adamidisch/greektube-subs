@@ -56,6 +56,8 @@
 .player-screen-transition{animation:gtsPlayerScreenIn .3s cubic-bezier(.22,.8,.3,1) both}
 .player-ready-transition{animation:gtsPlayerReadyIn .32s cubic-bezier(.22,.8,.3,1) both}
 .player-opening-shell{animation:gtsPlayerReadyIn .24s ease-out both}
+.player-is-opening{min-height:100dvh}
+.player-is-opening .app-footer{opacity:0;visibility:hidden;pointer-events:none}
 .player-opening-frame{position:relative;isolation:isolate;background:#090a0d}
 .player-opening-frame>img{
   width:100%;height:100%;display:block;object-fit:cover;
