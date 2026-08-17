@@ -1126,7 +1126,7 @@ export default function GreekTubePlayer() {
     }
     const settingsFromPlayer=view==="settings";
     return <>
-    <main className={`app-shell viewer player-screen-transition ${settingsFromPlayer?"viewer-settings-open":""}`} aria-hidden={settingsFromPlayer?true:undefined}>
+    <main className={`app-shell viewer player-screen-transition ${checkingReady?"player-is-opening":""} ${settingsFromPlayer?"viewer-settings-open":""}`} aria-hidden={settingsFromPlayer?true:undefined}>
       <header className="app-header"><button className="ghost back-library" onClick={close}><span aria-hidden="true">‹</span> Βιβλιοθήκη</button><Brand home={goHome}/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}>⚙</button></header>
       {checkingReady&&<section className="watch-layout player-only player-opening-shell" role="status" aria-live="polite" aria-label="Φόρτωση βίντεο">
         <div className="watch-main">
