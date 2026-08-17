@@ -51,47 +51,67 @@
   }
 }
 
-/* Fast player-open feedback. Keep loading inside the natural video surface. */
-.player-startup-shell{
-  width:min(100%,1120px);
-  margin:24px auto 40px;
-  padding:0 clamp(0px,1vw,10px);
-}
-.player-startup-frame{
-  position:relative;
-  width:100%;
-  aspect-ratio:16/9;
-  overflow:hidden;
-  border:1px solid var(--line);
-  border-radius:14px;
-  background:#090a0d;
-  box-shadow:0 20px 55px rgba(0,0,0,.18);
-}
-.player-startup-frame>img{
+/* Stable player opening surface. It mirrors the final player footprint so the
+   caption readiness check never causes a layout jump. */
+.player-screen-transition{animation:gtsPlayerScreenIn .3s cubic-bezier(.22,.8,.3,1) both}
+.player-ready-transition{animation:gtsPlayerReadyIn .32s cubic-bezier(.22,.8,.3,1) both}
+.player-opening-shell{animation:gtsPlayerReadyIn .24s ease-out both}
+.player-opening-frame{position:relative;isolation:isolate;background:#090a0d}
+.player-opening-frame>img{
   width:100%;height:100%;display:block;object-fit:cover;
-  filter:saturate(.82) brightness(.72);
-  transform:scale(1.01);
+  filter:saturate(.9) brightness(.82);transform:scale(1.008);
 }
-.player-startup-scrim{
-  position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(5,6,9,.16),rgba(5,6,9,.46));
+.player-opening-shade{
+  position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(6,7,10,.04),rgba(6,7,10,.2));
 }
-.player-startup-status{
-  position:absolute;inset:0;
-  display:grid;place-items:center;align-content:center;gap:8px;
-  padding:24px;text-align:center;color:#fff;
+.player-opening-spinner{
+  position:absolute;left:50%;top:50%;z-index:2;
+  width:34px;height:34px;border:2px solid rgba(255,255,255,.24);border-top-color:rgba(255,255,255,.94);border-radius:50%;
+  transform:translate(-50%,-50%);animation:gtsOpeningSpin .78s linear infinite;
+  box-shadow:0 5px 22px rgba(0,0,0,.28);
 }
-.player-startup-status strong{
-  font-size:13px;font-weight:760;letter-spacing:.08em;
+.player-opening-progress{
+  position:absolute;left:0;right:0;bottom:0;z-index:3;height:3px;
+  overflow:hidden;background:rgba(255,255,255,.12);
 }
-.player-startup-status small{
-  color:rgba(255,255,255,.68);font-size:9px;font-weight:700;letter-spacing:.1em;
+.player-opening-progress>i{
+  display:block;width:38%;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,#7770de,#61b9d2);
+  animation:gtsOpeningProgress 1.05s cubic-bezier(.45,0,.2,1) infinite;
 }
-.player-startup-spinner{
-  width:42px;height:42px;display:block;margin-bottom:4px;
+.player-opening-controls{display:grid;gap:8px;width:100%}
+.player-opening-control-card,.player-opening-actions{
+  border:1px solid #2b313b;border-radius:15px;background:#171b21;
 }
-.player-startup-spinner svg{width:100%;height:100%;animation:gtsStartupSpin .85s linear infinite}
-.player-startup-spinner circle{fill:none;stroke:rgba(255,255,255,.22);stroke-width:3.5;stroke-linecap:round;stroke-dasharray:78 35}
+.player-opening-control-card{display:grid;gap:8px;padding:8px}
+.player-opening-primary{height:48px;display:flex;align-items:center;justify-content:center;gap:15px}
+.player-opening-primary>span,.player-opening-primary>b{
+  display:block;border-radius:50%;background:rgba(255,255,255,.08);
+}
+.player-opening-primary>span{width:34px;height:34px}
+.player-opening-primary>b{width:44px;height:44px;background:rgba(124,116,224,.76);box-shadow:0 6px 16px rgba(124,116,224,.18)}
+.player-opening-compact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.player-opening-compact>i{display:block;height:46px;border:1px solid #303641;border-radius:11px;background:#20252d}
+.player-opening-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:7px}
+.player-opening-actions>i{display:block;height:64px;border:1px solid #303641;border-radius:11px;background:#20252d}
+.player-opening-details{display:grid;gap:8px;margin-top:14px;padding:0 1px}
+.player-opening-details>i{display:block;height:10px;border-radius:999px;background:rgba(255,255,255,.075)}
+.player-opening-details>i:nth-child(1){width:42%}
+.player-opening-details>i:nth-child(2){width:82%;height:18px}
+.player-opening-details>i:nth-child(3){width:64%;height:18px}
+.player-opening-byline>span{display:flex;align-items:center;gap:8px}
+.player-opening-byline>span>i{display:block;width:34px;height:34px;border:1px solid #303641;border-radius:10px;background:#181c22}
+html[data-theme="light"] .player-opening-control-card,
+html[data-theme="light"] .player-opening-actions{border-color:#d9e1e5;background:#f4f7f8}
+html[data-theme="light"] .player-opening-compact>i,
+html[data-theme="light"] .player-opening-actions>i,
+html[data-theme="light"] .player-opening-byline>span>i{border-color:#d7dfe3;background:#fff}
+html[data-theme="light"] .player-opening-primary>span,
+html[data-theme="light"] .player-opening-details>i{background:rgba(38,52,61,.1)}
+.player-cover{opacity:1;visibility:visible;transition:opacity .34s cubic-bezier(.22,.8,.3,1),visibility 0s linear 0s}
+.player-cover.is-hidden{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .34s cubic-bezier(.22,.8,.3,1),visibility 0s linear .34s}
+.player-cover.is-visible{opacity:1;visibility:visible;pointer-events:auto}
 .player-cover.is-loading{cursor:progress}
 .player-cover .cover-loading{
   position:absolute;left:50%;top:50%;z-index:3;
@@ -108,7 +128,17 @@
   font-size:9px;font-weight:760;letter-spacing:.09em;
   text-shadow:0 2px 12px rgba(0,0,0,.55);
 }
+@keyframes gtsOpeningSpin{
+  from{transform:translate(-50%,-50%) rotate(0)}
+  to{transform:translate(-50%,-50%) rotate(360deg)}
+}
 @keyframes gtsStartupSpin{to{transform:rotate(360deg)}}
+@keyframes gtsOpeningProgress{
+  0%{transform:translateX(-110%)}
+  58%,100%{transform:translateX(290%)}
+}
+@keyframes gtsPlayerScreenIn{from{opacity:.72;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes gtsPlayerReadyIn{from{opacity:.32}to{opacity:1}}
 
 /* 7.8.21 — distinct app, featured-video and player-video hierarchy. */
 html body .app-shell.app-shell.app-shell:not(.viewer) .home-intro h1{
@@ -243,10 +273,7 @@ html[data-theme="light"] body .viewer.viewer.viewer .player-greek-title:before{
 }
 
 @media(max-width:620px){
-  .player-startup-shell{margin:14px auto 26px;padding:0}
-  .player-startup-frame{border-radius:10px}
-  .player-startup-status strong{font-size:11px}
-  .player-startup-spinner{width:36px;height:36px}
+  .player-opening-spinner{width:32px;height:32px}
   html body .app-shell.app-shell.app-shell:not(.viewer) .home-intro h1{
     max-width:360px!important;
     font-size:clamp(27px,8.1vw,32px)!important;
@@ -266,4 +293,10 @@ html[data-theme="light"] body .viewer.viewer.viewer .player-greek-title:before{
     letter-spacing:-.029em!important;
   }
   html body .viewer.viewer.viewer .player-greek-title:before{width:2px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .player-screen-transition,.player-ready-transition,.player-opening-shell{animation:none}
+  .player-opening-spinner,.player-opening-progress>i{animation:none}
+  .player-cover{transition:none}
 }
