@@ -420,6 +420,7 @@ export default function GreekTubePlayer() {
   const player=useRef<Player|null>(null);
   const readyCaptionsCache=useRef(new Map<string,Promise<Captions|null>>());
   const playWhenReady=useRef(false);
+  const pendingPlayerStart=useRef(0);
   const pendingShareSpeed=useRef<number|null>(null);
   const transcript=useRef<HTMLDivElement>(null);
   const saveTimer=useRef<number|undefined>(undefined);
@@ -735,6 +736,7 @@ export default function GreekTubePlayer() {
     const knownPoints=transcriptHighlights(video.captions||[]);
     patchVideo(video.id,{views:(video.views||0)+1});
     player.current?.pauseVideo();setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);
+    pendingPlayerStart.current=start??video.lastPosition;
     setSelectedId(video.id); setView("library"); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
     setCheckingReady(!readyCaptions&&!forceTranslation);
@@ -742,7 +744,6 @@ export default function GreekTubePlayer() {
       localStorage.setItem(`greektube-transcript:${video.id}:v12`,JSON.stringify(readyCaptions));
       setProgress(100);setCaptions(readyCaptions);setLoading(false);setCheckingReady(false);
       patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:readyCaptions.title,originalTitle:video.originalTitle||readyCaptions.originalTitle||englishTitle(video),channel:video.channel||readyCaptions.channel,captions:readyCaptions.cues,speakerName:video.speakerName||readyCaptions.speaker?.name,speakerRole:video.speakerRole||readyCaptions.speaker?.role,lastWatched:new Date().toISOString()});
-      window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),0);
       return;
     }
     // The shared transcript is authoritative. Browser storage is only an offline fallback.
@@ -753,7 +754,6 @@ export default function GreekTubePlayer() {
           localStorage.setItem(`greektube-transcript:${video.id}:v12`,JSON.stringify(ready));
           setProgress(100);setCaptions(ready);setLoading(false);setCheckingReady(false);
           patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:ready.title,originalTitle:video.originalTitle||ready.originalTitle||englishTitle(video),channel:video.channel||ready.channel,captions:ready.cues,speakerName:video.speakerName||ready.speaker?.name,speakerRole:video.speakerRole||ready.speaker?.role,lastWatched:new Date().toISOString()});
-          window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),0);
           return;
         }
       }catch{}
@@ -765,7 +765,6 @@ export default function GreekTubePlayer() {
         if(isCompleteGreekTranscript(cached,video.duration)){
           setProgress(100);setCaptions(cached);setLoading(false);setCheckingReady(false);
           patchVideo(video.id,{title:isGreekTitle(video.title)?video.title:cached.title,originalTitle:video.originalTitle||cached.originalTitle||englishTitle(video),channel:video.channel||cached.channel,captions:cached.cues,speakerName:video.speakerName||cached.speaker?.name,speakerRole:video.speakerRole||cached.speaker?.role,lastWatched:new Date().toISOString()});
-          window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),0);
           void fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,cachedTranscript:cached})}).then(async response=>{
             if(!response.ok)return;
             const refreshed=await response.json() as Captions;
@@ -853,7 +852,6 @@ export default function GreekTubePlayer() {
       const points=data.keyPoints?.length?data.keyPoints:transcriptHighlights(data.cues);
       if(points.length){setLoadingPoints(points);setProgress(100);await new Promise(resolve=>window.setTimeout(resolve,750));}
       setProgress(100); setCaptions(data); setLoading(false); patchVideo(video.id,{lastWatched:new Date().toISOString()});
-      window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),120);
     }catch(error){
       console.error("Caption preparation failed",error);
       const local=localStorage.getItem(`greektube-transcript:${video.id}:v12`);
@@ -862,7 +860,6 @@ export default function GreekTubePlayer() {
           const fallback=JSON.parse(local) as Captions;
           if(isCompleteGreekTranscript(fallback,video.duration)){
             setCaptions(fallback);setLoading(false);patchVideo(video.id,{lastWatched:new Date().toISOString()});
-            window.setTimeout(()=>initPlayer(video.id,start??video.lastPosition),120);
             window.setTimeout(()=>{void fetch("/api/captions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:video.url,cachedTranscript:fallback})}).catch(()=>undefined)},10000);
           return;
         }
@@ -895,6 +892,11 @@ export default function GreekTubePlayer() {
     script.addEventListener("load",()=>{window.clearTimeout(apiTimeout);if(window.YT?.Player)create();},{once:true});
     script.addEventListener("error",()=>{window.clearTimeout(apiTimeout);script?.remove();setPlayerLoadFailed(true);},{once:true});
   }
+  useEffect(()=>{
+    if(!captions||!selectedId||checkingReady||loading||playerReady)return;
+    const raf=window.requestAnimationFrame(()=>initPlayer(selectedId,pendingPlayerStart.current));
+    return()=>window.cancelAnimationFrame(raf);
+  },[captions,selectedId,checkingReady,loading,playerReady]);
   function currentPlayer(){
     const target=player.current;
     return target&&typeof target.getCurrentTime==="function"&&typeof target.getDuration==="function"?target:null;
