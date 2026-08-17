@@ -7,7 +7,6 @@ import "./mobile-controls-fix.css";
 import "./ui-651.css";
 import "./ui-653.css";
 import "./ui-654.css";
-import "./mobile-controls-final.css";
 import "./desktop-controls-final.css";
 import "./content-areas-final.css";
 import "./release-6.6.15.css";
@@ -32,6 +31,7 @@ import "./v7-8-17-mobile-viewer-polish.css";
 import "./brand.css";
 import "./screen-isolation.css";
 import "./v7-8-23-player-fullscreen-footer.css";
+import "./mobile-controls-final.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
