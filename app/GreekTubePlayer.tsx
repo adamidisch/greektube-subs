@@ -1126,9 +1126,30 @@ export default function GreekTubePlayer() {
     }
     const settingsFromPlayer=view==="settings";
     return <>
-    <main className={`app-shell viewer ${settingsFromPlayer?"viewer-settings-open":""}`} aria-hidden={settingsFromPlayer?true:undefined}>
+    <main className={`app-shell viewer player-screen-transition ${checkingReady?"player-is-opening":""} ${settingsFromPlayer?"viewer-settings-open":""}`} aria-hidden={settingsFromPlayer?true:undefined}>
       <header className="app-header"><button className="ghost back-library" onClick={close}><span aria-hidden="true">‹</span> Βιβλιοθήκη</button><Brand home={goHome}/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}>⚙</button></header>
-      {checkingReady&&<section className="player-startup-shell" role="status" aria-live="polite"><div className="player-startup-frame"><img src={`https://i.ytimg.com/vi/${selected.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}} alt=""/><div className="player-startup-scrim"/><div className="player-startup-status"><span className="player-startup-spinner" aria-hidden="true"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18"/></svg></span><strong>ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ</strong><small>ΣΥΓΧΡΟΝΙΣΜΟΣ ΕΛΛΗΝΙΚΩΝ ΥΠΟΤΙΤΛΩΝ</small></div></div></section>}
+      {checkingReady&&<section className="watch-layout player-only player-opening-shell" role="status" aria-live="polite" aria-label="Φόρτωση βίντεο">
+        <div className="watch-main">
+          <div className="mobile-video-byline player-opening-byline"><strong>{displaySpeakerLabel}</strong><span aria-hidden="true"><i/><i/><i/></span></div>
+          <div className="sticky-player">
+            <div className="video-frame player-opening-frame">
+              <img src={`https://i.ytimg.com/vi/${selected.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}} alt=""/>
+              <div className="player-opening-shade" aria-hidden="true"/>
+              <span className="player-opening-spinner" aria-hidden="true"/>
+              <span className="player-opening-progress" aria-hidden="true"><i/></span>
+            </div>
+            <div className="player-opening-controls" aria-hidden="true">
+              <div className="player-opening-control-card">
+                <div className="player-opening-primary"><span/><b/><span/></div>
+                <div className="player-opening-compact"><i/><i/></div>
+              </div>
+              <div className="player-opening-actions"><i/><i/><i/></div>
+            </div>
+          </div>
+          <div className="player-opening-details" aria-hidden="true"><i/><i/><i/></div>
+        </div>
+        <span className="sr-only">Το βίντεο ανοίγει</span>
+      </section>}
       {!checkingReady&&loading&&<section className="content-loading">
         <div className="loading-visual"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div className="loading-percentage" aria-label={`${progress.toFixed(1)} τοις εκατό`}>{progress.toFixed(1)}%</div><div className="loading-caption"><small>{speaker.name}</small><h1>{greekTitle(selected)}</h1>{englishTitle(selected)&&<p className="original-title">{englishTitle(selected)}</p>}</div></div>
         <div className="loading-insights">
@@ -1197,13 +1218,13 @@ export default function GreekTubePlayer() {
         </section>
       </section>}
       {!checkingReady&&!loading&&captions&&<>
-        <section className={`watch-layout ${transcriptOpen?"transcript-open":"player-only"}`}>
+        <section className={`watch-layout player-ready-transition ${transcriptOpen?"transcript-open":"player-only"}`}>
           <div className="watch-main">
             <div className="mobile-video-byline"><strong>{displaySpeakerLabel}</strong><span><button type="button" aria-label="Διαχείριση υποτίτλων" onClick={()=>setTranslationChoiceVideo(selected)}>CC</button><button type="button" aria-label="Επεξεργασία βίντεο" onClick={()=>void requestEdit(selected)}>✎</button><button type="button" aria-label="Αγαπημένο" className={selected.favorite?"active":""} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♡</button></span></div>
             <div className="sticky-player" onContextMenu={e=>{e.preventDefault();beginMoment();}}>
               <div className={`video-frame ${isPseudoFullscreen?"pseudo-fullscreen":""} ${controlsVisible||!isPlaying?"player-ui-visible":"player-ui-hidden"}`} ref={fullscreenHost} onPointerMove={()=>revealPlayerUi()} onPointerDown={()=>revealPlayerUi()} onMouseLeave={()=>{if(isPlaying&&controlsTimer.current)controlsTimer.current=setTimeout(()=>setControlsVisible(false),900);}}>
                 <div ref={playerHost}/>
-                {showPlayerCover&&<button className={`player-cover ${playerReady?"":"is-loading"}`} aria-label={playerReady?"Αναπαραγωγή βίντεο":playerLoadFailed?"Επανάληψη φόρτωσης βίντεο":"Φόρτωση βίντεο"} onClick={()=>playerLoadFailed?initPlayer(selected.id,playhead||selected.lastPosition):togglePlayback()}><img src={`https://i.ytimg.com/vi/${selected.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}} alt=""/>{playerReady?<span className="cover-play">▶</span>:<span className="cover-loading" aria-hidden="true"><i/><small>{playerLoadFailed?"ΠΑΤΗΣΤΕ ΓΙΑ ΕΠΑΝΑΛΗΨΗ":"ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ"}</small></span>}<span className="cover-caption"><small>{displaySpeakerLabel}</small><strong>{greekTitle(selected)}</strong></span></button>}
+                <button className={`player-cover ${playerReady?"":"is-loading"} ${showPlayerCover?"is-visible":"is-hidden"}`} tabIndex={showPlayerCover?0:-1} aria-hidden={!showPlayerCover} aria-label={playerReady?"Αναπαραγωγή βίντεο":playerLoadFailed?"Επανάληψη φόρτωσης βίντεο":"Φόρτωση βίντεο"} onClick={()=>playerLoadFailed?initPlayer(selected.id,playhead||selected.lastPosition):togglePlayback()}><img src={`https://i.ytimg.com/vi/${selected.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}} alt=""/>{playerReady?<span className="cover-play">▶</span>:<span className="cover-loading" aria-hidden="true"><i/><small>{playerLoadFailed?"ΠΑΤΗΣΤΕ ΓΙΑ ΕΠΑΝΑΛΗΨΗ":"ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ"}</small></span>}<span className="cover-caption"><small>{displaySpeakerLabel}</small><strong>{greekTitle(selected)}</strong></span></button>
                 <div className="player-cover-badges" aria-hidden="true"><span>{CATEGORY_LABELS[selected.category]}</span>{selected.duration>0&&<time>{clock(selected.duration)}</time>}</div>
                 <div className={`player-seek-ui ${controlsVisible||!isPlaying?"visible":"hidden"}`} onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()}>
                   <span className="player-time-label">{clock(Math.max(0,playhead))} / {clock(Math.max(0,seekDuration))}</span>
