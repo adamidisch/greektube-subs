@@ -547,9 +547,36 @@ export default function GreekTubePlayer() {
   },[]);
   useEffect(()=>{
     if(!isPseudoFullscreen)return;
-    const previousOverflow=document.body.style.overflow;
-    document.body.style.overflow="hidden";
-    return()=>{document.body.style.overflow=previousOverflow;};
+    const body=document.body;
+    const root=document.documentElement;
+    const scrollX=window.scrollX;
+    const scrollY=window.scrollY;
+    const previous={
+      bodyOverflow:body.style.overflow,
+      bodyPosition:body.style.position,
+      bodyTop:body.style.top,
+      bodyLeft:body.style.left,
+      bodyWidth:body.style.width,
+      rootOverflow:root.style.overflow,
+      rootOverscroll:root.style.overscrollBehavior,
+    };
+    root.style.overflow="hidden";
+    root.style.overscrollBehavior="none";
+    body.style.overflow="hidden";
+    body.style.position="fixed";
+    body.style.top=`-${scrollY}px`;
+    body.style.left=`-${scrollX}px`;
+    body.style.width="100%";
+    return()=>{
+      root.style.overflow=previous.rootOverflow;
+      root.style.overscrollBehavior=previous.rootOverscroll;
+      body.style.overflow=previous.bodyOverflow;
+      body.style.position=previous.bodyPosition;
+      body.style.top=previous.bodyTop;
+      body.style.left=previous.bodyLeft;
+      body.style.width=previous.bodyWidth;
+      window.scrollTo(scrollX,scrollY);
+    };
   },[isPseudoFullscreen]);
   useEffect(()=>{
     if(isPseudoFullscreen)return;
