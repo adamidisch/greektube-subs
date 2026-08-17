@@ -164,9 +164,9 @@
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control>.cc-toggle{
-    width:100%!important;height:60px!important;min-height:60px!important;
+    width:100%!important;height:64px!important;min-height:64px!important;
     display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:5px!important;
-    margin:0!important;padding:8px 5px!important;
+    margin:0!important;padding:5px!important;
     border:1px solid #303641!important;border-radius:11px!important;background:#20252d!important;color:#f6f3ec!important;
     text-align:center!important;overflow:hidden!important;white-space:normal!important;
   }
@@ -174,7 +174,7 @@
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-card-icon{width:16px!important;height:16px!important;flex:0 0 16px!important;display:block!important;margin:0!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>span:not(.moment-count):not(.cc-active-tag),
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>b{
-    font-size:10.5px!important;font-weight:500!important;line-height:1.15!important;color:#f6f3ec!important;white-space:normal!important;
+    font-size:11.5px!important;font-weight:500!important;line-height:1.15!important;color:#f6f3ec!important;white-space:normal!important;
   }
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save{background:#1b1930!important;border-color:rgba(124,116,224,.42)!important;color:#c9c4f5!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save>span:not(.moment-count){color:#c9c4f5!important}
@@ -242,6 +242,6 @@
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row,
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions{gap:7px!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{gap:13px!important;padding-left:6px!important;padding-right:6px!important}
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>span:not(.moment-count):not(.cc-active-tag){font-size:10.5px!important}
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions button>span:not(.moment-count):not(.cc-active-tag){font-size:11px!important}
   html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary span{font-size:11px!important}
 }
