@@ -401,11 +401,13 @@ export default function GreekTubePlayer() {
   const [isPseudoFullscreen,setIsPseudoFullscreen]=useState(false);
   const [isPlaying,setIsPlaying]=useState(false);
   const [playerReady,setPlayerReady]=useState(false);
+  const [playerLoadFailed,setPlayerLoadFailed]=useState(false);
   const [volume,setVolumeState]=useState(100);
   const [isMuted,setIsMuted]=useState(false);
   const [volumeSliderOpen,setVolumeSliderOpen]=useState(false);
   const [showFsExit,setShowFsExit]=useState(true);
   const fsExitTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const playerReadyTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const controlsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const volumeDragging=useRef(false);
   const keyboardSeekTarget=useRef<number|null>(null);
@@ -732,7 +734,7 @@ export default function GreekTubePlayer() {
     const translationMode:TranslationMode=video.translationMode||"legacy";
     const knownPoints=transcriptHighlights(video.captions||[]);
     patchVideo(video.id,{views:(video.views||0)+1});
-    player.current?.pauseVideo();setPlayerReady(false);setIsPlaying(false);setPlayhead(0);setActive(-1);
+    player.current?.pauseVideo();setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);
     setSelectedId(video.id); setView("library"); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
     setCheckingReady(!readyCaptions&&!forceTranslation);
@@ -877,13 +879,21 @@ export default function GreekTubePlayer() {
     }
   }
   function initPlayer(id:string,start:number){
+    setPlayerLoadFailed(false);
+    let created=false;
     const disableYouTubeCaptions=(target:Player)=>{
       if(target.getOptions?.().includes("captions")){
         target.unloadModule?.("captions");
       }
     };
-    const create=()=>{if(!window.YT||!playerHost.current)return; player.current?.destroy(); playerHost.current.innerHTML=""; player.current=new window.YT.Player(playerHost.current,{videoId:id,width:"100%",height:"100%",playerVars:{autoplay:state.settings.autoplay?1:0,controls:0,disablekb:1,modestbranding:1,rel:0,playsinline:1,fs:0,start:Math.floor(start),cc_load_policy:0,iv_load_policy:3,showinfo:0,hl:"el"},events:{onReady:({target}:{target:Player})=>{setPlayerReady(true);disableYouTubeCaptions(target);window.setTimeout(()=>disableYouTubeCaptions(target),350);const appliedRate=pendingShareSpeed.current??state.settings.speed;target.setPlaybackRate(appliedRate);pendingShareSpeed.current=null;if(state.settings.autoplay||playWhenReady.current){playWhenReady.current=false;target.playVideo();}},onApiChange:({target}:{target:Player})=>disableYouTubeCaptions(target),onStateChange:({target,data}:{target:Player;data:number})=>{disableYouTubeCaptions(target);setIsPlaying(data===1);},onPlaybackRateChange:({data}:{data:number})=>{if(isAllowedShareSpeed(data))setState(current=>({...current,settings:{...current.settings,speed:data}}));}}});};
-    if(window.YT?.Player)create(); else{if(!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')){const s=document.createElement("script");s.src="https://www.youtube.com/iframe_api";document.head.appendChild(s);}window.onYouTubeIframeAPIReady=create;}
+    const create=()=>{if(created||!window.YT||!playerHost.current)return;created=true;player.current?.destroy(); playerHost.current.innerHTML="";if(playerReadyTimer.current)clearTimeout(playerReadyTimer.current);playerReadyTimer.current=setTimeout(()=>setPlayerLoadFailed(true),12000);player.current=new window.YT.Player(playerHost.current,{videoId:id,width:"100%",height:"100%",playerVars:{autoplay:state.settings.autoplay?1:0,controls:0,disablekb:1,modestbranding:1,rel:0,playsinline:1,fs:0,start:Math.floor(start),cc_load_policy:0,iv_load_policy:3,showinfo:0,hl:"el"},events:{onReady:({target}:{target:Player})=>{if(playerReadyTimer.current)clearTimeout(playerReadyTimer.current);setPlayerLoadFailed(false);setPlayerReady(true);disableYouTubeCaptions(target);window.setTimeout(()=>disableYouTubeCaptions(target),350);const appliedRate=pendingShareSpeed.current??state.settings.speed;target.setPlaybackRate(appliedRate);pendingShareSpeed.current=null;if(state.settings.autoplay||playWhenReady.current){playWhenReady.current=false;target.playVideo();}},onApiChange:({target}:{target:Player})=>disableYouTubeCaptions(target),onStateChange:({target,data}:{target:Player;data:number})=>{disableYouTubeCaptions(target);setIsPlaying(data===1);},onPlaybackRateChange:({data}:{data:number})=>{if(isAllowedShareSpeed(data))setState(current=>({...current,settings:{...current.settings,speed:data}}));}}});};
+    if(window.YT?.Player){create();return;}
+    let script=document.querySelector<HTMLScriptElement>('script[src="https://www.youtube.com/iframe_api"]');
+    if(!script){script=document.createElement("script");script.src="https://www.youtube.com/iframe_api";script.async=true;document.head.appendChild(script);}
+    window.onYouTubeIframeAPIReady=create;
+    const apiTimeout=window.setTimeout(()=>{if(window.YT?.Player){create();return;}script?.remove();setPlayerLoadFailed(true);},12000);
+    script.addEventListener("load",()=>{window.clearTimeout(apiTimeout);if(window.YT?.Player)create();},{once:true});
+    script.addEventListener("error",()=>{window.clearTimeout(apiTimeout);script?.remove();setPlayerLoadFailed(true);},{once:true});
   }
   function currentPlayer(){
     const target=player.current;
@@ -1021,7 +1031,7 @@ export default function GreekTubePlayer() {
     if(navigator.share){try{await navigator.share({title:m.note,url});return;}catch{}}
     await copyText(url);
   }
-  function close(){player.current?.destroy();player.current=null;setPlayerReady(false);setIsPlaying(false);setPlayhead(0);setActive(-1);setIsPseudoFullscreen(false);setCheckingReady(false);setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
+  function close(){if(playerReadyTimer.current)clearTimeout(playerReadyTimer.current);player.current?.destroy();player.current=null;setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);setIsPseudoFullscreen(false);setCheckingReady(false);setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
   function goToSettings(){
     playerScrollPosition.current=window.scrollY;
     const time=currentPlayer()?.getCurrentTime()||selected?.lastPosition||0;
@@ -1087,7 +1097,7 @@ export default function GreekTubePlayer() {
     return <>
     <main className={`app-shell viewer ${settingsFromPlayer?"viewer-settings-open":""}`} aria-hidden={settingsFromPlayer?true:undefined}>
       <header className="app-header"><button className="ghost back-library" onClick={close}><span aria-hidden="true">‹</span> Βιβλιοθήκη</button><Brand home={goHome}/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}>⚙</button></header>
-      {checkingReady&&<section className="player-startup-shell" role="status" aria-live="polite"><div className="player-startup-frame"><img src={`https://i.ytimg.com/vi/${selected.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}} alt=""/><div className="player-startup-scrim"/><div className="player-startup-status"><span className="player-startup-spinner" aria-hidden="true"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18"/></svg></span><strong>ΕΤΟΙΜΑΖΟΥΜΕ ΤΟ ΒΙΝΤΕΟ</strong><small>ΕΛΕΓΧΟΣ ΕΛΛΗΝΙΚΩΝ ΥΠΟΤΙΤΛΩΝ</small></div></div></section>}
+      {checkingReady&&<section className="player-startup-shell" role="status" aria-live="polite"><div className="player-startup-frame"><img src={`https://i.ytimg.com/vi/${selected.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}} alt=""/><div className="player-startup-scrim"/><div className="player-startup-status"><span className="player-startup-spinner" aria-hidden="true"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18"/></svg></span><strong>ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ</strong><small>ΣΥΓΧΡΟΝΙΣΜΟΣ ΕΛΛΗΝΙΚΩΝ ΥΠΟΤΙΤΛΩΝ</small></div></div></section>}
       {!checkingReady&&loading&&<section className="content-loading">
         <div className="loading-visual"><img src={`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`} alt=""/><div className="loading-percentage" aria-label={`${progress.toFixed(1)} τοις εκατό`}>{progress.toFixed(1)}%</div><div className="loading-caption"><small>{speaker.name}</small><h1>{greekTitle(selected)}</h1>{englishTitle(selected)&&<p className="original-title">{englishTitle(selected)}</p>}</div></div>
         <div className="loading-insights">
@@ -1162,7 +1172,7 @@ export default function GreekTubePlayer() {
             <div className="sticky-player" onContextMenu={e=>{e.preventDefault();beginMoment();}}>
               <div className={`video-frame ${isPseudoFullscreen?"pseudo-fullscreen":""} ${controlsVisible||!isPlaying?"player-ui-visible":"player-ui-hidden"}`} ref={fullscreenHost} onPointerMove={()=>revealPlayerUi()} onPointerDown={()=>revealPlayerUi()} onMouseLeave={()=>{if(isPlaying&&controlsTimer.current)controlsTimer.current=setTimeout(()=>setControlsVisible(false),900);}}>
                 <div ref={playerHost}/>
-                {showPlayerCover&&<button className={`player-cover ${playerReady?"":"is-loading"}`} aria-label={playerReady?"Αναπαραγωγή βίντεο":"Το βίντεο ετοιμάζεται"} onClick={togglePlayback}><img src={`https://i.ytimg.com/vi/${selected.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}} alt=""/>{playerReady?<span className="cover-play">▶</span>:<span className="cover-loading" aria-hidden="true"><i/><small>ΕΤΟΙΜΑΖΟΥΜΕ ΤΟ ΒΙΝΤΕΟ</small></span>}<span className="cover-caption"><small>{displaySpeakerLabel}</small><strong>{greekTitle(selected)}</strong></span></button>}
+                {showPlayerCover&&<button className={`player-cover ${playerReady?"":"is-loading"}`} aria-label={playerReady?"Αναπαραγωγή βίντεο":playerLoadFailed?"Επανάληψη φόρτωσης βίντεο":"Φόρτωση βίντεο"} onClick={()=>playerLoadFailed?initPlayer(selected.id,playhead||selected.lastPosition):togglePlayback()}><img src={`https://i.ytimg.com/vi/${selected.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}} alt=""/>{playerReady?<span className="cover-play">▶</span>:<span className="cover-loading" aria-hidden="true"><i/><small>{playerLoadFailed?"ΠΑΤΗΣΤΕ ΓΙΑ ΕΠΑΝΑΛΗΨΗ":"ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ"}</small></span>}<span className="cover-caption"><small>{displaySpeakerLabel}</small><strong>{greekTitle(selected)}</strong></span></button>}
                 <div className="player-cover-badges" aria-hidden="true"><span>{CATEGORY_LABELS[selected.category]}</span>{selected.duration>0&&<time>{clock(selected.duration)}</time>}</div>
                 <div className={`player-seek-ui ${controlsVisible||!isPlaying?"visible":"hidden"}`} onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()}>
                   <span className="player-time-label">{clock(Math.max(0,playhead))} / {clock(Math.max(0,seekDuration))}</span>
