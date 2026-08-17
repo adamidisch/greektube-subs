@@ -32,7 +32,7 @@ import "./brand.css";
 import "./screen-isolation.css";
 import "./v7-8-23-player-fullscreen-footer.css";
 import "./mobile-controls-final.css";
-// Keep the player revamp last so its scoped control geometry stays deterministic.
+// Keep the player revamp last so its scoped control geometry remains deterministic.
 import "./player-page-revamp.css";
 
 const geistSans = Geist({
