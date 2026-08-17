@@ -549,6 +549,16 @@ export default function GreekTubePlayer() {
     return()=>{document.body.style.overflow=previousOverflow;};
   },[isPseudoFullscreen]);
   useEffect(()=>{
+    if(isPseudoFullscreen)return;
+    // Refresh iOS Safari hit-testing after the fixed pseudo-fullscreen layer
+    // and body scroll lock are removed in the same render cycle.
+    const host=fullscreenHost.current;
+    if(!host)return;
+    void host.offsetHeight;
+    const raf=window.requestAnimationFrame(()=>{void host.offsetHeight;});
+    return()=>window.cancelAnimationFrame(raf);
+  },[isPseudoFullscreen]);
+  useEffect(()=>{
     if(view!=="settings")return;
     const body=document.body;
     const previousOverflow=body.style.overflow;
