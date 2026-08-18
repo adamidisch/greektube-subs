@@ -3,6 +3,7 @@ import {database} from "@/db/postgres";
 
 const ADMIN_COOKIE="greektube-admin";
 const ADMIN_SESSION_MESSAGE="greektube-edit-authorized";
+type Row=Record<string,unknown>;
 
 async function adminSecret(){return String(process.env.ADMIN_EDIT_PASSWORD||"");}
 async function adminSessionToken(password:string){
@@ -32,7 +33,7 @@ export async function GET(request:Request){
     await ensureTable();
     const url=new URL(request.url);const rawDays=Number(url.searchParams.get("days")||7);const days=[1,7,30,90].includes(rawDays)?rawDays:7;
     const db=database();
-    const [summary,topVideos,sources,countries,devices,events,recent]=await Promise.all([
+    const results=await Promise.all([
       db.query(`SELECT COUNT(DISTINCT session_id)::int AS sessions,
         COUNT(*) FILTER (WHERE event_name='page_view')::int AS page_views,
         COUNT(*) FILTER (WHERE event_name='video_open')::int AS video_opens,
@@ -47,6 +48,7 @@ export async function GET(request:Request){
       db.query(`SELECT event_name AS name,COUNT(*)::int AS count FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval GROUP BY event_name ORDER BY count DESC LIMIT 20`,[days]),
       db.query(`SELECT created_at,session_id,event_name,path,video_id,referrer_host,country,city,device,browser,properties FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval ORDER BY created_at DESC LIMIT 100`,[days])
     ]);
-    return NextResponse.json({days,summary:summary[0]||{},topVideos,sources,countries,devices,events,recent});
+    const [summaryRows,topVideos,sources,countries,devices,events,recent]=results.map(result=>result as Row[]);
+    return NextResponse.json({days,summary:summaryRows[0]||{},topVideos,sources,countries,devices,events,recent});
   }catch{return NextResponse.json({error:"report_failed"},{status:500});}
 }
