@@ -32,6 +32,7 @@ import "./brand.css";
 import "./screen-isolation.css";
 import "./v7-8-23-player-fullscreen-footer.css";
 import "./mobile-controls-final.css";
+import "./player-page-v7-8-30.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
