@@ -35,6 +35,7 @@ import "./mobile-controls-final.css";
 import "./player-page-v7-8-30.css";
 import "./player-page-v7-8-31.css";
 import "./player-page-v7-8-32.css";
+import "./player-page-v7-8-33.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

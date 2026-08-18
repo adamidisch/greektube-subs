@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { APP_VERSION } from "./version";
-import { canonicalSpeakerForVideo } from "./speaker-catalog";
+import { canonicalSpeakerForVideo, type CanonicalSpeakerProfile } from "./speaker-catalog";
 
 type Cue = { start: number; duration: number; text: string };
 type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
@@ -395,6 +395,8 @@ export default function GreekTubePlayer() {
   const [category,setCategory]=useState<(typeof CATEGORIES)[number]>("Όλα");
   const [sort,setSort]=useState("recent");
   const [filter,setFilter]=useState<"all"|"new"|"favorites"|"recent">("all");
+  const [speakerBioOpen,setSpeakerBioOpen]=useState(false);
+  const closeSpeakerBio=useCallback(()=>setSpeakerBioOpen(false),[]);
   const [modal,setModal]=useState(false);
   const [addRequest,setAddRequest]=useState(false);
   const [syncRequest,setSyncRequest]=useState(false);
@@ -786,7 +788,7 @@ export default function GreekTubePlayer() {
     patchVideo(video.id,{views:(video.views||0)+1});
     player.current?.pauseVideo();setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);
     pendingPlayerStart.current=start??video.lastPosition;
-    setSelectedId(video.id); setView("library"); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
+    setSelectedId(video.id); setView("library"); setSpeakerBioOpen(false); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
     history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
     setCheckingReady(!readyCaptions&&!forceTranslation);
     if(readyCaptions){
@@ -1099,7 +1101,7 @@ export default function GreekTubePlayer() {
     if(navigator.share){try{await navigator.share({title:m.note,url});return;}catch{}}
     await copyText(url);
   }
-  function close(){if(playerReadyTimer.current)clearTimeout(playerReadyTimer.current);if(videoTapTimer.current)clearTimeout(videoTapTimer.current);lastVideoTap.current=0;player.current?.destroy();player.current=null;setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);setIsPseudoFullscreen(false);setCheckingReady(false);setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
+  function close(){if(playerReadyTimer.current)clearTimeout(playerReadyTimer.current);if(videoTapTimer.current)clearTimeout(videoTapTimer.current);lastVideoTap.current=0;player.current?.destroy();player.current=null;setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);setIsPseudoFullscreen(false);setCheckingReady(false);setSpeakerBioOpen(false);setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
   function goToSettings(){
     playerScrollPosition.current=window.scrollY;
     const time=currentPlayer()?.getCurrentTime()||selected?.lastPosition||0;
@@ -1131,14 +1133,15 @@ export default function GreekTubePlayer() {
 
   if(selected){
     const moments=state.moments.filter(m=>m.videoId===selected.id);
-    const fallbackSpeaker=speakerForVideo(selected.id,selected.channel);
+    const canonicalSpeaker=canonicalSpeakerForVideo(selected.id);
+    const fallbackSpeaker=canonicalSpeaker||speakerForVideo(selected.id,selected.channel);
     const speaker=captions?.speaker||fallbackSpeaker;
     const storedSpeaker=(selected.speakerName||"").trim();
     const normalizedStoredSpeaker=searchText(storedSpeaker);
     const normalizedChannel=searchText(selected.channel);
     const speakerNeedsFallback=!storedSpeaker||normalizedStoredSpeaker===normalizedChannel||normalizedStoredSpeaker==="αγνωστος ομιλητης"||normalizedStoredSpeaker==="unknown speaker";
     const displaySpeakerName=speakerNeedsFallback?(captions?.speaker?.name||fallbackSpeaker.name||selected.channel):storedSpeaker;
-    const displaySpeakerRole=[selected.speakerRole,captions?.speaker?.role,fallbackSpeaker.role].map(cleanSpeakerRole).find(Boolean)||"";
+    const displaySpeakerRole=[canonicalSpeaker?.role,selected.speakerRole,captions?.speaker?.role,fallbackSpeaker.role].map(cleanSpeakerRole).find(Boolean)||"";
     const displaySpeakerLabel=displaySpeakerRole?`${displaySpeakerName} | ${displaySpeakerRole}`:displaySpeakerName;
     const sourceVideoUrl=selected.originalVideoUrl||selected.url||`https://www.youtube.com/watch?v=${selected.id}`;
     const sourceChannelUrl=selected.channelUrl||"";
@@ -1259,7 +1262,7 @@ export default function GreekTubePlayer() {
           <div className="watch-main">
             <div className="gts31-owner">
               <i className="gts31-owner-marker" aria-hidden="true"/>
-              <span className="gts31-owner-copy"><strong>{displaySpeakerName}</strong>{displaySpeakerRole&&<small>{displaySpeakerRole}</small>}</span>
+              <span className="gts31-owner-copy"><strong>{displaySpeakerName}</strong>{displaySpeakerRole&&<span className="gts33-speaker-meta"><small>{displaySpeakerRole}</small>{canonicalSpeaker?.biography&&<button type="button" aria-haspopup="dialog" aria-expanded={speakerBioOpen} onClick={()=>{player.current?.pauseVideo();setIsPlaying(false);setSpeakerBioOpen(true);}}>Περισσότερα <span aria-hidden="true">›</span></button>}</span>}</span>
               <span className="gts31-owner-actions">
                 <button type="button" aria-label="Επεξεργασία βίντεο" onClick={()=>void requestEdit(selected)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
                 <button type="button" aria-label={selected.favorite?"Αφαίρεση από τα αγαπημένα":"Προσθήκη στα αγαπημένα"} className={selected.favorite?"active":""} aria-pressed={selected.favorite} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}><svg viewBox="0 0 24 24" fill={selected.favorite?"currentColor":"none"} stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg></button>
@@ -1323,6 +1326,7 @@ export default function GreekTubePlayer() {
         </section>
       </>}
       {momentModal&&<Modal title="Αποθήκευση στιγμής" close={()=>setMomentModal(null)}><form className="form moment-form" onSubmit={saveMoment}><div className="moment-preview"><time>{clock(momentModal.time)}</time><p>{momentModal.excerpt||"Η στιγμή θα αποθηκευτεί στο συγκεκριμένο σημείο του βίντεο."}</p></div><label>Σύντομη σημείωση<input name="note" autoFocus placeholder="Τι θέλεις να θυμάσαι από αυτό το σημείο;"/></label><label>Ετικέτες <small>Προαιρετικά</small><input name="tags" placeholder="π.χ. ινσουλίνη, διατροφή"/></label><div className="modal-actions"><button type="button" className="secondary" onClick={()=>setMomentModal(null)}>Ακύρωση</button><button className="primary">Αποθήκευση στιγμής</button></div></form></Modal>}
+      {speakerBioOpen&&canonicalSpeaker?.biography&&<SpeakerBioModal profile={canonicalSpeaker} close={closeSpeakerBio}/>}
       {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
       {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:6});setEditingVideo(null);}} rebuild={()=>{const video=editingVideo;setEditingVideo(null);setTranslationChoiceVideo(video);}}/>}
       {manualImportRequest&&<EditPassword close={()=>setManualImportRequest(null)} authorized={()=>{setProImportVideo(manualImportRequest);setManualImportRequest(null);}}/>}
@@ -1389,6 +1393,30 @@ export default function GreekTubePlayer() {
 
 function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark" aria-hidden="true" /><span>GreekTube <b>Subs</b></span><small className="brand-version">{`ver ${APP_VERSION}`}</small></button>;}
 function SiteFooter(){return <footer className="app-footer"><div className="app-footer-brand"><span className="brand-mark" aria-hidden="true" /><span>GreekTube <b>Subs</b></span></div><p>Αυτόματοι ελληνικοί υπότιτλοι για δημόσια βίντεο YouTube.</p><span className="app-footer-note">Φτιαγμένο με ♥ για ελληνόφωνους θεατές</span></footer>;}
+function SpeakerBioModal({profile,close}:{profile:CanonicalSpeakerProfile;close:()=>void}){
+  const biography=profile.biography;
+  useEffect(()=>{
+    const previousOverflow=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")close();};
+    window.addEventListener("keydown",escape);
+    return()=>{document.body.style.overflow=previousOverflow;window.removeEventListener("keydown",escape);};
+  },[close]);
+  if(!biography)return null;
+  return <div className="gts33-bio-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)close();}}>
+    <section className="gts33-bio-modal" role="dialog" aria-modal="true" aria-labelledby="speaker-bio-title" aria-describedby="speaker-bio-introduction">
+      <header>
+        <div className="gts33-bio-monogram" aria-hidden="true">SM</div>
+        <div><small>{upperGreekLabel("Προφίλ ομιλήτριας")}</small><h2 id="speaker-bio-title">{profile.name}</h2><span>{biography.credential}</span></div>
+        <button type="button" autoFocus aria-label="Κλείσιμο βιογραφικού" onClick={close}>×</button>
+      </header>
+      <p className="gts33-bio-intro" id="speaker-bio-introduction">{biography.introduction}</p>
+      <div className="gts33-bio-facts">{biography.facts.map(fact=><article key={fact.label}><i aria-hidden="true"/><div><strong>{fact.label}</strong><p>{fact.text}</p></div></article>)}</div>
+      {biography.statusNote&&<p className="gts33-bio-status"><span aria-hidden="true">i</span>{biography.statusNote}</p>}
+      <footer><strong>{upperGreekLabel("Πηγές")}</strong><div>{biography.sources.map(source=><a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.label}<span aria-hidden="true">↗</span></a>)}</div></footer>
+    </section>
+  </div>;
+}
 function Modal({title,close,children,busy=false}:{title:string;close:()=>void;children:React.ReactNode;busy?:boolean}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!busy)close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[busy,close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title} aria-busy={busy}><header><h2>{title}</h2><button aria-label="Κλείσιμο" disabled={busy} onClick={close}>×</button></header>{children}</section></div>;}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
@@ -1639,5 +1667,5 @@ function SettingsPage({settings,update,close}:{settings:Settings;update:(p:Parti
   const blurAfterPointer=<T extends HTMLElement>(event:React.PointerEvent<T>)=>event.currentTarget.blur();
   const toggle=(key:keyof Settings,label:string)=><label className="setting-row"><span>{label}</span><input type="checkbox" checked={Boolean(settings[key])} onPointerUp={blurAfterPointer} onChange={e=>update({[key]:e.target.checked})}/></label>;
   const transparency=Math.round((1-settings.opacity)*100);
-  return <section className="settings-page"><header className="settings-page-header"><button type="button" className="settings-close" aria-label="Κλείσιμο ρυθμίσεων" onClick={close}>×</button><span>ΠΡΟΤΙΜΗΣΕΙΣ ΕΦΑΡΜΟΓΗΣ</span><h1>Ρυθμίσεις</h1><p>Οι αλλαγές αποθηκεύονται αυτόματα και εφαρμόζονται σε όλα τα βίντεο.</p></header><div className="settings-grid"><section><h2>Υπότιτλοι</h2><label>Προεπιλεγμένη γλώσσα<select value={settings.subtitleMode} onPointerUp={blurAfterPointer} onChange={e=>update({subtitleMode:e.target.value as Settings["subtitleMode"]})}><option value="el">Ελληνικά</option><option value="en">Αγγλικά</option><option value="dual">Διπλοί υπότιτλοι</option></select></label><label>Μέγεθος γραμματοσειράς<input type="range" min="13" max="28" value={settings.subtitleSize} onPointerUp={blurAfterPointer} onChange={e=>update({subtitleSize:+e.target.value,subtitleSizeVersion:2})}/><output>{settings.subtitleSize}px · αποθηκεύεται ως προεπιλογή</output></label><label>Θέση<select value={settings.subtitlePosition} onPointerUp={blurAfterPointer} onChange={e=>update({subtitlePosition:e.target.value as "top"|"bottom"})}><option value="bottom">Κάτω</option><option value="top">Πάνω</option></select></label><label>Διαφάνεια φόντου<input type="range" min="0" max="100" step="10" value={transparency} onPointerUp={blurAfterPointer} onChange={e=>update({opacity:1-(+e.target.value/100)})}/><output>{transparency}% διαφάνεια</output></label><label>Καθυστέρηση υποτίτλων<input type="range" min="-5" max="5" step=".1" value={settings.delay} onPointerUp={blurAfterPointer} onChange={e=>update({delay:+e.target.value})}/><output>{settings.delay}s</output></label>{toggle("subtitles","Εμφάνιση υποτίτλων")}{toggle("autoScroll","Αυτόματη κύλιση μεταγραφής")}{toggle("highlight","Επισήμανση ενεργής γραμμής")}</section><section><h2>Αναπαραγωγή</h2>{toggle("autoplay","Αυτόματη αναπαραγωγή")}<label>Προεπιλεγμένη ταχύτητα<select value={settings.speed} onPointerUp={blurAfterPointer} onChange={e=>update({speed:+e.target.value})}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>{toggle("autoTranslate","Αυτόματη μετάφραση")}{toggle("autoCategory","Αυτόματη κατηγοριοποίηση")}{toggle("continueWatching","Συνέχιση προβολής")}</section><section><h2>Εμφάνιση</h2><label>Διάταξη βιβλιοθήκης<select value={settings.layout} onPointerUp={blurAfterPointer} onChange={e=>update({layout:e.target.value as "grid"|"list"})}><option value="grid">Πλέγμα</option><option value="list">Λίστα</option></select></label><label>Θέμα<select value={settings.theme} onPointerUp={blurAfterPointer} onChange={e=>update({theme:e.target.value as Settings["theme"]})}><option value="dark">Σκούρο</option><option value="light">Φωτεινό</option><option value="system">Σύστημα</option></select></label>{toggle("compact","Συμπαγείς κάρτες")}{toggle("descriptions","Εμφάνιση περιγραφών")}</section></div></section>;
+  return <section className="settings-page"><header className="settings-page-header"><button type="button" className="settings-close" aria-label="Κλείσιμο ρυθμίσεων" onClick={close}>×</button><span>ΠΡΟΤΙΜΗΣΕΙΣ ΕΦΑΡΜΟΓΗΣ</span><h1>Ρυθμίσεις</h1><p>Οι αλλαγές αποθηκεύονται αυτόματα και εφαρμόζονται σε όλα τα βίντεο.</p></header><div className="settings-grid"><section><h2>Υπότιτλοι</h2><label>Προεπιλεγμένη γλώσσα<select value={settings.subtitleMode} onPointerUp={blurAfterPointer} onChange={e=>update({subtitleMode:e.target.value as Settings["subtitleMode"]})}><option value="el">Ελληνικά</option><option value="en">Αγγλικά</option><option value="dual">Διπλοί υπότιτλοι</option></select></label><label>Μέγεθος γραμματοσειράς<input type="range" min="13" max="28" value={settings.subtitleSize} onPointerUp={blurAfterPointer} onChange={e=>update({subtitleSize:+e.target.value,subtitleSizeVersion:2})}/><output>{settings.subtitleSize}px · αποθηκεύεται ως προεπιλογή</output></label><label>Θέση<select value={settings.subtitlePosition} onPointerUp={blurAfterPointer} onChange={e=>update({subtitlePosition:e.target.value as "top"|"bottom"})}><option value="bottom">Κάτω</option><option value="top">Πάνω</option></select></label><label>Διαφάνεια φόντου<input type="range" min="0" max="100" step="10" value={transparency} onPointerUp={blurAfterPointer} onChange={e=>update({opacity:1-(+e.target.value/100)})}/><output>{transparency}% διαφάνεια</output></label><label>Καθυστέρηση υποτίτλων<input type="range" min="-5" max="5" step=".1" value={settings.delay} onPointerUp={blurAfterPointer} onChange={e=>update({delay:+e.target.value})}/><output>{settings.delay}s</output></label>{toggle("subtitles","Εμφάνιση υποτίτλων")}{toggle("autoScroll","Αυτόματη κύλιση μεταγραφής")}{toggle("highlight","Επισήμανση ενεργής γραμμής")}</section><section><h2>Αναπαραγωγή</h2>{toggle("autoplay","Αυτόματη αναπαραγωγή")}<label>Προεπιλεγμένη ταχύτητα<select value={settings.speed} onPointerUp={blurAfterPointer} onChange={e=>update({speed:+e.target.value})}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>{toggle("autoTranslate","Αυτόματη μετάφραση")}{toggle("autoCategory","Αυτόματη κατηγοριοποίηση")}{toggle("continueWatching","Συνέχιση προβολής")}</section><section><h2>Εμφάνιση</h2><label>Διάταξη βιβλιοθήκης<select value={settings.layout} onPointerUp={blurAfterPointer} onChange={e=>update({layout:e.target.value as "grid"|"list"})}><option value="grid">Πλέγμα</option><option value="list">Λίστα</option></select></label><label>Θέμα<select value={settings.theme} onPointerUp={blurAfterPointer} onChange={e=>update({theme:e.target.value as Settings["theme"]})}><option value="dark">Σκούρο</option><option value="light">Φωτεινό</option><option value="system">Σύστημα</option></select></label>{toggle("compact","Συμπαγείς κάρτες")}{toggle("descriptions","Εμφάνιση περιγραφών")}</section></div><footer className="gts33-settings-footer"><small>Οι αλλαγές έχουν αποθηκευτεί.</small><button type="button" onClick={close}>Κλείσιμο ρυθμίσεων</button></footer></section>;
 }
