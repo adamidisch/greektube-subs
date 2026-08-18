@@ -4,6 +4,7 @@ import {database} from "@/db/postgres";
 const SHARED_LIBRARY_KEY="greektube-shared-library-v1";
 const ADMIN_COOKIE="greektube-admin";
 const ADMIN_SESSION_MESSAGE="greektube-edit-authorized";
+const DEMO_MODE=true;
 const CATEGORIES=new Set(["Medical","Tech","Podcasts","Comedy","Education","Documentaries","Other"]);
 
 type SkipRange={start:number;end:number};
@@ -73,7 +74,7 @@ export async function GET(request:Request){
     const videos=await getSharedVideos();
     const video=videos.find(item=>String(item.id||"")===videoId);
     if(!video)return NextResponse.json({error:"Το βίντεο δεν βρέθηκε."},{status:404});
-    return NextResponse.json({video});
+    return NextResponse.json({video,demo:DEMO_MODE});
   }catch{return NextResponse.json({error:"Δεν ήταν δυνατή η φόρτωση του editor."},{status:500});}
 }
 
@@ -114,8 +115,10 @@ export async function PUT(request:Request){
       tags,
       description:text(metadata.description,5000),
       skipRanges:ranges,
-      metadataVersion:currentVersion+1,
+      metadataVersion:DEMO_MODE?currentVersion:currentVersion+1,
     };
+    if(DEMO_MODE)return NextResponse.json({ok:true,demo:true,video:updated});
+
     videos[index]=updated;
     const db=database();
     const now=new Date().toISOString();
