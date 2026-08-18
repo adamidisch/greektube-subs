@@ -10,6 +10,7 @@ import VersionAboutSystem from "./VersionAboutSystem";
 import LogoPreferenceSystem from "./LogoPreferenceSystem";
 import PlayerUIAuditEnhancer from "./PlayerUIAuditEnhancer";
 import MobileUXFixesEnhancer from "./MobileUXFixesEnhancer";
+import VideoEditorDemoEnhancer from "./VideoEditorDemoEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
 const BRAND_REV = "7820";
@@ -104,6 +105,7 @@ export default function Home() {
       <LogoPreferenceSystem />
       <PlayerUIAuditEnhancer />
       <MobileUXFixesEnhancer />
+      <VideoEditorDemoEnhancer />
     </>
   );
 }
