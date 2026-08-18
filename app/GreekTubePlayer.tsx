@@ -102,8 +102,8 @@ const SEED: Video[] = [
   favorite:false, lastPosition:0, progress:0,
 })) as Video[];
 
-function speakerForVideo(id:string,_channel:string):SpeakerProfile{
-  return canonicalSpeakerForVideo(id)||{
+function speakerForVideo(id:string,channel:string):SpeakerProfile{
+  return canonicalSpeakerForVideo(id,channel)||{
     name:"Ομιλητής προς επιβεβαίωση",
     role:"",
     importance:"Η ταυτότητα του ομιλητή δεν έχει ακόμη επιβεβαιωθεί.",
@@ -1141,7 +1141,7 @@ export default function GreekTubePlayer() {
 
   if(selected){
     const moments=state.moments.filter(m=>m.videoId===selected.id);
-    const canonicalSpeaker=canonicalSpeakerForVideo(selected.id);
+    const canonicalSpeaker=canonicalSpeakerForVideo(selected.id,selected.speakerName,captions?.speaker?.name,selected.channel);
     const fallbackSpeaker=canonicalSpeaker||speakerForVideo(selected.id,selected.channel);
     const speaker=captions?.speaker||fallbackSpeaker;
     const storedSpeaker=(selected.speakerName||"").trim();
@@ -1401,6 +1401,7 @@ export default function GreekTubePlayer() {
 
 function Brand({home}:{home:()=>void}){return <button className="brand brand-home" aria-label="Αρχική σελίδα" onClick={home}><span className="brand-mark" aria-hidden="true" /><span>GreekTube <b>Subs</b></span><small className="brand-version">{`ver ${APP_VERSION}`}</small></button>;}
 function SiteFooter(){return <footer className="app-footer"><div className="app-footer-brand"><span className="brand-mark" aria-hidden="true" /><span>GreekTube <b>Subs</b></span></div><p>Αυτόματοι ελληνικοί υπότιτλοι για δημόσια βίντεο YouTube.</p><span className="app-footer-note">Φτιαγμένο με ♥ για ελληνόφωνους θεατές</span></footer>;}
+function speakerMonogram(name:string){return name.replace(/^Dr\.?\s+/i,"").split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()||"").join("")||"i";}
 function SpeakerBioModal({profile,close}:{profile:CanonicalSpeakerProfile;close:()=>void}){
   const biography=profile.biography;
   useEffect(()=>{
@@ -1414,13 +1415,13 @@ function SpeakerBioModal({profile,close}:{profile:CanonicalSpeakerProfile;close:
   return <div className="gts33-bio-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)close();}}>
     <section className="gts33-bio-modal" role="dialog" aria-modal="true" aria-labelledby="speaker-bio-title" aria-describedby="speaker-bio-introduction">
       <header>
-        <div className="gts33-bio-monogram" aria-hidden="true">SM</div>
-        <div><small>{upperGreekLabel("Προφίλ ομιλήτριας")}</small><h2 id="speaker-bio-title">{profile.name}</h2><span>{biography.credential}</span></div>
+        <div className="gts33-bio-monogram" aria-hidden="true">{speakerMonogram(profile.name)}</div>
+        <div><small>{upperGreekLabel(biography.profileLabel)}</small><h2 id="speaker-bio-title">{profile.name}</h2><span>{profile.role}</span></div>
         <button type="button" autoFocus aria-label="Κλείσιμο βιογραφικού" onClick={close}>×</button>
       </header>
       <p className="gts33-bio-intro" id="speaker-bio-introduction">{biography.introduction}</p>
       <div className="gts33-bio-facts">{biography.facts.map(fact=><article key={fact.label}><i aria-hidden="true"/><div><strong>{fact.label}</strong><p>{fact.text}</p></div></article>)}</div>
-      {biography.statusNote&&<p className="gts33-bio-status"><span aria-hidden="true">i</span>{biography.statusNote}</p>}
+      {biography.infoNote&&<p className="gts33-bio-status"><span aria-hidden="true">i</span>{biography.infoNote}</p>}
       <footer><strong>{upperGreekLabel("Πηγές")}</strong><div>{biography.sources.map(source=><a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.label}<span aria-hidden="true">↗</span></a>)}</div></footer>
     </section>
   </div>;

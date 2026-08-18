@@ -74,7 +74,11 @@ async function isAdminRequest(request: Request) {
 function normalizeSpeakerFields(video: VideoRecord) {
   const normalized = { ...video };
   const id = typeof video.id === "string" ? video.id : "";
-  const canonical = canonicalSpeakerForVideo(id);
+  const canonical = canonicalSpeakerForVideo(
+    id,
+    typeof video.speakerName === "string" ? video.speakerName : undefined,
+    typeof video.channel === "string" ? video.channel : undefined,
+  );
   if (canonical) {
     normalized.speakerName = canonical.name;
     normalized.speakerRole = canonical.role;

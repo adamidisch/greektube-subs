@@ -74,11 +74,11 @@ type SpeakerProfile = {
   highlights: string[];
 };
 
-function speakerProfile(videoId: string, description = "", _channel = ""): SpeakerProfile {
-  const known = canonicalSpeakerForVideo(videoId);
-  if (known) return known;
+function speakerProfile(videoId: string, description = "", channel = ""): SpeakerProfile {
   const match = description.match(/\b(?:Dr\.?|Doctor)\s+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,3})/);
   const name = match ? `Dr. ${match[1]}` : "";
+  const known = canonicalSpeakerForVideo(videoId,name,channel);
+  if (known) return known;
   return {
     name: name || "Ομιλητής προς επιβεβαίωση",
     role: name ? "Ιατρός / ομιλητής" : "",
@@ -89,13 +89,13 @@ function speakerProfile(videoId: string, description = "", _channel = ""): Speak
 }
 
 function normalizedPublishedSpeaker(videoId: string, payload: unknown): SpeakerProfile {
-  const canonical = canonicalSpeakerForVideo(videoId);
-  if (canonical) return canonical;
   const record = payload && typeof payload === "object"
     ? payload as { speaker?: SpeakerProfile; channel?: unknown }
     : {};
   const channel = typeof record.channel === "string" ? record.channel.trim() : "";
   const existing = record.speaker;
+  const canonical = canonicalSpeakerForVideo(videoId,existing?.name,channel);
+  if (canonical) return canonical;
   if (existing?.name && (!channel || existing.name.trim().toLowerCase() !== channel.toLowerCase())) return existing;
   return speakerProfile(videoId);
 }

@@ -262,8 +262,9 @@ export async function POST(request: Request) {
       });
     }
     const title = await greekTitle(originalTitle);
-    const canonicalSpeaker = canonicalSpeakerForVideo(id);
-    const speakerName = canonicalSpeaker?.name || speakerNameFromMetadata(originalTitle, details.description);
+    const detectedSpeakerName = speakerNameFromMetadata(originalTitle, details.description);
+    const canonicalSpeaker = canonicalSpeakerForVideo(id, detectedSpeakerName, metadata.author, details.author);
+    const speakerName = canonicalSpeaker?.name || detectedSpeakerName;
     const speakerRole = canonicalSpeaker?.role || speakerRoleFromMetadata(details.description, speakerName);
     const category = categoryFor(originalTitle, details.description, speakerName);
     const creatorChapterSource = creatorChaptersFromDescription(details.description, details.duration);
