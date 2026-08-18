@@ -12,6 +12,7 @@ type ManualImportProgress = { progress:number; label:string; detail:string; curr
 type GuideItem = { time:number; title:string; summary:string; comment?:string };
 type Category = "Medical" | "Tech" | "Podcasts" | "Comedy" | "Education" | "Documentaries" | "Other";
 type TranslationMode = "legacy" | "google" | "manual-pro";
+type VideoTapZone = "backward" | "center" | "forward";
 type Video = {
   id: string; url: string; title: string; originalTitle?:string; channel: string; category: Category;
   tags: string[]; notes: string; description: string; duration: number; addedAt: string;
@@ -426,6 +427,7 @@ export default function GreekTubePlayer() {
   const controlsTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const videoTapTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const lastVideoTap=useRef(0);
+  const lastVideoTapZone=useRef<VideoTapZone|null>(null);
   const volumeDragging=useRef(false);
   const keyboardSeekTarget=useRef<number|null>(null);
   const keyboardSeekTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -1046,17 +1048,23 @@ export default function GreekTubePlayer() {
     event.preventDefault();
     revealPlayerUi();revealFsExit();
     if(event.detail===0){togglePlayback();return;}
+    const coarsePointer=window.matchMedia("(pointer: coarse)").matches;
+    const rect=event.currentTarget.getBoundingClientRect();
+    const horizontalPosition=(event.clientX-rect.left)/Math.max(1,rect.width);
+    const tapZone:VideoTapZone=!coarsePointer?"center":horizontalPosition<.35?"backward":horizontalPosition>.65?"forward":"center";
     const now=window.performance.now();
-    if(lastVideoTap.current>0&&now-lastVideoTap.current<=320){
+    if(lastVideoTap.current>0&&now-lastVideoTap.current<=320&&lastVideoTapZone.current===tapZone){
       if(videoTapTimer.current)clearTimeout(videoTapTimer.current);
-      videoTapTimer.current=null;lastVideoTap.current=0;
-      void toggleFullscreen();
+      videoTapTimer.current=null;lastVideoTap.current=0;lastVideoTapZone.current=null;
+      if(tapZone==="backward")skip(-10);
+      else if(tapZone==="forward")skip(10);
+      else void toggleFullscreen();
       return;
     }
-    lastVideoTap.current=now;
+    lastVideoTap.current=now;lastVideoTapZone.current=tapZone;
     if(videoTapTimer.current)clearTimeout(videoTapTimer.current);
     videoTapTimer.current=setTimeout(()=>{
-      videoTapTimer.current=null;lastVideoTap.current=0;togglePlayback();
+      videoTapTimer.current=null;lastVideoTap.current=0;lastVideoTapZone.current=null;togglePlayback();
     },300);
   }
   function revealFsExit(){
@@ -1101,7 +1109,7 @@ export default function GreekTubePlayer() {
     if(navigator.share){try{await navigator.share({title:m.note,url});return;}catch{}}
     await copyText(url);
   }
-  function close(){if(playerReadyTimer.current)clearTimeout(playerReadyTimer.current);if(videoTapTimer.current)clearTimeout(videoTapTimer.current);lastVideoTap.current=0;player.current?.destroy();player.current=null;setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);setIsPseudoFullscreen(false);setCheckingReady(false);setSpeakerBioOpen(false);setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
+  function close(){if(playerReadyTimer.current)clearTimeout(playerReadyTimer.current);if(videoTapTimer.current)clearTimeout(videoTapTimer.current);lastVideoTap.current=0;lastVideoTapZone.current=null;player.current?.destroy();player.current=null;setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);setIsPseudoFullscreen(false);setCheckingReady(false);setSpeakerBioOpen(false);setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
   function goToSettings(){
     playerScrollPosition.current=window.scrollY;
     const time=currentPlayer()?.getCurrentTime()||selected?.lastPosition||0;
