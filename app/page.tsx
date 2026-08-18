@@ -13,6 +13,7 @@ import MobileUXFixesEnhancer from "./MobileUXFixesEnhancer";
 import VideoEditorDemoEnhancer from "./VideoEditorDemoEnhancer";
 import SkipRangeTransferEnhancer from "./SkipRangeTransferEnhancer";
 import NextVideosEnhancer from "./NextVideosEnhancer";
+import AnalyticsEnhancer from "./AnalyticsEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
 const BRAND_REV = "7820";
@@ -110,6 +111,7 @@ export default function Home() {
       <VideoEditorDemoEnhancer />
       <SkipRangeTransferEnhancer />
       <NextVideosEnhancer />
+      <AnalyticsEnhancer />
     </>
   );
 }
