@@ -11,11 +11,11 @@ export default function SimpleFooterEnhancer(){
     const decorate=()=>{
       raf=0;
       document.querySelectorAll<HTMLElement>(".app-footer").forEach(footer=>{
-        footer.classList.add("gts-simple-footer");
+        footer.classList.add("gts-site-footer");
         if(footer.querySelector(".gts-footer-links"))return;
         const nav=document.createElement("nav");
         nav.className="gts-footer-links";
-        nav.setAttribute("aria-label","Footer");
+        nav.setAttribute("aria-label","Footer navigation");
         LINKS.forEach(label=>{
           const button=document.createElement("button");
           button.type="button";
@@ -36,115 +36,157 @@ export default function SimpleFooterEnhancer(){
   },[]);
 
   return <style>{`
-    body .app-footer.gts-simple-footer {
+    body .app-footer.gts-site-footer {
       width: 100vw !important;
       max-width: none !important;
-      min-height: 94px !important;
-      margin: 72px 0 0 50% !important;
-      padding: 24px max(28px, calc((100vw - 1200px) / 2)) !important;
-      transform: translateX(-50%) !important;
+      min-height: 0 !important;
+      margin: 76px 0 0 calc(50% - 50vw) !important;
+      padding: 27px max(24px, calc((100vw - 1200px) / 2)) 29px !important;
       display: grid !important;
-      grid-template-columns: auto minmax(0, 1fr) auto !important;
-      grid-template-areas: "brand copy links" !important;
+      grid-template-columns: minmax(0, 1fr) auto !important;
+      grid-template-areas: "brand links" "copy links" !important;
       align-items: center !important;
-      gap: 18px 28px !important;
+      column-gap: 42px !important;
+      row-gap: 5px !important;
       border: 0 !important;
-      border-top: 1px solid rgba(255,255,255,.085) !important;
+      border-top: 1px solid rgba(255,255,255,.075) !important;
       border-radius: 0 !important;
-      background: linear-gradient(180deg, rgba(18,21,28,.5), rgba(11,13,18,.96)) !important;
+      background: #0c0f14 !important;
       box-shadow: none !important;
       text-align: left !important;
     }
-    body .app-footer.gts-simple-footer .app-footer-brand {
+
+    body .app-footer.gts-site-footer .app-footer-brand {
       grid-area: brand !important;
+      width: fit-content !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
       justify-self: start !important;
-      margin: 0 !important;
       gap: 8px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      color: var(--text) !important;
       white-space: nowrap !important;
     }
-    body .app-footer.gts-simple-footer .app-footer-brand .brand-mark {
-      width: 29px !important;
-      height: 22px !important;
+    body .app-footer.gts-site-footer .app-footer-brand:hover {
+      background: transparent !important;
+      box-shadow: none !important;
     }
-    body .app-footer.gts-simple-footer .app-footer-brand > span:last-child {
+    body .app-footer.gts-site-footer .app-footer-brand .brand-mark {
+      width: 27px !important;
+      height: 21px !important;
+      flex: 0 0 27px !important;
+    }
+    body .app-footer.gts-site-footer .app-footer-brand > span:last-child {
       font-size: 12px !important;
-      font-weight: 650 !important;
-      letter-spacing: -.02em !important;
+      font-weight: 660 !important;
+      letter-spacing: -.025em !important;
+      line-height: 1 !important;
     }
-    body .app-footer.gts-simple-footer > p {
+
+    body .app-footer.gts-site-footer > p {
       grid-area: copy !important;
+      max-width: 520px !important;
       margin: 0 !important;
-      color: var(--soft) !important;
-      font-size: 10.5px !important;
-      line-height: 1.4 !important;
+      color: #737985 !important;
+      font-size: 10px !important;
+      line-height: 1.45 !important;
       text-align: left !important;
     }
-    body .app-footer.gts-simple-footer .app-footer-note,
-    body .app-footer.gts-simple-footer .footer-version-label {
+
+    body .app-footer.gts-site-footer .app-footer-note,
+    body .app-footer.gts-site-footer .footer-version-label {
       display: none !important;
     }
-    body .app-footer.gts-simple-footer .gts-footer-links {
+
+    body .app-footer.gts-site-footer .gts-footer-links {
       grid-area: links !important;
       display: flex !important;
       align-items: center !important;
       justify-content: flex-end !important;
-      gap: 4px !important;
+      gap: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
       white-space: nowrap !important;
     }
-    body .app-footer.gts-simple-footer .gts-footer-links button {
-      min-height: 32px !important;
-      padding: 0 9px !important;
+    body .app-footer.gts-site-footer .gts-footer-links button {
+      position: relative !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      height: auto !important;
+      margin: 0 !important;
+      padding: 4px 10px !important;
       border: 0 !important;
-      border-radius: 8px !important;
+      border-radius: 0 !important;
       background: transparent !important;
-      color: #8f95a2 !important;
+      box-shadow: none !important;
+      color: #858b96 !important;
       font: inherit !important;
-      font-size: 10px !important;
+      font-size: 9.5px !important;
       font-weight: 520 !important;
+      line-height: 1.2 !important;
+      letter-spacing: .005em !important;
       cursor: default !important;
-      transition: color .16s ease, background .16s ease !important;
+      transition: color .16s ease !important;
     }
-    body .app-footer.gts-simple-footer .gts-footer-links button:hover {
-      color: #d8dbe3 !important;
-      background: rgba(255,255,255,.045) !important;
+    body .app-footer.gts-site-footer .gts-footer-links button + button::before {
+      content: "" !important;
+      position: absolute !important;
+      left: 0 !important;
+      top: 50% !important;
+      width: 1px !important;
+      height: 10px !important;
+      background: rgba(255,255,255,.10) !important;
+      transform: translateY(-50%) !important;
     }
-    html[data-theme="light"] body .app-footer.gts-simple-footer {
-      border-top-color: rgba(27,31,42,.10) !important;
-      background: linear-gradient(180deg, rgba(249,249,251,.76), rgba(241,242,246,.98)) !important;
+    body .app-footer.gts-site-footer .gts-footer-links button:hover {
+      color: #c8ccd4 !important;
+      background: transparent !important;
     }
-    html[data-theme="light"] body .app-footer.gts-simple-footer .gts-footer-links button {
-      color: #6f7480 !important;
+
+    html[data-theme="light"] body .app-footer.gts-site-footer {
+      border-top-color: rgba(24,28,38,.09) !important;
+      background: #f5f6f8 !important;
     }
+    html[data-theme="light"] body .app-footer.gts-site-footer > p {
+      color: #7a7e87 !important;
+    }
+    html[data-theme="light"] body .app-footer.gts-site-footer .gts-footer-links button {
+      color: #6c717c !important;
+    }
+    html[data-theme="light"] body .app-footer.gts-site-footer .gts-footer-links button + button::before {
+      background: rgba(20,24,32,.11) !important;
+    }
+
     @media (max-width: 700px) {
-      body .app-footer.gts-simple-footer {
-        min-height: 0 !important;
-        margin-top: 54px !important;
-        padding: 22px 18px max(24px, env(safe-area-inset-bottom)) !important;
-        grid-template-columns: 1fr auto !important;
-        grid-template-areas: "brand links" "copy copy" !important;
-        gap: 10px 14px !important;
-      }
-      body .app-footer.gts-simple-footer > p {
-        font-size: 10px !important;
-      }
-      body .app-footer.gts-simple-footer .gts-footer-links {
-        gap: 0 !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-      }
-      body .app-footer.gts-simple-footer .gts-footer-links button {
-        min-height: 30px !important;
-        padding: 0 6px !important;
-        font-size: 9px !important;
-      }
-    }
-    @media (max-width: 430px) {
-      body .app-footer.gts-simple-footer {
+      body .app-footer.gts-site-footer {
+        margin-top: 58px !important;
+        padding: 23px 18px max(25px, env(safe-area-inset-bottom)) !important;
         grid-template-columns: 1fr !important;
         grid-template-areas: "brand" "copy" "links" !important;
+        row-gap: 9px !important;
       }
-      body .app-footer.gts-simple-footer .gts-footer-links {
+      body .app-footer.gts-site-footer > p {
+        max-width: 360px !important;
+        font-size: 9.5px !important;
+      }
+      body .app-footer.gts-site-footer .gts-footer-links {
         justify-content: flex-start !important;
+        margin-top: 4px !important;
+      }
+      body .app-footer.gts-site-footer .gts-footer-links button {
+        padding: 4px 9px !important;
+        font-size: 9.5px !important;
+      }
+      body .app-footer.gts-site-footer .gts-footer-links button:first-child {
+        padding-left: 0 !important;
       }
     }
   `}</style>;
