@@ -1326,7 +1326,6 @@ export default function GreekTubePlayer() {
         </section>
       </>}
       {momentModal&&<Modal title="Αποθήκευση στιγμής" close={()=>setMomentModal(null)}><form className="form moment-form" onSubmit={saveMoment}><div className="moment-preview"><time>{clock(momentModal.time)}</time><p>{momentModal.excerpt||"Η στιγμή θα αποθηκευτεί στο συγκεκριμένο σημείο του βίντεο."}</p></div><label>Σύντομη σημείωση<input name="note" autoFocus placeholder="Τι θέλεις να θυμάσαι από αυτό το σημείο;"/></label><label>Ετικέτες <small>Προαιρετικά</small><input name="tags" placeholder="π.χ. ινσουλίνη, διατροφή"/></label><div className="modal-actions"><button type="button" className="secondary" onClick={()=>setMomentModal(null)}>Ακύρωση</button><button className="primary">Αποθήκευση στιγμής</button></div></form></Modal>}
-      {speakerBioOpen&&canonicalSpeaker?.biography&&<SpeakerBioModal profile={canonicalSpeaker} close={closeSpeakerBio}/>}
       {editRequest&&<EditPassword close={()=>setEditRequest(null)} authorized={()=>{setEditingVideo(editRequest);setEditRequest(null);}}/>}
       {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:6});setEditingVideo(null);}} rebuild={()=>{const video=editingVideo;setEditingVideo(null);setTranslationChoiceVideo(video);}}/>}
       {manualImportRequest&&<EditPassword close={()=>setManualImportRequest(null)} authorized={()=>{setProImportVideo(manualImportRequest);setManualImportRequest(null);}}/>}
@@ -1340,6 +1339,7 @@ export default function GreekTubePlayer() {
       />}
       <SiteFooter />
     </main>
+    {speakerBioOpen&&canonicalSpeaker?.biography&&<SpeakerBioModal profile={canonicalSpeaker} close={closeSpeakerBio}/>}
     {settingsFromPlayer&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-player settings-screen-shell"><header className="app-header"><button className="ghost back-to-video" autoFocus onClick={returnToVideo}>← Πίσω στο βίντεο</button><Brand home={goHome}/><button className="icon-button active" aria-label="Ρυθμίσεις" onClick={returnToVideo}>⚙</button></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patchSettings} close={returnToVideo}/></div></div></div>}
     </>;
   }
