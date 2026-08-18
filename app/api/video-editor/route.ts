@@ -4,7 +4,7 @@ import {database} from "@/db/postgres";
 const SHARED_LIBRARY_KEY="greektube-shared-library-v1";
 const ADMIN_COOKIE="greektube-admin";
 const ADMIN_SESSION_MESSAGE="greektube-edit-authorized";
-const DEMO_MODE=true;
+const DEMO_MODE=false;
 const CATEGORIES=new Set(["Medical","Tech","Podcasts","Comedy","Education","Documentaries","Other"]);
 
 type SkipRange={start:number;end:number};
@@ -115,9 +115,8 @@ export async function PUT(request:Request){
       tags,
       description:text(metadata.description,5000),
       skipRanges:ranges,
-      metadataVersion:DEMO_MODE?currentVersion:currentVersion+1,
+      metadataVersion:currentVersion+1,
     };
-    if(DEMO_MODE)return NextResponse.json({ok:true,demo:true,video:updated});
 
     videos[index]=updated;
     const db=database();
