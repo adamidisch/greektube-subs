@@ -337,13 +337,13 @@ html body .viewer.viewer.viewer .gts31-owner-actions>button:focus-visible::befor
 }
 
 html body .settings-screen-layer .gts33-settings-footer{
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  gap:14px;
+  display:grid;
+  justify-items:center;
+  gap:9px;
   margin-top:20px;
   padding:18px 0 4px;
   border-top:1px solid rgba(255,255,255,.07);
+  text-align:center;
 }
 
 html body .settings-screen-layer .gts33-settings-footer>small{
@@ -352,6 +352,7 @@ html body .settings-screen-layer .gts33-settings-footer>small{
 }
 
 html body .settings-screen-layer .gts33-settings-footer>button{
+  width:min(100%,240px);
   min-width:176px;
   min-height:44px;
   padding:0 18px;
@@ -439,7 +440,7 @@ html[data-theme="light"] body .settings-screen-layer .gts33-settings-footer>butt
   }
 
   html body .settings-screen-layer .gts33-settings-footer>button{
-    width:100%;
+    width:min(100%,240px);
   }
 }
 
