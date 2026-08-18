@@ -89,8 +89,12 @@ export default function NextVideosEnhancer(){
 
       if(!candidates.length){existing?.remove();return;}
 
+      const signature=`${selectedId}:${candidates.map(video=>safeText(video.id)).join(",")}`;
+      if(existing?.dataset.signature===signature)return;
+
       const section=existing||document.createElement("section");
       section.className="gts-next-videos";
+      section.dataset.signature=signature;
       section.setAttribute("aria-label","Επόμενα βίντεο");
       section.innerHTML="";
 
