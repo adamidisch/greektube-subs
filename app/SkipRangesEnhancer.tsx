@@ -111,7 +111,7 @@ export default function SkipRangesEnhancer(){
   },[]);
 
   useEffect(()=>{
-    const syncTarget=()=>setPortalTarget(document.querySelector(".heading-actions")||document.querySelector(".player-secondary-actions"));
+    const syncTarget=()=>setPortalTarget(document.querySelector(".heading-actions")||document.querySelector(".gts31-controls-row-2")||document.querySelector(".player-secondary-actions"));
     syncTarget();
     const root=document.querySelector(".app-shell")||document.body;
     const observer=new MutationObserver(syncTarget);

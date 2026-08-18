@@ -83,7 +83,7 @@ export default function TranscriptPerformanceEnhancer(){
   useEffect(()=>{
     const intercept=(event:MouseEvent)=>{
       const element=event.target as Element|null;
-      const toggle=element?.closest(".transcript-toggle,.mobile-transcript-toggle");
+      const toggle=element?.closest(".gts31-transcript-button,.transcript-toggle,.mobile-transcript-toggle");
       if(!toggle||!document.querySelector(".watch-layout"))return;
       event.preventDefault();
       event.stopPropagation();
@@ -99,11 +99,11 @@ export default function TranscriptPerformanceEnhancer(){
     if(!target)return;
     if(open){target.classList.add("transcript-open");target.classList.remove("player-only");}
     else{target.classList.remove("transcript-open");target.classList.add("player-only");}
-    target.querySelectorAll<HTMLElement>(".transcript-toggle,.mobile-transcript-toggle").forEach(button=>{
+    target.querySelectorAll<HTMLElement>(".gts31-transcript-button,.transcript-toggle,.mobile-transcript-toggle").forEach(button=>{
       button.classList.toggle("active",open);
       button.setAttribute("aria-pressed",open?"true":"false");
       const label=button.querySelector("span:last-child");
-      if(label&&button.classList.contains("transcript-toggle"))label.textContent=open?"Κλείσιμο κειμένου":"Κείμενο μεταγραφής";
+      if(label&&(button.classList.contains("gts31-transcript-button")||button.classList.contains("transcript-toggle")))label.textContent=open?"Κλείσιμο κειμένου":"Κείμενο";
     });
     return()=>{
       target.classList.remove("transcript-open");

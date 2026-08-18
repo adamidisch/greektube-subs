@@ -1223,10 +1223,10 @@ export default function GreekTubePlayer() {
       {!checkingReady&&!loading&&captions&&<>
         <section className={`watch-layout player-ready-transition ${transcriptOpen?"transcript-open":"player-only"}`}>
           <div className="watch-main">
-            <div className="mobile-video-byline v7830-owner-strip">
-              <i className="v7830-owner-marker" aria-hidden="true"/>
-              <span className="v7830-owner-copy"><strong>{displaySpeakerName}</strong>{displaySpeakerRole&&<small>{displaySpeakerRole}</small>}</span>
-              <span className="v7830-owner-actions">
+            <div className="gts31-owner">
+              <i className="gts31-owner-marker" aria-hidden="true"/>
+              <span className="gts31-owner-copy"><strong>{displaySpeakerName}</strong>{displaySpeakerRole&&<small>{displaySpeakerRole}</small>}</span>
+              <span className="gts31-owner-actions">
                 <button type="button" aria-label="Επεξεργασία βίντεο" onClick={()=>void requestEdit(selected)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
                 <button type="button" aria-label={selected.favorite?"Αφαίρεση από τα αγαπημένα":"Προσθήκη στα αγαπημένα"} className={selected.favorite?"active":""} aria-pressed={selected.favorite} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}><svg viewBox="0 0 24 24" fill={selected.favorite?"currentColor":"none"} stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg></button>
               </span>
@@ -1245,33 +1245,33 @@ export default function GreekTubePlayer() {
                 <button className="video-tap-toggle" aria-label={isPlaying?"Παύση βίντεο":"Αναπαραγωγή βίντεο"} onClick={()=>{revealPlayerUi();togglePlayback();revealFsExit();}}/>
                 {(isFullscreen||isPseudoFullscreen)&&showFsExit&&<button className="custom-fullscreen" title="Έξοδος από πλήρη οθόνη" aria-label="Έξοδος από πλήρη οθόνη" onClick={e=>{e.preventDefault();e.stopPropagation();e.currentTarget.blur();void toggleFullscreen();}}>↙</button>}
               </div>
-              <div className="player-actions player-tools v7830-player-controls">
-                <div className="v7830-controls-primary">
-                  <div className="playback-controls v7830-play-cluster" role="group" aria-label="Έλεγχος αναπαραγωγής">
-                    <button className="skip-button" aria-label="Πίσω 10 δευτερόλεπτα" onClick={()=>skip(-10)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="M17 5l-7 7 7 7M10 5l-7 7 7 7"/></svg><small>10</small></button>
-                    <button className="play-toggle" aria-label={isPlaying?"Παύση":"Αναπαραγωγή"} onClick={togglePlayback}>{isPlaying?"Ⅱ":"▶"}</button>
-                    <button className="skip-button" aria-label="Μπροστά 10 δευτερόλεπτα" onClick={()=>skip(10)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="M7 5l7 7-7 7M14 5l7 7-7 7"/></svg><small>10</small></button>
+              <div className="gts31-controls">
+                <div className="gts31-controls-row-1">
+                  <div className="gts31-play-cluster" role="group" aria-label="Έλεγχος αναπαραγωγής">
+                    <button className="gts31-control gts31-skip" aria-label="Πίσω 10 δευτερόλεπτα" onClick={()=>skip(-10)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="M17 5l-7 7 7 7M10 5l-7 7 7 7"/></svg><small>10</small></button>
+                    <button className="gts31-control gts31-play" aria-label={isPlaying?"Παύση":"Αναπαραγωγή"} onClick={togglePlayback}>{isPlaying?"Ⅱ":"▶"}</button>
+                    <button className="gts31-control gts31-skip" aria-label="Μπροστά 10 δευτερόλεπτα" onClick={()=>skip(10)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="M7 5l7 7-7 7M14 5l7 7-7 7"/></svg><small>10</small></button>
                   </div>
-                  <div className="v7830-settings-cluster">
-                    <label className="speed-control" aria-label="Ταχύτητα αναπαραγωγής"><span className="sr-only">Ταχύτητα</span><select value={normalizedPlaybackSpeed(state.settings.speed)} onChange={event=>{const next=Number(event.target.value);setState(current=>({...current,settings:{...current.settings,speed:next}}));currentPlayer()?.setPlaybackRate(next);}}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>
-                    <div className="volume-control">
-                      <button className="volume-toggle" aria-label={isMuted||volume===0?"Ενεργοποίηση ήχου":"Ρύθμιση ή σίγαση ήχου"} aria-expanded={volumeSliderOpen} onClick={()=>setVolumeSliderOpen(open=>!open)}>
+                  <div className="gts31-settings-cluster">
+                    <label className="gts31-speed" aria-label="Ταχύτητα αναπαραγωγής"><span className="sr-only">Ταχύτητα</span><select value={normalizedPlaybackSpeed(state.settings.speed)} onChange={event=>{const next=Number(event.target.value);setState(current=>({...current,settings:{...current.settings,speed:next}}));currentPlayer()?.setPlaybackRate(next);}}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>
+                    <div className="gts31-volume">
+                      <button className="gts31-control gts31-volume-toggle" aria-label={isMuted||volume===0?"Ενεργοποίηση ήχου":"Ρύθμιση ή σίγαση ήχου"} aria-expanded={volumeSliderOpen} onClick={()=>setVolumeSliderOpen(open=>!open)}>
                         {isMuted||volume===0?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M16 9l5 5M21 9l-5 5"/></svg>:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M16.5 8.5a5 5 0 010 7M19 6a8 8 0 010 12"/></svg>}
                       </button>
-                      {volumeSliderOpen&&<div className="volume-popup" onMouseLeave={()=>{if(!volumeDragging.current)setVolumeSliderOpen(false)}}>
-                        <button className="volume-mute-btn" aria-label={isMuted?"Ενεργοποίηση ήχου":"Σίγαση"} onClick={toggleMute}>{isMuted||volume===0?"🔇":"🔊"}</button>
+                      {volumeSliderOpen&&<div className="gts31-volume-popup" onMouseLeave={()=>{if(!volumeDragging.current)setVolumeSliderOpen(false)}}>
+                        <button className="gts31-volume-mute" aria-label={isMuted?"Ενεργοποίηση ήχου":"Σίγαση"} onClick={toggleMute}>{isMuted||volume===0?"🔇":"🔊"}</button>
                         <input type="range" min={0} max={100} value={isMuted?0:volume} onPointerDown={event=>{volumeDragging.current=true;try{event.currentTarget.setPointerCapture(event.pointerId)}catch{}}} onPointerUp={()=>{volumeDragging.current=false}} onPointerCancel={()=>{volumeDragging.current=false}} onChange={event=>changeVolume(Number(event.target.value))} aria-label="Ένταση ήχου"/>
                       </div>}
                     </div>
                   </div>
                 </div>
-                <div className="player-secondary-actions v7830-controls-secondary">
-                  <button className="fullscreen-toggle fullscreen-primary" aria-label="Πλήρης οθόνη" onClick={event=>{event.currentTarget.blur();void toggleFullscreen();}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3m11 0h3a2 2 0 002-2v-3"/></svg><span>Πλήρης</span></button>
-                  <button className="moment-save" onClick={()=>beginMoment()}>{moments.length>0&&<span className="moment-count">{moments.length}</span>}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 2l2.9 6.6L21 9.3l-4.9 4.6L17.4 21 12 17.6 6.6 21l1.3-7.1L3 9.3l6.1-.7L12 2z"/></svg><span>Στιγμή</span></button>
-                  <button className={`transcript-toggle ${transcriptOpen?"active":""}`} aria-pressed={transcriptOpen} onClick={()=>setTranscriptOpen(value=>!value)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Κείμενο</span></button>
-                  <div className={`subtitle-cc-control ${state.settings.subtitles?"active":""}`}>
-                    <button className={`cc-toggle ${state.settings.subtitles?"active":""}`} aria-label="Επιλογές υποτίτλων" aria-expanded={subtitleMenuOpen} onClick={()=>setSubtitleMenuOpen(open=>!open)}><svg className="cc-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h3M13 10h4M7 14h6"/></svg><span className="cc-label">Υπότιτλοι</span></button>
-                    {subtitleMenuOpen&&<div className="subtitle-cc-menu" role="menu" aria-label="Επιλογές υποτίτλων"><button className={!state.settings.subtitles?"active":""} role="menuitemradio" aria-checked={!state.settings.subtitles} onClick={()=>{setState(current=>({...current,settings:{...current.settings,subtitles:false}}));setSubtitleMenuOpen(false);}}><span>Χωρίς υπότιτλους</span>{!state.settings.subtitles&&<i>✓</i>}</button>{[{size:16,label:"Μικροί"},{size:19,label:"Μεσαίοι"},{size:22,label:"Μεγάλοι"}].map(option=><button key={option.size} className={state.settings.subtitles&&state.settings.subtitleSize===option.size?"active":""} role="menuitemradio" aria-checked={state.settings.subtitles&&state.settings.subtitleSize===option.size} onClick={()=>{setState(current=>({...current,settings:{...current.settings,subtitles:true,subtitleSize:option.size,subtitleSizeVersion:2}}));setSubtitleMenuOpen(false);}}><span>{option.label}</span>{state.settings.subtitles&&state.settings.subtitleSize===option.size&&<i>✓</i>}</button>)}</div>}
+                <div className="gts31-controls-row-2">
+                  <button className="gts31-segment gts31-fullscreen" aria-label="Πλήρης οθόνη" onClick={event=>{event.currentTarget.blur();void toggleFullscreen();}}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3m11 0h3a2 2 0 002-2v-3"/></svg><span>Πλήρης</span></button>
+                  <button className="gts31-segment gts31-moment" aria-label="Αποθήκευση στιγμής" onClick={()=>beginMoment()}>{moments.length>0&&<span className="gts31-moment-count">{moments.length}</span>}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 2l2.9 6.6L21 9.3l-4.9 4.6L17.4 21 12 17.6 6.6 21l1.3-7.1L3 9.3l6.1-.7L12 2z"/></svg><span>Στιγμή</span></button>
+                  <button className={`gts31-segment gts31-transcript-button ${transcriptOpen?"active":""}`} aria-pressed={transcriptOpen} onClick={()=>setTranscriptOpen(value=>!value)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Κείμενο</span></button>
+                  <div className={`gts31-subtitles ${state.settings.subtitles?"active":""}`}>
+                    <button className={`gts31-segment gts31-cc-toggle ${state.settings.subtitles?"active":""}`} aria-label="Επιλογές υποτίτλων" aria-expanded={subtitleMenuOpen} onClick={()=>setSubtitleMenuOpen(open=>!open)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h3M13 10h4M7 14h6"/></svg><span>Υπότιτλοι</span></button>
+                    {subtitleMenuOpen&&<div className="gts31-cc-menu" role="menu" aria-label="Επιλογές υποτίτλων"><button className={!state.settings.subtitles?"active":""} role="menuitemradio" aria-checked={!state.settings.subtitles} onClick={()=>{setState(current=>({...current,settings:{...current.settings,subtitles:false}}));setSubtitleMenuOpen(false);}}><span>Χωρίς υπότιτλους</span>{!state.settings.subtitles&&<i>✓</i>}</button>{[{size:16,label:"Μικροί"},{size:19,label:"Μεσαίοι"},{size:22,label:"Μεγάλοι"}].map(option=><button key={option.size} className={state.settings.subtitles&&state.settings.subtitleSize===option.size?"active":""} role="menuitemradio" aria-checked={state.settings.subtitles&&state.settings.subtitleSize===option.size} onClick={()=>{setState(current=>({...current,settings:{...current.settings,subtitles:true,subtitleSize:option.size,subtitleSizeVersion:2}}));setSubtitleMenuOpen(false);}}><span>{option.label}</span>{state.settings.subtitles&&state.settings.subtitleSize===option.size&&<i>✓</i>}</button>)}</div>}
                   </div>
                 </div>
               </div>

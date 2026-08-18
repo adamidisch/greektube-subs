@@ -1,0 +1,599 @@
+/* v7.8.31 — isolated player shell based on the approved Claude mockup (12). */
+
+html body .viewer.viewer.viewer{
+  --g31-surface:#161a20;
+  --g31-surface-2:#1b1f26;
+  --g31-surface-3:#20252d;
+  --g31-line:rgba(255,255,255,.07);
+  --g31-line-strong:rgba(255,255,255,.12);
+  --g31-text:#eef0f2;
+  --g31-muted:#9aa2ad;
+  --g31-faint:#6b7280;
+  --g31-amber:#c79a5d;
+  --g31-amber-soft:rgba(199,154,93,.14);
+  --g31-sage:#7fa37a;
+  --g31-indigo:#7c74e0;
+  --g31-indigo-soft:rgba(124,116,224,.16);
+}
+
+/* Speaker strip — no legacy mobile-video-byline class, therefore no duplicate marker. */
+html body .viewer.viewer.viewer .gts31-owner{
+  width:100%;
+  min-height:58px;
+  display:grid;
+  grid-template-columns:3px minmax(0,1fr) auto;
+  align-items:center;
+  gap:9px;
+  margin:0;
+  padding:2px 2px 12px;
+}
+
+html body .viewer.viewer.viewer .gts31-owner-marker{
+  width:3px;
+  height:22px;
+  display:block;
+  border-radius:2px;
+  background:var(--g31-sage);
+}
+
+html body .viewer.viewer.viewer .gts31-owner-copy{
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+
+html body .viewer.viewer.viewer .gts31-owner-copy>strong,
+html body .viewer.viewer.viewer .gts31-owner-copy>small{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+html body .viewer.viewer.viewer .gts31-owner-copy>strong{
+  color:var(--g31-text);
+  font-size:14px;
+  font-weight:600;
+  line-height:1.25;
+}
+
+html body .viewer.viewer.viewer .gts31-owner-copy>small{
+  color:var(--g31-faint);
+  font-size:13px;
+  font-weight:400;
+  line-height:1.25;
+}
+
+html body .viewer.viewer.viewer .gts31-owner-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+html body .viewer.viewer.viewer .gts31-owner-actions>button{
+  width:44px;
+  min-width:44px;
+  height:44px;
+  min-height:44px;
+  display:grid;
+  place-items:center;
+  margin:0;
+  padding:0;
+  border:1px solid var(--g31-line);
+  border-radius:12px;
+  background:var(--g31-surface-2);
+  color:var(--g31-muted);
+}
+
+html body .viewer.viewer.viewer .gts31-owner-actions>button>svg{
+  width:17px;
+  height:17px;
+}
+
+html body .viewer.viewer.viewer .gts31-owner-actions>button:hover,
+html body .viewer.viewer.viewer .gts31-owner-actions>button:focus-visible{
+  border-color:var(--g31-line-strong);
+  background:var(--g31-surface-3);
+  color:var(--g31-text);
+}
+
+html body .viewer.viewer.viewer .gts31-owner-actions>button.active{
+  color:#e58b91;
+}
+
+/* Real video surface. Old player-only rules must never make a playing iframe transparent. */
+html body .viewer.viewer.viewer .sticky-player{
+  display:grid!important;
+  gap:6px!important;
+  overflow:visible!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame:not(.pseudo-fullscreen){
+  width:100%!important;
+  aspect-ratio:16/9!important;
+  overflow:hidden!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  border-radius:20px!important;
+  background:#000!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.4),0 20px 42px rgba(124,116,224,.13)!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame iframe{
+  position:absolute!important;
+  inset:0!important;
+  z-index:1!important;
+  width:100%!important;
+  height:100%!important;
+  border:0!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame:has(.player-cover.is-visible) iframe,
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame:has(.player-cover.is-loading:not(.is-hidden)) iframe{
+  opacity:0!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .player-cover.is-hidden{
+  z-index:0!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .player-cover.is-visible,
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .player-cover.is-loading:not(.is-hidden){
+  z-index:7!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .player-cover{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  overflow:hidden!important;
+  border:0!important;
+  border-radius:inherit!important;
+  background:#000!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .player-cover>img{
+  width:100%!important;
+  height:100%!important;
+  display:block!important;
+  object-fit:cover!important;
+  opacity:.85!important;
+  filter:none!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-play{
+  width:56px!important;
+  height:56px!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1.5px solid rgba(255,255,255,.5)!important;
+  border-radius:50%!important;
+  background:rgba(0,0,0,.45)!important;
+  color:#fff!important;
+  font-size:20px!important;
+  box-shadow:none!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading{
+  border:1px solid rgba(255,255,255,.12)!important;
+  border-radius:13px!important;
+  background:rgba(13,16,21,.82)!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.3)!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading small{
+  color:var(--g31-text)!important;
+  font-size:13px!important;
+  letter-spacing:.02em!important;
+}
+
+/* Two-row control card. Every class is unique to this shell. */
+html body .viewer.viewer.viewer .gts31-controls{
+  width:100%;
+  min-width:0;
+  display:block;
+  margin:0 0 12px;
+  padding:10px;
+  border:1px solid var(--g31-line);
+  border-radius:16px;
+  background:var(--g31-surface);
+  box-shadow:none;
+}
+
+html body .viewer.viewer.viewer .gts31-controls-row-1{
+  width:100%;
+  min-width:0;
+  height:86px;
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:6px 6px 14px;
+  overflow:visible;
+}
+
+html body .viewer.viewer.viewer .gts31-play-cluster,
+html body .viewer.viewer.viewer .gts31-settings-cluster{
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  border-radius:18px;
+  background:var(--g31-surface-2);
+}
+
+html body .viewer.viewer.viewer .gts31-play-cluster{
+  width:168px;
+  height:66px;
+  justify-content:center;
+  gap:8px;
+  padding:6px 5px;
+}
+
+html body .viewer.viewer.viewer .gts31-settings-cluster{
+  width:129px;
+  height:54px;
+  justify-content:center;
+  gap:6px;
+  padding:6px 5px;
+}
+
+html body .viewer.viewer.viewer .gts31-control{
+  position:relative;
+  width:44px;
+  min-width:44px;
+  height:44px;
+  min-height:44px;
+  display:grid;
+  place-items:center;
+  flex:0 0 44px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:12px;
+  background:transparent;
+  color:var(--g31-muted);
+}
+
+html body .viewer.viewer.viewer .gts31-control:hover,
+html body .viewer.viewer.viewer .gts31-control:focus-visible{
+  background:var(--g31-surface-3);
+  color:var(--g31-text);
+}
+
+html body .viewer.viewer.viewer .gts31-skip>svg{
+  width:20px;
+  height:20px;
+}
+
+html body .viewer.viewer.viewer .gts31-skip>small{
+  position:absolute;
+  right:4px;
+  bottom:3px;
+  color:currentColor;
+  font:700 13px/1 var(--font-geist-mono),monospace;
+  opacity:.72;
+}
+
+html body .viewer.viewer.viewer .gts31-play{
+  width:54px;
+  min-width:54px;
+  height:54px;
+  min-height:54px;
+  flex-basis:54px;
+  border-radius:16px;
+  background:linear-gradient(160deg,#8d84ea,var(--g31-indigo) 60%,#6a5fd3);
+  color:#fff;
+  font-size:17px;
+  box-shadow:0 8px 20px rgba(124,116,224,.45),inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+html body .viewer.viewer.viewer .gts31-speed{
+  width:69px;
+  min-width:69px;
+  height:44px;
+  display:block;
+  flex:0 0 69px;
+  overflow:hidden;
+  border-radius:12px;
+}
+
+html body .viewer.viewer.viewer .gts31-speed>select{
+  width:100%;
+  height:44px;
+  margin:0;
+  padding:0 3px;
+  border:0;
+  border-radius:12px;
+  appearance:none;
+  background:transparent;
+  color:var(--g31-amber);
+  font:700 13px/1 var(--font-geist-mono),monospace;
+  text-align:center;
+  text-align-last:center;
+  outline:0;
+}
+
+html body .viewer.viewer.viewer .gts31-speed>select:hover,
+html body .viewer.viewer.viewer .gts31-speed>select:focus-visible{
+  background:var(--g31-surface-3);
+}
+
+html body .viewer.viewer.viewer .gts31-volume{
+  position:relative;
+  width:44px;
+  height:44px;
+  flex:0 0 44px;
+}
+
+html body .viewer.viewer.viewer .gts31-volume-toggle>svg{
+  width:17px;
+  height:17px;
+}
+
+html body .viewer.viewer.viewer .gts31-volume-popup{
+  position:absolute;
+  right:0;
+  bottom:calc(100% + 8px);
+  z-index:40;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 9px;
+  border:1px solid var(--g31-line-strong);
+  border-radius:12px;
+  background:var(--g31-surface-3);
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+}
+
+html body .viewer.viewer.viewer .gts31-volume-mute{
+  width:44px;
+  min-width:44px;
+  height:44px;
+  min-height:44px;
+  padding:0;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+}
+
+html body .viewer.viewer.viewer .gts31-volume-popup input[type="range"]{
+  width:104px;
+  accent-color:var(--g31-indigo);
+}
+
+html body .viewer.viewer.viewer .gts31-controls-row-2{
+  width:100%;
+  min-width:0;
+  min-height:67px;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  align-items:stretch;
+  gap:6px;
+  padding:10px 0 0;
+  border-top:1px solid var(--g31-line);
+}
+
+html body .viewer.viewer.viewer .gts31-segment{
+  position:relative;
+  width:100%;
+  min-width:0;
+  min-height:56px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  margin:0;
+  padding:9px 4px;
+  border:1px solid transparent;
+  border-radius:11px;
+  background:var(--g31-surface-2);
+  color:var(--g31-muted);
+}
+
+html body .viewer.viewer.viewer .gts31-segment:hover,
+html body .viewer.viewer.viewer .gts31-segment:focus-visible{
+  background:var(--g31-surface-3);
+  color:var(--g31-text);
+}
+
+html body .viewer.viewer.viewer .gts31-segment>svg{
+  width:17px;
+  height:17px;
+  flex:0 0 17px;
+}
+
+html body .viewer.viewer.viewer .gts31-segment>span:not(.gts31-moment-count){
+  overflow:hidden;
+  color:inherit;
+  font-size:13px;
+  font-weight:600;
+  line-height:1.1;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+html body .viewer.viewer.viewer .gts31-fullscreen{
+  border-color:rgba(124,116,224,.3);
+  background:var(--g31-indigo-soft);
+  color:#9c94ef;
+}
+
+html body .viewer.viewer.viewer .gts31-transcript-button.active,
+html body .viewer.viewer.viewer .gts31-moment.active{
+  border-color:rgba(124,116,224,.3);
+  background:var(--g31-indigo-soft);
+  color:#9c94ef;
+}
+
+html body .viewer.viewer.viewer .gts31-subtitles{
+  position:relative;
+  width:100%;
+  min-width:0;
+}
+
+html body .viewer.viewer.viewer .gts31-subtitles>.gts31-cc-toggle{
+  height:100%;
+}
+
+html body .viewer.viewer.viewer .gts31-subtitles.active>.gts31-cc-toggle{
+  border-color:rgba(199,154,93,.35);
+  background:var(--g31-amber-soft);
+  color:var(--g31-amber);
+}
+
+html body .viewer.viewer.viewer .gts31-moment-count{
+  position:absolute;
+  top:4px;
+  right:5px;
+  width:18px;
+  height:18px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:var(--g31-indigo);
+  color:#fff;
+  font:700 13px/1 var(--font-geist-mono),monospace;
+}
+
+/* CC uses the approved speed-menu language instead of a new visual pattern. */
+html body .viewer.viewer.viewer .gts31-cc-menu{
+  position:absolute;
+  right:0;
+  bottom:calc(100% + 8px);
+  z-index:50;
+  width:min(210px,82vw);
+  padding:5px;
+  border:1px solid var(--g31-line-strong);
+  border-radius:12px;
+  background:var(--g31-surface-3);
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+}
+
+html body .viewer.viewer.viewer .gts31-cc-menu>button{
+  width:100%;
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:7px 10px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:var(--g31-muted);
+  font-size:13px;
+  font-weight:600;
+  text-align:left;
+}
+
+html body .viewer.viewer.viewer .gts31-cc-menu>button:hover,
+html body .viewer.viewer.viewer .gts31-cc-menu>button:focus-visible{
+  background:var(--g31-surface-2);
+  color:var(--g31-text);
+}
+
+html body .viewer.viewer.viewer .gts31-cc-menu>button.active{
+  background:var(--g31-amber-soft);
+  color:var(--g31-amber);
+}
+
+/* Preserve the approved gradient title while keeping the card restrained. */
+html body .viewer.viewer.viewer .player-info-card{
+  margin-top:12px!important;
+  padding:18px 16px!important;
+  border:1px solid var(--g31-line)!important;
+  border-radius:16px!important;
+  background:var(--g31-surface)!important;
+  box-shadow:none!important;
+}
+
+html body .viewer.viewer.viewer .player-info-card .player-greek-title{
+  margin:0 0 9px!important;
+  padding-left:12px!important;
+  font-size:clamp(20px,5.4vw,24px)!important;
+  line-height:1.22!important;
+}
+
+html[data-theme="light"] body .viewer.viewer.viewer{
+  --g31-surface:#fff;
+  --g31-surface-2:#f0f2ea;
+  --g31-surface-3:#e9ebe1;
+  --g31-line:rgba(30,40,20,.08);
+  --g31-line-strong:rgba(30,40,20,.14);
+  --g31-text:#1c2118;
+  --g31-muted:#5b6255;
+  --g31-faint:#8a917f;
+  --g31-amber:#a97a3e;
+  --g31-amber-soft:rgba(169,122,62,.12);
+  --g31-sage:#2f6b4f;
+  --g31-indigo:#6a5fd3;
+  --g31-indigo-soft:rgba(106,95,211,.12);
+}
+
+@media(max-width:620px){
+  html body .viewer.viewer.viewer.app-shell{
+    max-width:430px!important;
+    padding-inline:12px!important;
+  }
+
+  html body .viewer.viewer.viewer .watch-layout{
+    padding-top:6px!important;
+  }
+}
+
+/* Measured correction for the only real overflow in the reference at 320px. */
+@media(max-width:350px){
+  html body .viewer.viewer.viewer .gts31-controls-row-1{
+    gap:6px;
+    padding-inline:6px;
+  }
+
+  html body .viewer.viewer.viewer .gts31-play-cluster{
+    width:148px;
+    gap:2px;
+    padding-inline:3px;
+  }
+
+  html body .viewer.viewer.viewer .gts31-play{
+    width:50px;
+    min-width:50px;
+    height:50px;
+    min-height:50px;
+    flex-basis:50px;
+  }
+
+  html body .viewer.viewer.viewer .gts31-settings-cluster{
+    width:108px;
+    gap:4px;
+    padding-inline:4px;
+  }
+
+  html body .viewer.viewer.viewer .gts31-speed{
+    width:52px;
+    min-width:52px;
+    flex-basis:52px;
+  }
+
+  html body .viewer.viewer.viewer .gts31-segment{
+    padding-inline:2px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  html body .viewer.viewer.viewer .gts31-controls *,
+  html body .viewer.viewer.viewer .gts31-owner *{
+    transition:none!important;
+  }
+}
