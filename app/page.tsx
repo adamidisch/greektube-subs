@@ -12,6 +12,7 @@ import PlayerUIAuditEnhancer from "./PlayerUIAuditEnhancer";
 import MobileUXFixesEnhancer from "./MobileUXFixesEnhancer";
 import VideoEditorDemoEnhancer from "./VideoEditorDemoEnhancer";
 import DemoSkipPlaybackEnhancer from "./DemoSkipPlaybackEnhancer";
+import SkipRangeTransferEnhancer from "./SkipRangeTransferEnhancer";
 import SimpleFooterEnhancer from "./SimpleFooterEnhancer";
 import NextVideosEnhancer from "./NextVideosEnhancer";
 
@@ -110,6 +111,7 @@ export default function Home() {
       <MobileUXFixesEnhancer />
       <VideoEditorDemoEnhancer />
       <DemoSkipPlaybackEnhancer />
+      <SkipRangeTransferEnhancer />
       <SimpleFooterEnhancer />
       <NextVideosEnhancer />
     </>
