@@ -62,7 +62,7 @@ const NATASHA_CAMPBELL_MCBRIDE: CanonicalSpeakerProfile = {
 
 const DAVID_BROWNSTEIN: CanonicalSpeakerProfile = {
   name: "Dr. David Brownstein",
-  role: "Ιατρός οικογενειακής ιατρικής",
+  role: "Οικογενειακός ιατρός",
   importance: "Κλινικός ιατρός και συγγραφέας με πολυετή ενασχόληση με το ιώδιο και τη λειτουργία του θυρεοειδούς.",
   currentWork: "Συνεχίζει την κλινική και εκπαιδευτική του δραστηριότητα γύρω από το ιώδιο και τη μεταβολική υγεία.",
   highlights: ["Ιώδιο", "Θυρεοειδής", "Οικογενειακή ιατρική", "Μεταβολική υγεία"],
