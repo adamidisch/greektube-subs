@@ -1,11 +1,11 @@
 "use client";
 
-import {useEffect,useRef,useState} from "react";
+import {useEffect,useRef} from "react";
 
 const CONSENT_KEY="gts-analytics-consent-v1";
 const SESSION_KEY="gts-analytics-session-v1";
 
-type Consent="yes"|"no"|"";
+type Consent="yes"|"no";
 type EventPayload={name:string;properties?:Record<string,string|number|boolean|null>};
 type QueuedEvent={sessionId:string;name:string;path:string;videoId:string;referrer:string;properties?:Record<string,string|number|boolean|null>;ts:number};
 
@@ -26,19 +26,18 @@ function kindFor(element:Element){
   return element.tagName.toLowerCase();
 }
 function getConsent():Consent{
-  try{return localStorage.getItem(CONSENT_KEY)==="yes"?"yes":localStorage.getItem(CONSENT_KEY)==="no"?"no":"";}catch{return "";}
+  try{return localStorage.getItem(CONSENT_KEY)==="yes"?"yes":"no";}catch{return "no";}
 }
 
 export default function AnalyticsEnhancer(){
-  const [consent,setConsent]=useState<Consent>("");
-  const consentRef=useRef<Consent>("");
+  const consentRef=useRef<Consent>("no");
   const queue=useRef<QueuedEvent[]>([]);
   const lastPath=useRef("");
   const watchAccum=useRef(0);
   const lastTick=useRef(Date.now());
   const lastProgressBucket=useRef<Record<string,number>>({});
 
-  useEffect(()=>{const value=getConsent();setConsent(value);consentRef.current=value;},[]);
+  useEffect(()=>{consentRef.current=getConsent();},[]);
 
   useEffect(()=>{
     const flush=()=>{
@@ -126,14 +125,5 @@ export default function AnalyticsEnhancer(){
     return()=>{window.clearInterval(timer);window.clearInterval(flushTimer);window.clearTimeout(searchTimer);window.removeEventListener("popstate",page);document.removeEventListener("click",click,true);document.removeEventListener("input",input,true);document.removeEventListener("change",input,true);document.removeEventListener("visibilitychange",visibility);window.removeEventListener("pagehide",end);history.pushState=originalPush;history.replaceState=originalReplace;flush();};
   },[]);
 
-  function choose(value:"yes"|"no"){
-    try{localStorage.setItem(CONSENT_KEY,value);if(value==="no")sessionStorage.removeItem(SESSION_KEY);}catch{}
-    consentRef.current=value;setConsent(value);
-    if(value==="yes")window.location.reload();
-  }
-
-  if(consent)return null;
-  return <div className="gts-analytics-consent" role="dialog" aria-label="Ρυθμίσεις analytics"><div><strong>Βελτίωση του GreekTube Subs</strong><p>Θέλουμε να μετράμε ανώνυμα ποιες σελίδες και λειτουργίες χρησιμοποιούνται ώστε να βελτιώνουμε το site. Δεν αποθηκεύουμε raw IP και δεν χρησιμοποιούμε διαφημιστικό tracking.</p></div><div className="gts-analytics-actions"><button onClick={()=>choose("no")}>Μόνο απαραίτητα</button><button className="accept" onClick={()=>choose("yes")}>Αποδοχή analytics</button></div><style>{`
-    .gts-analytics-consent{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));z-index:2147483400;width:min(680px,calc(100vw - 24px));display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 15px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(16,19,25,.96);color:#f4f4f1;box-shadow:0 18px 60px rgba(0,0,0,.42);backdrop-filter:blur(18px);transform:translateX(-50%)}.gts-analytics-consent>div:first-child{min-width:0}.gts-analytics-consent strong{display:block;font-size:12px;font-weight:680}.gts-analytics-consent p{max-width:430px;margin:5px 0 0;color:#979da7;font-size:10.5px;line-height:1.45}.gts-analytics-actions{display:flex;flex:0 0 auto;gap:7px}.gts-analytics-actions button{min-height:35px;padding:0 11px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:transparent;color:#c6cad1;font-size:9.5px;font-weight:620}.gts-analytics-actions button.accept{border-color:rgba(143,127,240,.42);background:#7569d9;color:#fff}@media(max-width:620px){.gts-analytics-consent{display:block;padding:14px}.gts-analytics-consent p{font-size:11px}.gts-analytics-actions{margin-top:12px}.gts-analytics-actions button{flex:1;min-height:38px}}
-  `}</style></div>;
+  return null;
 }
