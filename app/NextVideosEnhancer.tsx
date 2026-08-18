@@ -19,12 +19,15 @@ const PERSONAL_CACHE_KEY="greektube-personal-state:v1";
 function safeText(value:unknown){return typeof value==="string"?value.trim():"";}
 function numeric(value:unknown){const number=Number(value||0);return Number.isFinite(number)?number:0;}
 function currentVideoId(){return new URLSearchParams(location.search).get("video")||"";}
-function readPersonalVideos(){
+function readPersonalVideos():Map<string,VideoItem>{
   try{
     const raw=localStorage.getItem(PERSONAL_CACHE_KEY);
     if(!raw)return new Map<string,VideoItem>();
     const parsed=JSON.parse(raw) as AppState;
-    return new Map((parsed.videos||[]).map(video=>[safeText(video.id),video]).filter(([id])=>Boolean(id)));
+    const entries:Array<[string,VideoItem]>=(parsed.videos||[])
+      .map(video=>[safeText(video.id),video] as [string,VideoItem])
+      .filter(([id])=>Boolean(id));
+    return new Map<string,VideoItem>(entries);
   }catch{return new Map<string,VideoItem>();}
 }
 function isWatched(video:VideoItem){
@@ -37,6 +40,8 @@ export default function NextVideosEnhancer(){
     let sharedVideos:VideoItem[]=[];
     let raf=0;
     let cancelled=false;
+
+    const schedule=()=>{if(!raf)raf=window.requestAnimationFrame(decorate);};
 
     const loadLibrary=async()=>{
       try{
@@ -62,7 +67,7 @@ export default function NextVideosEnhancer(){
       location.assign("/");
     };
 
-    const decorate=()=>{
+    function decorate(){
       raf=0;
       const selectedId=currentVideoId();
       const watchMain=document.querySelector<HTMLElement>(".watch-main");
@@ -127,9 +132,8 @@ export default function NextVideosEnhancer(){
 
       section.append(header,list);
       if(!existing)watchMain.appendChild(section);
-    };
+    }
 
-    const schedule=()=>{if(!raf)raf=window.requestAnimationFrame(decorate);};
     void loadLibrary();
     schedule();
     const observer=new MutationObserver(schedule);
@@ -151,8 +155,8 @@ export default function NextVideosEnhancer(){
   return <style>{`
     .viewer .next-videos { display:none !important; }
     .gts-next-videos {
-      margin-top: 30px;
-      padding-top: 3px;
+      margin-top:30px;
+      padding-top:3px;
     }
     .gts-next-header {
       display:flex;
@@ -254,7 +258,7 @@ export default function NextVideosEnhancer(){
       text-overflow:ellipsis;
       white-space:nowrap;
     }
-    @media (min-width: 900px) {
+    @media (min-width:900px) {
       .gts-next-list {
         grid-template-columns:repeat(5,minmax(0,1fr));
         gap:9px;
@@ -269,7 +273,7 @@ export default function NextVideosEnhancer(){
       .gts-next-item strong { font-size:10.5px; line-height:1.35; }
       .gts-next-item small { font-size:8.5px; }
     }
-    @media (max-width: 700px) {
+    @media (max-width:700px) {
       .gts-next-videos { margin-top:26px; }
       .gts-next-header { margin-bottom:10px; }
       .gts-next-header h2 { font-size:14px; }
