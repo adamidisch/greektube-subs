@@ -197,6 +197,16 @@ html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-l
   letter-spacing:.02em!important;
 }
 
+/* Fullscreen subtitles: readable background without the legacy outlined card. */
+html body .viewer.viewer.viewer .video-frame:fullscreen .subtitles,
+html body .viewer.viewer.viewer .video-frame.pseudo-fullscreen .subtitles{
+  border:0!important;
+  border-radius:6px!important;
+  background:rgba(0,0,0,.58)!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+}
+
 /* Two-row control card. Every class is unique to this shell. */
 html body .viewer.viewer.viewer .gts31-controls{
   width:100%;
