@@ -34,7 +34,8 @@ export default function DemoSkipPlaybackEnhancer(){
       const response=await nativeFetch(input,init);
       try{
         const url=typeof input==="string"?input:input instanceof URL?input.toString():input.url;
-        const method=String(init?.method||("method" in input?input.method:"GET")||"GET").toUpperCase();
+        const requestMethod=typeof Request!=="undefined"&&input instanceof Request?input.method:"GET";
+        const method=String(init?.method||requestMethod).toUpperCase();
         if(method==="PUT"&&url.includes("/api/video-editor")&&response.ok&&typeof init?.body==="string"){
           const payload=JSON.parse(init.body) as {videoId?:unknown;skipRanges?:unknown};
           const videoId=typeof payload.videoId==="string"?payload.videoId:"";
