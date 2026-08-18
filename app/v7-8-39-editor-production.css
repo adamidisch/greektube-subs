@@ -1,0 +1,26 @@
+/* Production polish for the full-page video editor. */
+
+/* The legacy skip modal remains mounted only as the lightweight playback engine.
+   Editing now happens exclusively through the full-page pencil editor. */
+.skip-editor-trigger,
+.skip-editor-backdrop {
+  display: none !important;
+}
+
+/* Remove demo wording from the promoted editor without touching its behavior. */
+.gts-editor-title .gts-editor-kicker {
+  font-size: 0 !important;
+}
+.gts-editor-title .gts-editor-kicker::after {
+  content: "VIDEO EDITOR";
+  color: #9084ee;
+  font-size: 8px;
+  font-weight: 760;
+  letter-spacing: .13em;
+}
+
+@media (max-width: 900px) {
+  .gts-editor-title .gts-editor-kicker::after {
+    display: none;
+  }
+}
