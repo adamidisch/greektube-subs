@@ -1,0 +1,184 @@
+/* v7.8.32 — crisp typography, native-feeling interactions and library paging. */
+
+html body{
+  --font-geist-sans:var(--font-ui)!important;
+  font-family:var(--font-ui),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  text-rendering:optimizeLegibility;
+}
+
+html body .viewer.viewer.viewer .gts31-owner,
+html body .viewer.viewer.viewer .gts31-controls,
+html body .viewer.viewer.viewer .player-info-card,
+html body .app-shell.app-shell.app-shell:not(.viewer) .library-tools,
+html body .app-shell.app-shell.app-shell:not(.viewer) .video-grid{
+  font-family:var(--font-ui),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+}
+
+html body .viewer.viewer.viewer .subtitles{
+  font-family:var(--font-ui),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+}
+
+html body .viewer.viewer.viewer .gts31-controls svg,
+html body .viewer.viewer.viewer .gts31-owner svg,
+html body .viewer.viewer.viewer .cover-play svg,
+html body .viewer.viewer.viewer .custom-fullscreen svg,
+html body .app-shell.app-shell.app-shell .clean-library-tools .search svg,
+html body .app-shell.app-shell.app-shell .load-more-button svg{
+  display:block;
+  shape-rendering:geometricPrecision;
+}
+
+html body .viewer.viewer.viewer .gts31-play>svg{
+  width:19px;
+  height:19px;
+}
+
+html body .viewer.viewer.viewer .cover-play>svg{
+  width:21px;
+  height:21px;
+}
+
+html body .viewer.viewer.viewer .gts31-volume-mute>svg{
+  width:18px;
+  height:18px;
+  margin:auto;
+}
+
+html body .viewer.viewer.viewer .custom-fullscreen>svg{
+  width:30px;
+  height:30px;
+}
+
+html body .viewer.viewer.viewer .video-tap-toggle{
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* The search field must remain immediately visible without looking oversized. */
+html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .search{
+  min-height:44px!important;
+  border:1px solid rgba(139,128,232,.42)!important;
+  background:linear-gradient(180deg,rgba(124,116,224,.095),rgba(124,116,224,.045))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+  transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease!important;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .search:focus-within{
+  border-color:rgba(151,140,244,.78)!important;
+  background:rgba(124,116,224,.11)!important;
+  box-shadow:0 0 0 3px rgba(124,116,224,.12)!important;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .search>svg{
+  width:18px;
+  height:18px;
+  flex:0 0 18px;
+  color:#a7a0ed;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .search input{
+  color:#f1f0f8!important;
+  font-size:13px!important;
+  font-weight:500!important;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .search input::placeholder{
+  color:#969aa6!important;
+  opacity:1!important;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .library-sort{
+  min-height:44px!important;
+  appearance:none!important;
+  padding:0 36px 0 13px!important;
+  border:1px solid rgba(124,116,224,.38)!important;
+  background-color:rgba(124,116,224,.14)!important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23aaa3ef' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E")!important;
+  background-repeat:no-repeat!important;
+  background-position:right 12px center!important;
+  color:#d9d5ff!important;
+  font-size:12px!important;
+  font-weight:600!important;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .library-sort:hover,
+html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .library-sort:focus-visible{
+  border-color:rgba(151,140,244,.72)!important;
+  background-color:rgba(124,116,224,.2)!important;
+  outline:0!important;
+}
+
+/* Link-style reveal: five initially then ten more per action. */
+html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-wrap{
+  margin:20px 0 6px!important;
+  text-align:center!important;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button{
+  width:auto!important;
+  min-height:44px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  padding:0 10px!important;
+  border:0!important;
+  border-radius:10px!important;
+  background:transparent!important;
+  color:#aaa3ef!important;
+  box-shadow:none!important;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button:hover,
+html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button:focus-visible{
+  background:rgba(124,116,224,.09)!important;
+  color:#c9c4ff!important;
+  outline:0!important;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button>span{
+  font-size:13px!important;
+  font-weight:650!important;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button>svg{
+  width:15px;
+  height:15px;
+}
+
+html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button>small{
+  color:#777c89!important;
+  font-size:11px!important;
+  font-weight:500!important;
+}
+
+html[data-theme="light"] body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .search{
+  border-color:rgba(102,89,194,.34)!important;
+  background:rgba(115,102,210,.075)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8)!important;
+}
+
+html[data-theme="light"] body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .search input{
+  color:#29243e!important;
+}
+
+html[data-theme="light"] body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .search input::placeholder{
+  color:#767184!important;
+}
+
+html[data-theme="light"] body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .library-sort{
+  border-color:rgba(102,89,194,.3)!important;
+  background-color:rgba(115,102,210,.1)!important;
+  color:#51499d!important;
+}
+
+@media(max-width:620px){
+  html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .search,
+  html body .app-shell.app-shell.app-shell:not(.viewer) .clean-library-tools .library-sort{
+    min-height:44px!important;
+  }
+
+  html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button>small{
+    display:none!important;
+  }
+}

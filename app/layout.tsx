@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { APP_VERSION } from "./version";
 import UserProfileEnhancer from "./UserProfileEnhancer";
 import "./globals.css";
@@ -34,6 +34,7 @@ import "./v7-8-23-player-fullscreen-footer.css";
 import "./mobile-controls-final.css";
 import "./player-page-v7-8-30.css";
 import "./player-page-v7-8-31.css";
+import "./player-page-v7-8-32.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,6 +44,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const inter = Inter({
+  variable: "--font-ui",
+  subsets: ["latin", "greek"],
+  display: "swap",
 });
 
 const SITE_URL = "https://greektubesubs.com";
@@ -90,7 +97,7 @@ export default function RootLayout({
   return (
     <html lang="el">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased`}
       >
         {children}
         <UserProfileEnhancer />
