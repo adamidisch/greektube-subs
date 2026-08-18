@@ -11,6 +11,7 @@ import LogoPreferenceSystem from "./LogoPreferenceSystem";
 import PlayerUIAuditEnhancer from "./PlayerUIAuditEnhancer";
 import MobileUXFixesEnhancer from "./MobileUXFixesEnhancer";
 import VideoEditorDemoEnhancer from "./VideoEditorDemoEnhancer";
+import DemoSkipPlaybackEnhancer from "./DemoSkipPlaybackEnhancer";
 import SimpleFooterEnhancer from "./SimpleFooterEnhancer";
 import NextVideosEnhancer from "./NextVideosEnhancer";
 
@@ -108,6 +109,7 @@ export default function Home() {
       <PlayerUIAuditEnhancer />
       <MobileUXFixesEnhancer />
       <VideoEditorDemoEnhancer />
+      <DemoSkipPlaybackEnhancer />
       <SimpleFooterEnhancer />
       <NextVideosEnhancer />
     </>
