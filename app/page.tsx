@@ -12,6 +12,7 @@ import PlayerUIAuditEnhancer from "./PlayerUIAuditEnhancer";
 import MobileUXFixesEnhancer from "./MobileUXFixesEnhancer";
 import VideoEditorDemoEnhancer from "./VideoEditorDemoEnhancer";
 import SimpleFooterEnhancer from "./SimpleFooterEnhancer";
+import NextVideosEnhancer from "./NextVideosEnhancer";
 
 const SITE_URL = "https://greektubesubs.com";
 const BRAND_REV = "7820";
@@ -108,6 +109,7 @@ export default function Home() {
       <MobileUXFixesEnhancer />
       <VideoEditorDemoEnhancer />
       <SimpleFooterEnhancer />
+      <NextVideosEnhancer />
     </>
   );
 }
