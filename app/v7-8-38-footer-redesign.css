@@ -21,26 +21,20 @@
   overflow: visible !important;
 }
 
-/* Double full-bleed glow divider. The pseudo elements use the footer as
-   their containing block and intentionally escape the app-shell width. */
+/* Single compact glow divider. */
 .app-footer .app-footer-brand {
   position: static !important;
 }
 
-.app-footer .app-footer-brand::before,
-.app-footer .app-footer-brand::after {
+.app-footer .app-footer-brand::before {
   content: "" !important;
   position: absolute !important;
   z-index: 0 !important;
-  display: block !important;
-  height: 1px !important;
-  pointer-events: none !important;
-}
-
-.app-footer .app-footer-brand::before {
   top: 10px !important;
   left: 50% !important;
   width: 44vw !important;
+  max-width: 620px !important;
+  height: 1px !important;
   margin-left: -22vw !important;
   background: linear-gradient(
     90deg,
@@ -50,21 +44,12 @@
     rgba(143,124,246,0) 92%,
     rgba(143,124,246,0) 100%
   ) !important;
+  pointer-events: none !important;
 }
 
 .app-footer .app-footer-brand::after {
-  top: 29px !important;
-  left: 50% !important;
-  width: 100vw !important;
-  margin-left: -50vw !important;
-  background: linear-gradient(
-    90deg,
-    rgba(143,124,246,0) 0%,
-    rgba(143,124,246,0) 8%,
-    rgba(143,124,246,.85) 50%,
-    rgba(143,124,246,0) 92%,
-    rgba(143,124,246,0) 100%
-  ) !important;
+  content: none !important;
+  display: none !important;
 }
 
 .app-footer .app-footer-brand {
@@ -128,8 +113,6 @@
   text-align: center !important;
 }
 
-/* Version pill — generated from the v7.8.38 stylesheet so the existing
-   footer component remains backwards compatible with earlier releases. */
 .app-footer .app-footer-note::after {
   content: "Version 7.8.38" !important;
   position: absolute !important;
@@ -180,6 +163,12 @@ html[data-theme="light"] .app-footer .app-footer-note::after {
   .app-footer {
     margin-top: 40px !important;
     padding-top: 46px !important;
+  }
+
+  .app-footer .app-footer-brand::before {
+    width: 60vw !important;
+    max-width: 260px !important;
+    margin-left: -30vw !important;
   }
 
   .app-footer .app-footer-brand {
