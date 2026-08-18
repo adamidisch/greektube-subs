@@ -1,0 +1,187 @@
+/* v7.8.38 — Claude footer redesign
+   Imported last so the footer remains deterministic across library and viewer screens. */
+
+.app-footer {
+  position: relative !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 56px 0 4px !important;
+  padding: 46px 0 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0 !important;
+  border: 0 !important;
+  border-top: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-align: center !important;
+  overflow: visible !important;
+}
+
+/* Single compact glow divider. */
+.app-footer .app-footer-brand {
+  position: static !important;
+}
+
+.app-footer .app-footer-brand::before {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  top: 10px !important;
+  left: 50% !important;
+  width: 44vw !important;
+  max-width: 620px !important;
+  height: 1px !important;
+  margin-left: -22vw !important;
+  background: linear-gradient(
+    90deg,
+    rgba(143,124,246,0) 0%,
+    rgba(143,124,246,0) 8%,
+    rgba(143,124,246,.32) 50%,
+    rgba(143,124,246,0) 92%,
+    rgba(143,124,246,0) 100%
+  ) !important;
+  pointer-events: none !important;
+}
+
+.app-footer .app-footer-brand::after {
+  content: none !important;
+  display: none !important;
+}
+
+.app-footer .app-footer-brand {
+  z-index: 1 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 9px !important;
+  margin: 22px 0 14px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #f6f3ec !important;
+  text-align: center !important;
+}
+
+.app-footer .app-footer-brand > span:first-child {
+  width: 30px !important;
+  height: 24px !important;
+  flex: 0 0 30px !important;
+}
+
+.app-footer .app-footer-brand > span:last-child {
+  color: #f6f3ec !important;
+  font-size: 15px !important;
+  font-weight: 650 !important;
+  line-height: 1 !important;
+  letter-spacing: -.01em !important;
+}
+
+.app-footer .app-footer-brand b {
+  color: #9d8ff5 !important;
+  font-weight: 650 !important;
+}
+
+.app-footer > p {
+  width: min(100%, 290px) !important;
+  max-width: 290px !important;
+  margin: 0 0 6px !important;
+  padding: 0 !important;
+  color: #8b9099 !important;
+  font-size: 12.5px !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  text-align: center !important;
+}
+
+.app-footer .app-footer-note {
+  position: relative !important;
+  display: block !important;
+  margin: 0 0 50px !important;
+  padding: 0 !important;
+  color: #5f6570 !important;
+  font-size: 11.5px !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  text-align: center !important;
+}
+
+.app-footer .app-footer-note::after {
+  content: "Version 7.8.38" !important;
+  position: absolute !important;
+  top: calc(100% + 18px) !important;
+  left: 50% !important;
+  min-height: 26px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 5px 12px 5px 24px !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: 99px !important;
+  background:
+    radial-gradient(circle at 12px 50%, #5fd98a 0 2.5px, transparent 2.8px),
+    transparent !important;
+  color: #8b9099 !important;
+  font-size: 10.5px !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  letter-spacing: .02em !important;
+  white-space: nowrap !important;
+  transform: translateX(-50%) !important;
+  box-sizing: border-box !important;
+}
+
+html[data-theme="light"] .app-footer .app-footer-brand > span:last-child {
+  color: #1d2429 !important;
+}
+
+html[data-theme="light"] .app-footer .app-footer-brand b {
+  color: #7b68e8 !important;
+}
+
+html[data-theme="light"] .app-footer > p {
+  color: #5f6870 !important;
+}
+
+html[data-theme="light"] .app-footer .app-footer-note {
+  color: #8b939b !important;
+}
+
+html[data-theme="light"] .app-footer .app-footer-note::after {
+  border-color: rgba(15,48,64,.12) !important;
+  color: #6e7780 !important;
+}
+
+@media (max-width: 620px) {
+  .app-footer {
+    margin-top: 40px !important;
+    padding-top: 46px !important;
+  }
+
+  .app-footer .app-footer-brand::before {
+    width: 60vw !important;
+    max-width: 260px !important;
+    margin-left: -30vw !important;
+  }
+
+  .app-footer .app-footer-brand {
+    margin-top: 18px !important;
+    margin-bottom: 13px !important;
+  }
+
+  .app-footer > p {
+    width: min(calc(100vw - 40px), 290px) !important;
+    max-width: min(calc(100vw - 40px), 290px) !important;
+  }
+
+  .app-footer .app-footer-note {
+    margin-bottom: calc(50px + env(safe-area-inset-bottom)) !important;
+  }
+}
