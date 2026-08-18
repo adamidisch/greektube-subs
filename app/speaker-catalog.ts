@@ -8,7 +8,7 @@ export type CanonicalSpeakerProfile = {
     profileLabel: string;
     introduction: string;
     facts: Array<{ label: string; text: string }>;
-    infoNote?: string;
+    onlineInfo?: Array<{ label: string; url: string }>;
     sources: Array<{ label: string; url: string }>;
   };
 };
@@ -28,7 +28,11 @@ const SARAH_MYHILL: CanonicalSpeakerProfile = {
       { label: "Αντικείμενο", text: "Ασχολήθηκε με την Περιβαλλοντική Ιατρική τη διατροφή και το σύνδρομο χρόνιας κόπωσης ME/CFS." },
       { label: "Εκπαιδευτικό έργο", text: "Έχει συγγράψει βιβλία και έχει παρουσιάσει εκπαιδευτικό υλικό για τη χρόνια κόπωση τη μιτοχονδριακή λειτουργία και τη διατροφή." },
     ],
-    infoNote: "Έχει δύο κόρες τη Ruth και την Claire.",
+    onlineInfo: [
+      { label: "Επίσημη ιστοσελίδα", url: "https://www.drmyhill.co.uk/" },
+      { label: "Ηλεκτρονικό κατάστημα", url: "https://www.salesatdrmyhill.co.uk/" },
+      { label: "Επίσημο κανάλι YouTube", url: "https://www.youtube.com/@drsarahmyhill5403" },
+    ],
     sources: [
       { label: "Επίσημη ιστοσελίδα", url: "https://www.drmyhill.co.uk/" },
       { label: "GMC — μητρώο και προσόντα", url: "https://www.gmc-uk.org/registrants/2734668" },
@@ -52,7 +56,9 @@ const NATASHA_CAMPBELL_MCBRIDE: CanonicalSpeakerProfile = {
       { label: "Αντικείμενο", text: "Ανέπτυξε την προσέγγιση GAPS γύρω από τη σχέση του πεπτικού συστήματος με τη νευρολογική και τη γενικότερη υγεία." },
       { label: "Εκπαιδευτικό έργο", text: "Έχει συγγράψει βιβλία έχει εκπαιδεύσει επαγγελματίες GAPS και δίνει διαλέξεις διεθνώς." },
     ],
-    infoNote: "Ασχολείται επίσης με την αναγεννητική γεωργία σε οικογενειακή φάρμα στην Αγγλία.",
+    onlineInfo: [
+      { label: "Επίσημη ιστοσελίδα GAPS", url: "https://www.gaps.me/" },
+    ],
     sources: [
       { label: "GAPS — επίσημο βιογραφικό", url: "https://www.gaps.me/dr-campbell-mcbride.php" },
       { label: "GAPS — επίσημη ιστοσελίδα", url: "https://www.gapsdiet.com/about/" },
@@ -75,7 +81,9 @@ const DAVID_BROWNSTEIN: CanonicalSpeakerProfile = {
       { label: "Κλινική πορεία", text: "Είναι Medical Director του Center for Holistic Medicine στο West Bloomfield του Michigan." },
       { label: "Εκπαιδευτικό έργο", text: "Έχει δώσει διεθνείς διαλέξεις και έχει συγγράψει βιβλία γύρω από το ιώδιο τον θυρεοειδή και τη διατροφή." },
     ],
-    infoNote: "Είναι παντρεμένος με την Allison για περισσότερα από 30 χρόνια και οι δύο κόρες τους είναι γιατροί.",
+    onlineInfo: [
+      { label: "Επίσημη ιστοσελίδα", url: "https://www.drbrownstein.com/" },
+    ],
     sources: [
       { label: "Επίσημο βιογραφικό", url: "https://www.drbrownstein.com/about" },
       { label: "Επίσημη ιστοσελίδα", url: "https://www.drbrownstein.com/" },

@@ -237,6 +237,35 @@ html body .gts33-bio-status>span{
   font:700 11px/1 Georgia,serif;
 }
 
+html body .gts33-bio-status>div{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:5px 11px;
+  min-width:0;
+}
+
+html body .gts33-bio-status strong{
+  flex:0 0 100%;
+  color:#ded9d0;
+  font-size:12px;
+}
+
+html body .gts33-bio-status a{
+  color:#d3aa71;
+  font-size:12px;
+  font-weight:650;
+  text-decoration:none;
+}
+
+html body .gts33-bio-status a:hover{
+  text-decoration:underline;
+}
+
+html body .gts33-bio-status a>span{
+  margin-left:4px;
+}
+
 html body .gts33-bio-modal>footer{
   padding:17px 20px 20px;
 }
@@ -429,6 +458,9 @@ html[data-theme="light"] body .settings-screen-layer .gts33-settings-footer>butt
   html body .gts33-bio-facts{margin:0 16px;}
   html body .gts33-bio-facts>article{padding:12px 13px;}
   html body .gts33-bio-status{margin:12px 16px 0;}
+  html body .gts33-bio-status>div{display:grid;gap:0;}
+  html body .gts33-bio-status strong{padding-bottom:4px;font-size:13px;}
+  html body .gts33-bio-status a{display:flex;align-items:center;justify-content:space-between;min-height:44px;border-top:1px solid rgba(199,154,93,.12);font-size:13px;}
   html body .gts33-bio-modal>footer{padding:15px 16px 17px;}
 
   html body .settings-screen-layer .gts33-settings-footer{
