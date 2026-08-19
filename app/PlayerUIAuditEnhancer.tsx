@@ -1,6 +1,25 @@
 "use client";
 
+import {useEffect} from "react";
+
 export default function PlayerUIAuditEnhancer(){
+  useEffect(()=>{
+    let raf=0;
+    const cleanSettingsLabels=()=>{
+      raf=0;
+      document.querySelectorAll<HTMLButtonElement>('.viewer .icon-button[aria-label="Ρυθμίσεις"]').forEach(button=>{
+        Array.from(button.childNodes).forEach(node=>{
+          if(node.nodeType===Node.TEXT_NODE&&node.textContent?.trim())node.textContent="";
+        });
+      });
+    };
+    const schedule=()=>{if(!raf)raf=requestAnimationFrame(cleanSettingsLabels);};
+    schedule();
+    const observer=new MutationObserver(schedule);
+    observer.observe(document.body,{childList:true,subtree:true});
+    return()=>{observer.disconnect();if(raf)cancelAnimationFrame(raf);};
+  },[]);
+
   return <style>{`
     .viewer .icon-button[aria-label="Ρυθμίσεις"],
     .viewer .mobile-video-byline button[aria-label="Επεξεργασία βίντεο"],
