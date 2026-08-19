@@ -1,3 +1,5 @@
+.app-footer{display:none!important}
+
 .gts-standard-footer{
   position:relative;
   width:min(1340px,calc(100vw - 48px));
