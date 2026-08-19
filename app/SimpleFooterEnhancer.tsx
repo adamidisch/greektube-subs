@@ -20,7 +20,7 @@ const FOOTER_HTML=()=>{
           <a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/contact">Contact</a>
         </nav>
         <div class="gts-standard-footer-meta">
-          <span>© ${year} GreekTube Subs</span><i aria-hidden="true">·</i><span>Version ${APP_VERSION}</span>
+          <a class="gts-standard-footer-admin" href="/admin/analytics">© ${year} GreekTube Subs</a><i aria-hidden="true">·</i><span>Version ${APP_VERSION}</span>
         </div>
       </div>
     </div>`;
