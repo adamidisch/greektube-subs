@@ -78,15 +78,19 @@ export default function ContactPage(){
     <footer className="contact-footer">
       <div className="contact-footer-line"/>
       <div className="contact-footer-inner">
-        <span className="contact-version"><i/>Version {APP_VERSION}</span>
-        <Link href="/" className="contact-footer-logo" aria-label="GreekTube Subs αρχική">
-          <span className="contact-logo" aria-hidden="true"/>
-          <span>GreekTube <b>Subs</b></span>
-        </Link>
-        <p>Αυτόματοι ελληνικοί υπότιτλοι με AI για δημόσια βίντεο YouTube.</p>
-        <p className="contact-made">Φτιαγμένο με <span>♥</span> για ελληνόφωνους θεατές</p>
-        <nav aria-label="Νομικές πληροφορίες"><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link><Link href="/contact">Contact</Link></nav>
-        <small>© {year} GreekTube Subs</small>
+        <div className="contact-footer-left">
+          <span className="contact-version"><i/>Version {APP_VERSION}</span>
+          <Link href="/" className="contact-footer-logo" aria-label="GreekTube Subs αρχική">
+            <span className="contact-logo" aria-hidden="true"/>
+            <span>GreekTube <b>Subs</b></span>
+          </Link>
+          <p>Αυτόματοι ελληνικοί υπότιτλοι με AI για δημόσια βίντεο YouTube.</p>
+          <p className="contact-made">Φτιαγμένο με <span>♥</span> για ελληνόφωνους θεατές</p>
+        </div>
+        <div className="contact-footer-right">
+          <nav aria-label="Νομικές πληροφορίες"><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link><Link href="/contact">Contact</Link></nav>
+          <small>© {year} GreekTube Subs</small>
+        </div>
       </div>
     </footer>
 
@@ -105,9 +109,10 @@ export default function ContactPage(){
 
       .contact-note{display:grid;grid-template-columns:8px 1fr;gap:14px;margin-top:12px;padding:18px 20px;border:1px solid rgba(157,143,245,.12);border-radius:14px;background:rgba(157,143,245,.025)}.contact-note-dot{width:5px;height:5px;margin-top:6px;border-radius:50%;background:#9389d8;box-shadow:0 0 12px rgba(147,137,216,.5)}.contact-note strong{display:block;color:#c7c9ce;font-size:11px;font-weight:650}.contact-note p{margin:5px 0 0;color:#757c87;font-size:10.5px;line-height:1.6}
 
-      .contact-footer{background:#08090c;padding:42px 0 30px}.contact-footer-line{height:1px;width:100%;margin-bottom:28px;background:linear-gradient(90deg,transparent 8%,rgba(143,124,246,.62) 50%,transparent 92%)}.contact-footer-inner{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 20px}.contact-version{display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 10px;border:1px solid rgba(255,255,255,.1);border-radius:99px;color:#8b9099;font-family:var(--font-geist-mono),monospace;font-size:10.5px;letter-spacing:.02em;margin-bottom:14px}.contact-version i{width:5px;height:5px;border-radius:50%;background:#5fd98a}.contact-footer-logo{font-size:15px;margin-bottom:14px}.contact-footer-logo .contact-logo{width:30px;height:24px}.contact-footer-inner>p{margin:0 0 6px;max-width:320px;color:#8b9099;font-size:12.5px;line-height:1.5}.contact-footer-inner .contact-made{margin:0 0 18px;color:#5f6570;font-size:11.5px}.contact-made span{color:#9d8ff5}.contact-footer nav{display:flex;justify-content:center;gap:12px;margin-bottom:3px}.contact-footer nav a{color:#777d88;font-size:12px;text-decoration:none;transition:color .15s ease}.contact-footer nav a:hover{color:#aaa0ec}.contact-footer small{color:#4f5562;font-size:11px;letter-spacing:.01em}
+      .contact-footer{background:#08090c;padding:42px 0 30px}.contact-footer-line{height:1px;width:100%;margin-bottom:30px;background:linear-gradient(90deg,transparent 8%,rgba(143,124,246,.62) 50%,transparent 92%)}.contact-footer-inner{width:min(1040px,calc(100% - 40px));margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:48px}.contact-footer-left{display:flex;flex-direction:column;align-items:flex-start;min-width:0}.contact-version{display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 10px;border:1px solid rgba(255,255,255,.1);border-radius:99px;color:#8b9099;font-family:var(--font-geist-mono),monospace;font-size:10.5px;letter-spacing:.02em;margin-bottom:14px}.contact-version i{width:5px;height:5px;border-radius:50%;background:#5fd98a}.contact-footer-logo{font-size:15px;margin-bottom:12px}.contact-footer-logo .contact-logo{width:30px;height:24px}.contact-footer-left>p{margin:0 0 6px;max-width:360px;color:#8b9099;font-size:12.5px;line-height:1.5;text-align:left}.contact-footer-left .contact-made{margin:0;color:#5f6570;font-size:11.5px}.contact-made span{color:#9d8ff5}.contact-footer-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;min-width:max-content;padding-bottom:1px}.contact-footer nav{display:flex;justify-content:flex-end;gap:12px;margin-bottom:7px}.contact-footer nav a{color:#777d88;font-size:12px;text-decoration:none;transition:color .15s ease}.contact-footer nav a:hover{color:#aaa0ec}.contact-footer small{color:#4f5562;font-size:11px;letter-spacing:.01em;text-align:right}
 
-      @media(max-width:720px){.contact-shell{padding:58px 0 68px}.contact-card{grid-template-columns:1fr;padding:23px 21px;gap:21px}.contact-mail-button{width:100%;justify-content:center}.contact-grid{grid-template-columns:1fr}.contact-grid article{min-height:0;padding:19px}.contact-grid article>span{margin-bottom:23px}.contact-intro{margin-bottom:30px}}
+      @media(max-width:720px){.contact-shell{padding:58px 0 68px}.contact-card{grid-template-columns:1fr;padding:23px 21px;gap:21px}.contact-mail-button{width:100%;justify-content:center}.contact-grid{grid-template-columns:1fr}.contact-grid article{min-height:0;padding:19px}.contact-grid article>span{margin-bottom:23px}.contact-intro{margin-bottom:30px}.contact-footer-inner{align-items:flex-start;gap:34px}.contact-footer-right{align-items:flex-end}}
+      @media(max-width:620px){.contact-footer-inner{width:min(100% - 32px,1040px);display:grid;grid-template-columns:1fr;gap:26px}.contact-footer-right{align-items:flex-start}.contact-footer nav{justify-content:flex-start}.contact-footer small{text-align:left}.contact-footer-left>p{text-align:left}}
       @media(max-width:520px){.contact-header{height:62px;padding:0 15px}.contact-shell{width:min(100% - 28px,820px);padding-top:48px}.contact-intro h1{font-size:43px}.contact-intro p{font-size:13px}.contact-card h2{font-size:13px;overflow-wrap:anywhere}.contact-footer{padding-top:36px}}
     `}</style>
   </main>;
