@@ -40,6 +40,7 @@ import "./v7-8-38-footer-redesign.css";
 import "./v7-8-39-editor-production.css";
 import "./gts-footer.css";
 import "./contact-footer-guard.css";
+import "./release-lock-7-8-44.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
