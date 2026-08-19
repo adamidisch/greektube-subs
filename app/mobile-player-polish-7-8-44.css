@@ -72,6 +72,12 @@ html body .viewer.viewer.viewer .moments .moment-actions button:last-child:focus
   color:#e3a1a6!important;
 }
 
+/* The global shell already contributes bottom space. Keep the viewer ending compact
+   so spacing is not doubled before the shared footer. */
+html body .app-shell.viewer.viewer.viewer{
+  padding-bottom:28px!important;
+}
+
 @media(max-width:700px){
   /* Keep the 46px touch target but make Settings visually lighter. */
   html body .app-shell.viewer.viewer.viewer .icon-button[aria-label="Ρυθμίσεις"]::before{
@@ -142,8 +148,11 @@ html body .viewer.viewer.viewer .moments .moment-actions button:last-child:focus
     text-align:center!important;
   }
 
-  /* Remove the accidental dead space before the footer on the viewer only. */
+  /* Compact closing rhythm on iPhone. */
+  html body .app-shell.viewer.viewer.viewer{
+    padding-bottom:max(18px,env(safe-area-inset-bottom))!important;
+  }
   html body > .app-shell.viewer ~ .gts-standard-footer{
-    margin-top:22px!important;
+    margin-top:0!important;
   }
 }
