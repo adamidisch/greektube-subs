@@ -38,6 +38,7 @@ import "./player-page-v7-8-32.css";
 import "./player-page-v7-8-33.css";
 import "./v7-8-38-footer-redesign.css";
 import "./v7-8-39-editor-production.css";
+import "./gts-footer.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
