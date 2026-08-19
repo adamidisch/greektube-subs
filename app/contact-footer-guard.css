@@ -1,0 +1,11 @@
+/* Contact route: guarantee a single footer even if a legacy footer is mounted client-side. */
+body:has(.contact-page) .app-footer,
+body:has(.contact-page) .footer-card,
+body:has(.contact-page) .legacy-footer,
+body:has(.contact-page) footer:not(.gts-standard-footer) {
+  display: none !important;
+}
+
+body:has(.contact-page) .gts-standard-footer {
+  display: block !important;
+}
