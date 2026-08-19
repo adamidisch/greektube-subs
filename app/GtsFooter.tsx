@@ -20,7 +20,7 @@ export default function GtsFooter(){
           <Link href="/contact">Contact</Link>
         </nav>
         <div className="gts-standard-footer-meta">
-          <span>© {year} GreekTube Subs</span><i aria-hidden="true">·</i><span>Version {APP_VERSION}</span>
+          <Link href="/admin/analytics" className="gts-standard-footer-admin">© {year} GreekTube Subs</Link><i aria-hidden="true">·</i><span>Version {APP_VERSION}</span>
         </div>
       </div>
     </div>
