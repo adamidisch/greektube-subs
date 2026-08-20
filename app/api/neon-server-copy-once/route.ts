@@ -29,21 +29,33 @@ function hashRows(rows: unknown) {
   return createHash("sha256").update(safeJson(rows)).digest("hex");
 }
 
+type TargetConfig = { host?: unknown; db?: unknown; user?: unknown; secret?: unknown };
+
+function parseConfig(value: string | null) {
+  if (!value) return null;
+  try {
+    const raw = Buffer.from(value, "base64url").toString("utf8");
+    const parsed = JSON.parse(raw) as TargetConfig;
+    if (typeof parsed.host !== "string" || typeof parsed.user !== "string" || typeof parsed.secret !== "string") return null;
+    return {
+      host: parsed.host,
+      db: typeof parsed.db === "string" && parsed.db ? parsed.db : "neondb",
+      user: parsed.user,
+      password: parsed.secret,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: Request) {
   if (!previewOnly()) return new Response(null, { status: 404 });
 
   const url = new URL(request.url);
-  const host = url.searchParams.get("host") || "";
-  const dbName = url.searchParams.get("db") || "neondb";
-  const user = url.searchParams.get("user") || "";
-  const password = url.searchParams.get("password") || "";
-  const go = url.searchParams.get("go") === "1";
+  const config = parseConfig(url.searchParams.get("cfg"));
+  if (!config) return NextResponse.json({ ok: false, error: "missing-target" }, { status: 400 });
 
-  if (!go || !host || !user || !password) {
-    return NextResponse.json({ ok: false, error: "missing-target" }, { status: 400 });
-  }
-
-  const targetUrl = `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}/${encodeURIComponent(dbName)}?sslmode=require`;
+  const targetUrl = `postgresql://${encodeURIComponent(config.user)}:${encodeURIComponent(config.password)}@${config.host}/${encodeURIComponent(config.db)}?sslmode=require`;
   const pool = new Pool({ connectionString: targetUrl, max: 1, connectionTimeoutMillis: 10_000 });
   const source = database();
   const client = await pool.connect();
