@@ -5,6 +5,10 @@ export function hasTranslatableWordTokens(tokens: string[], protectedTokens: str
 
 export function stripEnglishSpeechFillers(text: string) {
   return text
+    // Supadata/YouTube can occasionally expose SSML-style silence markers as
+    // transcript text. They are timing metadata, not spoken content, and must
+    // never enter translation or semantic-review cues.
+    .replace(/<break\b[^>]*\/?\s*>/giu, " ")
     .replace(/(^|[^\p{L}\p{N}])(?:u+m+|u+h+|e+r+m+|h+m+|a+h+)(?=$|[^\p{L}\p{N}])/giu, "$1")
     .replace(/^[,;:]+\s*/, "")
     .replace(/\s+([,.;:!?…])/g, "$1")
