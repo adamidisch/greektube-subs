@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Pool } from "@neondatabase/serverless";
 import { database } from "@/db/postgres";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,18 @@ function sourceIdentity() {
 
 function safeJson(value: unknown) {
   return JSON.stringify(value, (_key, item) => typeof item === "bigint" ? item.toString() : item);
+}
+
+async function directTransportProbe() {
+  const connectionString = process.env.DATABASE_URL || "";
+  if (!connectionString) throw new Error("DATABASE_URL is not configured.");
+  const pool = new Pool({ connectionString, max: 1, connectionTimeoutMillis: 10_000 });
+  try {
+    const result = await pool.query("SELECT current_database() AS database, current_user AS user, 1 AS ok");
+    return result.rows;
+  } finally {
+    await pool.end().catch(() => undefined);
+  }
 }
 
 async function existingTables() {
@@ -84,6 +97,22 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const requestedTable = url.searchParams.get("table") as AllowedTable | null;
+
+  if (url.searchParams.get("transport") === "ws") {
+    try {
+      const rows = await directTransportProbe();
+      return new Response(safeJson({ source: sourceIdentity(), transport: "pool", rows }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "private, no-store" },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return NextResponse.json({ source: sourceIdentity(), transport: "pool", error: message.slice(0, 1000) }, {
+        status: 503,
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+  }
 
   try {
     const present = await existingTables();
