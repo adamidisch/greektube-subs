@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
 import { Pool } from "@neondatabase/serverless";
 import { database } from "@/db/postgres";
 
@@ -25,10 +24,6 @@ function safeJson(value: unknown) {
   return JSON.stringify(value, (_key, item) => typeof item === "bigint" ? item.toString() : item);
 }
 
-function hashRows(rows: unknown) {
-  return createHash("sha256").update(safeJson(rows)).digest("hex");
-}
-
 type TargetConfig = { host?: unknown; db?: unknown; user?: unknown; secret?: unknown };
 
 function parseConfig(value: string | null) {
@@ -46,6 +41,20 @@ function parseConfig(value: string | null) {
   } catch {
     return null;
   }
+}
+
+async function sourceNativeHash(source: ReturnType<typeof database>, table: string, orderBy: string) {
+  const rows = await source.query(
+    `SELECT md5(COALESCE(string_agg(md5(to_jsonb(t)::text), '' ORDER BY ${orderBy}), '')) AS hash, COUNT(*)::int AS count FROM ${table} t`,
+  ) as { hash: string; count: number }[];
+  return rows[0] ?? { hash: "", count: 0 };
+}
+
+async function targetNativeHash(client: { query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }> }, table: string, orderBy: string) {
+  const result = await client.query(
+    `SELECT md5(COALESCE(string_agg(md5(to_jsonb(t)::text), '' ORDER BY ${orderBy}), '')) AS hash, COUNT(*)::int AS count FROM ${table} t`,
+  );
+  return (result.rows[0] as { hash: string; count: number } | undefined) ?? { hash: "", count: 0 };
 }
 
 export async function GET(request: Request) {
@@ -69,20 +78,22 @@ export async function GET(request: Request) {
 
     for (const [table, orderBy] of TABLES) {
       const sourceRows = await source.query(`SELECT * FROM ${table} ORDER BY ${orderBy}`) as unknown[];
+      const sourceCheck = await sourceNativeHash(source, table, orderBy);
       counts[table] = sourceRows.length;
-      sourceHashes[table] = hashRows(sourceRows);
+      sourceHashes[table] = sourceCheck.hash;
+
+      if (sourceCheck.count !== sourceRows.length) throw new Error(`source-count-changed:${table}`);
 
       if (sourceRows.length > 0) {
-        const payload = safeJson(sourceRows);
         await client.query(
           `INSERT INTO ${table} SELECT * FROM json_populate_recordset(NULL::${table}, $1::json)`,
-          [payload],
+          [safeJson(sourceRows)],
         );
       }
 
-      const targetResult = await client.query(`SELECT * FROM ${table} ORDER BY ${orderBy}`);
-      targetHashes[table] = hashRows(targetResult.rows);
-      if (targetResult.rows.length !== sourceRows.length || targetHashes[table] !== sourceHashes[table]) {
+      const targetCheck = await targetNativeHash(client, table, orderBy);
+      targetHashes[table] = targetCheck.hash;
+      if (targetCheck.count !== sourceCheck.count || targetCheck.hash !== sourceCheck.hash) {
         throw new Error(`parity-failed:${table}`);
       }
     }
