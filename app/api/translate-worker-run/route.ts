@@ -13,7 +13,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function healStaleMarkupCheckpoint(videoId: string) {
   const record = await getTranscript(videoId);
-  if (!record || record.status !== "processing" || !record.rawEnglishTranscript.length) return false;
+  if (!record || !record.rawEnglishTranscript.length) return false;
   const staleMarkup = record.englishTranscript.some(cue => /<break\b[^>]*\/?\s*>/iu.test(cue.text));
   if (!staleMarkup) return false;
 
@@ -44,12 +44,13 @@ export async function GET(request: Request) {
       retryAfter?: string | null;
       stage?: string | null;
       videoId?: string | null;
+      error?: unknown;
     } | null;
 
     if (payload?.videoId) knownVideoId = payload.videoId;
 
     if (lastResponse.status !== 202) {
-      if (knownVideoId && /Translation temporarily failed for 1 cue/.test(String((payload as { error?: unknown } | null)?.error || ""))) {
+      if (knownVideoId && /Translation temporarily failed for 1 cue/.test(String(payload?.error || ""))) {
         const healed = await healStaleMarkupCheckpoint(knownVideoId);
         if (healed) {
           await sleep(250);
