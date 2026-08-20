@@ -24,6 +24,15 @@ These rules are the visual contract for every future change.
 - Maintain strong contrast: primary text at least `#F2F3F6` and secondary text at least `#AEB3BD` on dark surfaces.
 - Greek text must be natural and correctly accented. Fully uppercase Greek must not contain tonos.
 
+## Mobile Safari focus / zoom rule
+
+- Treat iPhone Safari focus zoom as a permanent design QA rule, not a one-off bug.
+- Every user-editable `input`, `textarea` and `select`, including search fields, must have an effective mobile font size of at least `16px` whenever it can receive focus. This prevents Safari from auto-zooming the viewport on focus.
+- Never solve focus zoom with `maximum-scale=1`, `user-scalable=no` or any viewport setting that disables user zoom/accessibility.
+- After every mobile form/search change, test the complete flow: focus → keyboard opens → type → blur/submit → keyboard closes → viewport returns to the original scale and position.
+- If the visual design needs a compact field, reduce padding, container height, icon size or surrounding spacing instead of shrinking focused text below `16px`.
+- Apply this rule across search, login/profile, settings, editor fields, modals and any future form controls.
+
 ## Controls and menus
 
 - Touch targets must be at least 44×44px on mobile.
@@ -45,4 +54,5 @@ These rules are the visual contract for every future change.
 
 - Test every visible interaction and responsive layout.
 - Check readable typography, spacing, alignment, contrast, focus states and touch targets.
+- On iPhone Safari, explicitly test every focusable form control for unintended viewport zoom and correct scale restoration after blur.
 - Do not publish if any label is too small, clipped, low-contrast or ambiguously interactive.
