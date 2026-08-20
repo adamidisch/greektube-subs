@@ -44,6 +44,15 @@ When screenshots, websites or visual references are provided:
 - Greek text must be natural and correctly accented.
 - Fully uppercase Greek must not contain tonos.
 
+## Mobile Safari focus and viewport stability
+
+- Treat iPhone Safari focus zoom as a permanent design QA concern on every project.
+- Any focusable `input`, `textarea` or `select` must have an effective mobile font size of at least `16px` whenever it can receive focus. This includes search, login/profile, settings, editor, modal and filter fields.
+- Never fix Safari focus zoom by disabling pinch zoom or accessibility with `maximum-scale=1`, `user-scalable=no` or equivalent viewport restrictions.
+- If a field must look compact, reduce padding, height, icon scale and surrounding spacing rather than shrinking editable text below `16px`.
+- After any mobile form or search change, test: focus → keyboard open → type → blur/submit → keyboard close → verify the viewport returns to its original scale and position.
+- Unexpected zoom, viewport drift or failure to restore after blur is a release-blocking mobile regression.
+
 ## Interaction language
 
 - Use 44px minimum touch targets on mobile when controls are intended for touch.
@@ -80,6 +89,7 @@ Before completion, review desktop, tablet and mobile and verify:
 - theme parity
 - focus visibility
 - touch targets
+- mobile form focus does not trigger unintended Safari zoom or viewport drift
 - loading and empty states
 - footer finish
 - existing functionality still works
