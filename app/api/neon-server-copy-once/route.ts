@@ -43,18 +43,56 @@ function parseConfig(value: string | null) {
   }
 }
 
+function nativeHashSql(table: string, orderBy: string) {
+  if (table === "analytics_events") {
+    return `SELECT md5(COALESCE(string_agg(md5(concat_ws(E'\\x1f',
+      id::text,
+      (round(extract(epoch FROM created_at) * 1000000)::bigint)::text,
+      COALESCE((round(extract(epoch FROM client_ts) * 1000000)::bigint)::text, ''),
+      session_id,
+      event_name,
+      path,
+      video_id,
+      referrer_host,
+      country,
+      city,
+      device,
+      browser,
+      properties::text
+    )), '' ORDER BY id), '')) AS hash, COUNT(*)::int AS count FROM analytics_events`;
+  }
+  return `SELECT md5(COALESCE(string_agg(md5(to_jsonb(t)::text), '' ORDER BY ${orderBy}), '')) AS hash, COUNT(*)::int AS count FROM ${table} t`;
+}
+
 async function sourceNativeHash(source: ReturnType<typeof database>, table: string, orderBy: string) {
-  const rows = await source.query(
-    `SELECT md5(COALESCE(string_agg(md5(to_jsonb(t)::text), '' ORDER BY ${orderBy}), '')) AS hash, COUNT(*)::int AS count FROM ${table} t`,
-  ) as { hash: string; count: number }[];
+  const rows = await source.query(nativeHashSql(table, orderBy)) as { hash: string; count: number }[];
   return rows[0] ?? { hash: "", count: 0 };
 }
 
 async function targetNativeHash(client: { query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }> }, table: string, orderBy: string) {
-  const result = await client.query(
-    `SELECT md5(COALESCE(string_agg(md5(to_jsonb(t)::text), '' ORDER BY ${orderBy}), '')) AS hash, COUNT(*)::int AS count FROM ${table} t`,
-  );
+  const result = await client.query(nativeHashSql(table, orderBy));
   return (result.rows[0] as { hash: string; count: number } | undefined) ?? { hash: "", count: 0 };
+}
+
+async function sourceRowsForCopy(source: ReturnType<typeof database>, table: string, orderBy: string) {
+  if (table === "analytics_events") {
+    return await source.query(`SELECT
+      id,
+      created_at::text AS created_at,
+      client_ts::text AS client_ts,
+      session_id,
+      event_name,
+      path,
+      video_id,
+      referrer_host,
+      country,
+      city,
+      device,
+      browser,
+      properties
+    FROM analytics_events ORDER BY id`) as unknown[];
+  }
+  return await source.query(`SELECT * FROM ${table} ORDER BY ${orderBy}`) as unknown[];
 }
 
 export async function GET(request: Request) {
@@ -77,7 +115,7 @@ export async function GET(request: Request) {
     await client.query("BEGIN");
 
     for (const [table, orderBy] of TABLES) {
-      const sourceRows = await source.query(`SELECT * FROM ${table} ORDER BY ${orderBy}`) as unknown[];
+      const sourceRows = await sourceRowsForCopy(source, table, orderBy);
       const sourceCheck = await sourceNativeHash(source, table, orderBy);
       counts[table] = sourceRows.length;
       sourceHashes[table] = sourceCheck.hash;
@@ -99,8 +137,8 @@ export async function GET(request: Request) {
     }
 
     const sequences = {
-      user_profiles_public_id_seq: (await source.query("SELECT last_value, is_called FROM user_profiles_public_id_seq") as unknown[])[0] ?? null,
-      analytics_events_id_seq: (await source.query("SELECT last_value, is_called FROM analytics_events_id_seq") as unknown[])[0] ?? null,
+      user_profiles_public_id_seq: (await source.query("SELECT last_value::text AS last_value, is_called FROM user_profiles_public_id_seq") as unknown[])[0] ?? null,
+      analytics_events_id_seq: (await source.query("SELECT last_value::text AS last_value, is_called FROM analytics_events_id_seq") as unknown[])[0] ?? null,
     };
 
     await client.query("COMMIT");
