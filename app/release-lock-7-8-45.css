@@ -1,0 +1,14 @@
+/* v7.8.45 release lock: prevent iPhone Safari focus zoom without disabling user zoom */
+@media (max-width: 700px) {
+  html body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  html body textarea,
+  html body select {
+    font-size: 16px !important;
+  }
+
+  /* Keep the primary library search visually compact while its editable text stays Safari-safe. */
+  html body .search input {
+    font-size: 16px !important;
+    line-height: 1.25 !important;
+  }
+}
