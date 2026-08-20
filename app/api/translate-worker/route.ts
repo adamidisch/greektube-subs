@@ -37,6 +37,11 @@ type QualityJob = {
   lock_token: string | null;
   lock_expires_at: string | null;
 };
+type CommandRow = {
+  issue_number: number;
+  video_id: string;
+  status: string;
+};
 
 function commandVideoId(issue: GitHubIssue) {
   if (issue.pull_request || issue.user?.login !== COMMAND_OWNER) return null;
@@ -45,7 +50,69 @@ function commandVideoId(issue: GitHubIssue) {
   return match?.[1] || null;
 }
 
+async function ensureCommandTable() {
+  await ensureTranscriptTable();
+  const db = database();
+  await db.query(`CREATE TABLE IF NOT EXISTS translation_commands (
+    issue_number INTEGER PRIMARY KEY,
+    video_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+
+  // One-time bootstrap for the command that was already verified through the
+  // connected GitHub account before this durable command cache was introduced.
+  // The row is never reactivated after completion because issue_number is the PK.
+  const now = new Date().toISOString();
+  await db.query(
+    `INSERT INTO translation_commands (issue_number, video_id, status, created_at, updated_at)
+     VALUES (26, 'fX2z-BF8Jac', 'active', $1, $1)
+     ON CONFLICT(issue_number) DO NOTHING`,
+    [now],
+  );
+}
+
+async function cachedActiveCommand() {
+  await ensureCommandTable();
+  const db = database();
+  const rows = await db.query(
+    `SELECT issue_number, video_id, status
+     FROM translation_commands
+     WHERE status='active'
+     ORDER BY issue_number DESC LIMIT 1`,
+  ) as CommandRow[];
+  const row = rows[0];
+  return row ? { issueNumber: Number(row.issue_number), videoId: row.video_id } : null;
+}
+
+async function cacheVerifiedCommand(issueNumber: number, videoId: string) {
+  await ensureCommandTable();
+  const db = database();
+  const now = new Date().toISOString();
+  await db.query(
+    `INSERT INTO translation_commands (issue_number, video_id, status, created_at, updated_at)
+     VALUES ($1,$2,'active',$3,$3)
+     ON CONFLICT(issue_number) DO UPDATE SET
+       video_id=EXCLUDED.video_id,
+       updated_at=EXCLUDED.updated_at`,
+    [issueNumber, videoId, now],
+  );
+}
+
+async function completeCommand(issueNumber: number) {
+  await ensureCommandTable();
+  const db = database();
+  await db.query(
+    `UPDATE translation_commands SET status='ready', updated_at=$1 WHERE issue_number=$2`,
+    [new Date().toISOString(), issueNumber],
+  );
+}
+
 async function latestTranslationCommand() {
+  const cached = await cachedActiveCommand();
+  if (cached) return cached;
+
   const response = await fetch(
     `https://api.github.com/repos/${REPOSITORY}/issues?state=open&creator=${COMMAND_OWNER}&sort=created&direction=desc&per_page=20`,
     {
@@ -61,7 +128,11 @@ async function latestTranslationCommand() {
   const issues = await response.json() as GitHubIssue[];
   for (const issue of issues) {
     const videoId = commandVideoId(issue);
-    if (videoId && Number.isInteger(issue.number)) return { issueNumber: issue.number as number, videoId };
+    if (videoId && Number.isInteger(issue.number)) {
+      const issueNumber = issue.number as number;
+      await cacheVerifiedCommand(issueNumber, videoId);
+      return { issueNumber, videoId };
+    }
   }
   return null;
 }
@@ -227,6 +298,7 @@ async function runQualityStep(videoId: string, issueNumber: number) {
     : null;
   const existingJob = await qualityJob(videoId);
   if (existingJob?.status === "ready" && published?.translationMethod === QUALITY_METHOD) {
+    await completeCommand(issueNumber);
     return NextResponse.json({
       status: "ready", progress: 100, videoId, issueNumber,
       quality: QUALITY_METHOD, reviewedCues: existingJob.cursor, changed: existingJob.changed_count,
@@ -254,6 +326,7 @@ async function runQualityStep(videoId: string, issueNumber: number) {
         ? latestPublishedValue as Record<string, unknown>
         : null;
       if (latestPublished?.translationMethod === QUALITY_METHOD) {
+        await completeCommand(issueNumber);
         return NextResponse.json({
           status: "ready", progress: 100, videoId, issueNumber,
           quality: QUALITY_METHOD, reviewedCues: current.cursor, changed: current.changed_count,
@@ -273,6 +346,7 @@ async function runQualityStep(videoId: string, issueNumber: number) {
       const payload = publicationPayload(record, published);
       if (!await publishTranscript(videoId, TRANSCRIPT_VERSION, payload)) throw new Error("quality-final-publish-failed");
       const finalJob = await advanceQualityJob(videoId, qualityToken, record.greekTranscript.length, 0, true);
+      await completeCommand(issueNumber);
       return NextResponse.json({
         status: "ready", progress: 100, videoId, issueNumber, quality: QUALITY_METHOD,
         reviewedCues: finalJob?.cursor || record.greekTranscript.length,
@@ -288,6 +362,7 @@ async function runQualityStep(videoId: string, issueNumber: number) {
     const updated = await persistReviewedGreek(videoId, result.reviewedGreek as Cue[], published);
     const done = end >= updated.greekTranscript.length;
     const finalJob = await advanceQualityJob(videoId, qualityToken, end, result.changed, done);
+    if (done) await completeCommand(issueNumber);
     const progress = done ? 100 : Math.round((92 + 8 * (end / updated.greekTranscript.length)) * 10) / 10;
     return NextResponse.json({
       status: done ? "ready" : "processing",
@@ -322,6 +397,7 @@ export async function GET(request: Request) {
       : null;
     const completedJob = await qualityJob(videoId);
     if (completedJob?.status === "ready" && published?.translationMethod === QUALITY_METHOD) {
+      await completeCommand(issueNumber);
       return NextResponse.json({
         status: "ready", progress: 100, videoId, issueNumber, quality: QUALITY_METHOD,
         reviewedCues: completedJob.cursor, changed: completedJob.changed_count,
