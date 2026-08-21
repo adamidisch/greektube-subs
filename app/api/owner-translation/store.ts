@@ -418,11 +418,12 @@ export async function validateOwnerGreek(videoId: string, subtitleText: string) 
   };
   await writeJson(path, draft);
   const db = database();
-  await db.query(
+  const validationRows = await db.query(
     `UPDATE owner_translation_manifests SET greek_draft_blob_path=$1,greek_draft_hash=$2,status='validated',validation_json=$3,validated_at=$4,updated_at=$4
-     WHERE video_id=$5 AND revision=$6 AND source_hash=$7 AND status!='published'`,
+     WHERE video_id=$5 AND revision=$6 AND source_hash=$7 AND status!='published' RETURNING video_id`,
     [path, greekHash, JSON.stringify(validation), now, videoId, manifest.revision, manifest.sourceHash],
-  );
+  ) as { video_id: string }[];
+  if (validationRows.length !== 1) throw new Error("Το validated draft δεν μπόρεσε να δεθεί με το active owner manifest.");
   const updated = await getOwnerTranslationManifest(videoId);
   return { manifest: updated || manifest, validation };
 }
@@ -461,7 +462,7 @@ export async function publishOwnerTranslation(videoId: string) {
   const now = new Date().toISOString();
   let committed = false;
   try {
-    const duration = Math.max(existing.duration || 0, ...greek.map(cue => cue.start + cue.duration));
+    const duration = greek.reduce((max, cue) => Math.max(max, cue.start + cue.duration), existing.duration || 0);
     const finalPayload = {
       status: "ready",
       progress: 100,
@@ -500,13 +501,15 @@ export async function publishOwnerTranslation(videoId: string) {
     }
 
     const db = database();
-    await db.query(
+    const publishedRows = await db.query(
       `UPDATE owner_translation_manifests SET status='published',published_at=$1,updated_at=$1
-       WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='validated'`,
+       WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='validated' RETURNING video_id`,
       [now, videoId, manifest.revision, manifest.sourceHash],
-    );
+    ) as { video_id: string }[];
+    if (publishedRows.length !== 1) throw new Error("Το final owner manifest transition δεν ολοκληρώθηκε.");
     const updated = await getOwnerTranslationManifest(videoId);
-    return { manifest: updated || manifest, alreadyPublished: false };
+    if (!updated || updated.revision !== manifest.revision || updated.status !== "published") throw new Error("Το published owner manifest δεν επιβεβαιώθηκε.");
+    return { manifest: updated, alreadyPublished: false };
   } catch (error) {
     if (!committed) {
       if (previousPublished) await publishTranscript(videoId, TRANSCRIPT_VERSION, previousPublished).catch(() => undefined);
