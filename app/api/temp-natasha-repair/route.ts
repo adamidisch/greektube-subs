@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { POST as runCaptions } from "../captions/route";
+import { POST as runLegacyCaptions } from "../captions/legacy-route";
 import { getTranscriptStatus } from "../shared-cache";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: VIDEO_URL, force: false, translationMode: "google" }),
     });
-    const response = await runCaptions(internal);
+    const response = await runLegacyCaptions(internal);
     passes += 1;
     if (response.status !== 202) {
       const payload = await response.json().catch(() => null);
