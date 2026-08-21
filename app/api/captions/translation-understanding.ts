@@ -34,7 +34,8 @@ type SegmentUnderstanding = {
 };
 
 const MODEL = "openai/gpt-oss-120b";
-const SEGMENT_MAX_CHARS = 22_000;
+const DIRECT_MAX_CHARS = 260_000;
+const SEGMENT_MAX_CHARS = 40_000;
 const memory = new Map<string, TranslationUnderstanding>();
 
 function configured() {
@@ -123,7 +124,7 @@ async function groqJson(system: string, user: string, maxTokens: number) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is required for understanding-first translation");
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 35_000);
+  const timeout = setTimeout(() => controller.abort(), 38_000);
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -143,8 +144,7 @@ async function groqJson(system: string, user: string, maxTokens: number) {
     if (response.status === 429) throw new Error(`Groq 429 understanding rate limit; retry-after=${response.headers.get("retry-after") || "30"}`);
     if (!response.ok) throw new Error(`Groq understanding ${response.status}`);
     const payload = await response.json() as { choices?: { message?: { content?: string } }[] };
-    const content = payload.choices?.[0]?.message?.content || "";
-    return parseJsonObject(content);
+    return parseJsonObject(payload.choices?.[0]?.message?.content || "");
   } finally {
     clearTimeout(timeout);
   }
@@ -158,17 +158,21 @@ function timestamp(seconds: number) {
   return h ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function segmentTranscript(cues: UnderstandingCue[]) {
+function transcriptForPrompt(cues: UnderstandingCue[]) {
+  return cues.map((cue, index) => `[[${index} @ ${timestamp(cue.start)}]] ${normalizeText(cue.text)}`).join("\n");
+}
+
+function segmentTranscript(fullTranscript: string) {
+  const lines = fullTranscript.split("\n");
   const segments: string[] = [];
   let current = "";
-  for (let index = 0; index < cues.length; index += 1) {
-    const cue = cues[index];
-    const line = `[[${index} @ ${timestamp(cue.start)}]] ${normalizeText(cue.text)}\n`;
-    if (current && current.length + line.length > SEGMENT_MAX_CHARS) {
+  for (const line of lines) {
+    const next = `${line}\n`;
+    if (current && current.length + next.length > SEGMENT_MAX_CHARS) {
       segments.push(current);
       current = "";
     }
-    current += line;
+    current += next;
   }
   if (current) segments.push(current);
   return segments;
@@ -184,46 +188,13 @@ function normalizeSegment(value: Record<string, unknown>): SegmentUnderstanding 
   };
 }
 
-async function understandSegment(segment: string, part: number, total: number) {
-  const result = await groqJson(
-    "You are preparing a source-analysis brief for a professional English-to-Greek translator. " +
-    "Understand what is actually being discussed before any translation happens. Track arguments, references, technical meaning, uncertainty, negation, causality, irony and changes of position. " +
-    "Do not translate the transcript. Do not invent speaker identities or facts not present in the text. If wording is ambiguous, record the ambiguity instead of resolving it by guesswork. " +
-    "Return JSON only with keys summary, points, terms, ambiguities, tone. terms is an array of {source, greek, note}; give a Greek rendering only when the contextual meaning is sufficiently clear.",
-    `This is transcript segment ${part} of ${total}. Analyse it in the context of a larger conversation.\n\n${segment}`,
-    1800,
-  );
-  return normalizeSegment(result);
-}
-
-function compactSegmentForSynthesis(segment: SegmentUnderstanding, index: number) {
-  return JSON.stringify({
-    segment: index + 1,
-    summary: segment.summary,
-    points: segment.points,
-    terms: segment.terms,
-    ambiguities: segment.ambiguities,
-    tone: segment.tone,
-  });
-}
-
-async function synthesizeGlobalUnderstanding(
+function buildUnderstanding(
   videoId: string,
   transcriptVersion: number,
   sourceHash: string,
   cueCount: number,
-  segments: SegmentUnderstanding[],
+  result: Record<string, unknown>,
 ) {
-  const result = await groqJson(
-    "You are the senior source analyst for a professional English-to-Greek subtitle translator. " +
-    "Synthesize the analyses of ALL transcript segments into one compact global translation brief. " +
-    "The translator must understand the topic, purpose, thread of discussion, arguments/positions, terminology, references, tone and unresolved ambiguity before translating any cue. " +
-    "Never invent facts or certainty. Preserve distinctions such as may/might/could versus certainty, association versus causation, hypothesis versus established claim and a speaker reporting a claim versus endorsing it. " +
-    "Do not produce subtitle translations. Return JSON only with keys mainTopic, purpose, discussion, claimsAndPositions, glossary, ambiguities, toneAndStance, fidelityRules. glossary is {source, greek, note}[].",
-    `Synthesize these ${segments.length} ordered segment analyses. They cover the complete repaired English transcript:\n\n${segments.map(compactSegmentForSynthesis).join("\n")}`,
-    3200,
-  );
-  const generatedAt = new Date().toISOString();
   const defaultRules = [
     "Preserve uncertainty, hedging and degree of confidence exactly.",
     "Preserve negation, agency, causality and who is attributing each claim.",
@@ -244,8 +215,53 @@ async function synthesizeGlobalUnderstanding(
     ambiguities: stringList(result.ambiguities, 32),
     toneAndStance: stringList(result.toneAndStance, 24),
     fidelityRules: [...new Set([...stringList(result.fidelityRules, 20), ...defaultRules])],
-    generatedAt,
+    generatedAt: new Date().toISOString(),
   } satisfies TranslationUnderstanding;
+}
+
+const GLOBAL_SYSTEM =
+  "You are the senior source analyst for a professional English-to-Greek subtitle translator. " +
+  "Read and understand the discussion BEFORE translation. Identify the real topic, purpose, thread of discussion, arguments/positions, terminology, references, tone, irony, uncertainty, negation and causality. " +
+  "Never invent a speaker identity, fact or certainty that is not supported by the transcript. Preserve distinctions such as may/might/could versus certainty, association versus causation, hypothesis versus established claim and a speaker reporting a claim versus endorsing it. " +
+  "This is analysis only: do not translate subtitle lines. Return compact JSON only with keys mainTopic, purpose, discussion, claimsAndPositions, glossary, ambiguities, toneAndStance, fidelityRules. glossary is an array of {source, greek, note}; give a Greek rendering only when contextual meaning is sufficiently clear.";
+
+async function directGlobalUnderstanding(fullTranscript: string) {
+  return groqJson(
+    GLOBAL_SYSTEM,
+    `The following is the COMPLETE repaired English transcript in chronological order. Read it as one conversation and build the global translation brief from the whole thing:\n\n${fullTranscript}`,
+    3400,
+  );
+}
+
+async function understandSegment(segment: string, part: number, total: number) {
+  const result = await groqJson(
+    "You are preparing one part of a source-analysis brief for a professional English-to-Greek translator. " +
+    "Understand arguments, references, technical meaning, uncertainty, negation, causality, irony and changes of position. Do not translate the transcript and do not invent facts. " +
+    "Return JSON only with keys summary, points, terms, ambiguities, tone. terms is an array of {source, greek, note}.",
+    `This is transcript segment ${part} of ${total}. Analyse it as part of a larger ordered conversation:\n\n${segment}`,
+    1600,
+  );
+  return normalizeSegment(result);
+}
+
+async function hierarchicalGlobalUnderstanding(
+  fullTranscript: string,
+  heartbeat?: (completedParts: number, totalParts: number) => Promise<void>,
+) {
+  const segments = segmentTranscript(fullTranscript);
+  const analysed: SegmentUnderstanding[] = [];
+  for (let index = 0; index < segments.length; index += 1) {
+    analysed.push(await understandSegment(segments[index], index + 1, segments.length));
+    if (heartbeat) await heartbeat(index + 1, segments.length + 1);
+  }
+  const compact = analysed.map((segment, index) => JSON.stringify({ segment: index + 1, ...segment })).join("\n");
+  const result = await groqJson(
+    GLOBAL_SYSTEM,
+    `These ordered segment analyses jointly cover the COMPLETE transcript. Synthesize them into one coherent global brief without dropping disagreements or ambiguity:\n\n${compact}`,
+    3400,
+  );
+  if (heartbeat) await heartbeat(segments.length + 1, segments.length + 1);
+  return result;
 }
 
 export async function readTranslationUnderstanding(
@@ -280,17 +296,13 @@ export async function ensureTranslationUnderstanding(
   if (existing) return existing;
 
   const sourceHash = transcriptHash(cues);
-  const segments = segmentTranscript(cues);
-  const analysed: SegmentUnderstanding[] = [];
-  for (let index = 0; index < segments.length; index += 1) {
-    analysed.push(await understandSegment(segments[index], index + 1, segments.length));
-    if (heartbeat) await heartbeat(index + 1, segments.length + 1);
-  }
-  const understanding = await synthesizeGlobalUnderstanding(
-    videoId, transcriptVersion, sourceHash, cues.length, analysed,
-  );
-  if (heartbeat) await heartbeat(segments.length + 1, segments.length + 1);
+  const fullTranscript = transcriptForPrompt(cues);
+  const result = fullTranscript.length <= DIRECT_MAX_CHARS
+    ? await directGlobalUnderstanding(fullTranscript)
+    : await hierarchicalGlobalUnderstanding(fullTranscript, heartbeat);
+  if (fullTranscript.length <= DIRECT_MAX_CHARS && heartbeat) await heartbeat(1, 1);
 
+  const understanding = buildUnderstanding(videoId, transcriptVersion, sourceHash, cues.length, result);
   await put(pathname(videoId, transcriptVersion), JSON.stringify(understanding), {
     access: "public" as const,
     addRandomSuffix: false,
