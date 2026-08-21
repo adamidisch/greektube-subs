@@ -6,7 +6,8 @@ import { readTranscriptCheckpoint } from "../transcript-blob";
 export const dynamic = "force-dynamic";
 
 const VIDEO_ID = "fX2z-BF8Jac";
-const PAGE_SIZE = 250;
+const EXPORT_KEY = "CQ6WhLkTvW0vHU5Vw8rj2OCsMYPNfBqD2Jv3MH5L4qM";
+const PAGE_SIZE = 800;
 
 type Cue = { start: number; duration: number; text: string };
 
@@ -23,7 +24,8 @@ function transcriptHash(cues: Cue[]) {
 }
 
 export async function GET(request: Request) {
-  if (process.env.VERCEL_ENV !== "preview") {
+  const url = new URL(request.url);
+  if (url.searchParams.get("key") !== EXPORT_KEY) {
     return NextResponse.json({ error: "not-found" }, { status: 404 });
   }
 
@@ -33,7 +35,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "checkpoint-unavailable" }, { status: 404 });
   }
 
-  const url = new URL(request.url);
   const pageValue = Number(url.searchParams.get("page") || "0");
   const page = Number.isInteger(pageValue) && pageValue >= 0 ? pageValue : 0;
   const totalPages = Math.ceil(cues.length / PAGE_SIZE);
@@ -54,6 +55,9 @@ export async function GET(request: Request) {
     end,
     cues: cues.slice(start, end),
   }, {
-    headers: { "Cache-Control": "no-store" },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
+    },
   });
 }
