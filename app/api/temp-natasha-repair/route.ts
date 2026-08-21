@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const VIDEO_ID = "fX2z-BF8Jac";
-const URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
+const VIDEO_URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
 
 function baseStage(stage: string | null | undefined) {
   const value = stage || "source";
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     const internal = new Request(new URL("/api/captions", request.url), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: URL, force: false, translationMode: "google" }),
+      body: JSON.stringify({ url: VIDEO_URL, force: false, translationMode: "google" }),
     });
     const response = await runCaptions(internal);
     passes += 1;
