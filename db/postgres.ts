@@ -3,14 +3,10 @@ import { neon } from "@neondatabase/serverless";
 let client: ReturnType<typeof neon> | null = null;
 
 export function database() {
-  const useStandby = Boolean(process.env.DATABASE_URL_STANDBY);
   const url = process.env.DATABASE_URL_STANDBY || process.env.DATABASE_URL;
   if (!url) {
     throw new Error("No database connection is configured.");
   }
-  if (!client) {
-    console.info("[db:source]", useStandby ? "standby" : "fallback");
-    client = neon(url);
-  }
+  if (!client) client = neon(url);
   return client;
 }
