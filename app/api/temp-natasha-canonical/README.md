@@ -1,0 +1,1 @@
+This route is fixed to the public Natasha transcript and is read-only. Remove after the owner ChatGPT translation run.
