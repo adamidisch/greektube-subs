@@ -1,21 +1,17 @@
 import { database } from "@/db/postgres";
+import { ensureOwnerTranslationTable } from "../owner-translation/store";
 
 export async function isOwnerChatgptVideo(videoId: string) {
+  await ensureOwnerTranslationTable();
   const db = database();
-  try {
-    const ownerRows = await db.query(
-      `SELECT 1
-       FROM owner_translation_manifests
-       WHERE video_id=$1
-       LIMIT 1`,
-      [videoId],
-    ) as { "?column?": number }[];
-    if (ownerRows.length > 0) return true;
-  } catch (error) {
-    // Deployments created before the generic owner workflow may not have the
-    // additive manifest table yet. Fall through to the legacy owner marker.
-    if ((error as { code?: string } | null)?.code !== "42P01") throw error;
-  }
+  const ownerRows = await db.query(
+    `SELECT 1
+     FROM owner_translation_manifests
+     WHERE video_id=$1
+     LIMIT 1`,
+    [videoId],
+  ) as { "?column?": number }[];
+  if (ownerRows.length > 0) return true;
 
   try {
     const rows = await db.query(
