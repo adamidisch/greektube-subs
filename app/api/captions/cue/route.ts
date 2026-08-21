@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { publishTranscript, readPublishedTranscript } from "../../transcript-blob";
 import { TRANSCRIPT_VERSION } from "../../shared-cache";
+import { isOwnerChatgptVideo } from "../owner-mode";
 
 type CueEditRequest = {
   videoId?: unknown;
@@ -25,6 +26,9 @@ export async function PATCH(request: Request) {
 
   if (!videoId || transcriptVersion !== TRANSCRIPT_VERSION || !Number.isInteger(cueIndex) || cueIndex < 0 || expectedText === null) {
     return NextResponse.json({ error: "Μη έγκυρο αίτημα." }, { status: 400 });
+  }
+  if (await isOwnerChatgptVideo(videoId)) {
+    return NextResponse.json({ error: "Το transcript είναι owner-locked. Ξεκίνα New Revision από το Video Editor για αλλαγές στους υπότιτλους." }, { status: 409 });
   }
   if (!text) {
     return NextResponse.json({ error: "Το κείμενο δεν μπορεί να είναι κενό." }, { status: 400 });
