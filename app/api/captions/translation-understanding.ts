@@ -178,34 +178,58 @@ async function groqJson(system: string, user: string, maxTokens: number) {
   if (!apiKey) throw new Error("GROQ_API_KEY is required for understanding-first translation");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 38_000);
+
+  const request = (jsonMode: boolean) => fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    signal: controller.signal,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: MODEL,
+      temperature: 0,
+      max_tokens: maxTokens,
+      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+      messages: [
+        {
+          role: "system",
+          content: jsonMode
+            ? system
+            : `${system} Return ONLY one syntactically valid JSON object. Do not use markdown fences and do not write prose outside the JSON object.`,
+        },
+        { role: "user", content: user },
+      ],
+    }),
+  });
+
+  const errorDetail = async (response: Response) => {
+    const raw = await response.text().catch(() => "");
+    try {
+      const parsed = JSON.parse(raw) as { error?: { message?: unknown } };
+      return normalizeText(parsed.error?.message);
+    } catch {
+      return normalizeText(raw);
+    }
+  };
+
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      signal: controller.signal,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        temperature: 0,
-        max_tokens: maxTokens,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-      }),
-    });
+    let response = await request(true);
+    if (response.status === 429) {
+      throw new Error(`Groq 429 understanding rate limit; retry-after=${response.headers.get("retry-after") || "30"}`);
+    }
+
+    if (response.status === 400) {
+      const detail = await errorDetail(response);
+      if (/failed to (?:validate|generate) json/i.test(detail)) {
+        response = await request(false);
+      } else {
+        throw new Error(`Groq understanding 400${detail ? `: ${truncate(detail, 260)}` : ""}`);
+      }
+    }
+
     if (response.status === 429) {
       throw new Error(`Groq 429 understanding rate limit; retry-after=${response.headers.get("retry-after") || "30"}`);
     }
     if (!response.ok) {
-      const raw = await response.text().catch(() => "");
-      let detail = "";
-      try {
-        const parsed = JSON.parse(raw) as { error?: { message?: unknown } };
-        detail = normalizeText(parsed.error?.message);
-      } catch {
-        detail = normalizeText(raw);
-      }
+      const detail = await errorDetail(response);
       throw new Error(`Groq understanding ${response.status}${detail ? `: ${truncate(detail, 260)}` : ""}`);
     }
     const payload = await response.json() as { choices?: { message?: { content?: string } }[] };
