@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { GET as semanticGET, POST as semanticPOST } from "./semantic-route";
-import { getTranscriptStatus, TRANSCRIPT_VERSION } from "../shared-cache";
+import { getTranscript, getTranscriptStatus, TRANSCRIPT_VERSION } from "../shared-cache";
 import { isOwnerChatgptVideo } from "./owner-mode";
 
 type TranslationRequestBody = {
@@ -79,16 +79,24 @@ export async function POST(request: Request) {
     const videoId = extractVideoId(body.url);
     if (videoId && await isOwnerChatgptVideo(videoId)) {
       const status = await getTranscriptStatus(videoId);
+      const ownerHeaders = { "Cache-Control": "no-store", "X-GreekTube-Translation-Mode": "owner-chatgpt" };
       if (status?.status === "processing") {
-        return NextResponse.json(ownerStatusPayload(status), {
-          status: 202,
-          headers: {
-            "Retry-After": "60",
-            "Cache-Control": "no-store",
-            "X-GreekTube-Translation-Mode": "owner-chatgpt",
-          },
-        });
+        return NextResponse.json(ownerStatusPayload(status), { status: 202, headers: { ...ownerHeaders, "Retry-After": "60" } });
       }
+      if (status?.status === "ready") {
+        const record = await getTranscript(videoId);
+        if (!record) return NextResponse.json({ error: "Owner transcript unavailable." }, { status: 409, headers: ownerHeaders });
+        return NextResponse.json({
+          status: "ready", progress: 100, videoId, title: record.title, channel: record.channel, duration: record.duration,
+          sourceLanguage: record.originalLanguage || "en", cues: record.greekTranscript, englishCues: record.englishTranscript,
+          keyPoints: record.keyPoints, topics: record.topics, transcriptVersion: record.transcriptVersion,
+          translationMode: "owner-chatgpt", translationMethod: "manual_chatgpt_pro_v1", cached: true,
+        }, { headers: ownerHeaders });
+      }
+      if (status?.status === "failed") {
+        return NextResponse.json({ status: "failed", progress: status.progress, videoId, error: "Owner-managed transcript is locked and requires admin action." }, { status: 409, headers: ownerHeaders });
+      }
+      return NextResponse.json({ status: "owner_locked", progress: 0, videoId, error: "Owner-managed transcript is locked and requires admin action." }, { status: 409, headers: ownerHeaders });
     }
   }
 

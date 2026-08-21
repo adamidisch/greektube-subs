@@ -473,6 +473,10 @@ export async function publishOwnerTranslation(videoId: string) {
     };
     if (!await completeTranscript(record, token)) throw new Error("Το guarded Neon switch απέτυχε.");
     committed = true;
+    const readBack = await getTranscript(videoId);
+    if (!readBack || readBack.status !== "ready" || readBack.englishTranscript.length !== manifest.cueCount || readBack.greekTranscript.length !== manifest.cueCount || ownerSourceHash(readBack.englishTranscript) !== manifest.sourceHash || ownerSourceHash(readBack.greekTranscript) !== manifest.greekDraftHash) {
+      throw new Error("Το production read-back δεν ταίριαξε με το validated owner manifest.");
+    }
 
     const db = database();
     await db.query(
