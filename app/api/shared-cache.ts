@@ -1,4 +1,10 @@
 import { database } from "@/db/postgres";
+import {
+  mergeTranscriptCheckpoint,
+  publishTranscriptCheckpoint,
+  readTranscriptCheckpoint,
+  type TranscriptCheckpointPayload,
+} from "./transcript-blob";
 
 // v7.1.8 could replay a checkpoint after every lease reacquisition. Version
 // 12 restarts only those corrupt partial results while retaining raw English.
@@ -96,13 +102,67 @@ export function ensureTranscriptTable() {
 
 type Row = {
   video_id: string; title: string; channel: string; thumbnail: string; duration: number;
-  original_language: string; raw_english_transcript: string; english_transcript: string; greek_transcript: string;
-  timestamps: string; topics: string; key_points: string; status: TranscriptRecord["status"];
+  original_language: string; topics: string; key_points: string; status: TranscriptRecord["status"];
   progress: number; lock_expires_at: string | null; processing_stage: string | null; processing_cursor: number;
   retry_count: number; retry_after: string | null; groq_429_streak: number; groq_cooldown_until: string | null;
   processing_started_at: string | null;
   error: string | null; transcript_version: number; created_at: string; updated_at: string;
 };
+
+type PayloadRow = {
+  raw_english_transcript: string;
+  english_transcript: string;
+  greek_transcript: string;
+  timestamps: string;
+};
+
+function parseArray<T>(value: string | null | undefined): T[] {
+  try {
+    const parsed = JSON.parse(value || "[]") as unknown;
+    return Array.isArray(parsed) ? parsed as T[] : [];
+  } catch {
+    return [];
+  }
+}
+
+function checkpointMatchesRow(checkpoint: TranscriptCheckpointPayload | null, row: Row) {
+  return Boolean(checkpoint &&
+    checkpoint.status === row.status &&
+    checkpoint.processingStage === (row.processing_stage || null) &&
+    checkpoint.processingCursor === (row.processing_cursor || 0));
+}
+
+async function payloadForRow(row: Row) {
+  const checkpoint = await readTranscriptCheckpoint(row.video_id, row.transcript_version);
+  if (checkpointMatchesRow(checkpoint, row) && checkpoint) return checkpoint;
+
+  // Migration/fallback path: only when Blob is missing or behind the durable
+  // Neon cursor do we transfer the large TEXT columns. The result is immediately
+  // published so subsequent processing reads stay off Neon.
+  const db = database();
+  const rows = await db.query(
+    `SELECT raw_english_transcript, english_transcript, greek_transcript, timestamps
+     FROM video_transcripts WHERE video_id = $1 LIMIT 1`,
+    [row.video_id],
+  ) as PayloadRow[];
+  const payloadRow = rows[0];
+  if (!payloadRow) return null;
+
+  const snapshot: TranscriptCheckpointPayload = {
+    videoId: row.video_id,
+    transcriptVersion: row.transcript_version,
+    status: row.status,
+    processingStage: row.processing_stage || null,
+    processingCursor: row.processing_cursor || 0,
+    rawEnglishTranscript: parseArray<CachedCue>(payloadRow.raw_english_transcript),
+    englishTranscript: parseArray<CachedCue>(payloadRow.english_transcript),
+    greekTranscript: parseArray<CachedCue>(payloadRow.greek_transcript),
+    timestamps: parseArray<{ start: number; duration: number }>(payloadRow.timestamps),
+    updatedAt: row.updated_at,
+  };
+  await publishTranscriptCheckpoint(row.video_id, row.transcript_version, snapshot);
+  return snapshot;
+}
 
 function normalizeReadyTranscriptOrder(
   greekTranscript: CachedCue[],
@@ -128,12 +188,23 @@ function normalizeReadyTranscriptOrder(
 export async function getTranscript(videoId: string) {
   await ensureTranscriptTable();
   const db = database();
-  const rows = await db.query("SELECT * FROM video_transcripts WHERE video_id = $1 LIMIT 1", [videoId]) as Row[];
+  const rows = await db.query(
+    `SELECT video_id, title, channel, thumbnail, duration, original_language,
+      topics, key_points, status, progress, lock_expires_at, processing_stage,
+      processing_cursor, retry_count, retry_after, groq_429_streak,
+      groq_cooldown_until, processing_started_at, error, transcript_version,
+      created_at, updated_at
+     FROM video_transcripts WHERE video_id = $1 LIMIT 1`,
+    [videoId],
+  ) as Row[];
   const row = rows[0];
   if (!row) return null;
-  const storedGreekTranscript = JSON.parse(row.greek_transcript || "[]") as CachedCue[];
-  const storedEnglishTranscript = JSON.parse(row.english_transcript || "[]") as CachedCue[];
-  const storedTimestamps = JSON.parse(row.timestamps || "[]") as { start: number; duration: number }[];
+
+  const payload = await payloadForRow(row);
+  if (!payload) return null;
+  const storedGreekTranscript = payload.greekTranscript as CachedCue[];
+  const storedEnglishTranscript = payload.englishTranscript as CachedCue[];
+  const storedTimestamps = payload.timestamps as { start: number; duration: number }[];
   const hasReadyGreekTranslation = row.status === "ready" && storedGreekTranscript.length > 0;
   const readyOrder = hasReadyGreekTranslation
     ? normalizeReadyTranscriptOrder(storedGreekTranscript, storedEnglishTranscript, storedTimestamps)
@@ -148,12 +219,12 @@ export async function getTranscript(videoId: string) {
     thumbnail: row.thumbnail,
     duration: row.duration,
     originalLanguage: row.original_language,
-    rawEnglishTranscript: JSON.parse(row.raw_english_transcript || "[]"),
+    rawEnglishTranscript: payload.rawEnglishTranscript as CachedCue[],
     englishTranscript,
     greekTranscript,
     timestamps,
-    topics: JSON.parse(row.topics || "[]"),
-    keyPoints: JSON.parse(row.key_points || "[]"),
+    topics: parseArray<string>(row.topics),
+    keyPoints: parseArray<string>(row.key_points),
     status: row.status,
     progress: row.progress,
     lockExpiresAt: row.lock_expires_at,
@@ -256,7 +327,7 @@ export async function getTranscriptStatus(videoId: string): Promise<TranscriptSt
     rawEnglishCount: Number(row.raw_english_count) || 0,
     englishCount: Number(row.english_count) || 0,
     greekCount,
-    keyPoints: JSON.parse(row.key_points || "[]") as string[],
+    keyPoints: parseArray<string>(row.key_points),
   };
 }
 
@@ -323,6 +394,20 @@ export async function completeTranscript(record: TranscriptRecord, token: string
       JSON.stringify(record.timestamps), JSON.stringify(record.topics), JSON.stringify(record.keyPoints),
       record.transcriptVersion, record.updatedAt, record.videoId, token],
   ) as { video_id: string }[];
+  if (rows.length === 1) {
+    await publishTranscriptCheckpoint(record.videoId, record.transcriptVersion, {
+      videoId: record.videoId,
+      transcriptVersion: record.transcriptVersion,
+      status: "ready",
+      processingStage: null,
+      processingCursor: 0,
+      rawEnglishTranscript: record.rawEnglishTranscript,
+      englishTranscript: record.englishTranscript,
+      greekTranscript: record.greekTranscript,
+      timestamps: record.timestamps,
+      updatedAt: record.updatedAt,
+    });
+  }
   return rows.length === 1;
 }
 
@@ -338,6 +423,21 @@ export type ProcessingCheckpoint = {
   duration?: number;
   originalLanguage?: string;
 };
+
+function baseCheckpointStage(stage: string) {
+  return stage.endsWith("_google") ? stage.slice(0, -7) : stage;
+}
+
+function shouldSyncCheckpointBlob(checkpoint: ProcessingCheckpoint) {
+  const hasPayload = checkpoint.rawEnglishTranscript !== undefined ||
+    checkpoint.englishTranscript !== undefined || checkpoint.greekTranscript !== undefined;
+  if (!hasPayload) return false;
+  if (checkpoint.rawEnglishTranscript !== undefined) return true;
+  const stage = baseCheckpointStage(checkpoint.stage);
+  if (stage === "repair" || stage === "source_el_finalize" || stage === "finalize") return true;
+  if (stage === "translate") return checkpoint.progress >= 90 || checkpoint.cursor % 24 === 0;
+  return false;
+}
 
 export async function saveProcessingCheckpoint(videoId: string, token: string, checkpoint: ProcessingCheckpoint) {
   const db = database();
@@ -360,6 +460,19 @@ export async function saveProcessingCheckpoint(videoId: string, token: string, c
       checkpoint.title ?? null, checkpoint.channel ?? null, checkpoint.duration ?? null, checkpoint.originalLanguage ?? null,
       now, new Date(Date.now()+180_000).toISOString(), videoId, token],
   ) as { video_id: string }[];
+
+  if (rows.length === 1 && shouldSyncCheckpointBlob(checkpoint)) {
+    const patch: Partial<Omit<TranscriptCheckpointPayload, "videoId" | "transcriptVersion">> = {
+      status: "processing",
+      processingStage: checkpoint.stage,
+      processingCursor: checkpoint.cursor,
+      updatedAt: now,
+    };
+    if (checkpoint.rawEnglishTranscript !== undefined) patch.rawEnglishTranscript = checkpoint.rawEnglishTranscript;
+    if (checkpoint.englishTranscript !== undefined) patch.englishTranscript = checkpoint.englishTranscript;
+    if (checkpoint.greekTranscript !== undefined) patch.greekTranscript = checkpoint.greekTranscript;
+    await mergeTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, patch);
+  }
   return rows.length === 1;
 }
 
@@ -375,6 +488,18 @@ export async function resetProcessingForTranslation(videoId: string, token: stri
      RETURNING video_id`,
     [keepRaw ? 28 : 3, keepRaw ? 'repair' : 'source', keepRaw ? 1 : 0, now, videoId, token],
   ) as { video_id: string }[];
+  if (rows.length === 1) {
+    await mergeTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, {
+      status: "processing",
+      processingStage: keepRaw ? "repair" : "source",
+      processingCursor: 0,
+      ...(keepRaw ? {} : { rawEnglishTranscript: [] }),
+      englishTranscript: [],
+      greekTranscript: [],
+      timestamps: [],
+      updatedAt: now,
+    });
+  }
   return rows.length === 1;
 }
 
@@ -436,6 +561,9 @@ export async function recordTransientProcessingFailure(videoId: string, token: s
      RETURNING status, retry_count, retry_after`,
     [retryAfter, message.slice(0, 500), now.toISOString(), MAX_TRANSIENT_RETRIES, videoId, token],
   ) as { status: TranscriptRecord["status"]; retry_count: number; retry_after: string | null }[];
+  if (rows[0]?.status === "failed") {
+    await mergeTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, { status: "failed", updatedAt: now.toISOString() });
+  }
   return rows[0] || null;
 }
 
@@ -462,10 +590,15 @@ export async function recordRecoverableProcessingFailure(
 
 export async function failTranscript(videoId: string, token: string, message: string) {
   const db = database();
-  await db.query(
+  const now = new Date().toISOString();
+  const rows = await db.query(
     `UPDATE video_transcripts SET status = 'failed', error = $1,
       lock_token = NULL, lock_expires_at = NULL, updated_at = $2
-     WHERE video_id = $3 AND lock_token = $4`,
-    [message.slice(0, 500), new Date().toISOString(), videoId, token],
-  );
+     WHERE video_id = $3 AND lock_token = $4
+     RETURNING video_id`,
+    [message.slice(0, 500), now, videoId, token],
+  ) as { video_id: string }[];
+  if (rows.length === 1) {
+    await mergeTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, { status: "failed", updatedAt: now });
+  }
 }
