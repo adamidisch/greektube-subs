@@ -1,4 +1,5 @@
 import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../../shared-cache";
+import { CanonicalImportSourceError, canonicalEnglishForImport } from "../canonical-source";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "../parser";
 
 const ADMIN_COOKIE = "greektube-admin";
@@ -11,7 +12,6 @@ type ImportBody = {
   channel?: unknown;
   duration?: unknown;
   subtitleText?: unknown;
-  sourceSubtitleText?: unknown;
 };
 
 type ProgressUpdate = {
@@ -75,7 +75,7 @@ function failure(error: unknown) {
   return {
     type: "error",
     error: error instanceof Error ? error.message : "Η εισαγωγή της μετάφρασης απέτυχε.",
-    status: error instanceof ManualImportError ? error.status : 500,
+    status: error instanceof ManualImportError || error instanceof CanonicalImportSourceError ? error.status : 500,
   };
 }
 
@@ -100,7 +100,6 @@ export async function POST(request: Request) {
         try {
           if (typeof body.url !== "string" || typeof body.subtitleText !== "string") throw new ManualImportError("Λείπει το βίντεο ή το κείμενο υποτίτλων.");
           if (body.subtitleText.length > 2_000_000) throw new ManualImportError("Το αρχείο υποτίτλων είναι υπερβολικά μεγάλο.", 413);
-          if (typeof body.sourceSubtitleText === "string" && body.sourceSubtitleText.length > 2_000_000) throw new ManualImportError("Το αγγλικό αρχείο υποτίτλων είναι υπερβολικά μεγάλο.", 413);
           videoId = videoIdFrom(body.url);
           if (!videoId) throw new ManualImportError("Δεν αναγνωρίζω αυτό το YouTube link.");
 
@@ -113,19 +112,11 @@ export async function POST(request: Request) {
           if (greekRatio(combined) < 0.2) throw new ManualImportError("Το SRT δεν φαίνεται να περιέχει ελληνικό κείμενο. Έλεγξε ότι ανέβασες τη μεταφρασμένη έκδοση.");
           if (!hasValidManualCueTimings(cues)) throw new ManualImportError("Το αρχείο περιέχει μη έγκυρα timestamps.");
 
-          report({ progress: 34, label: "Φόρτωση αγγλικού πρωτοτύπου", detail: "Ανακτούμε το αρχικό transcript για ακριβή σύγκριση.", currentCue: 0, totalCues: cues.length });
+          report({ progress: 34, label: "Φόρτωση canonical αγγλικού source", detail: "Ανακτούμε το server-side πρωτότυπο και επαληθεύουμε version, cue count και source hash.", currentCue: 0, totalCues: cues.length });
           const existing = await getTranscript(videoId);
-          const hasSuppliedEnglish = typeof body.sourceSubtitleText === "string" && Boolean(body.sourceSubtitleText.trim());
-          const suppliedEnglish = hasSuppliedEnglish
-            ? parseManualSubtitleText(body.sourceSubtitleText as string)
-            : [];
-          if (hasSuppliedEnglish && !suppliedEnglish.length) throw new ManualImportError("Το αγγλικό SRT δεν μπόρεσε να διαβαστεί.");
-          if (suppliedEnglish.length && !hasValidManualCueTimings(suppliedEnglish)) throw new ManualImportError("Το αγγλικό SRT περιέχει μη έγκυρα timestamps.");
-          const existingEnglish = (suppliedEnglish.length
-            ? suppliedEnglish
-            : existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];
-          if (!existingEnglish.length) throw new ManualImportError("Δεν υπάρχει αγγλικό transcript για σύγκριση. Κάνε πρώτα λήψη του αγγλικού SRT από αυτή την οθόνη.", 409);
-          if (cues.length !== existingEnglish.length) throw new ManualImportError(`Ο αριθμός των υποτίτλων δεν ταιριάζει: το ελληνικό SRT έχει ${cues.length} cues, το αγγλικό έχει ${existingEnglish.length}. Μην προσθέσεις, αφαιρέσεις ή ενώσεις γραμμές — μετάφρασε γραμμή προς γραμμή.`);
+          const canonical = await canonicalEnglishForImport(videoId);
+          const existingEnglish = canonical.cues;
+          if (cues.length !== existingEnglish.length) throw new ManualImportError(`Ο αριθμός των υποτίτλων δεν ταιριάζει: το ελληνικό SRT έχει ${cues.length} cues, το canonical αγγλικό έχει ${existingEnglish.length}. Μην προσθέσεις, αφαιρέσεις ή ενώσεις γραμμές — μετάφρασε γραμμή προς γραμμή.`);
 
           const tolerance = 0.002;
           const reportEvery = Math.max(1, Math.floor(cues.length / 60));
@@ -133,21 +124,21 @@ export async function POST(request: Request) {
             const greekCue = cues[index];
             const englishCue = existingEnglish[index];
             if (Math.abs(greekCue.start - englishCue.start) > tolerance || Math.abs(greekCue.duration - englishCue.duration) > tolerance) {
-              throw new ManualImportError(`Το cue #${index + 1} έχει διαφορετικό timestamp από το αγγλικό πρωτότυπο. Μην αλλάξεις ή αναδιατάξεις τα timestamps — κράτησέ τα ακριβώς όπως στο κατεβασμένο SRT.`);
+              throw new ManualImportError(`Το cue #${index + 1} έχει διαφορετικό timestamp από το canonical αγγλικό source. Μην αλλάξεις ή αναδιατάξεις τα timestamps.`);
             }
             if (index === cues.length - 1 || index % reportEvery === 0) {
               const completed = index + 1;
               report({
                 progress: 40 + (completed / cues.length) * 40,
                 label: "Σύγκριση cues και timestamps",
-                detail: "Επιβεβαιώνουμε ένα προς ένα ότι η αρίθμηση και οι χρονισμοί δεν άλλαξαν.",
+                detail: "Επιβεβαιώνουμε ένα προς ένα ότι η αρίθμηση και οι χρονισμοί ταιριάζουν με το επαληθευμένο server source.",
                 currentCue: completed,
                 totalCues: cues.length,
               });
             }
           }
 
-          report({ progress: 84, label: "Προετοιμασία αποθήκευσης", detail: "Όλοι οι έλεγχοι πέρασαν. Κλειδώνουμε την ασφαλή εγγραφή.", currentCue: cues.length, totalCues: cues.length });
+          report({ progress: 84, label: "Προετοιμασία αποθήκευσης", detail: "Το canonical source και όλα τα timestamps επαληθεύτηκαν. Κλειδώνουμε την ασφαλή εγγραφή.", currentCue: cues.length, totalCues: cues.length });
           lockToken = crypto.randomUUID();
           if (!await acquireProcessingLock(videoId, lockToken, true)) throw new ManualImportError("Το βίντεο επεξεργάζεται ήδη. Δοκίμασε ξανά σε λίγο.", 409);
 
@@ -160,7 +151,7 @@ export async function POST(request: Request) {
           const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : (existing?.title || "YouTube video");
           const channel = typeof body.channel === "string" && body.channel.trim() ? body.channel.trim() : (existing?.channel || "YouTube");
 
-          report({ progress: 91, label: "Αποθήκευση ελληνικών υποτίτλων", detail: "Γράφουμε το ελεγμένο SRT στη βιβλιοθήκη.", currentCue: cues.length, totalCues: cues.length });
+          report({ progress: 91, label: "Αποθήκευση ελληνικών υποτίτλων", detail: "Γράφουμε μόνο το ελεγμένο ελληνικό SRT μαζί με το canonical English alignment.", currentCue: cues.length, totalCues: cues.length });
           const record = {
             videoId,
             title,
@@ -168,7 +159,7 @@ export async function POST(request: Request) {
             thumbnail: existing?.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
             duration,
             originalLanguage: "en",
-            rawEnglishTranscript: suppliedEnglish.length ? suppliedEnglish : existing?.rawEnglishTranscript || existingEnglish,
+            rawEnglishTranscript: existing?.rawEnglishTranscript?.length ? existing.rawEnglishTranscript : existingEnglish,
             englishTranscript: alignedEnglish,
             greekTranscript: cues,
             timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
@@ -192,7 +183,7 @@ export async function POST(request: Request) {
               originalTitle: typeof body.originalTitle === "string" ? body.originalTitle : "",
               channel, duration, sourceLanguage: "en", cues, englishCues: alignedEnglish,
               keyPoints: points, topics: record.topics, transcriptVersion: TRANSCRIPT_VERSION,
-              translationMethod: "manual_chatgpt_pro_v1", cached: false,
+              translationMethod: "manual_chatgpt_pro_v1", sourceHash: canonical.sourceHash, cached: false,
             },
           });
         } catch (error) {
