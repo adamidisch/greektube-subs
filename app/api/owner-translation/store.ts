@@ -277,10 +277,10 @@ async function releaseFreezeLease(videoId: string, token: string) {
   );
 }
 
-export async function freezeOwnerSource(videoId: string) {
+export async function freezeOwnerSource(videoId: string, newRevision = false) {
   await ensureOwnerTranslationTable();
   const existingManifest = await getOwnerTranslationManifest(videoId);
-  if (existingManifest) return { manifest: existingManifest, created: false };
+  if (existingManifest && !newRevision) return { manifest: existingManifest, created: false };
 
   const token = crypto.randomUUID();
   if (!await claimFreezeLease(videoId, token)) throw new Error("Το βίντεο επεξεργάζεται αυτή τη στιγμή. Περίμενε να ολοκληρωθεί το τρέχον processing slice και ξαναπάτησε Freeze Source.");
@@ -293,7 +293,7 @@ export async function freezeOwnerSource(videoId: string) {
     const cues = source as CachedCue[];
     const sourceHash = ownerSourceHash(cues);
     const timestampHash = ownerTimestampHash(cues);
-    const revision = 1;
+    const revision = existingManifest ? existingManifest.revision + 1 : 1;
     const now = new Date().toISOString();
     const pathname = sourcePath(videoId, revision, sourceHash);
     const payload: SourcePayload = { videoId, revision, transcriptVersion: TRANSCRIPT_VERSION, cueCount: cues.length, sourceHash, timestampHash, cues, createdAt: now };

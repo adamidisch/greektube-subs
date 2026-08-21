@@ -129,6 +129,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
           <a className="gts-owner-button" href={`/api/owner-translation?videoId=${encodeURIComponent(videoId)}&download=package`}>Translation Package</a>
           {canValidate && <><button className="gts-owner-button" disabled={Boolean(busy)} onClick={() => fileRef.current?.click()}>{busy === "validate" ? "Validating…" : "Import Greek SRT"}</button><input ref={fileRef} hidden type="file" accept=".srt,.vtt,text/plain" onChange={event => { const file = event.target.files?.[0]; if (file) void validateFile(file); }}/></>}
           {canPublish && <button className="gts-owner-primary" disabled={Boolean(busy)} onClick={() => void action("publish")}>{busy === "publish" ? "Publishing…" : "Publish"}</button>}
+          {manifest.status === "published" && <button className="gts-owner-button" disabled={Boolean(busy)} onClick={() => void action("freeze", { newRevision: true })}>{busy === "freeze" ? "Creating…" : "New Revision"}</button>}
         </div>
       </>}
 

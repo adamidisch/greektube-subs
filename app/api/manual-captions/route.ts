@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../shared-cache";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "./parser";
+import { isOwnerChatgptVideo } from "../captions/owner-mode";
 
 const ADMIN_COOKIE = "greektube-admin";
 const SESSION_MESSAGE = "greektube-edit-authorized";
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
     if (typeof body.sourceSubtitleText === "string" && body.sourceSubtitleText.length > 2_000_000) return NextResponse.json({ error: "Το αγγλικό αρχείο υποτίτλων είναι υπερβολικά μεγάλο." }, { status: 413 });
     videoId = videoIdFrom(body.url);
     if (!videoId) return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
+    if (await isOwnerChatgptVideo(videoId)) return NextResponse.json({ error: "Το βίντεο είναι owner-locked. Χρησιμοποίησε το Owner Translation panel του Video Editor." }, { status: 409 });
     const strict = body.strict === true;
 
     const cues = parseManualSubtitleText(body.subtitleText);

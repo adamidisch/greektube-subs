@@ -1,5 +1,6 @@
 import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../../shared-cache";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "../parser";
+import { isOwnerChatgptVideo } from "../../captions/owner-mode";
 
 const ADMIN_COOKIE = "greektube-admin";
 const SESSION_MESSAGE = "greektube-edit-authorized";
@@ -103,6 +104,7 @@ export async function POST(request: Request) {
           if (typeof body.sourceSubtitleText === "string" && body.sourceSubtitleText.length > 2_000_000) throw new ManualImportError("Το αγγλικό αρχείο υποτίτλων είναι υπερβολικά μεγάλο.", 413);
           videoId = videoIdFrom(body.url);
           if (!videoId) throw new ManualImportError("Δεν αναγνωρίζω αυτό το YouTube link.");
+          if (await isOwnerChatgptVideo(videoId)) throw new ManualImportError("Το βίντεο είναι owner-locked. Χρησιμοποίησε το Owner Translation panel του Video Editor.", 409);
 
           report({ progress: 12, label: "Ανάλυση ελληνικού SRT", detail: "Ελέγχουμε τη μορφή και τους χρονισμούς του αρχείου." });
           const cues = parseManualSubtitleText(body.subtitleText);

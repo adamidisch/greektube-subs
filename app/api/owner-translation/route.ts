@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   if (!await verifyAdminSession(request)) return NextResponse.json({ error: "Απαιτείται admin authorization." }, { status: 401 });
-  let body: { action?: unknown; videoId?: unknown; subtitleText?: unknown };
+  let body: { action?: unknown; videoId?: unknown; subtitleText?: unknown; newRevision?: unknown };
   try {
     body = await request.json() as typeof body;
   } catch {
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
   try {
     if (action === "freeze") {
-      const result = await freezeOwnerSource(videoId);
+      const result = await freezeOwnerSource(videoId, body.newRevision === true);
       return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
     }
     if (action === "validate") {
