@@ -1,0 +1,45 @@
+name: temp-owner-final-safety
+on:
+  push:
+    branches: [feature/generic-owner-translation]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/generic-owner-translation
+      - name: Apply final owner publish guards
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/api/owner-translation/store.ts')
+          text = p.read_text()
+          old = '    const duration = Math.max(existing.duration || 0, ...greek.map(cue => cue.start + cue.duration));'
+          new = '    const duration = greek.reduce((max, cue) => Math.max(max, cue.start + cue.duration), existing.duration || 0);'
+          assert text.count(old) == 1, f'duration target={text.count(old)}'
+          text = text.replace(old, new)
+
+          old = '''  await db.query(\n    `UPDATE owner_translation_manifests SET greek_draft_blob_path=$1,greek_draft_hash=$2,status='validated',validation_json=$3,validated_at=$4,updated_at=$4\n     WHERE video_id=$5 AND revision=$6 AND source_hash=$7 AND status!='published'`,\n    [path, greekHash, JSON.stringify(validation), now, videoId, manifest.revision, manifest.sourceHash],\n  );\n  const updated = await getOwnerTranslationManifest(videoId);'''
+          new = '''  const validationRows = await db.query(\n    `UPDATE owner_translation_manifests SET greek_draft_blob_path=$1,greek_draft_hash=$2,status='validated',validation_json=$3,validated_at=$4,updated_at=$4\n     WHERE video_id=$5 AND revision=$6 AND source_hash=$7 AND status!='published' RETURNING video_id`,\n    [path, greekHash, JSON.stringify(validation), now, videoId, manifest.revision, manifest.sourceHash],\n  ) as { video_id: string }[];\n  if (validationRows.length !== 1) throw new Error("Το validated draft δεν μπόρεσε να δεθεί με το active owner manifest.");\n  const updated = await getOwnerTranslationManifest(videoId);'''
+          assert text.count(old) == 1, f'validation update target={text.count(old)}'
+          text = text.replace(old, new)
+
+          old = '''    await db.query(\n      `UPDATE owner_translation_manifests SET status='published',published_at=$1,updated_at=$1\n       WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='validated'`,\n      [now, videoId, manifest.revision, manifest.sourceHash],\n    );\n    const updated = await getOwnerTranslationManifest(videoId);\n    return { manifest: updated || manifest, alreadyPublished: false };'''
+          new = '''    const publishedRows = await db.query(\n      `UPDATE owner_translation_manifests SET status='published',published_at=$1,updated_at=$1\n       WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='validated' RETURNING video_id`,\n      [now, videoId, manifest.revision, manifest.sourceHash],\n    ) as { video_id: string }[];\n    if (publishedRows.length !== 1) throw new Error("Το final owner manifest transition δεν ολοκληρώθηκε.");\n    const updated = await getOwnerTranslationManifest(videoId);\n    if (!updated || updated.revision !== manifest.revision || updated.status !== "published") throw new Error("Το published owner manifest δεν επιβεβαιώθηκε.");\n    return { manifest: updated, alreadyPublished: false };'''
+          assert text.count(old) == 1, f'publish update target={text.count(old)}'
+          text = text.replace(old, new)
+          p.write_text(text)
+          Path('.github/workflows/temp-owner-final-safety.yml').unlink()
+          PY
+      - name: Commit and self-delete
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app/api/owner-translation/store.ts .github/workflows/temp-owner-final-safety.yml
+          git diff --cached --check
+          git commit -m "Finalize owner translation publish guards"
+          git push origin HEAD:feature/generic-owner-translation
