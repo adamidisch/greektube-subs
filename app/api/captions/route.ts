@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     return semanticPOST(clonePostRequest(request, rawBody));
   }
 
-  if (body.force !== true && typeof body.url === "string") {
+  if (typeof body.url === "string") {
     const videoId = extractVideoId(body.url);
     if (videoId && await isOwnerChatgptVideo(videoId)) {
       const status = await getTranscriptStatus(videoId);
