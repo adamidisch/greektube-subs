@@ -41,6 +41,9 @@ export type OwnerValidation = {
   expectedCueCount: number;
   timestampMismatches: number;
   numericMismatches: number;
+  missingCues: number;
+  extraCues: number;
+  duplicateCues: number;
   emptyCues: number;
   greekRatio: number;
   sourceHash: string;
@@ -361,6 +364,21 @@ export async function validateOwnerGreek(videoId: string, subtitleText: string) 
   let timestampMismatches = 0;
   let numericMismatches = 0;
   let emptyCues = 0;
+  const missingCues = Math.max(0, manifest.cueCount - cues.length);
+  const extraCues = Math.max(0, cues.length - manifest.cueCount);
+  const allowedTimestampCounts = new Map<string, number>();
+  for (const cue of source) {
+    const key = `${cue.start.toFixed(3)}|${cue.duration.toFixed(3)}`;
+    allowedTimestampCounts.set(key, (allowedTimestampCounts.get(key) || 0) + 1);
+  }
+  const seenTimestampCounts = new Map<string, number>();
+  let duplicateCues = 0;
+  for (const cue of cues) {
+    const key = `${cue.start.toFixed(3)}|${cue.duration.toFixed(3)}`;
+    const seen = (seenTimestampCounts.get(key) || 0) + 1;
+    seenTimestampCounts.set(key, seen);
+    if (seen > Math.max(1, allowedTimestampCounts.get(key) || 0)) duplicateCues += 1;
+  }
   for (let index = 0; index < Math.min(cues.length, source.length); index += 1) {
     const target = cues[index];
     const original = source[index];
@@ -370,11 +388,14 @@ export async function validateOwnerGreek(videoId: string, subtitleText: string) 
   }
   const ratio = greekRatio(cues);
   const validation: OwnerValidation = {
-    ok: cues.length === manifest.cueCount && timestampMismatches === 0 && numericMismatches === 0 && emptyCues === 0 && ratio >= 0.2,
+    ok: cues.length === manifest.cueCount && timestampMismatches === 0 && numericMismatches === 0 && missingCues === 0 && extraCues === 0 && duplicateCues === 0 && emptyCues === 0 && ratio >= 0.2,
     cueCount: cues.length,
     expectedCueCount: manifest.cueCount,
     timestampMismatches,
     numericMismatches,
+    missingCues,
+    extraCues,
+    duplicateCues,
     emptyCues,
     greekRatio: ratio,
     sourceHash: manifest.sourceHash,

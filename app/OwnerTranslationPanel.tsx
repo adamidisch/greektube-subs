@@ -8,6 +8,9 @@ type Validation = {
   expectedCueCount: number;
   timestampMismatches: number;
   numericMismatches: number;
+  missingCues: number;
+  extraCues: number;
+  duplicateCues: number;
   emptyCues: number;
   greekRatio: number;
   sourceHash: string;
@@ -128,7 +131,8 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
           <div><small>SOURCE HASH</small><b title={manifest.sourceHash}>{shortHash(manifest.sourceHash)}</b></div>
         </div>
         <div className="gts-owner-actions">
-          <a className="gts-owner-button" href={`/api/owner-translation?videoId=${encodeURIComponent(videoId)}&download=package`}>Translation Package</a>
+          <a className="gts-owner-button" href={`/api/owner-translation?videoId=${encodeURIComponent(videoId)}&download=srt`}>English SRT</a>
+          <a className="gts-owner-button" href={`/api/owner-translation?videoId=${encodeURIComponent(videoId)}&download=package`}>Manifest Package</a>
           {canValidate && <><button className="gts-owner-button" disabled={Boolean(busy)} onClick={() => fileRef.current?.click()}>{busy === "validate" ? "Validating…" : "Import Greek SRT"}</button><input ref={fileRef} hidden type="file" accept=".srt,.vtt,text/plain" onChange={event => { const file = event.target.files?.[0]; if (file) void validateFile(file); }}/></>}
           {canPublish && <button className="gts-owner-primary" disabled={Boolean(busy)} onClick={() => void action("publish")}>{busy === "publish" ? "Publishing…" : "Publish"}</button>}
           {manifest.status === "published" && <button className="gts-owner-button" disabled={Boolean(busy)} onClick={() => void action("freeze", { newRevision: true })}>{busy === "freeze" ? "Creating…" : "New Revision"}</button>}
@@ -142,6 +146,9 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
           <div><span>Canonical source</span><b>✓</b></div>
           <div><span>Cues</span><b>{check.cueCount}/{check.expectedCueCount}</b></div>
           <div><span>Timestamps</span><b>{check.timestampMismatches === 0 ? "✓" : check.timestampMismatches}</b></div>
+          <div><span>Missing cues</span><b>{check.missingCues}</b></div>
+          <div><span>Extra cues</span><b>{check.extraCues}</b></div>
+          <div><span>Duplicate cues</span><b>{check.duplicateCues}</b></div>
           <div><span>Numeric mismatches</span><b>{check.numericMismatches}</b></div>
           <div><span>Empty cues</span><b>{check.emptyCues}</b></div>
         </div>;
