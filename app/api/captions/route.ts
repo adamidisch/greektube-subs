@@ -15,6 +15,7 @@ import {
   getTranscriptStatus,
   recordGroqProviderSuccess,
   recordGroqRateLimit,
+  recordProviderRateLimitWait,
   recordRecoverableProcessingFailure,
   releaseProcessingLock,
   saveProcessingCheckpoint,
@@ -25,6 +26,7 @@ import {
 const GROQ_MODEL = "openai/gpt-oss-120b";
 const TRANSLATION_BATCH = 12;
 const LOCAL_CONTEXT = 8;
+const AUTO_TRANSLATION_MODE = "auto-groq-contextual";
 
 type TranslationRequestBody = {
   url?: unknown;
@@ -70,6 +72,14 @@ function clonePostRequest(request: Request, rawBody: string) {
     headers: request.headers,
     body: rawBody,
   });
+}
+
+function autoHeaders(retryAfter: number | string) {
+  return {
+    "Retry-After": String(retryAfter),
+    "X-GreekTube-Translation": "understanding-first",
+    "X-GreekTube-Translation-Mode": AUTO_TRANSLATION_MODE,
+  };
 }
 
 function processingStatusPayload(record: Awaited<ReturnType<typeof getTranscriptStatus>>) {
@@ -279,14 +289,14 @@ export async function POST(request: Request) {
     const retrySeconds = current.retryAfter
       ? Math.max(1, Math.ceil((new Date(current.retryAfter).getTime() - Date.now()) / 1000))
       : 1;
-    return NextResponse.json(processingStatusPayload(status), { status: 202, headers: { "Retry-After": String(retrySeconds), "X-GreekTube-Translation": "understanding-first" } });
+    return NextResponse.json(processingStatusPayload(status), { status: 202, headers: autoHeaders(retrySeconds) });
   }
 
   const token = crypto.randomUUID();
   const acquired = await acquireProcessingLock(videoId, token, false);
   if (!acquired) {
     const status = await getTranscriptStatus(videoId);
-    return NextResponse.json(processingStatusPayload(status), { status: 202, headers: { "Retry-After": "1", "X-GreekTube-Translation": "understanding-first" } });
+    return NextResponse.json(processingStatusPayload(status), { status: 202, headers: autoHeaders(1) });
   }
 
   let ownsLock = true;
@@ -337,15 +347,29 @@ export async function POST(request: Request) {
     const status = await getTranscriptStatus(videoId);
     return NextResponse.json(processingStatusPayload(status), {
       status: 202,
-      headers: { "Retry-After": "1", "X-GreekTube-Translation": "understanding-first" },
+      headers: autoHeaders(1),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Understanding-first translation failed";
     const retryAfter = error instanceof GroqTranslationError ? error.retryAfterSeconds : /429/i.test(message) ? 30 : 8;
+    const isRateLimit = /429/i.test(message);
     console.error("[captions:understanding-first-failed]", JSON.stringify({ videoId, message }));
 
     if (ownsLock) {
-      if (/429/i.test(message)) await recordGroqRateLimit(videoId, token, retryAfter).catch(() => null);
+      if (isRateLimit) {
+        await recordGroqRateLimit(videoId, token, retryAfter).catch(() => null);
+        const retry = await recordProviderRateLimitWait(videoId, token, message, retryAfter).catch(() => null);
+        ownsLock = false;
+        const status = await getTranscriptStatus(videoId).catch(() => null);
+        if (retry?.status === "processing") {
+          return NextResponse.json({ ...processingStatusPayload(status), transientError: message }, {
+            status: 202,
+            headers: autoHeaders(retryAfter),
+          });
+        }
+        return NextResponse.json({ error: message, providerRateLimit: true }, { status: 502, headers: autoHeaders(retryAfter) });
+      }
+
       if ((current?.retryCount || 0) >= MAX_TRANSIENT_RETRIES - 1) {
         await failTranscript(videoId, token, message).catch(() => undefined);
         ownsLock = false;
@@ -357,7 +381,7 @@ export async function POST(request: Request) {
       if (retry?.status === "processing") {
         return NextResponse.json({ ...processingStatusPayload(status), transientError: message }, {
           status: 202,
-          headers: { "Retry-After": String(retryAfter), "X-GreekTube-Translation": "understanding-first" },
+          headers: autoHeaders(retryAfter),
         });
       }
     }

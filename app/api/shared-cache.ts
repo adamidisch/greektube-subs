@@ -492,7 +492,7 @@ export async function releaseProcessingLock(videoId: string, token: string) {
 
 export async function recordGroqRateLimit(videoId: string, token: string, retryAfterSeconds?: number) {
   const db = database();
-  const cooldownSeconds = Math.max(20, Math.min(120, Math.ceil(retryAfterSeconds || 30)));
+  const cooldownSeconds = Math.max(20, Math.min(86_400, Math.ceil(retryAfterSeconds || 30)));
   const cooldownUntil = new Date(Date.now() + cooldownSeconds * 1_000).toISOString();
   const rows = await db.query(
     `UPDATE video_transcripts SET groq_429_streak=groq_429_streak+1,
@@ -500,6 +500,20 @@ export async function recordGroqRateLimit(videoId: string, token: string, retryA
       updated_at=$2, lock_expires_at=$3 WHERE video_id=$4 AND lock_token=$5 RETURNING groq_429_streak, groq_cooldown_until`,
     [cooldownUntil, new Date().toISOString(), new Date(Date.now()+180_000).toISOString(), videoId, token],
   ) as { groq_429_streak: number; groq_cooldown_until: string | null }[];
+  return rows[0] || null;
+}
+
+export async function recordProviderRateLimitWait(videoId: string, token: string, message: string, retryAfterSeconds = 30) {
+  const db = database();
+  const now = new Date();
+  const delay = Math.max(2, Math.min(86_400, Math.ceil(retryAfterSeconds)));
+  const retryAfter = new Date(now.getTime() + delay * 1_000).toISOString();
+  const rows = await db.query(
+    `UPDATE video_transcripts SET retry_after=$1, error=$2,
+      lock_token=NULL, lock_expires_at=NULL, updated_at=$3, status='processing'
+     WHERE video_id=$4 AND lock_token=$5 RETURNING status, retry_count, retry_after`,
+    [retryAfter, message.slice(0,500), now.toISOString(), videoId, token],
+  ) as { status: TranscriptRecord["status"]; retry_count: number; retry_after: string | null }[];
   return rows[0] || null;
 }
 
