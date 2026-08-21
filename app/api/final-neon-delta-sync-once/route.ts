@@ -71,7 +71,7 @@ async function nativeHash(client: { query: (sql: string, params?: unknown[]) => 
   return (result.rows[0] as { hash: string; count: number } | undefined) ?? { hash: "", count: 0 };
 }
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   if (!previewOnly()) return new Response(null, { status: 404 });
   const url = new URL(request.url);
   if (url.searchParams.get("confirm") !== "final-sync") return new Response(null, { status: 404 });
