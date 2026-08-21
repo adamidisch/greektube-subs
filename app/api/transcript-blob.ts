@@ -16,6 +16,19 @@ type PublishedEnglish = {
   transcriptVersion?: unknown;
 };
 
+export type TranscriptCheckpointPayload = {
+  videoId: string;
+  transcriptVersion: number;
+  status: "processing" | "ready" | "failed";
+  processingStage: string | null;
+  processingCursor: number;
+  rawEnglishTranscript: unknown[];
+  englishTranscript: unknown[];
+  greekTranscript: unknown[];
+  timestamps: unknown[];
+  updatedAt: string;
+};
+
 function configured() {
   return Boolean(
     process.env.BLOB_READ_WRITE_TOKEN ||
@@ -35,6 +48,10 @@ function englishPathname(videoId: string, transcriptVersion: number) {
   return `transcripts/v${transcriptVersion}/english/${videoId}.json`;
 }
 
+function checkpointPathname(videoId: string, transcriptVersion: number) {
+  return `transcripts/v${transcriptVersion}/checkpoints/${videoId}.json`;
+}
+
 function validPayload(value: unknown, videoId: string, transcriptVersion: number): value is PublishedTranscript {
   if (!value || typeof value !== "object") return false;
   const payload = value as PublishedTranscript;
@@ -52,6 +69,20 @@ function validEnglish(value: unknown, videoId: string, transcriptVersion: number
     payload.transcriptVersion === transcriptVersion &&
     Array.isArray(payload.englishCues) &&
     payload.englishCues.length > 0;
+}
+
+function validCheckpoint(value: unknown, videoId: string, transcriptVersion: number): value is TranscriptCheckpointPayload {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as Partial<TranscriptCheckpointPayload>;
+  return payload.videoId === videoId &&
+    payload.transcriptVersion === transcriptVersion &&
+    (payload.status === "processing" || payload.status === "ready" || payload.status === "failed") &&
+    Number.isInteger(payload.processingCursor) &&
+    Array.isArray(payload.rawEnglishTranscript) &&
+    Array.isArray(payload.englishTranscript) &&
+    Array.isArray(payload.greekTranscript) &&
+    Array.isArray(payload.timestamps) &&
+    typeof payload.updatedAt === "string";
 }
 
 async function readJson(pathname: string) {
@@ -92,6 +123,60 @@ function greekOnly(payload: PublishedTranscript): PublishedTranscript {
 
 export function transcriptBlobConfigured() {
   return configured();
+}
+
+export async function readTranscriptCheckpoint(videoId: string, transcriptVersion: number) {
+  if (!configured()) return null;
+  try {
+    const value = await readJson(checkpointPathname(videoId, transcriptVersion));
+    return validCheckpoint(value, videoId, transcriptVersion) ? value : null;
+  } catch (error) {
+    console.warn("[transcript-blob:checkpoint-read-failed]", JSON.stringify({
+      videoId,
+      error: error instanceof Error ? error.message : "unknown",
+    }));
+    return null;
+  }
+}
+
+export async function publishTranscriptCheckpoint(
+  videoId: string,
+  transcriptVersion: number,
+  payload: TranscriptCheckpointPayload,
+) {
+  if (!configured() || !validCheckpoint(payload, videoId, transcriptVersion)) return false;
+  try {
+    await put(checkpointPathname(videoId, transcriptVersion), JSON.stringify(payload), {
+      access: "public" as const,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      cacheControlMaxAge: 60,
+      contentType: "application/json; charset=utf-8",
+    });
+    return true;
+  } catch (error) {
+    console.warn("[transcript-blob:checkpoint-publish-failed]", JSON.stringify({
+      videoId,
+      error: error instanceof Error ? error.message : "unknown",
+    }));
+    return false;
+  }
+}
+
+export async function mergeTranscriptCheckpoint(
+  videoId: string,
+  transcriptVersion: number,
+  patch: Partial<Omit<TranscriptCheckpointPayload, "videoId" | "transcriptVersion">>,
+) {
+  if (!configured()) return false;
+  const current = await readTranscriptCheckpoint(videoId, transcriptVersion);
+  if (!current) return false;
+  return publishTranscriptCheckpoint(videoId, transcriptVersion, {
+    ...current,
+    ...patch,
+    videoId,
+    transcriptVersion,
+  });
 }
 
 export async function readPublishedTranscript(videoId: string, transcriptVersion: number, includeEnglish = false) {
