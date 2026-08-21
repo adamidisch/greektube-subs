@@ -1,0 +1,1 @@
+Temporary fixed read-only reader for the owner ChatGPT translation run. Remove together with app/api/temp-natasha-canonical/route.ts after the canonical cue set is captured.
