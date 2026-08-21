@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     return semanticPOST(clonePostRequest(request, rawBody));
   }
 
-  if (body.force !== true && typeof body.url === "string") {
+  if (typeof body.url === "string") {
     const videoId = extractVideoId(body.url);
     if (videoId && await isOwnerChatgptVideo(videoId)) {
       const status = await getTranscriptStatus(videoId);
@@ -89,6 +89,18 @@ export async function POST(request: Request) {
           },
         });
       }
+      if (!status) {
+        return NextResponse.json({ error: "Owner-managed video is locked and has no transcript state." }, {
+          status: 423,
+          headers: {
+            "Cache-Control": "no-store",
+            "X-GreekTube-Translation-Mode": "owner-chatgpt",
+          },
+        });
+      }
+
+      const safeBody = JSON.stringify({ ...body, force: false });
+      return semanticPOST(clonePostRequest(request, safeBody));
     }
   }
 
