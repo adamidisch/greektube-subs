@@ -531,7 +531,12 @@ export async function recordTransientProcessingFailure(videoId: string, token: s
 export async function recordRecoverableProcessingFailure(videoId: string, token: string, message: string, retryAfterSeconds = 5) {
   const db = database();
   const now = new Date();
-  const delay = Math.max(2, Math.min(60, Math.ceil(retryAfterSeconds)));
+  const providerHint = /retry-after=(\d+)/i.exec(message);
+  const hintedSeconds = providerHint ? Number(providerHint[1]) : 0;
+  const requestedSeconds = Math.max(retryAfterSeconds, Number.isFinite(hintedSeconds) ? hintedSeconds : 0);
+  // Respect long provider windows instead of truncating them to one minute.
+  // Cap only pathological values so a malformed upstream response cannot park a video forever.
+  const delay = Math.max(2, Math.min(86_400, Math.ceil(requestedSeconds)));
   const retryAfter = new Date(now.getTime()+delay*1_000).toISOString();
   const rows = await db.query(
     `UPDATE video_transcripts SET retry_count=retry_count+1, retry_after=$1, error=$2,
