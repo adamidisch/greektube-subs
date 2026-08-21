@@ -5,13 +5,12 @@ import {
   acquireProcessingLock,
   completeTranscript,
   getTranscript,
-  readTranscriptCheckpoint,
   releaseProcessingLock,
   TRANSCRIPT_VERSION,
   type CachedCue,
   type TranscriptRecord,
 } from "../shared-cache";
-import { publishTranscript, publishTranscriptCheckpoint, readPublishedTranscript } from "../transcript-blob";
+import { publishTranscript, publishTranscriptCheckpoint, readPublishedTranscript, readTranscriptCheckpoint } from "../transcript-blob";
 import { numberTokensMatch } from "../captions/numeric-integrity";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "../manual-captions/parser";
 
@@ -441,6 +440,7 @@ export async function publishOwnerTranslation(videoId: string) {
   const previousPublished = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION, true).catch(() => null);
   const previousCheckpoint = await readTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, true).catch(() => null);
   const now = new Date().toISOString();
+  let committed = false;
   try {
     const duration = Math.max(existing.duration || 0, ...greek.map(cue => cue.start + cue.duration));
     const finalPayload = {
@@ -474,6 +474,7 @@ export async function publishOwnerTranslation(videoId: string) {
       updatedAt: now,
     };
     if (!await completeTranscript(record, token)) throw new Error("Το guarded Neon switch απέτυχε.");
+    committed = true;
 
     const db = database();
     await db.query(
@@ -484,9 +485,11 @@ export async function publishOwnerTranslation(videoId: string) {
     const updated = await getOwnerTranslationManifest(videoId);
     return { manifest: updated || manifest, alreadyPublished: false };
   } catch (error) {
-    if (previousPublished) await publishTranscript(videoId, TRANSCRIPT_VERSION, previousPublished).catch(() => undefined);
-    if (previousCheckpoint) await publishTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, previousCheckpoint).catch(() => undefined);
-    await releaseProcessingLock(videoId, token).catch(() => undefined);
+    if (!committed) {
+      if (previousPublished) await publishTranscript(videoId, TRANSCRIPT_VERSION, previousPublished).catch(() => undefined);
+      if (previousCheckpoint) await publishTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, previousCheckpoint).catch(() => undefined);
+      await releaseProcessingLock(videoId, token).catch(() => undefined);
+    }
     throw error;
   }
 }

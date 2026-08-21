@@ -2,6 +2,7 @@
 
 import {useEffect,useMemo,useRef,useState,type CSSProperties} from "react";
 import {createPortal} from "react-dom";
+import OwnerTranslationPanel from "./OwnerTranslationPanel";
 
 type SkipRange={start:number;end:number};
 type EditorVideo={
@@ -240,6 +241,7 @@ export default function VideoEditorDemoEnhancer(){
             <section className="gts-editor-card"><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VIDEO INFORMATION</span><h2>Πληροφορίες βίντεο</h2></div></div>
               <div className="gts-editor-form"><label>Ελληνικός τίτλος<input value={metadata.title} onChange={event=>setMetadata({...metadata,title:event.target.value})}/></label><label>Αγγλικός τίτλος<input value={metadata.originalTitle} onChange={event=>setMetadata({...metadata,originalTitle:event.target.value})}/></label><div className="gts-editor-grid"><label>Γιατρός ή ομιλητής<input value={metadata.speakerName} onChange={event=>setMetadata({...metadata,speakerName:event.target.value})}/></label><label>Ιδιότητα<input value={metadata.speakerRole} onChange={event=>setMetadata({...metadata,speakerRole:event.target.value})}/></label></div><div className="gts-editor-grid"><label>Κανάλι<input value={metadata.channel} onChange={event=>setMetadata({...metadata,channel:event.target.value})}/></label><label>Link καναλιού<input value={metadata.channelUrl} onChange={event=>setMetadata({...metadata,channelUrl:event.target.value})}/></label></div><label>Original video link<input value={metadata.originalVideoUrl} onChange={event=>setMetadata({...metadata,originalVideoUrl:event.target.value})}/></label><div className="gts-editor-grid"><label>Κατηγορία<select value={metadata.category} onChange={event=>setMetadata({...metadata,category:event.target.value})}>{CATEGORIES.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label>Ετικέτες<input value={metadata.tags.join(", ")} onChange={event=>setMetadata({...metadata,tags:event.target.value.split(",").map(item=>item.trim()).filter(Boolean)})}/></label></div><label>Περιγραφή<textarea value={metadata.description} onChange={event=>setMetadata({...metadata,description:event.target.value})}/></label></div>
             </section>
+            <OwnerTranslationPanel videoId={video.id}/>
             <section className={`gts-editor-card gts-editor-validation ${validationErrors.length?"has-errors":"ok"}`}><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VALIDATION</span><h2>{validationErrors.length?"Χρειάζεται διόρθωση":"Όλα έτοιμα"}</h2></div><strong>{validationErrors.length?"!":"✓"}</strong></div>{validationErrors.length?<ul>{validationErrors.map((error,index)=><li key={`${error}-${index}`}>{error}</li>)}</ul>:<p>Δεν υπάρχουν επικαλύψεις ή λανθασμένα timestamps. Metadata και markers μπορούν να αποθηκευτούν μαζί.</p>}</section>
             {status&&<div className="gts-editor-status" role="status">{status}</div>}
           </aside>
