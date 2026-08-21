@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../shared-cache";
+import { CanonicalImportSourceError, canonicalEnglishForImport } from "./canonical-source";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "./parser";
 
 const ADMIN_COOKIE = "greektube-admin";
@@ -58,10 +59,15 @@ export async function POST(request: Request) {
     const body = await request.json() as { url?: unknown; title?: unknown; originalTitle?: unknown; channel?: unknown; duration?: unknown; subtitleText?: unknown; sourceSubtitleText?: unknown; strict?: unknown };
     if (typeof body.url !== "string" || typeof body.subtitleText !== "string") return NextResponse.json({ error: "Λείπει το βίντεο ή το κείμενο υποτίτλων." }, { status: 400 });
     if (body.subtitleText.length > 2_000_000) return NextResponse.json({ error: "Το αρχείο υποτίτλων είναι υπερβολικά μεγάλο." }, { status: 413 });
-    if (typeof body.sourceSubtitleText === "string" && body.sourceSubtitleText.length > 2_000_000) return NextResponse.json({ error: "Το αγγλικό αρχείο υποτίτλων είναι υπερβολικά μεγάλο." }, { status: 413 });
     videoId = videoIdFrom(body.url);
     if (!videoId) return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
     const strict = body.strict === true;
+    if (strict && typeof body.sourceSubtitleText === "string" && body.sourceSubtitleText.trim()) {
+      return NextResponse.json({ error: "Το strict import δεν δέχεται αγγλικό source από τον client. Χρησιμοποιεί αποκλειστικά το canonical server source." }, { status: 400 });
+    }
+    if (!strict && typeof body.sourceSubtitleText === "string" && body.sourceSubtitleText.length > 2_000_000) {
+      return NextResponse.json({ error: "Το αγγλικό αρχείο υποτίτλων είναι υπερβολικά μεγάλο." }, { status: 413 });
+    }
 
     const cues = parseManualSubtitleText(body.subtitleText);
     if (cues.length < 3) return NextResponse.json({ error: "Δεν βρέθηκαν αρκετά έγκυρα timed cues. Χρησιμοποίησε SRT, VTT ή transcript με timestamps." }, { status: 400 });
@@ -70,25 +76,33 @@ export async function POST(request: Request) {
     if (!hasValidManualCueTimings(cues)) return NextResponse.json({ error: "Το αρχείο περιέχει μη έγκυρα timestamps." }, { status: 400 });
 
     const existing = await getTranscript(videoId);
-    const hasSuppliedEnglish = typeof body.sourceSubtitleText === "string" && Boolean(body.sourceSubtitleText.trim());
-    const suppliedEnglish = hasSuppliedEnglish
-      ? parseManualSubtitleText(body.sourceSubtitleText as string)
-      : [];
-    if (hasSuppliedEnglish && !suppliedEnglish.length) return NextResponse.json({ error: "Το αγγλικό SRT δεν μπόρεσε να διαβαστεί." }, { status: 400 });
-    if (suppliedEnglish.length && !hasValidManualCueTimings(suppliedEnglish)) return NextResponse.json({ error: "Το αγγλικό SRT περιέχει μη έγκυρα timestamps." }, { status: 400 });
-    const existingEnglish = (suppliedEnglish.length
-      ? suppliedEnglish
-      : existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];
+    let suppliedEnglish: { start: number; duration: number; text: string }[] = [];
+    let sourceHash: string | null = null;
+    let existingEnglish: { start: number; duration: number; text: string }[];
 
     if (strict) {
-      if (!existingEnglish.length) return NextResponse.json({ error: "Δεν υπάρχει αγγλικό transcript για σύγκριση. Κάνε πρώτα λήψη του αγγλικού SRT από αυτή τη οθόνη." }, { status: 409 });
-      if (cues.length !== existingEnglish.length) return NextResponse.json({ error: `Ο αριθμός των υποτίτλων δεν ταιριάζει: το ελληνικό SRT έχει ${cues.length} cues, το αγγλικό έχει ${existingEnglish.length}. Μην προσθέσεις, αφαιρέσεις ή ενώσεις γραμμές — μετάφρασε γραμμή προς γραμμή.` }, { status: 400 });
+      const canonical = await canonicalEnglishForImport(videoId);
+      existingEnglish = canonical.cues;
+      sourceHash = canonical.sourceHash;
+    } else {
+      const hasSuppliedEnglish = typeof body.sourceSubtitleText === "string" && Boolean(body.sourceSubtitleText.trim());
+      suppliedEnglish = hasSuppliedEnglish ? parseManualSubtitleText(body.sourceSubtitleText as string) : [];
+      if (hasSuppliedEnglish && !suppliedEnglish.length) return NextResponse.json({ error: "Το αγγλικό SRT δεν μπόρεσε να διαβαστεί." }, { status: 400 });
+      if (suppliedEnglish.length && !hasValidManualCueTimings(suppliedEnglish)) return NextResponse.json({ error: "Το αγγλικό SRT περιέχει μη έγκυρα timestamps." }, { status: 400 });
+      existingEnglish = (suppliedEnglish.length
+        ? suppliedEnglish
+        : existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];
+    }
+
+    if (strict) {
+      if (!existingEnglish.length) return NextResponse.json({ error: "Δεν υπάρχει canonical αγγλικό transcript για strict σύγκριση." }, { status: 409 });
+      if (cues.length !== existingEnglish.length) return NextResponse.json({ error: `Ο αριθμός των υποτίτλων δεν ταιριάζει: το ελληνικό SRT έχει ${cues.length} cues, το canonical αγγλικό έχει ${existingEnglish.length}. Μην προσθέσεις, αφαιρέσεις ή ενώσεις γραμμές — μετάφρασε γραμμή προς γραμμή.` }, { status: 400 });
       const TOLERANCE = 0.002;
       for (let index = 0; index < cues.length; index += 1) {
         const a = cues[index];
         const b = existingEnglish[index];
         if (Math.abs(a.start - b.start) > TOLERANCE || Math.abs(a.duration - b.duration) > TOLERANCE) {
-          return NextResponse.json({ error: `Το cue #${index + 1} έχει διαφορετικό timestamp από το αγγλικό πρωτότυπο. Μην αλλάξεις ή αναδιατάξεις τα timestamps — κράτησέ τα ακριβώς όπως στο κατεβασμένο SRT.` }, { status: 400 });
+          return NextResponse.json({ error: `Το cue #${index + 1} έχει διαφορετικό timestamp από το canonical αγγλικό source. Μην αλλάξεις ή αναδιατάξεις τα timestamps.` }, { status: 400 });
         }
       }
     }
@@ -112,7 +126,9 @@ export async function POST(request: Request) {
       thumbnail: existing?.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
       duration,
       originalLanguage: "en",
-      rawEnglishTranscript: suppliedEnglish.length ? suppliedEnglish : existing?.rawEnglishTranscript || existingEnglish,
+      rawEnglishTranscript: strict
+        ? (existing?.rawEnglishTranscript?.length ? existing.rawEnglishTranscript : existingEnglish)
+        : suppliedEnglish.length ? suppliedEnglish : existing?.rawEnglishTranscript || existingEnglish,
       englishTranscript: alignedEnglish,
       greekTranscript: cues,
       timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
@@ -134,12 +150,14 @@ export async function POST(request: Request) {
       keyPoints: points, topics: record.topics, transcriptVersion: TRANSCRIPT_VERSION,
       translationMode: OWNER_TRANSLATION_MODE,
       translationMethod: OWNER_TRANSLATION_METHOD,
+      sourceHash,
       cached: false,
     }, {
       headers: { "X-GreekTube-Translation-Mode": OWNER_TRANSLATION_MODE },
     });
   } catch (error) {
     if (videoId && lockToken) await releaseProcessingLock(videoId, lockToken).catch(() => undefined);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Η εισαγωγή της μετάφρασης απέτυχε." }, { status: 500 });
+    const status = error instanceof CanonicalImportSourceError ? error.status : 500;
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Η εισαγωγή της μετάφρασης απέτυχε." }, { status });
   }
 }
