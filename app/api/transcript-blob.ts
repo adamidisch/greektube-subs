@@ -29,6 +29,8 @@ export type TranscriptCheckpointPayload = {
   updatedAt: string;
 };
 
+const checkpointMemory = new Map<string, TranscriptCheckpointPayload>();
+
 function configured() {
   return Boolean(
     process.env.BLOB_READ_WRITE_TOKEN ||
@@ -50,6 +52,10 @@ function englishPathname(videoId: string, transcriptVersion: number) {
 
 function checkpointPathname(videoId: string, transcriptVersion: number) {
   return `transcripts/v${transcriptVersion}/checkpoints/${videoId}.json`;
+}
+
+function checkpointKey(videoId: string, transcriptVersion: number) {
+  return `${transcriptVersion}:${videoId}`;
 }
 
 function validPayload(value: unknown, videoId: string, transcriptVersion: number): value is PublishedTranscript {
@@ -96,10 +102,6 @@ function cleanTrailingOrphanArticle(value: unknown) {
   const text = value.replace(/\s+/g, " ").trim();
   if (!text) return text;
 
-  // Translation providers can occasionally leave a dangling source article
-  // as a final one-letter token ("a" -> "α"). Remove only that narrow case:
-  // a clearly Greek, multi-word cue ending in lowercase a/alpha. Uppercase A/Α
-  // remains untouched so grades, vitamins and scientific labels are preserved.
   const letters = text.match(/\p{L}/gu)?.length ?? 0;
   const greekLetters = text.match(/[\u0370-\u03ff\u1f00-\u1fff]/g)?.length ?? 0;
   const words = text.match(/\p{L}+/gu)?.length ?? 0;
@@ -127,9 +129,14 @@ export function transcriptBlobConfigured() {
 
 export async function readTranscriptCheckpoint(videoId: string, transcriptVersion: number) {
   if (!configured()) return null;
+  const key = checkpointKey(videoId, transcriptVersion);
+  const cached = checkpointMemory.get(key);
+  if (cached) return cached;
   try {
     const value = await readJson(checkpointPathname(videoId, transcriptVersion));
-    return validCheckpoint(value, videoId, transcriptVersion) ? value : null;
+    if (!validCheckpoint(value, videoId, transcriptVersion)) return null;
+    checkpointMemory.set(key, value);
+    return value;
   } catch (error) {
     console.warn("[transcript-blob:checkpoint-read-failed]", JSON.stringify({
       videoId,
@@ -153,6 +160,7 @@ export async function publishTranscriptCheckpoint(
       cacheControlMaxAge: 60,
       contentType: "application/json; charset=utf-8",
     });
+    checkpointMemory.set(checkpointKey(videoId, transcriptVersion), payload);
     return true;
   } catch (error) {
     console.warn("[transcript-blob:checkpoint-publish-failed]", JSON.stringify({
@@ -163,20 +171,40 @@ export async function publishTranscriptCheckpoint(
   }
 }
 
+export async function upsertTranscriptCheckpoint(
+  videoId: string,
+  transcriptVersion: number,
+  patch: Partial<Omit<TranscriptCheckpointPayload, "videoId" | "transcriptVersion">>,
+) {
+  if (!configured()) return null;
+  const current = await readTranscriptCheckpoint(videoId, transcriptVersion);
+  const base: TranscriptCheckpointPayload = current || {
+    videoId,
+    transcriptVersion,
+    status: "processing",
+    processingStage: null,
+    processingCursor: 0,
+    rawEnglishTranscript: [],
+    englishTranscript: [],
+    greekTranscript: [],
+    timestamps: [],
+    updatedAt: new Date().toISOString(),
+  };
+  const next: TranscriptCheckpointPayload = {
+    ...base,
+    ...patch,
+    videoId,
+    transcriptVersion,
+  };
+  return await publishTranscriptCheckpoint(videoId, transcriptVersion, next) ? next : null;
+}
+
 export async function mergeTranscriptCheckpoint(
   videoId: string,
   transcriptVersion: number,
   patch: Partial<Omit<TranscriptCheckpointPayload, "videoId" | "transcriptVersion">>,
 ) {
-  if (!configured()) return false;
-  const current = await readTranscriptCheckpoint(videoId, transcriptVersion);
-  if (!current) return false;
-  return publishTranscriptCheckpoint(videoId, transcriptVersion, {
-    ...current,
-    ...patch,
-    videoId,
-    transcriptVersion,
-  });
+  return Boolean(await upsertTranscriptCheckpoint(videoId, transcriptVersion, patch));
 }
 
 export async function readPublishedTranscript(videoId: string, transcriptVersion: number, includeEnglish = false) {
