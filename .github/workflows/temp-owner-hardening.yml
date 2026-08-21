@@ -1,0 +1,85 @@
+name: temp-owner-hardening
+on:
+  push:
+    branches: [feature/generic-owner-translation]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/generic-owner-translation
+      - name: Apply exact generic owner hardening
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          store = Path('app/api/owner-translation/store.ts')
+          text = store.read_text()
+          old = 'export async function freezeOwnerSource(videoId: string) {\n  await ensureOwnerTranslationTable();\n  const existingManifest = await getOwnerTranslationManifest(videoId);\n  if (existingManifest) return { manifest: existingManifest, created: false };'
+          new = 'export async function freezeOwnerSource(videoId: string, newRevision = false) {\n  await ensureOwnerTranslationTable();\n  const existingManifest = await getOwnerTranslationManifest(videoId);\n  if (existingManifest && !newRevision) return { manifest: existingManifest, created: false };'
+          assert text.count(old) == 1, f'freeze signature target={text.count(old)}'
+          text = text.replace(old, new)
+          old = '    const revision = 1;'
+          new = '    const revision = existingManifest ? existingManifest.revision + 1 : 1;'
+          assert text.count(old) == 1, f'revision target={text.count(old)}'
+          text = text.replace(old, new)
+          store.write_text(text)
+
+          route = Path('app/api/owner-translation/route.ts')
+          text = route.read_text()
+          old = '  let body: { action?: unknown; videoId?: unknown; subtitleText?: unknown };'
+          new = '  let body: { action?: unknown; videoId?: unknown; subtitleText?: unknown; newRevision?: unknown };'
+          assert text.count(old) == 1, f'route body target={text.count(old)}'
+          text = text.replace(old, new)
+          old = '      const result = await freezeOwnerSource(videoId);'
+          new = '      const result = await freezeOwnerSource(videoId, body.newRevision === true);'
+          assert text.count(old) == 1, f'route freeze target={text.count(old)}'
+          text = text.replace(old, new)
+          route.write_text(text)
+
+          panel = Path('app/OwnerTranslationPanel.tsx')
+          text = panel.read_text()
+          old = '''          {canPublish && <button className="gts-owner-primary" disabled={Boolean(busy)} onClick={() => void action("publish")}>{busy === "publish" ? "Publishing…" : "Publish"}</button>}'''
+          new = '''          {canPublish && <button className="gts-owner-primary" disabled={Boolean(busy)} onClick={() => void action("publish")}>{busy === "publish" ? "Publishing…" : "Publish"}</button>}\n          {manifest.status === "published" && <button className="gts-owner-button" disabled={Boolean(busy)} onClick={() => void action("freeze", { newRevision: true })}>{busy === "freeze" ? "Creating…" : "New Revision"}</button>}'''
+          assert text.count(old) == 1, f'panel revision target={text.count(old)}'
+          text = text.replace(old, new)
+          panel.write_text(text)
+
+          manual = Path('app/api/manual-captions/route.ts')
+          text = manual.read_text()
+          old = 'import { hasValidManualCueTimings, parseManualSubtitleText } from "./parser";'
+          new = 'import { hasValidManualCueTimings, parseManualSubtitleText } from "./parser";\nimport { isOwnerChatgptVideo } from "../captions/owner-mode";'
+          assert text.count(old) == 1, f'manual import target={text.count(old)}'
+          text = text.replace(old, new)
+          old = '    if (!videoId) return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });\n    const strict = body.strict === true;'
+          new = '    if (!videoId) return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });\n    if (await isOwnerChatgptVideo(videoId)) return NextResponse.json({ error: "Το βίντεο είναι owner-locked. Χρησιμοποίησε το Owner Translation panel του Video Editor." }, { status: 409 });\n    const strict = body.strict === true;'
+          assert text.count(old) == 1, f'manual guard target={text.count(old)}'
+          text = text.replace(old, new)
+          manual.write_text(text)
+
+          progress = Path('app/api/manual-captions/progress/route.ts')
+          text = progress.read_text()
+          old = 'import { hasValidManualCueTimings, parseManualSubtitleText } from "../parser";'
+          new = 'import { hasValidManualCueTimings, parseManualSubtitleText } from "../parser";\nimport { isOwnerChatgptVideo } from "../../captions/owner-mode";'
+          assert text.count(old) == 1, f'progress import target={text.count(old)}'
+          text = text.replace(old, new)
+          old = '          if (!videoId) throw new ManualImportError("Δεν αναγνωρίζω αυτό το YouTube link.");\n\n          report({ progress: 12,'
+          new = '          if (!videoId) throw new ManualImportError("Δεν αναγνωρίζω αυτό το YouTube link.");\n          if (await isOwnerChatgptVideo(videoId)) throw new ManualImportError("Το βίντεο είναι owner-locked. Χρησιμοποίησε το Owner Translation panel του Video Editor.", 409);\n\n          report({ progress: 12,'
+          assert text.count(old) == 1, f'progress guard target={text.count(old)}'
+          text = text.replace(old, new)
+          progress.write_text(text)
+
+          Path('.github/workflows/temp-owner-hardening.yml').unlink()
+          PY
+      - name: Commit hardening and self-delete
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app/api/owner-translation/store.ts app/api/owner-translation/route.ts app/OwnerTranslationPanel.tsx app/api/manual-captions/route.ts app/api/manual-captions/progress/route.ts .github/workflows/temp-owner-hardening.yml
+          git diff --cached --check
+          git commit -m "Harden generic owner translation workflow"
+          git push origin HEAD:feature/generic-owner-translation
