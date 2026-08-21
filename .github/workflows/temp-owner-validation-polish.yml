@@ -1,0 +1,61 @@
+name: temp-owner-validation-polish
+on:
+  push:
+    branches: [feature/generic-owner-translation]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/generic-owner-translation
+      - name: Expand strict validation report
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          store = Path('app/api/owner-translation/store.ts')
+          text = store.read_text()
+          old = '''  timestampMismatches: number;\n  numericMismatches: number;\n  emptyCues: number;'''
+          new = '''  timestampMismatches: number;\n  numericMismatches: number;\n  missingCues: number;\n  extraCues: number;\n  duplicateCues: number;\n  emptyCues: number;'''
+          assert text.count(old) == 1, f'validation type={text.count(old)}'
+          text = text.replace(old, new)
+          old = '''  let timestampMismatches = 0;\n  let numericMismatches = 0;\n  let emptyCues = 0;\n  for (let index = 0; index < Math.min(cues.length, source.length); index += 1) {'''
+          new = '''  let timestampMismatches = 0;\n  let numericMismatches = 0;\n  let emptyCues = 0;\n  const missingCues = Math.max(0, manifest.cueCount - cues.length);\n  const extraCues = Math.max(0, cues.length - manifest.cueCount);\n  const allowedTimestampCounts = new Map<string, number>();\n  for (const cue of source) {\n    const key = `${cue.start.toFixed(3)}|${cue.duration.toFixed(3)}`;\n    allowedTimestampCounts.set(key, (allowedTimestampCounts.get(key) || 0) + 1);\n  }\n  const seenTimestampCounts = new Map<string, number>();\n  let duplicateCues = 0;\n  for (const cue of cues) {\n    const key = `${cue.start.toFixed(3)}|${cue.duration.toFixed(3)}`;\n    const seen = (seenTimestampCounts.get(key) || 0) + 1;\n    seenTimestampCounts.set(key, seen);\n    if (seen > Math.max(1, allowedTimestampCounts.get(key) || 0)) duplicateCues += 1;\n  }\n  for (let index = 0; index < Math.min(cues.length, source.length); index += 1) {'''
+          assert text.count(old) == 1, f'validation counters={text.count(old)}'
+          text = text.replace(old, new)
+          old = '''    ok: cues.length === manifest.cueCount && timestampMismatches === 0 && numericMismatches === 0 && emptyCues === 0 && ratio >= 0.2,\n    cueCount: cues.length,\n    expectedCueCount: manifest.cueCount,\n    timestampMismatches,\n    numericMismatches,\n    emptyCues,'''
+          new = '''    ok: cues.length === manifest.cueCount && timestampMismatches === 0 && numericMismatches === 0 && missingCues === 0 && extraCues === 0 && duplicateCues === 0 && emptyCues === 0 && ratio >= 0.2,\n    cueCount: cues.length,\n    expectedCueCount: manifest.cueCount,\n    timestampMismatches,\n    numericMismatches,\n    missingCues,\n    extraCues,\n    duplicateCues,\n    emptyCues,'''
+          assert text.count(old) == 1, f'validation result={text.count(old)}'
+          text = text.replace(old, new)
+          store.write_text(text)
+
+          panel = Path('app/OwnerTranslationPanel.tsx')
+          text = panel.read_text()
+          old = '''  timestampMismatches: number;\n  numericMismatches: number;\n  emptyCues: number;'''
+          new = '''  timestampMismatches: number;\n  numericMismatches: number;\n  missingCues: number;\n  extraCues: number;\n  duplicateCues: number;\n  emptyCues: number;'''
+          assert text.count(old) == 1, f'panel validation type={text.count(old)}'
+          text = text.replace(old, new)
+          old = '''          <a className="gts-owner-button" href={`/api/owner-translation?videoId=${encodeURIComponent(videoId)}&download=package`}>Translation Package</a>'''
+          new = '''          <a className="gts-owner-button" href={`/api/owner-translation?videoId=${encodeURIComponent(videoId)}&download=srt`}>English SRT</a>\n          <a className="gts-owner-button" href={`/api/owner-translation?videoId=${encodeURIComponent(videoId)}&download=package`}>Manifest Package</a>'''
+          assert text.count(old) == 1, f'panel package={text.count(old)}'
+          text = text.replace(old, new)
+          old = '''          <div><span>Numeric mismatches</span><b>{check.numericMismatches}</b></div>\n          <div><span>Empty cues</span><b>{check.emptyCues}</b></div>'''
+          new = '''          <div><span>Missing cues</span><b>{check.missingCues}</b></div>\n          <div><span>Extra cues</span><b>{check.extraCues}</b></div>\n          <div><span>Duplicate cues</span><b>{check.duplicateCues}</b></div>\n          <div><span>Numeric mismatches</span><b>{check.numericMismatches}</b></div>\n          <div><span>Empty cues</span><b>{check.emptyCues}</b></div>'''
+          assert text.count(old) == 1, f'panel validation rows={text.count(old)}'
+          text = text.replace(old, new)
+          panel.write_text(text)
+
+          Path('.github/workflows/temp-owner-validation-polish.yml').unlink()
+          PY
+      - name: Commit and self-delete
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app/api/owner-translation/store.ts app/OwnerTranslationPanel.tsx .github/workflows/temp-owner-validation-polish.yml
+          git diff --cached --check
+          git commit -m "Expand owner translation validation reporting"
+          git push origin HEAD:feature/generic-owner-translation
