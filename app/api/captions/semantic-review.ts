@@ -1,3 +1,4 @@
+import { database } from "@/db/postgres";
 import {
   applyValidatedCorrections,
   buildContextWindow,
@@ -9,6 +10,7 @@ import {
 import {
   compactUnderstandingForPrompt,
   ensureTranslationUnderstanding,
+  readTranslationUnderstanding,
   type TranslationUnderstanding,
 } from "./translation-understanding";
 
@@ -19,6 +21,8 @@ type ReviewBatchResult = {
   reviewedIndexes: number[];
   raw?: string;
 };
+
+type ContextCandidate = { video_id: string; transcript_version: number };
 
 function technicalTokens(text: string) {
   return [...new Set(
@@ -83,6 +87,45 @@ function formatWindow(english: TimedTextCue[], greek: TimedTextCue[], indexes: n
   }).join("\n\n---\n\n");
 }
 
+async function resolveUnderstanding(
+  english: TimedTextCue[],
+  options?: { videoId?: string; transcriptVersion?: number },
+) {
+  if (options?.videoId) {
+    return await ensureTranslationUnderstanding(
+      options.videoId,
+      options.transcriptVersion ?? 12,
+      english,
+    ).catch(() => null);
+  }
+
+  // The worker already knows the full aligned transcript but its historical API
+  // does not pass videoId into the reviewer. Resolve candidates using only the
+  // tiny integer cue counter, then verify the exact transcript hash in Blob.
+  // No transcript TEXT is selected from Neon.
+  try {
+    const db = database();
+    const candidates = await db.query(
+      `SELECT video_id, transcript_version
+       FROM video_transcripts
+       WHERE status='ready' AND english_count=$1
+       ORDER BY updated_at DESC LIMIT 8`,
+      [english.length],
+    ) as ContextCandidate[];
+    for (const candidate of candidates) {
+      const understanding = await readTranslationUnderstanding(
+        candidate.video_id,
+        Number(candidate.transcript_version) || 12,
+        english,
+      );
+      if (understanding) return understanding;
+    }
+  } catch {
+    // A missing global brief must never prevent the conservative local review.
+  }
+  return null;
+}
+
 async function reviewIndexesWithGroq(
   english: TimedTextCue[],
   greek: TimedTextCue[],
@@ -143,14 +186,7 @@ export async function semanticReviewTranscript(
   const end = Math.min(greek.length, Math.max(start, Math.floor(options?.end ?? greek.length)));
   const batchSize = Math.max(1, Math.min(8, Math.floor(options?.batchSize ?? 6)));
   const corrections: CueCorrection[] = [];
-
-  const understanding = options?.videoId
-    ? await ensureTranslationUnderstanding(
-        options.videoId,
-        options.transcriptVersion ?? 12,
-        english,
-      ).catch(() => null)
-    : null;
+  const understanding = await resolveUnderstanding(english, options);
 
   for (let cursor = start; cursor < end; cursor += batchSize) {
     const indexes = Array.from({ length: Math.min(batchSize, end - cursor) }, (_, offset) => cursor + offset);
