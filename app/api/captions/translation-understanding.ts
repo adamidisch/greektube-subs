@@ -269,11 +269,15 @@ function segmentTranscript(fullTranscript: string) {
 
 function normalizeSegment(value: Record<string, unknown>): SegmentUnderstanding {
   return {
-    summary: normalizeText(value.summary),
-    points: stringList(value.points, 20),
-    terms: glossaryList(value.terms, 18),
-    ambiguities: stringList(value.ambiguities, 14),
-    tone: stringList(value.tone, 8),
+    summary: truncate(normalizeText(value.summary), 700),
+    points: stringList(value.points, 7).map(item => truncate(item, 240)),
+    terms: glossaryList(value.terms, 9).map(term => ({
+      source: truncate(term.source, 140),
+      greek: truncate(term.greek, 140),
+      ...(term.note ? { note: truncate(term.note, 180) } : {}),
+    })),
+    ambiguities: stringList(value.ambiguities, 5).map(item => truncate(item, 220)),
+    tone: stringList(value.tone, 4).map(item => truncate(item, 180)),
   };
 }
 
@@ -314,7 +318,7 @@ async function readPersistedSegment(
   try {
     const value = await readJson(segmentPath(videoId, transcriptVersion, sourceHash, part));
     return validPersistedSegment(value, videoId, transcriptVersion, sourceHash, segmentHash, part, total)
-      ? value.analysis
+      ? normalizeSegment(value.analysis as unknown as Record<string, unknown>)
       : null;
   } catch {
     return null;
@@ -377,7 +381,7 @@ async function readPersistedSynthesis(
   try {
     const value = await readJson(synthesisPath(videoId, transcriptVersion, sourceHash, level, groupHash));
     return validPersistedSynthesis(value, videoId, transcriptVersion, sourceHash, level, groupHash)
-      ? value.analysis
+      ? normalizeSegment(value.analysis as unknown as Record<string, unknown>)
       : null;
   } catch {
     return null;
@@ -423,14 +427,18 @@ function buildUnderstanding(
     transcriptVersion,
     sourceHash,
     cueCount,
-    mainTopic: normalizeText(result.mainTopic),
-    purpose: normalizeText(result.purpose),
-    discussion: stringList(result.discussion, 32),
-    claimsAndPositions: stringList(result.claimsAndPositions, 40),
-    glossary: glossaryList(result.glossary),
-    ambiguities: stringList(result.ambiguities, 32),
-    toneAndStance: stringList(result.toneAndStance, 24),
-    fidelityRules: [...new Set([...stringList(result.fidelityRules, 20), ...defaultRules])],
+    mainTopic: truncate(normalizeText(result.mainTopic), 260),
+    purpose: truncate(normalizeText(result.purpose), 500),
+    discussion: stringList(result.discussion, 12).map(item => truncate(item, 300)),
+    claimsAndPositions: stringList(result.claimsAndPositions, 16).map(item => truncate(item, 320)),
+    glossary: glossaryList(result.glossary, 24).map(term => ({
+      source: truncate(term.source, 160),
+      greek: truncate(term.greek, 160),
+      ...(term.note ? { note: truncate(term.note, 220) } : {}),
+    })),
+    ambiguities: stringList(result.ambiguities, 10).map(item => truncate(item, 280)),
+    toneAndStance: stringList(result.toneAndStance, 7).map(item => truncate(item, 240)),
+    fidelityRules: [...new Set([...stringList(result.fidelityRules, 8).map(item => truncate(item, 240)), ...defaultRules])],
     generatedAt: new Date().toISOString(),
   } satisfies TranslationUnderstanding;
 }
@@ -439,13 +447,15 @@ const GLOBAL_SYSTEM =
   "You are the senior source analyst for a professional English-to-Greek subtitle translator. " +
   "Read and understand the discussion BEFORE translation. Identify the real topic, purpose, thread of discussion, arguments/positions, terminology, references, tone, irony, uncertainty, negation and causality. " +
   "Never invent a speaker identity, fact or certainty that is not supported by the transcript. Preserve distinctions such as may/might/could versus certainty, association versus causation, hypothesis versus established claim and a speaker reporting a claim versus endorsing it. " +
-  "This is analysis only: do not translate subtitle lines. Return compact JSON only with keys mainTopic, purpose, discussion, claimsAndPositions, glossary, ambiguities, toneAndStance, fidelityRules. glossary is an array of {source, greek, note}; give a Greek rendering only when contextual meaning is sufficiently clear.";
+  "This is analysis only: do not translate subtitle lines. Return compact JSON only with keys mainTopic, purpose, discussion, claimsAndPositions, glossary, ambiguities, toneAndStance, fidelityRules. " +
+  "Keep the output deliberately compact: mainTopic one sentence; purpose at most two sentences; discussion at most 12 short items; claimsAndPositions at most 16 short items; glossary at most 24 entries; ambiguities at most 10 short items; toneAndStance at most 7 short items; fidelityRules at most 8 short items. " +
+  "glossary is an array of {source, greek, note}; give a Greek rendering only when contextual meaning is sufficiently clear.";
 
 async function directGlobalUnderstanding(fullTranscript: string) {
   return groqJson(
     GLOBAL_SYSTEM,
     `The following is the COMPLETE repaired English transcript in chronological order. Read it as one conversation and build the global translation brief from the whole thing:\n\n${fullTranscript}`,
-    2200,
+    1600,
   );
 }
 
@@ -460,14 +470,15 @@ async function understandSegment(
     "You are preparing one ordered section of a source-analysis brief for a professional English-to-Greek translator. " +
     "Understand the current section's arguments, references, technical meaning, uncertainty, negation, causality, irony and changes of position. " +
     "The small preceding/following excerpts are CONTINUITY CONTEXT only. Use them to resolve references crossing a section boundary but do not treat them as part of the current section's content. " +
-    "Do not translate the transcript and do not invent facts. Return compact JSON only with keys summary, points, terms, ambiguities, tone. terms is an array of {source, greek, note}.",
+    "Do not translate the transcript and do not invent facts. Return compact JSON only with keys summary, points, terms, ambiguities, tone. " +
+    "Output limits are strict: summary at most 600 characters; points at most 7 short items; terms at most 9 entries of {source, greek, note}; ambiguities at most 5 short items; tone at most 4 short items. Prefer the most translation-critical information rather than exhaustive prose.",
     JSON.stringify({
       section: `${part}/${total}`,
       precedingBoundaryContext: previousTail,
       currentSection: segment,
       followingBoundaryContext: nextHead,
     }),
-    1200,
+    900,
   );
   return normalizeSegment(result);
 }
@@ -475,15 +486,15 @@ async function understandSegment(
 function compactSegmentForSynthesis(segment: SegmentUnderstanding, index: number) {
   return JSON.stringify({
     segment: index + 1,
-    summary: truncate(segment.summary, 1400),
-    points: segment.points.slice(0, 8).map(value => truncate(value, 380)),
-    terms: segment.terms.slice(0, 10).map(term => ({
-      source: truncate(term.source, 180),
-      greek: truncate(term.greek, 180),
-      ...(term.note ? { note: truncate(term.note, 220) } : {}),
+    summary: truncate(segment.summary, 700),
+    points: segment.points.slice(0, 6).map(value => truncate(value, 220)),
+    terms: segment.terms.slice(0, 8).map(term => ({
+      source: truncate(term.source, 140),
+      greek: truncate(term.greek, 140),
+      ...(term.note ? { note: truncate(term.note, 180) } : {}),
     })),
-    ambiguities: segment.ambiguities.slice(0, 6).map(value => truncate(value, 300)),
-    tone: segment.tone.slice(0, 4).map(value => truncate(value, 220)),
+    ambiguities: segment.ambiguities.slice(0, 4).map(value => truncate(value, 200)),
+    tone: segment.tone.slice(0, 3).map(value => truncate(value, 160)),
   });
 }
 
@@ -515,9 +526,11 @@ async function synthesizeGroup(
   const cached = await readPersistedSynthesis(videoId, transcriptVersion, sourceHash, level, groupHash);
   if (cached) return cached;
   const result = await groqJson(
-    "You are consolidating consecutive source-analysis sections for a professional English-to-Greek translator. Preserve chronology, disagreements, attribution, uncertainty, technical terminology and unresolved ambiguity. Do not translate subtitle lines. Return compact JSON only with keys summary, points, terms, ambiguities, tone.",
+    "You are consolidating consecutive source-analysis sections for a professional English-to-Greek translator. Preserve chronology, disagreements, attribution, uncertainty, technical terminology and unresolved ambiguity. " +
+    "Do not translate subtitle lines. Return compact JSON only with keys summary, points, terms, ambiguities, tone. " +
+    "Output limits are strict: summary at most 600 characters; points at most 7 short items; terms at most 9 entries; ambiguities at most 5 short items; tone at most 4 short items. Preserve the most translation-critical distinctions.",
     `Ordered analysis group ${groupIndex}/${groupCount} at synthesis level ${level}:\n\n${group}`,
-    1200,
+    900,
   );
   const analysis = normalizeSegment(result);
   await persistSynthesis(videoId, transcriptVersion, sourceHash, level, groupHash, analysis);
@@ -539,7 +552,7 @@ async function synthesizeAnalyses(
       return groqJson(
         GLOBAL_SYSTEM,
         `These ordered analyses jointly cover the COMPLETE transcript. Synthesize them into one coherent global brief without dropping disagreements, attribution, uncertainty or ambiguity:\n\n${compact}`,
-        2200,
+        1600,
       );
     }
 
