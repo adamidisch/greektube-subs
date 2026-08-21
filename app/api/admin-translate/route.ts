@@ -47,7 +47,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid video URL or video ID" }, { status: 400 });
   }
 
-  const translationMode = body.translationMode === "legacy" ? "legacy" : "google";
+  // Quality/understanding-first is the default. Google remains available only
+  // when it is explicitly requested for the fast translation path.
+  const translationMode = body.translationMode === "google" ? "google" : "legacy";
   const force = body.force === true;
   let lastResponse: Response | null = null;
 

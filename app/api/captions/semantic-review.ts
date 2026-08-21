@@ -1,3 +1,4 @@
+import { database } from "@/db/postgres";
 import {
   applyValidatedCorrections,
   buildContextWindow,
@@ -6,6 +7,12 @@ import {
   type CueCorrection,
   type TimedTextCue,
 } from "./quality-review";
+import {
+  compactUnderstandingForPrompt,
+  ensureTranslationUnderstanding,
+  readTranslationUnderstanding,
+  type TranslationUnderstanding,
+} from "./translation-understanding";
 
 const REVIEW_MODEL = "openai/gpt-oss-120b";
 
@@ -14,6 +21,8 @@ type ReviewBatchResult = {
   reviewedIndexes: number[];
   raw?: string;
 };
+
+type ContextCandidate = { video_id: string; transcript_version: number };
 
 function technicalTokens(text: string) {
   return [...new Set(
@@ -71,31 +80,75 @@ function parseCorrections(raw: string, english: TimedTextCue[], greek: TimedText
 
 function formatWindow(english: TimedTextCue[], greek: TimedTextCue[], indexes: number[]) {
   return indexes.map(index => {
-    const window = buildContextWindow(english, greek, index, 2);
+    const window = buildContextWindow(english, greek, index, 4);
     const en = window.english.map(cue => `[${cue.index}] ${cue.text}`).join("\n");
     const el = window.greek.map(cue => `[${cue.index}] ${cue.text}`).join("\n");
     return `TARGET ${index}\nENGLISH CONTEXT:\n${en}\nGREEK CONTEXT:\n${el}`;
   }).join("\n\n---\n\n");
 }
 
+async function resolveUnderstanding(
+  english: TimedTextCue[],
+  options?: { videoId?: string; transcriptVersion?: number },
+) {
+  if (options?.videoId) {
+    return await ensureTranslationUnderstanding(
+      options.videoId,
+      options.transcriptVersion ?? 12,
+      english,
+    ).catch(() => null);
+  }
+
+  // The worker already knows the full aligned transcript but its historical API
+  // does not pass videoId into the reviewer. Resolve candidates using only the
+  // tiny integer cue counter, then verify the exact transcript hash in Blob.
+  // No transcript TEXT is selected from Neon.
+  try {
+    const db = database();
+    const candidates = await db.query(
+      `SELECT video_id, transcript_version
+       FROM video_transcripts
+       WHERE status='ready' AND english_count=$1
+       ORDER BY updated_at DESC LIMIT 8`,
+      [english.length],
+    ) as ContextCandidate[];
+    for (const candidate of candidates) {
+      const understanding = await readTranslationUnderstanding(
+        candidate.video_id,
+        Number(candidate.transcript_version) || 12,
+        english,
+      );
+      if (understanding) return understanding;
+    }
+  } catch {
+    // A missing global brief must never prevent the conservative local review.
+  }
+  return null;
+}
+
 async function reviewIndexesWithGroq(
   english: TimedTextCue[],
   greek: TimedTextCue[],
   indexes: number[],
+  understanding: TranslationUnderstanding | null,
 ): Promise<ReviewBatchResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || !indexes.length) return { corrections: [], reviewedIndexes: indexes };
 
-  const prompt = `${qualityReviewSystemPrompt()}\n\n` +
-    "For every TARGET, decide whether the CURRENT Greek cue needs correction after reading its surrounding English and Greek context. " +
+  const globalBrief = understanding
+    ? `WHOLE-VIDEO TRANSLATION BRIEF (use for meaning/disambiguation only):\n${compactUnderstandingForPrompt(understanding)}\n\n`
+    : "";
+  const prompt = `${qualityReviewSystemPrompt()}\n` +
+    "The whole-video brief, when supplied, is authoritative context for the discussion but is NOT permission to add information to a cue. " +
+    "Check especially whether uncertainty, negation, agency, attribution, causality, technical meaning, irony or the speaker's actual point changed in Greek. " +
+    "For every TARGET, decide whether the CURRENT Greek cue needs correction after reading its English/Greek context and the global brief. " +
     "Do not rewrite good cues. Keep the correction inside the same cue; do not steal words from unrelated cues. " +
-    "Natural Greek grammar and continuity across adjacent subtitle cues matter. " +
-    "Return strict JSON only in this form: {\"corrections\":[{\"index\":123,\"text\":\"...\",\"reason\":\"short reason\"}]}. " +
+    "Return strict JSON only: {\"corrections\":[{\"index\":123,\"text\":\"...\",\"reason\":\"short reason\"}]}. " +
     "If nothing needs correction return {\"corrections\":[]}.\n\n" +
-    formatWindow(english, greek, indexes);
+    globalBrief + formatWindow(english, greek, indexes);
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 24_000);
+  const timeout = setTimeout(() => controller.abort(), 28_000);
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -105,8 +158,9 @@ async function reviewIndexesWithGroq(
         model: REVIEW_MODEL,
         temperature: 0,
         max_tokens: 2200,
+        response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "You are a conservative professional Greek subtitle quality editor. Output JSON only." },
+          { role: "system", content: "You are a conservative professional Greek subtitle quality editor. Correct meaning only when the source and context justify it. Output JSON only." },
           { role: "user", content: prompt },
         ],
       }),
@@ -125,17 +179,18 @@ async function reviewIndexesWithGroq(
 export async function semanticReviewTranscript(
   english: TimedTextCue[],
   greek: TimedTextCue[],
-  options?: { start?: number; end?: number; batchSize?: number },
+  options?: { start?: number; end?: number; batchSize?: number; videoId?: string; transcriptVersion?: number },
 ) {
   if (english.length !== greek.length) throw new Error("English/Greek cue count mismatch");
   const start = Math.max(0, Math.floor(options?.start ?? 0));
   const end = Math.min(greek.length, Math.max(start, Math.floor(options?.end ?? greek.length)));
   const batchSize = Math.max(1, Math.min(8, Math.floor(options?.batchSize ?? 6)));
   const corrections: CueCorrection[] = [];
+  const understanding = await resolveUnderstanding(english, options);
 
   for (let cursor = start; cursor < end; cursor += batchSize) {
     const indexes = Array.from({ length: Math.min(batchSize, end - cursor) }, (_, offset) => cursor + offset);
-    const result = await reviewIndexesWithGroq(english, greek, indexes);
+    const result = await reviewIndexesWithGroq(english, greek, indexes, understanding);
     corrections.push(...result.corrections);
   }
 
