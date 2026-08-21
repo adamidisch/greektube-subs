@@ -28,8 +28,18 @@ export async function GET(request: Request) {
   const videoId = validVideoId(url.searchParams.get("videoId"));
   if (!videoId) return NextResponse.json({ error: "Μη έγκυρο videoId." }, { status: 400 });
   try {
-    if (url.searchParams.get("download") === "package") {
+    const download = url.searchParams.get("download");
+    if (download === "package" || download === "srt") {
       const pack = await ownerTranslationPackage(videoId);
+      if (download === "srt") {
+        return new Response(pack.sourceSrt, {
+          headers: {
+            "Content-Type": "application/x-subrip; charset=utf-8",
+            "Content-Disposition": `attachment; filename="greektube-owner-${videoId}-r${pack.manifest.revision}-english.srt"`,
+            "Cache-Control": "no-store",
+          },
+        });
+      }
       return new Response(JSON.stringify(pack, null, 2), {
         headers: {
           "Content-Type": "application/json; charset=utf-8",
