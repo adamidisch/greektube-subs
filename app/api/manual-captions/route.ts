@@ -4,6 +4,8 @@ import { hasValidManualCueTimings, parseManualSubtitleText } from "./parser";
 
 const ADMIN_COOKIE = "greektube-admin";
 const SESSION_MESSAGE = "greektube-edit-authorized";
+const OWNER_TRANSLATION_MODE = "owner-chatgpt";
+const OWNER_TRANSLATION_METHOD = "manual_chatgpt_pro_v1";
 
 async function sessionToken(password: string) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -130,7 +132,11 @@ export async function POST(request: Request) {
       originalTitle: typeof body.originalTitle === "string" ? body.originalTitle : "",
       channel, duration, sourceLanguage: "en", cues, englishCues: alignedEnglish,
       keyPoints: points, topics: record.topics, transcriptVersion: TRANSCRIPT_VERSION,
-      translationMethod: "manual_chatgpt_pro_v1", cached: false,
+      translationMode: OWNER_TRANSLATION_MODE,
+      translationMethod: OWNER_TRANSLATION_METHOD,
+      cached: false,
+    }, {
+      headers: { "X-GreekTube-Translation-Mode": OWNER_TRANSLATION_MODE },
     });
   } catch (error) {
     if (videoId && lockToken) await releaseProcessingLock(videoId, lockToken).catch(() => undefined);
