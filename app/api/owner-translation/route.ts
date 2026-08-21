@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { isOwnerChatgptVideo } from "../captions/owner-mode";
 import {
   freezeOwnerSource,
   getOwnerTranslationManifest,
@@ -38,7 +39,8 @@ export async function GET(request: Request) {
       });
     }
     const manifest = await getOwnerTranslationManifest(videoId);
-    return NextResponse.json({ manifest }, { headers: { "Cache-Control": "no-store" } });
+    const legacyOwner = !manifest && await isOwnerChatgptVideo(videoId);
+    return NextResponse.json({ manifest, legacyOwner }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return errorResponse(error);
   }

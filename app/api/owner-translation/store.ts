@@ -2,10 +2,8 @@ import { createHash } from "crypto";
 import { get, put } from "@vercel/blob";
 import { database } from "@/db/postgres";
 import {
-  acquireProcessingLock,
   completeTranscript,
   getTranscript,
-  releaseProcessingLock,
   TRANSCRIPT_VERSION,
   type CachedCue,
   type TranscriptRecord,
@@ -256,7 +254,7 @@ async function readSource(manifest: OwnerTranslationManifest) {
   return normalized;
 }
 
-async function claimFreezeLease(videoId: string, token: string) {
+async function claimOwnerLease(videoId: string, token: string) {
   const db = database();
   const now = new Date().toISOString();
   const expires = new Date(Date.now() + 120_000).toISOString();
@@ -269,7 +267,7 @@ async function claimFreezeLease(videoId: string, token: string) {
   return rows.length === 1;
 }
 
-async function releaseFreezeLease(videoId: string, token: string) {
+async function releaseOwnerLease(videoId: string, token: string) {
   const db = database();
   await db.query(
     "UPDATE video_transcripts SET lock_token=NULL, lock_expires_at=NULL, updated_at=$1 WHERE video_id=$2 AND lock_token=$3",
@@ -283,7 +281,7 @@ export async function freezeOwnerSource(videoId: string, newRevision = false) {
   if (existingManifest && !newRevision) return { manifest: existingManifest, created: false };
 
   const token = crypto.randomUUID();
-  if (!await claimFreezeLease(videoId, token)) throw new Error("Το βίντεο επεξεργάζεται αυτή τη στιγμή. Περίμενε να ολοκληρωθεί το τρέχον processing slice και ξαναπάτησε Freeze Source.");
+  if (!await claimOwnerLease(videoId, token)) throw new Error("Το βίντεο επεξεργάζεται αυτή τη στιγμή. Περίμενε να ολοκληρωθεί το τρέχον processing slice και ξαναπάτησε Freeze Source.");
 
   try {
     const transcript = await getTranscript(videoId);
@@ -312,7 +310,7 @@ export async function freezeOwnerSource(videoId: string, newRevision = false) {
     if (!manifest) throw new Error("Το owner manifest δεν αποθηκεύτηκε.");
     return { manifest, created: true };
   } finally {
-    await releaseFreezeLease(videoId, token).catch(() => undefined);
+    await releaseOwnerLease(videoId, token).catch(() => undefined);
   }
 }
 
@@ -435,7 +433,7 @@ export async function publishOwnerTranslation(videoId: string) {
   if (!existing) throw new Error("Το transcript record δεν υπάρχει.");
 
   const token = crypto.randomUUID();
-  if (!await acquireProcessingLock(videoId, token, false)) throw new Error("Το βίντεο επεξεργάζεται ήδη. Το Publish δεν ξεκίνησε.");
+  if (!await claimOwnerLease(videoId, token)) throw new Error("Το βίντεο επεξεργάζεται ήδη. Το Publish δεν ξεκίνησε.");
 
   const previousPublished = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION, true).catch(() => null);
   const previousCheckpoint = await readTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, true).catch(() => null);
@@ -488,7 +486,7 @@ export async function publishOwnerTranslation(videoId: string) {
     if (!committed) {
       if (previousPublished) await publishTranscript(videoId, TRANSCRIPT_VERSION, previousPublished).catch(() => undefined);
       if (previousCheckpoint) await publishTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, previousCheckpoint).catch(() => undefined);
-      await releaseProcessingLock(videoId, token).catch(() => undefined);
+      await releaseOwnerLease(videoId, token).catch(() => undefined);
     }
     throw error;
   }

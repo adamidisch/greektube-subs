@@ -28,7 +28,7 @@ type Manifest = {
   publishedAt: string | null;
 };
 
-type ApiResult = { manifest?: Manifest | null; validation?: Validation; error?: string };
+type ApiResult = { manifest?: Manifest | null; validation?: Validation; legacyOwner?: boolean; error?: string };
 
 function shortHash(value?: string | null) {
   return value ? `${value.slice(0, 8)}…${value.slice(-6)}` : "—";
@@ -36,6 +36,7 @@ function shortHash(value?: string | null) {
 
 export default function OwnerTranslationPanel({ videoId }: { videoId: string }) {
   const [manifest, setManifest] = useState<Manifest | null>(null);
+  const [legacyOwner, setLegacyOwner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<"freeze" | "validate" | "publish" | "">("");
   const [message, setMessage] = useState("");
@@ -49,6 +50,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
       const result = await response.json() as ApiResult;
       if (!response.ok) throw new Error(result.error || "Το owner translation state δεν φορτώθηκε.");
       setManifest(result.manifest || null);
+      setLegacyOwner(Boolean(result.legacyOwner));
       setValidation(result.manifest?.validation || null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Το owner translation state δεν φορτώθηκε.");
@@ -105,7 +107,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
     }
   }
 
-  const statusLabel = !manifest ? "AUTOMATIC" : manifest.status === "frozen" ? "OWNER · SOURCE FROZEN" : manifest.status === "validated" ? "OWNER · VALIDATED" : "OWNER · PUBLISHED";
+  const statusLabel = !manifest ? (legacyOwner ? "OWNER · LEGACY" : "AUTOMATIC") : manifest.status === "frozen" ? "OWNER · SOURCE FROZEN" : manifest.status === "validated" ? "OWNER · VALIDATED" : "OWNER · PUBLISHED";
   const canValidate = Boolean(manifest && manifest.status !== "published");
   const canPublish = Boolean(manifest?.status === "validated" && (manifest.validation?.ok || validation?.ok));
 
@@ -117,7 +119,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
 
     {loading ? <div className="gts-owner-loading">Φόρτωση owner state…</div> : <>
       {!manifest ? <div className="gts-owner-intro">
-        <p>Κλείδωσε το τρέχον αγγλικό transcript ως immutable source πριν ξεκινήσει manual μετάφραση.</p>
+        <p>{legacyOwner ? "Υπάρχει legacy owner lock. Κάνε Freeze Source για να μεταφερθεί στο νέο immutable manifest." : "Κλείδωσε το τρέχον αγγλικό transcript ως immutable source πριν ξεκινήσει manual μετάφραση."}</p>
         <button className="gts-owner-primary" disabled={Boolean(busy)} onClick={() => void action("freeze")}>{busy === "freeze" ? "Freeze…" : "Freeze Source"}</button>
       </div> : <>
         <div className="gts-owner-meta">
