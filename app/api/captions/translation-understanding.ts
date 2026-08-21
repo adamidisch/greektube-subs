@@ -44,15 +44,25 @@ type PersistedSegmentUnderstanding = {
   generatedAt: string;
 };
 
+type PersistedSynthesis = {
+  videoId: string;
+  transcriptVersion: number;
+  sourceHash: string;
+  level: number;
+  groupHash: string;
+  analysis: SegmentUnderstanding;
+  generatedAt: string;
+};
+
 const MODEL = "openai/gpt-oss-120b";
-// Keep direct requests deliberately conservative. Provider request-size limits can
-// be lower than the model context window and a 413 must never force us into a
-// lower-quality cue-by-cue translation path.
-const DIRECT_MAX_CHARS = 70_000;
-const SEGMENT_MAX_CHARS = 28_000;
-const EDGE_CONTEXT_CHARS = 2_000;
-const SYNTHESIS_MAX_CHARS = 70_000;
-const SYNTHESIS_GROUP_MAX_CHARS = 45_000;
+// Free-tier GPT-OSS 120B currently has an 8K TPM envelope. Keep every
+// understanding request comfortably below that envelope even though the model
+// itself supports a much larger context window.
+const DIRECT_MAX_CHARS = 10_000;
+const SEGMENT_MAX_CHARS = 8_000;
+const EDGE_CONTEXT_CHARS = 600;
+const SYNTHESIS_MAX_CHARS = 10_000;
+const SYNTHESIS_GROUP_MAX_CHARS = 8_000;
 const memory = new Map<string, TranslationUnderstanding>();
 
 function configured() {
@@ -70,12 +80,20 @@ function segmentPath(videoId: string, transcriptVersion: number, sourceHash: str
   return `transcripts/v${transcriptVersion}/context/${videoId}/segments/${sourceHash}/${String(part).padStart(3, "0")}.json`;
 }
 
+function synthesisPath(videoId: string, transcriptVersion: number, sourceHash: string, level: number, groupHash: string) {
+  return `transcripts/v${transcriptVersion}/context/${videoId}/synthesis/${sourceHash}/l${level}-${groupHash}.json`;
+}
+
 function key(videoId: string, transcriptVersion: number) {
   return `${transcriptVersion}:${videoId}`;
 }
 
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+}
+
+function truncate(value: string, max: number) {
+  return value.length <= max ? value : `${value.slice(0, max - 1).trimEnd()}…`;
 }
 
 function stringList(value: unknown, max = 40) {
@@ -176,8 +194,20 @@ async function groqJson(system: string, user: string, maxTokens: number) {
         ],
       }),
     });
-    if (response.status === 429) throw new Error(`Groq 429 understanding rate limit; retry-after=${response.headers.get("retry-after") || "30"}`);
-    if (!response.ok) throw new Error(`Groq understanding ${response.status}`);
+    if (response.status === 429) {
+      throw new Error(`Groq 429 understanding rate limit; retry-after=${response.headers.get("retry-after") || "30"}`);
+    }
+    if (!response.ok) {
+      const raw = await response.text().catch(() => "");
+      let detail = "";
+      try {
+        const parsed = JSON.parse(raw) as { error?: { message?: unknown } };
+        detail = normalizeText(parsed.error?.message);
+      } catch {
+        detail = normalizeText(raw);
+      }
+      throw new Error(`Groq understanding ${response.status}${detail ? `: ${truncate(detail, 260)}` : ""}`);
+    }
     const payload = await response.json() as { choices?: { message?: { content?: string } }[] };
     return parseJsonObject(payload.choices?.[0]?.message?.content || "");
   } finally {
@@ -216,10 +246,10 @@ function segmentTranscript(fullTranscript: string) {
 function normalizeSegment(value: Record<string, unknown>): SegmentUnderstanding {
   return {
     summary: normalizeText(value.summary),
-    points: stringList(value.points, 24),
-    terms: glossaryList(value.terms, 24),
-    ambiguities: stringList(value.ambiguities, 20),
-    tone: stringList(value.tone, 12),
+    points: stringList(value.points, 20),
+    terms: glossaryList(value.terms, 18),
+    ambiguities: stringList(value.ambiguities, 14),
+    tone: stringList(value.tone, 8),
   };
 }
 
@@ -289,6 +319,67 @@ async function persistSegment(
   await writeJson(segmentPath(videoId, transcriptVersion, sourceHash, part), value);
 }
 
+function validPersistedSynthesis(
+  value: unknown,
+  videoId: string,
+  transcriptVersion: number,
+  sourceHash: string,
+  level: number,
+  groupHash: string,
+): value is PersistedSynthesis {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Partial<PersistedSynthesis>;
+  const analysis = record.analysis;
+  return record.videoId === videoId &&
+    record.transcriptVersion === transcriptVersion &&
+    record.sourceHash === sourceHash &&
+    record.level === level &&
+    record.groupHash === groupHash &&
+    Boolean(analysis) &&
+    typeof analysis?.summary === "string" &&
+    Array.isArray(analysis?.points) &&
+    Array.isArray(analysis?.terms) &&
+    Array.isArray(analysis?.ambiguities) &&
+    Array.isArray(analysis?.tone);
+}
+
+async function readPersistedSynthesis(
+  videoId: string,
+  transcriptVersion: number,
+  sourceHash: string,
+  level: number,
+  groupHash: string,
+) {
+  try {
+    const value = await readJson(synthesisPath(videoId, transcriptVersion, sourceHash, level, groupHash));
+    return validPersistedSynthesis(value, videoId, transcriptVersion, sourceHash, level, groupHash)
+      ? value.analysis
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function persistSynthesis(
+  videoId: string,
+  transcriptVersion: number,
+  sourceHash: string,
+  level: number,
+  groupHash: string,
+  analysis: SegmentUnderstanding,
+) {
+  const value: PersistedSynthesis = {
+    videoId,
+    transcriptVersion,
+    sourceHash,
+    level,
+    groupHash,
+    analysis,
+    generatedAt: new Date().toISOString(),
+  };
+  await writeJson(synthesisPath(videoId, transcriptVersion, sourceHash, level, groupHash), value);
+}
+
 function buildUnderstanding(
   videoId: string,
   transcriptVersion: number,
@@ -330,7 +421,7 @@ async function directGlobalUnderstanding(fullTranscript: string) {
   return groqJson(
     GLOBAL_SYSTEM,
     `The following is the COMPLETE repaired English transcript in chronological order. Read it as one conversation and build the global translation brief from the whole thing:\n\n${fullTranscript}`,
-    3400,
+    2200,
   );
 }
 
@@ -352,7 +443,7 @@ async function understandSegment(
       currentSection: segment,
       followingBoundaryContext: nextHead,
     }),
-    1800,
+    1200,
   );
   return normalizeSegment(result);
 }
@@ -360,11 +451,15 @@ async function understandSegment(
 function compactSegmentForSynthesis(segment: SegmentUnderstanding, index: number) {
   return JSON.stringify({
     segment: index + 1,
-    summary: segment.summary,
-    points: segment.points.slice(0, 16),
-    terms: segment.terms.slice(0, 20),
-    ambiguities: segment.ambiguities.slice(0, 12),
-    tone: segment.tone.slice(0, 8),
+    summary: truncate(segment.summary, 1400),
+    points: segment.points.slice(0, 8).map(value => truncate(value, 380)),
+    terms: segment.terms.slice(0, 10).map(term => ({
+      source: truncate(term.source, 180),
+      greek: truncate(term.greek, 180),
+      ...(term.note ? { note: truncate(term.note, 220) } : {}),
+    })),
+    ambiguities: segment.ambiguities.slice(0, 6).map(value => truncate(value, 300)),
+    tone: segment.tone.slice(0, 4).map(value => truncate(value, 220)),
   });
 }
 
@@ -383,35 +478,67 @@ function groupBySize(lines: string[], maxChars: number) {
   return groups;
 }
 
-async function synthesizeAnalyses(analysed: SegmentUnderstanding[]) {
-  const lines = analysed.map(compactSegmentForSynthesis);
-  const compact = lines.join("\n");
-  if (compact.length <= SYNTHESIS_MAX_CHARS) {
-    return groqJson(
-      GLOBAL_SYSTEM,
-      `These ordered section analyses jointly cover the COMPLETE transcript. Synthesize them into one coherent global brief without dropping disagreements, attribution, uncertainty or ambiguity:\n\n${compact}`,
-      3400,
-    );
-  }
-
-  // Extremely long videos get one additional hierarchy level so the final
-  // synthesis request itself can never become another oversized payload.
-  const groups = groupBySize(lines, SYNTHESIS_GROUP_MAX_CHARS);
-  const chapterBriefs: SegmentUnderstanding[] = [];
-  for (let index = 0; index < groups.length; index += 1) {
-    const chapter = await groqJson(
-      "You are consolidating consecutive source-analysis sections for a professional translator. Preserve chronology, disagreements, attribution, uncertainty, technical terminology and unresolved ambiguity. Do not translate subtitle lines. Return JSON only with keys summary, points, terms, ambiguities, tone.",
-      `These are ordered analyses for chapter ${index + 1}/${groups.length}:\n\n${groups[index]}`,
-      1800,
-    );
-    chapterBriefs.push(normalizeSegment(chapter));
-  }
-  const chapterCompact = chapterBriefs.map(compactSegmentForSynthesis).join("\n");
-  return groqJson(
-    GLOBAL_SYSTEM,
-    `These ordered chapter analyses jointly cover the COMPLETE transcript. Build one final coherent translation brief while preserving disagreements, attribution, uncertainty and ambiguity:\n\n${chapterCompact}`,
-    3400,
+async function synthesizeGroup(
+  videoId: string,
+  transcriptVersion: number,
+  sourceHash: string,
+  level: number,
+  group: string,
+  groupIndex: number,
+  groupCount: number,
+) {
+  const groupHash = textHash(group);
+  const cached = await readPersistedSynthesis(videoId, transcriptVersion, sourceHash, level, groupHash);
+  if (cached) return cached;
+  const result = await groqJson(
+    "You are consolidating consecutive source-analysis sections for a professional English-to-Greek translator. Preserve chronology, disagreements, attribution, uncertainty, technical terminology and unresolved ambiguity. Do not translate subtitle lines. Return compact JSON only with keys summary, points, terms, ambiguities, tone.",
+    `Ordered analysis group ${groupIndex}/${groupCount} at synthesis level ${level}:\n\n${group}`,
+    1200,
   );
+  const analysis = normalizeSegment(result);
+  await persistSynthesis(videoId, transcriptVersion, sourceHash, level, groupHash, analysis);
+  return analysis;
+}
+
+async function synthesizeAnalyses(
+  videoId: string,
+  transcriptVersion: number,
+  sourceHash: string,
+  analysed: SegmentUnderstanding[],
+  heartbeat?: (completedParts: number, totalParts: number) => Promise<void>,
+) {
+  let level = analysed;
+  for (let pass = 1; pass <= 8; pass += 1) {
+    const lines = level.map(compactSegmentForSynthesis);
+    const compact = lines.join("\n");
+    if (compact.length <= SYNTHESIS_MAX_CHARS) {
+      return groqJson(
+        GLOBAL_SYSTEM,
+        `These ordered analyses jointly cover the COMPLETE transcript. Synthesize them into one coherent global brief without dropping disagreements, attribution, uncertainty or ambiguity:\n\n${compact}`,
+        2200,
+      );
+    }
+
+    const groups = groupBySize(lines, SYNTHESIS_GROUP_MAX_CHARS);
+    const next: SegmentUnderstanding[] = [];
+    for (let index = 0; index < groups.length; index += 1) {
+      next.push(await synthesizeGroup(
+        videoId,
+        transcriptVersion,
+        sourceHash,
+        pass,
+        groups[index],
+        index + 1,
+        groups.length,
+      ));
+      if (heartbeat) await heartbeat(index + 1, groups.length);
+    }
+    if (!next.length || next.length >= level.length) {
+      throw new Error("Understanding synthesis could not reduce safely within provider limits");
+    }
+    level = next;
+  }
+  throw new Error("Understanding synthesis exceeded maximum hierarchy depth");
 }
 
 async function hierarchicalGlobalUnderstanding(
@@ -454,10 +581,16 @@ async function hierarchicalGlobalUnderstanding(
       );
     }
     analysed.push(analysis);
-    if (heartbeat) await heartbeat(part, segments.length + 1);
+    if (heartbeat) await heartbeat(part, segments.length);
   }
-  const result = await synthesizeAnalyses(analysed);
-  if (heartbeat) await heartbeat(segments.length + 1, segments.length + 1);
+  const result = await synthesizeAnalyses(
+    videoId,
+    transcriptVersion,
+    sourceHash,
+    analysed,
+    heartbeat,
+  );
+  if (heartbeat) await heartbeat(1, 1);
   return result;
 }
 
@@ -500,8 +633,6 @@ export async function ensureTranslationUnderstanding(
       result = await directGlobalUnderstanding(fullTranscript);
       if (heartbeat) await heartbeat(1, 1);
     } catch (error) {
-      // A provider may impose a body-size limit below its advertised context
-      // window. Fall back to the resumable hierarchy instead of lowering quality.
       if (!/\b413\b/.test(error instanceof Error ? error.message : String(error))) throw error;
       result = await hierarchicalGlobalUnderstanding(
         videoId,
