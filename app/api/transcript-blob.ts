@@ -127,11 +127,11 @@ export function transcriptBlobConfigured() {
   return configured();
 }
 
-export async function readTranscriptCheckpoint(videoId: string, transcriptVersion: number) {
+export async function readTranscriptCheckpoint(videoId: string, transcriptVersion: number, fresh = false) {
   if (!configured()) return null;
   const key = checkpointKey(videoId, transcriptVersion);
   const cached = checkpointMemory.get(key);
-  if (cached) return cached;
+  if (!fresh && cached) return cached;
   try {
     const value = await readJson(checkpointPathname(videoId, transcriptVersion));
     if (!validCheckpoint(value, videoId, transcriptVersion)) return null;
