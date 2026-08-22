@@ -113,6 +113,9 @@ export default function VideoEditorDemoEnhancer(){
   const host=useRef<HTMLDivElement|null>(null);
   const player=useRef<PlayerLike|null>(null);
   const captionReadyPlayer=useRef<PlayerLike|null>(null);
+  const captionsRequestSequence=useRef(0);
+  const captionsAbortController=useRef<AbortController|null>(null);
+  const currentEditorVideoId=useRef("");
   const origin=useRef<{videoId:string;time:number}>({videoId:"",time:0});
 
   const validationErrors=useMemo(()=>{
@@ -134,6 +137,10 @@ export default function VideoEditorDemoEnhancer(){
   const activeCaption=useMemo(()=>captions?activeCueIndex(captions.cues,current):-1,[captions,current]);
 
   async function loadEditor(videoId:string){
+    captionsAbortController.current?.abort();
+    captionsAbortController.current=null;
+    const requestSequence=++captionsRequestSequence.current;
+    currentEditorVideoId.current=videoId;
     setLoading(true);setAuthRequired(false);setOpen(true);setStatus("");setCaptions(null);
     const queryId=new URLSearchParams(location.search).get("video")||"";
     const sourceTime=queryId===videoId?Number(document.querySelector<HTMLInputElement>(".player-seek-bar")?.value||0):0;
@@ -144,16 +151,27 @@ export default function VideoEditorDemoEnhancer(){
       const result=await response.json() as {video?:EditorVideo;error?:string};
       if(!response.ok||!result.video)throw new Error(result.error||"Το βίντεο δεν φορτώθηκε.");
       const editorVideo=result.video;
+      if(requestSequence!==captionsRequestSequence.current||currentEditorVideoId.current!==videoId)return;
       const nextMetadata=metadataFrom(editorVideo),nextRanges=rangesFrom(editorVideo.skipRanges);
       setVideo(editorVideo);setMetadata(nextMetadata);setRanges(nextRanges);setDuration(Number(editorVideo.duration||0));setCurrent(sourceTime);setInitialSnapshot(snapshotOf(nextMetadata,nextRanges));setDraftStart(null);
-      void fetch(`/api/captions?videoId=${encodeURIComponent(videoId)}`,{cache:"no-store",credentials:"same-origin"})
-        .then(async captionsResponse=>{
+      const controller=new AbortController();
+      captionsAbortController.current=controller;
+      const isCurrentRequest=()=>!controller.signal.aborted&&requestSequence===captionsRequestSequence.current&&captionsAbortController.current===controller&&currentEditorVideoId.current===editorVideo.id;
+      void (async()=>{
+        try{
+          const captionsResponse=await fetch(`/api/captions?videoId=${encodeURIComponent(videoId)}`,{cache:"no-store",credentials:"same-origin",signal:controller.signal});
           const captionData=await captionsResponse.json().catch(()=>null) as EditorCaptions|null;
-          if(captionsResponse.ok&&isVerifiedGreekCaptions(captionData,Number(editorVideo.duration||0)))setCaptions(captionData);
-        })
-        .catch(()=>{});
-    }catch(problem){setStatus(problem instanceof Error?problem.message:"Το βίντεο δεν φορτώθηκε.");}
-    finally{setLoading(false);}
+          if(!isCurrentRequest())return;
+          if(captionsResponse.ok&&captionData?.videoId===editorVideo.id&&isVerifiedGreekCaptions(captionData,Number(editorVideo.duration||0)))setCaptions(captionData);
+          else{setCaptions(null);setStatus("Δεν υπάρχει ακόμη verified ελληνική μεταγραφή για το Video Editor.");}
+        }catch{
+          if(isCurrentRequest()){setCaptions(null);setStatus("Δεν υπάρχει ακόμη verified ελληνική μεταγραφή για το Video Editor.");}
+        }finally{
+          if(captionsAbortController.current===controller)captionsAbortController.current=null;
+        }
+      })();
+    }catch(problem){if(requestSequence===captionsRequestSequence.current&&currentEditorVideoId.current===videoId)setStatus(problem instanceof Error?problem.message:"Το βίντεο δεν φορτώθηκε.");}
+    finally{if(requestSequence===captionsRequestSequence.current&&currentEditorVideoId.current===videoId)setLoading(false);}
   }
   async function requestEditor(videoId:string){
     setPendingId(videoId);setAuthError("");
@@ -241,7 +259,8 @@ export default function VideoEditorDemoEnhancer(){
       nativeSeek(current);
       const params=new URLSearchParams(location.search);params.set("video",video.id);params.set("t",Math.max(0,current).toFixed(1));history.replaceState(null,"",`/?${params.toString()}`);
     }
-    setOpen(false);setAuthRequired(false);setVideo(null);setCaptions(null);setMetadata(null);setRanges([]);setInitialSnapshot("");setPreviewIndex(null);setStatus("");
+    captionsRequestSequence.current+=1;captionsAbortController.current?.abort();captionsAbortController.current=null;currentEditorVideoId.current="";
+    setOpen(false);setAuthRequired(false);setLoading(false);setVideo(null);setCaptions(null);setMetadata(null);setRanges([]);setInitialSnapshot("");setPreviewIndex(null);setStatus("");
   }
   function seek(next:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));target.seekTo(safe,true);setCurrent(safe);}
   function toggle(){const target=player.current;if(!target)return;if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();}
