@@ -3,7 +3,6 @@ import { database } from "@/db/postgres";
 import GreekTubePlayer from "./GreekTubePlayer";
 import TranscriptPerformanceEnhancer from "./TranscriptPerformanceEnhancer";
 import CueEditEnhancer from "./CueEditEnhancer";
-import SkipRangesEnhancer from "./SkipRangesEnhancer";
 import ThemeToggleEnhancer from "./ThemeToggleEnhancer";
 import NavigationUXEnhancer from "./NavigationUXEnhancer";
 import VersionAboutSystem from "./VersionAboutSystem";
@@ -103,7 +102,6 @@ export default function Home() {
       <GreekTubePlayer />
       <TranscriptPerformanceEnhancer />
       <CueEditEnhancer />
-      <SkipRangesEnhancer />
       <ThemeToggleEnhancer />
       <NavigationUXEnhancer />
       <VersionAboutSystem />

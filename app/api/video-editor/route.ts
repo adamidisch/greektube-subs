@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {database} from "@/db/postgres";
+import {validateSkipRanges} from "@/app/skip-ranges";
 
 const SHARED_LIBRARY_KEY="greektube-shared-library-v1";
 const ADMIN_COOKIE="greektube-admin";
@@ -7,7 +8,6 @@ const ADMIN_SESSION_MESSAGE="greektube-edit-authorized";
 const DEMO_MODE=false;
 const CATEGORIES=new Set(["Medical","Tech","Podcasts","Comedy","Education","Documentaries","Other"]);
 
-type SkipRange={start:number;end:number};
 type VideoRecord=Record<string,unknown>&{id?:unknown;metadataVersion?:unknown;skipRanges?:unknown};
 
 async function ensureTable(){
@@ -39,23 +39,6 @@ async function isAdminRequest(request:Request){
   return safeEqual(cookie,await adminSessionToken(password));
 }
 function text(value:unknown,max=500){return typeof value==="string"?value.trim().slice(0,max):"";}
-function normalizeRanges(input:unknown,duration:number){
-  if(!Array.isArray(input))return {ranges:[] as SkipRange[],errors:[] as string[]};
-  const ranges:SkipRange[]=input.map(item=>{
-    const value=item as {start?:unknown;end?:unknown};
-    return {start:Number(value.start),end:Number(value.end)};
-  }).sort((a,b)=>a.start-b.start);
-  const errors:string[]=[];
-  ranges.forEach((range,index)=>{
-    if(!Number.isFinite(range.start)||!Number.isFinite(range.end))errors.push(`Range ${index+1}: μη έγκυρο timestamp.`);
-    else if(range.start<0)errors.push(`Range ${index+1}: η αρχή δεν μπορεί να είναι αρνητική.`);
-    else if(range.end<=range.start+.15)errors.push(`Range ${index+1}: το τέλος πρέπει να είναι μετά την αρχή.`);
-    else if(duration>0&&range.end>duration+.25)errors.push(`Range ${index+1}: το τέλος είναι έξω από τη διάρκεια του βίντεο.`);
-    const previous=ranges[index-1];
-    if(previous&&Number.isFinite(previous.end)&&range.start<previous.end-.01)errors.push(`Range ${index+1}: επικαλύπτεται με το προηγούμενο range.`);
-  });
-  return {ranges,errors};
-}
 async function getSharedVideos(){
   await ensureTable();
   const db=database();
@@ -98,7 +81,7 @@ export async function PUT(request:Request){
     const title=text(metadata.title,260);
     if(!title)return NextResponse.json({error:"Ο ελληνικός τίτλος είναι υποχρεωτικός."},{status:400});
     const duration=Number(current.duration||0);
-    const {ranges,errors}=normalizeRanges(payload.skipRanges,duration);
+    const {ranges,errors}=validateSkipRanges(payload.skipRanges,duration);
     if(errors.length)return NextResponse.json({error:errors[0],errors},{status:400});
 
     const tags=Array.isArray(metadata.tags)?metadata.tags.map(value=>text(value,60)).filter(Boolean).slice(0,30):[];

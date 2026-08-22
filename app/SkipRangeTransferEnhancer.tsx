@@ -2,8 +2,8 @@
 
 import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
+import {parseSkipTimecode,validateSkipRanges,type SkipRange} from "./skip-ranges";
 
-type SkipRange={start:number;end:number};
 type ExportPayload={
   format:"greektube-skip-ranges";
   version:1;
@@ -37,9 +37,9 @@ function editorVideoId(){
 function editorTitle(){return document.querySelector<HTMLElement>(".gts-editor-title strong")?.textContent?.trim()||"video";}
 function currentRanges(){
   return Array.from(document.querySelectorAll<HTMLElement>(".gts-editor-range-times")).map(row=>{
-    const inputs=row.querySelectorAll<HTMLInputElement>('input[type="number"]');
-    return {start:Number(inputs[0]?.value),end:Number(inputs[1]?.value)};
-  }).filter(range=>Number.isFinite(range.start)&&Number.isFinite(range.end)).sort((a,b)=>a.start-b.start);
+    const inputs=row.querySelectorAll<HTMLInputElement>("input");
+    return {start:parseSkipTimecode(inputs[0]?.value||""),end:parseSkipTimecode(inputs[1]?.value||"")};
+  }).filter((range):range is SkipRange=>range.start!==null&&range.end!==null).sort((a,b)=>a.start-b.start);
 }
 function timeline(){return document.querySelector<HTMLInputElement>('.gts-editor-timeline input[type="range"]');}
 function nativeRangeValue(input:HTMLInputElement,value:number){
@@ -49,21 +49,13 @@ function nativeRangeValue(input:HTMLInputElement,value:number){
   input.dispatchEvent(new Event("change",{bubbles:true}));
 }
 function nextFrame(){return new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));}
-function parseTimestamp(value:string){
-  const clean=value.trim().replace(",",".");
-  if(!clean)return NaN;
-  if(/^\d+(?:\.\d+)?$/.test(clean))return Number(clean);
-  const parts=clean.split(":").map(Number);
-  if(parts.some(part=>!Number.isFinite(part))||parts.length<2||parts.length>3)return NaN;
-  return parts.length===2?parts[0]*60+parts[1]:parts[0]*3600+parts[1]*60+parts[2];
-}
 function parseTextRanges(text:string){
   const ranges:SkipRange[]=[];
   for(const rawLine of text.split(/\r?\n/)){
     const line=rawLine.trim();if(!line||line.startsWith("#"))continue;
     const match=line.match(/^\s*([\d:.,]+)\s*(?:-->|->|→|–|—|,|;)\s*([\d:.,]+)\s*$/);if(!match)continue;
-    const start=parseTimestamp(match[1]),end=parseTimestamp(match[2]);
-    if(Number.isFinite(start)&&Number.isFinite(end))ranges.push({start,end});
+    const start=parseSkipTimecode(match[1]),end=parseSkipTimecode(match[2]);
+    if(start!==null&&end!==null)ranges.push({start,end});
   }
   return ranges;
 }
@@ -82,15 +74,7 @@ function importedPayload(text:string):{videoId:string;ranges:SkipRange[]}{
 function validateRanges(input:SkipRange[],duration:number){
   const ranges=input.map(range=>({start:round1(Number(range.start)),end:round1(Number(range.end))})).sort((a,b)=>a.start-b.start);
   if(!ranges.length)return {ranges,errors:["Δεν βρέθηκαν έγκυρα skip ranges στο αρχείο."]};
-  const errors:string[]=[];
-  ranges.forEach((range,index)=>{
-    if(!Number.isFinite(range.start)||!Number.isFinite(range.end))errors.push(`Range ${index+1}: μη έγκυρο timestamp.`);
-    else if(range.start<0)errors.push(`Range ${index+1}: η αρχή είναι αρνητική.`);
-    else if(range.end<=range.start+.15)errors.push(`Range ${index+1}: το τέλος πρέπει να είναι μετά την αρχή.`);
-    else if(duration>0&&range.end>duration+.25)errors.push(`Range ${index+1}: ξεπερνά τη διάρκεια του βίντεο.`);
-    const previous=ranges[index-1];if(previous&&range.start<previous.end-.01)errors.push(`Range ${index+1}: επικαλύπτεται με το προηγούμενο range.`);
-  });
-  return {ranges,errors};
+  return validateSkipRanges(ranges,duration);
 }
 function downloadExport(){
   const videoId=editorVideoId();if(!videoId){window.alert("Δεν βρέθηκε το video id.");return;}

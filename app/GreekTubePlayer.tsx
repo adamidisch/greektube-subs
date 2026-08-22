@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { APP_VERSION } from "./version";
 import { canonicalSpeakerForVideo, type CanonicalSpeakerProfile } from "./speaker-catalog";
+import {activeSkipTarget,normalizeSkipRanges,SKIP_RANGES_UPDATED_EVENT,type SkipRange} from "./skip-ranges";
 
 type Cue = { start: number; duration: number; text: string };
 type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
@@ -17,7 +18,7 @@ type Video = {
   id: string; url: string; title: string; originalTitle?:string; channel: string; category: Category;
   tags: string[]; notes: string; description: string; duration: number; addedAt: string;
   favorite: boolean; lastPosition: number; progress: number; lastWatched?: string; captions?: Cue[];
-  speakerName?:string; speakerRole?:string; channelUrl?:string; originalVideoUrl?:string; views?:number; metadataVersion?:number; creatorChapters?:GuideItem[];
+  speakerName?:string; speakerRole?:string; channelUrl?:string; originalVideoUrl?:string; views?:number; metadataVersion?:number; creatorChapters?:GuideItem[]; skipRanges?:SkipRange[];
   translationMode?:TranslationMode;
 };
 type Moment = { id: string; videoId: string; time: number; note: string; tags: string[]; excerpt: string };
@@ -446,6 +447,7 @@ export default function GreekTubePlayer() {
   const stateRef=useRef(state);
   const activeRef=useRef(-1);
   const lastProgressSave=useRef(0);
+  const lastSkipJump=useRef<{videoId:string;target:number;at:number}|null>(null);
   const lastTelemetryUpdatedAt=useRef<string|null>(null);
   const selected=state.videos.find(v=>v.id===selectedId)||null;
 
@@ -523,6 +525,17 @@ export default function GreekTubePlayer() {
     },1200);
     return()=>window.clearTimeout(saveTimer.current);
   },[state,hydrated]);
+  useEffect(()=>{
+    const syncSkipRanges=(event:Event)=>{
+      const detail=(event as CustomEvent<{videoId?:unknown;skipRanges?:unknown;metadataVersion?:unknown}>).detail;
+      if(!detail||typeof detail.videoId!=="string"||!detail.videoId)return;
+      const skipRanges=normalizeSkipRanges(detail.skipRanges);
+      const metadataVersion=Number(detail.metadataVersion||0);
+      setState(current=>({...current,videos:current.videos.map(video=>video.id===detail.videoId?{...video,skipRanges,metadataVersion:Number.isFinite(metadataVersion)?Math.max(Number(video.metadataVersion||0),metadataVersion):video.metadataVersion}:video)}));
+    };
+    window.addEventListener(SKIP_RANGES_UPDATED_EVENT,syncSkipRanges);
+    return()=>window.removeEventListener(SKIP_RANGES_UPDATED_EVENT,syncSkipRanges);
+  },[]);
   useEffect(()=>{
     if(!hydrated)return;
     const saveBeforeLeaving=()=>{
@@ -954,6 +967,25 @@ export default function GreekTubePlayer() {
     const target=player.current;
     return target&&typeof target.getCurrentTime==="function"&&typeof target.getDuration==="function"?target:null;
   }
+  useEffect(()=>{
+    if(!selectedId||!playerReady)return;
+    lastSkipJump.current=null;
+    const selectedDuration=selected?.duration||0;
+    const timer=window.setInterval(()=>{
+      const target=currentPlayer();if(!target)return;
+      const now=target.getCurrentTime();if(!Number.isFinite(now))return;
+      const duration=target.getDuration()||selectedDuration;
+      const skipTarget=activeSkipTarget(selected?.skipRanges,now,duration);
+      if(skipTarget===null)return;
+      const recent=lastSkipJump.current;
+      const timestamp=performance.now();
+      if(recent&&recent.videoId===selectedId&&Math.abs(recent.target-skipTarget)<.01&&timestamp-recent.at<1200)return;
+      lastSkipJump.current={videoId:selectedId,target:skipTarget,at:timestamp};
+      target.seekTo(skipTarget,true);
+      setPlayhead(skipTarget+state.settings.delay);
+    },100);
+    return()=>window.clearInterval(timer);
+  },[selectedId,playerReady,selected?.skipRanges,selected?.duration,state.settings.delay]);
   useEffect(()=>{if(!captions||!selectedId)return;lastProgressSave.current=0;const selectedDuration=selected?.duration||0;const timer=window.setInterval(()=>{const target=currentPlayer();if(!target)return;const now=target.getCurrentTime();if(typeof now!=="number")return;setPlayhead(now+state.settings.delay);const nextActive=activeIndex(captions.cues,now+state.settings.delay);if(nextActive!==activeRef.current){activeRef.current=nextActive;setActive(nextActive);}const duration=target.getDuration()||selectedDuration;if(duration>0&&now-lastProgressSave.current>=5){lastProgressSave.current=now;patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});}},250);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay,selected?.duration]);
   useEffect(()=>{
     if(!transcriptOpen||!state.settings.autoScroll||!transcript.current||!captions)return;

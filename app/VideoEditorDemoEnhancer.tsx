@@ -3,8 +3,8 @@
 import {useEffect,useMemo,useRef,useState,type CSSProperties} from "react";
 import {createPortal} from "react-dom";
 import OwnerTranslationPanel from "./OwnerTranslationPanel";
+import {activeSkipTarget,formatSkipTimecode,normalizeSkipRanges,parseSkipTimecode,SKIP_RANGES_UPDATED_EVENT,validateSkipRanges,type SkipRange} from "./skip-ranges";
 
-type SkipRange={start:number;end:number};
 type EditorVideo={
   id:string;title:string;originalTitle?:string;speakerName?:string;speakerRole?:string;channel?:string;channelUrl?:string;
   originalVideoUrl?:string;url?:string;category?:string;tags?:string[];description?:string;duration?:number;metadataVersion?:number;skipRanges?:SkipRange[];
@@ -22,10 +22,6 @@ function clock(seconds:number,precise=false){
   const safe=Math.max(0,Number(seconds)||0),whole=Math.floor(safe),h=Math.floor(whole/3600),m=Math.floor((whole%3600)/60),s=whole%60;
   const base=h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`;
   return precise?`${base}.${Math.floor((safe-whole)*10)}`:base;
-}
-function rangesFrom(input:unknown):SkipRange[]{
-  if(!Array.isArray(input))return [];
-  return input.map(item=>({start:Number((item as SkipRange).start),end:Number((item as SkipRange).end)})).filter(item=>Number.isFinite(item.start)&&Number.isFinite(item.end)).sort((a,b)=>a.start-b.start);
 }
 function metadataFrom(video:EditorVideo):MetadataDraft{
   return {title:video.title||"",originalTitle:video.originalTitle||"",speakerName:video.speakerName||"",speakerRole:video.speakerRole||"",channel:video.channel||"",channelUrl:video.channelUrl||"",originalVideoUrl:video.originalVideoUrl||video.url||`https://www.youtube.com/watch?v=${video.id}`,category:video.category||"Other",tags:Array.isArray(video.tags)?video.tags:[],description:video.description||""};
@@ -62,6 +58,9 @@ function isVerifiedGreekCaptions(data:EditorCaptions|null|undefined,duration=0){
 }
 function suppressNativeCaptions(target:PlayerLike){
   window.setTimeout(()=>{try{target.unloadModule?.("captions");}catch{}},0);
+}
+function blocksEditorShortcut(target:EventTarget|null){
+  return target instanceof Element&&Boolean(target.closest("input,textarea,select,[contenteditable=true]"));
 }
 function videoIdFromButton(button:HTMLElement){
   const current=new URLSearchParams(location.search).get("video")||"";
@@ -107,7 +106,9 @@ export default function VideoEditorDemoEnhancer(){
   const [current,setCurrent]=useState(0);
   const [duration,setDuration]=useState(0);
   const [playing,setPlaying]=useState(false);
+  const [playerVisualReady,setPlayerVisualReady]=useState(false);
   const [previewIndex,setPreviewIndex]=useState<number|null>(null);
+  const [timecodeDrafts,setTimecodeDrafts]=useState<Record<string,string>>({});
   const [status,setStatus]=useState("");
   const [saveBusy,setSaveBusy]=useState(false);
   const host=useRef<HTMLDivElement|null>(null);
@@ -121,17 +122,10 @@ export default function VideoEditorDemoEnhancer(){
   const validationErrors=useMemo(()=>{
     const errors:string[]=[];
     if(metadata&&!metadata.title.trim())errors.push("Ο ελληνικός τίτλος είναι υποχρεωτικός.");
-    const sorted=[...ranges].sort((a,b)=>a.start-b.start);
-    sorted.forEach((range,index)=>{
-      if(!Number.isFinite(range.start)||!Number.isFinite(range.end))errors.push(`Range ${index+1}: μη έγκυρο timestamp.`);
-      else if(range.start<0)errors.push(`Range ${index+1}: η αρχή δεν μπορεί να είναι αρνητική.`);
-      else if(range.end<=range.start+.15)errors.push(`Range ${index+1}: το τέλος πρέπει να είναι μετά την αρχή.`);
-      else if(duration>0&&range.end>duration+.25)errors.push(`Range ${index+1}: βρίσκεται έξω από τη διάρκεια του βίντεο.`);
-      const previous=sorted[index-1];
-      if(previous&&range.start<previous.end-.01)errors.push(`Range ${index+1}: επικαλύπτεται με το προηγούμενο range.`);
-    });
+    errors.push(...validateSkipRanges(ranges,duration).errors);
+    if(Object.values(timecodeDrafts).some(value=>parseSkipTimecode(value)===null))errors.push("Υπάρχει μη έγκυρο timecode. Χρησιμοποίησε MM:SS.d ή δευτερόλεπτα.");
     return errors;
-  },[metadata,ranges,duration]);
+  },[metadata,ranges,duration,timecodeDrafts]);
   const dirty=Boolean(metadata&&snapshotOf(metadata,ranges)!==initialSnapshot);
   const totalSkipped=useMemo(()=>ranges.reduce((sum,item)=>sum+Math.max(0,item.end-item.start),0),[ranges]);
   const activeCaption=useMemo(()=>captions?activeCueIndex(captions.cues,current):-1,[captions,current]);
@@ -141,7 +135,7 @@ export default function VideoEditorDemoEnhancer(){
     captionsAbortController.current=null;
     const requestSequence=++captionsRequestSequence.current;
     currentEditorVideoId.current=videoId;
-    setLoading(true);setAuthRequired(false);setOpen(true);setStatus("");setCaptions(null);
+    setLoading(true);setAuthRequired(false);setOpen(true);setStatus("");setCaptions(null);setPlayerVisualReady(false);setTimecodeDrafts({});
     const queryId=new URLSearchParams(location.search).get("video")||"";
     const sourceTime=queryId===videoId?Number(document.querySelector<HTMLInputElement>(".player-seek-bar")?.value||0):0;
     origin.current={videoId:queryId===videoId?videoId:"",time:sourceTime};
@@ -152,7 +146,7 @@ export default function VideoEditorDemoEnhancer(){
       if(!response.ok||!result.video)throw new Error(result.error||"Το βίντεο δεν φορτώθηκε.");
       const editorVideo=result.video;
       if(requestSequence!==captionsRequestSequence.current||currentEditorVideoId.current!==videoId)return;
-      const nextMetadata=metadataFrom(editorVideo),nextRanges=rangesFrom(editorVideo.skipRanges);
+      const nextMetadata=metadataFrom(editorVideo),nextRanges=normalizeSkipRanges(editorVideo.skipRanges);
       setVideo(editorVideo);setMetadata(nextMetadata);setRanges(nextRanges);setDuration(Number(editorVideo.duration||0));setCurrent(sourceTime);setInitialSnapshot(snapshotOf(nextMetadata,nextRanges));setDraftStart(null);
       const controller=new AbortController();
       captionsAbortController.current=controller;
@@ -223,17 +217,39 @@ export default function VideoEditorDemoEnhancer(){
   },[dirty]);
 
   useEffect(()=>{
+    if(!open||!video||authRequired)return;
+    const key=(event:KeyboardEvent)=>{
+      if(event.defaultPrevented||event.metaKey||event.ctrlKey||event.altKey||blocksEditorShortcut(event.target))return;
+      const target=player.current;if(!target)return;
+      if(event.code==="Space"){
+        if(event.repeat)return;
+        event.preventDefault();
+        if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();
+        return;
+      }
+      if(event.code!=="ArrowLeft"&&event.code!=="ArrowRight")return;
+      event.preventDefault();
+      const direction=event.code==="ArrowLeft"?-5:5;
+      const playerDuration=target.getDuration()||duration||Number.MAX_SAFE_INTEGER;
+      const next=Math.max(0,Math.min(playerDuration,target.getCurrentTime()+direction));
+      target.seekTo(next,true);setCurrent(next);
+    };
+    window.addEventListener("keydown",key,true);
+    return()=>window.removeEventListener("keydown",key,true);
+  },[open,video?.id,authRequired,duration]);
+
+  useEffect(()=>{
     if(!open||!video||!host.current||authRequired)return;
-    let cancelled=false;
+    let cancelled=false;setPlayerVisualReady(false);
     void ensureYouTubeApi().then(YT=>{
       if(cancelled||!host.current)return;
       player.current?.destroy();host.current.innerHTML="";
       player.current=new YT.Player(host.current,{videoId:video.id,width:"100%",height:"100%",playerVars:{autoplay:0,controls:0,disablekb:1,playsinline:1,rel:0,modestbranding:1,start:Math.floor(current)},events:{
-        onReady:({target}:{target:PlayerLike})=>{const d=target.getDuration();if(d>0)setDuration(d);target.seekTo(current,true);captionReadyPlayer.current=target;suppressNativeCaptions(target);window.setTimeout(()=>{if(captionReadyPlayer.current===target)suppressNativeCaptions(target);},350);},
+        onReady:({target}:{target:PlayerLike})=>{const d=target.getDuration();if(d>0)setDuration(d);target.seekTo(current,true);captionReadyPlayer.current=target;setPlayerVisualReady(true);suppressNativeCaptions(target);window.setTimeout(()=>{if(captionReadyPlayer.current===target)suppressNativeCaptions(target);},350);},
         onApiChange:({target}:{target:PlayerLike})=>{if(captionReadyPlayer.current===target)suppressNativeCaptions(target);},
         onStateChange:({target,data}:{target:PlayerLike;data:number})=>{setPlaying(data===1);if(captionReadyPlayer.current===target)suppressNativeCaptions(target);},
       }});
-    }).catch(()=>setStatus("Δεν ήταν δυνατή η φόρτωση του YouTube player."));
+    }).catch(()=>{setPlayerVisualReady(false);setStatus("Δεν ήταν δυνατή η φόρτωση του YouTube player.");});
     return()=>{cancelled=true;captionReadyPlayer.current=null;player.current?.destroy();player.current=null;};
   },[open,video?.id,authRequired]);
 
@@ -246,8 +262,10 @@ export default function VideoEditorDemoEnhancer(){
       if(previewIndex!==null){
         const range=ranges[previewIndex];
         if(!range){setPreviewIndex(null);return;}
-        if(now>=range.start-.03&&now<range.end-.03){target.seekTo(range.end,true);return;}
-        if(now>=range.end+2){target.pauseVideo();setPreviewIndex(null);setStatus("Preview ολοκληρώθηκε.");}
+        const skipTarget=activeSkipTarget([range],now,d||duration);
+        if(skipTarget!==null){target.seekTo(skipTarget,true);setCurrent(skipTarget);return;}
+        const previewStop=d>0?Math.min(d,range.end+2):range.end+2;
+        if(now>=previewStop-.05){target.pauseVideo();setPreviewIndex(null);setStatus("Preview ολοκληρώθηκε.");}
       }
     },100);
     return()=>window.clearInterval(timer);
@@ -260,7 +278,7 @@ export default function VideoEditorDemoEnhancer(){
       const params=new URLSearchParams(location.search);params.set("video",video.id);params.set("t",Math.max(0,current).toFixed(1));history.replaceState(null,"",`/?${params.toString()}`);
     }
     captionsRequestSequence.current+=1;captionsAbortController.current?.abort();captionsAbortController.current=null;currentEditorVideoId.current="";
-    setOpen(false);setAuthRequired(false);setLoading(false);setVideo(null);setCaptions(null);setMetadata(null);setRanges([]);setInitialSnapshot("");setPreviewIndex(null);setStatus("");
+    setOpen(false);setAuthRequired(false);setLoading(false);setPlayerVisualReady(false);setVideo(null);setCaptions(null);setMetadata(null);setRanges([]);setTimecodeDrafts({});setInitialSnapshot("");setPreviewIndex(null);setStatus("");
   }
   function seek(next:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));target.seekTo(safe,true);setCurrent(safe);}
   function toggle(){const target=player.current;if(!target)return;if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();}
@@ -268,10 +286,20 @@ export default function VideoEditorDemoEnhancer(){
   function markEnd(){
     if(draftStart===null){setStatus("Όρισε πρώτα την αρχή του range.");return;}
     if(current<=draftStart+.15){setStatus("Το τέλος πρέπει να είναι μετά την αρχή.");return;}
-    setRanges(value=>[...value,{start:draftStart,end:current}].sort((a,b)=>a.start-b.start));setDraftStart(null);setStatus("Το range προστέθηκε στο draft.");
+    setRanges(value=>[...value,{start:draftStart,end:current}].sort((a,b)=>a.start-b.start));setTimecodeDrafts({});setDraftStart(null);setStatus("Το range προστέθηκε στο draft.");
   }
-  function preview(index:number){const range=ranges[index];if(!range)return;setPreviewIndex(index);setStatus(`Preview ${clock(range.start)} → ${clock(range.end)}`);seek(Math.max(0,range.start-2));window.setTimeout(()=>player.current?.playVideo(),80);}
-  function updateRange(index:number,key:"start"|"end",value:number){setRanges(currentRanges=>currentRanges.map((item,itemIndex)=>itemIndex===index?{...item,[key]:value}:item).sort((a,b)=>a.start-b.start));}
+  function preview(index:number){const range=ranges[index];if(!range)return;setPreviewIndex(index);setStatus(`Preview ${formatSkipTimecode(range.start)} → ${formatSkipTimecode(range.end)}`);seek(Math.max(0,range.start-2));window.setTimeout(()=>player.current?.playVideo(),80);}
+  function updateRange(index:number,key:"start"|"end",value:number){setRanges(currentRanges=>currentRanges.map((item,itemIndex)=>itemIndex===index?{...item,[key]:value}:item));}
+  function updateTimecode(index:number,key:"start"|"end",value:string){
+    const draftKey=`${index}-${key}`;setTimecodeDrafts(currentDrafts=>({...currentDrafts,[draftKey]:value}));
+    const parsed=parseSkipTimecode(value);if(parsed!==null)updateRange(index,key,parsed);
+  }
+  function commitTimecode(index:number,key:"start"|"end",fallback:number){
+    const draftKey=`${index}-${key}`,draft=timecodeDrafts[draftKey]??formatSkipTimecode(fallback),parsed=parseSkipTimecode(draft);
+    if(parsed!==null)setRanges(currentRanges=>currentRanges.map((item,itemIndex)=>itemIndex===index?{...item,[key]:parsed}:item).sort((left,right)=>left.start-right.start));
+    setTimecodeDrafts({});
+  }
+  function deleteRange(index:number){setRanges(value=>value.filter((_,itemIndex)=>itemIndex!==index));setTimecodeDrafts({});setPreviewIndex(null);}
   async function save(){
     if(!video||!metadata||validationErrors.length||saveBusy)return;
     setSaveBusy(true);setStatus("Αποθήκευση metadata και markers…");
@@ -279,8 +307,9 @@ export default function VideoEditorDemoEnhancer(){
       const response=await fetch("/api/video-editor",{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({videoId:video.id,metadataVersion:Number(video.metadataVersion||0),metadata,skipRanges:ranges})});
       const result=await response.json() as {ok?:boolean;video?:EditorVideo;error?:string};
       if(!response.ok||!result.ok||!result.video)throw new Error(result.error||"Η αποθήκευση απέτυχε.");
-      const nextMetadata=metadataFrom(result.video),nextRanges=rangesFrom(result.video.skipRanges);
-      setVideo(result.video);setMetadata(nextMetadata);setRanges(nextRanges);setInitialSnapshot(snapshotOf(nextMetadata,nextRanges));setStatus("Όλες οι αλλαγές αποθηκεύτηκαν.");
+      const nextMetadata=metadataFrom(result.video),nextRanges=normalizeSkipRanges(result.video.skipRanges);
+      setVideo(result.video);setMetadata(nextMetadata);setRanges(nextRanges);setTimecodeDrafts({});setInitialSnapshot(snapshotOf(nextMetadata,nextRanges));setStatus("Όλες οι αλλαγές αποθηκεύτηκαν και συγχρονίστηκαν με τον player.");
+      window.dispatchEvent(new CustomEvent(SKIP_RANGES_UPDATED_EVENT,{detail:{videoId:result.video.id,skipRanges:nextRanges,metadataVersion:Number(result.video.metadataVersion||0)}}));
     }catch(problem){setStatus(problem instanceof Error?problem.message:"Η αποθήκευση απέτυχε.");}
     finally{setSaveBusy(false);}
   }
@@ -292,7 +321,7 @@ export default function VideoEditorDemoEnhancer(){
         <header className="gts-editor-header"><button className="gts-editor-back" onClick={closeEditor}>← <span>Πίσω στο βίντεο</span></button><div className="gts-editor-title"><span className="gts-editor-kicker">VIDEO EDITOR</span><h1 title={metadata?.title||video?.title||"Επεξεργασία βίντεο"}><strong>{metadata?.title||video?.title||"Επεξεργασία βίντεο"}</strong></h1>{(metadata?.originalTitle||video?.originalTitle)&&<p title={metadata?.originalTitle||video?.originalTitle}>{metadata?.originalTitle||video?.originalTitle}</p>}</div><div className="gts-editor-save-state">{dirty?<span>ΜΗ ΑΠΟΘΗΚΕΥΜΕΝΕΣ ΑΛΛΑΓΕΣ</span>:<span className="saved">ΑΠΟΘΗΚΕΥΜΕΝΟ</span>}<button className="primary" disabled={!dirty||validationErrors.length>0||saveBusy||loading} onClick={()=>void save()}>{saveBusy?"Αποθήκευση…":"Αποθήκευση"}</button></div></header>
         {loading?<div className="gts-editor-loading">Φόρτωση editor…</div>:video&&metadata?<main className="gts-editor-layout">
           <section className="gts-editor-stage">
-            <div className="gts-editor-video"><div ref={host}/>{captions&&activeCaption>=0&&<div className="gts-editor-subtitles" aria-live="off">{subtitleWindow(captions.cues[activeCaption],current,captions.cues[activeCaption+1]).split("\n").map((line,index)=><span key={`${activeCaption}-${index}`}>{line}</span>)}</div>}<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div></div>
+            <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ</strong></div>{captions&&activeCaption>=0&&<div className="gts-editor-subtitles" aria-live="off">{subtitleWindow(captions.cues[activeCaption],current,captions.cues[activeCaption+1]).split("\n").map((line,index)=><span key={`${activeCaption}-${index}`}>{line}</span>)}</div>}<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div></div>
             <div className="gts-editor-transport"><button onClick={()=>seek(current-5)} aria-label="Πίσω 5 δευτερόλεπτα">−5</button><button className="gts-editor-play" onClick={toggle} aria-label={playing?"Παύση":"Αναπαραγωγή"}>{playing?"❚❚":"▶"}</button><button onClick={()=>seek(current+5)} aria-label="Μπροστά 5 δευτερόλεπτα">+5</button></div>
             <div className="gts-editor-timeline-wrap">
               <div className="gts-editor-timeline">
@@ -304,7 +333,7 @@ export default function VideoEditorDemoEnhancer(){
             </div>
             <div className="gts-editor-mark-actions"><button className={draftStart!==null?"active":""} onClick={markStart}><small>01</small><span><b>Ορισμός αρχής</b>{draftStart!==null?clock(draftStart,true):"Στο τρέχον σημείο"}</span></button><button onClick={markEnd}><small>02</small><span><b>Ορισμός τέλους</b>Δημιουργία skip range</span></button></div>
             <section className="gts-editor-ranges"><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">SKIP RANGES</span><h2>Περιοχές παράλειψης</h2></div><strong>{ranges.length}</strong></div>
-              {ranges.length===0?<div className="gts-editor-empty">Δεν υπάρχουν ακόμη ranges. Παίξε το βίντεο και όρισε αρχή και τέλος.</div>:<div className="gts-editor-range-list">{ranges.map((range,index)=><article key={`${index}-${range.start}-${range.end}`} className={validationErrors.some(error=>error.startsWith(`Range ${index+1}:`))?"invalid":""}><div className="gts-editor-range-index">{String(index+1).padStart(2,"0")}</div><div className="gts-editor-range-main"><div className="gts-editor-range-times"><label>ΑΠΟ<input type="number" step="0.1" min="0" value={Number(range.start.toFixed(1))} onChange={event=>updateRange(index,"start",Number(event.target.value))}/></label><span>→</span><label>ΜΕΧΡΙ<input type="number" step="0.1" min="0" value={Number(range.end.toFixed(1))} onChange={event=>updateRange(index,"end",Number(event.target.value))}/></label><em>{(range.end-range.start).toFixed(1)}s</em></div><div className="gts-editor-range-actions"><button onClick={()=>preview(index)}>{previewIndex===index?"Previewing…":"Preview"}</button><button onClick={()=>seek(range.start)}>Μετάβαση</button><button className="danger" onClick={()=>setRanges(value=>value.filter((_,itemIndex)=>itemIndex!==index))}>Διαγραφή</button></div></div></article>)}</div>}
+              {ranges.length===0?<div className="gts-editor-empty">Δεν υπάρχουν ακόμη ranges. Παίξε το βίντεο και όρισε αρχή και τέλος.</div>:<div className="gts-editor-range-list">{ranges.map((range,index)=>{const startKey=`${index}-start`,endKey=`${index}-end`;const startDraft=timecodeDrafts[startKey]??formatSkipTimecode(range.start),endDraft=timecodeDrafts[endKey]??formatSkipTimecode(range.end);return <article key={index} className={validationErrors.some(error=>error.startsWith(`Range ${index+1}:`))?"invalid":""}><div className="gts-editor-range-index">{String(index+1).padStart(2,"0")}</div><div className="gts-editor-range-main"><strong className="gts-editor-range-timecode">{formatSkipTimecode(range.start)} <span>→</span> {formatSkipTimecode(range.end)}</strong><div className="gts-editor-range-times"><label>ΑΠΟ<input type="text" inputMode="decimal" value={startDraft} aria-invalid={parseSkipTimecode(startDraft)===null} onChange={event=>updateTimecode(index,"start",event.target.value)} onBlur={()=>commitTimecode(index,"start",range.start)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label><span>→</span><label>ΜΕΧΡΙ<input type="text" inputMode="decimal" value={endDraft} aria-invalid={parseSkipTimecode(endDraft)===null} onChange={event=>updateTimecode(index,"end",event.target.value)} onBlur={()=>commitTimecode(index,"end",range.end)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label><em>{formatSkipTimecode(Math.max(0,range.end-range.start))}</em></div><div className="gts-editor-range-actions"><button onClick={()=>preview(index)}>{previewIndex===index?"Previewing…":"Preview"}</button><button onClick={()=>seek(range.start)}>Μετάβαση</button><button className="danger" onClick={()=>deleteRange(index)}>Διαγραφή</button></div></div></article>;})}</div>}
             </section>
           </section>
           <aside className="gts-editor-sidebar">
@@ -328,4 +357,7 @@ const styles=`
 @media(max-width:900px){.gts-editor-header{grid-template-columns:auto minmax(0,1fr) auto;height:68px;padding:0 13px}.gts-editor-back span,.gts-editor-save-state>span{display:none}.gts-editor-title{text-align:left}.gts-editor-title .gts-editor-kicker{display:block}.gts-editor-title h1{font-size:11px}.gts-editor-title p{font-size:8.5px}.gts-editor-save-state .primary{display:none}.gts-editor-layout{display:block;padding:12px 12px 92px}.gts-editor-video{border-radius:14px}.gts-editor-transport{padding:12px 0 8px}.gts-editor-timeline-wrap{padding:2px 2px 13px}.gts-editor-timeline-labels strong{font-size:7px}.gts-editor-mark-actions{gap:8px;margin-bottom:14px}.gts-editor-mark-actions button{min-height:58px;padding:8px}.gts-editor-ranges{padding:14px;border-radius:15px}.gts-editor-sidebar{margin-top:12px;gap:10px}.gts-editor-card{padding:14px;border-radius:15px}.gts-editor-grid{grid-template-columns:1fr}.gts-editor-range-times{grid-template-columns:1fr auto 1fr}.gts-editor-range-times em{display:none}.gts-editor-range-list article{grid-template-columns:30px 1fr;padding:9px}.gts-editor-range-index{width:28px;height:28px}.gts-editor-mobile-save{position:fixed;left:0;right:0;bottom:0;z-index:25;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.09);background:rgba(9,11,15,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}.gts-editor-mobile-save div{color:#858b94;font-size:9px}.gts-editor-mobile-save .primary{min-width:124px}.gts-editor-section-head h2{font-size:14px}.gts-editor-form input,.gts-editor-form select,.gts-editor-form textarea{font-size:12px}.gts-editor-range-times input{font-size:12px}.gts-editor-range-actions button{font-size:10px;min-height:32px}.gts-editor-timeline input{touch-action:pan-x}}
 @media(max-width:420px){.gts-editor-mark-actions button{grid-template-columns:28px 1fr}.gts-editor-mark-actions small{width:26px;height:26px}.gts-editor-mark-actions b{font-size:11px}.gts-editor-range-times{gap:5px}.gts-editor-range-times input{padding:0 6px}.gts-editor-range-actions{gap:5px}.gts-editor-range-actions button{padding:0 7px}.gts-editor-range-actions button.danger{margin-left:0}.gts-editor-title h1,.gts-editor-title p{max-width:46vw}}
 .gts-editor-subtitles{box-sizing:border-box;position:absolute;z-index:4;left:50%;bottom:8%;width:min(88%,760px);transform:translateX(-50%);padding:7px 12px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(0,0,0,.8);color:#fff;font-size:clamp(13px,1.65vw,24px);font-weight:650;line-height:1.35;text-align:center;pointer-events:none}.gts-editor-subtitles span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gts-editor-timecode{z-index:5}
+.gts-editor-player-loading{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;background:radial-gradient(circle at 50% 45%,rgba(38,34,66,.34),rgba(0,0,0,.9) 72%);color:#d8d4ff;opacity:1;visibility:visible;pointer-events:none;transition:opacity .28s ease,visibility 0s linear 0s}.gts-editor-player-loading.ready{opacity:0;visibility:hidden;transition:opacity .28s ease,visibility 0s linear .28s}.gts-editor-player-spinner{width:34px;height:34px;border:2px solid rgba(157,145,244,.2);border-top-color:#9d91f4;border-radius:50%;animation:gts-editor-spin .8s linear infinite}.gts-editor-player-loading strong{font-size:9px;font-weight:760;letter-spacing:.15em}.gts-editor-range-timecode{display:block;margin:0 0 8px;color:#f2f0ff;font:650 13px var(--font-geist-mono),monospace;letter-spacing:-.02em}.gts-editor-range-timecode span{padding:0 5px;color:#867ae0}.gts-editor-range-times input[aria-invalid=true]{border-color:rgba(226,96,86,.7);box-shadow:0 0 0 3px rgba(226,96,86,.08)}
+@keyframes gts-editor-spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){.gts-editor-player-spinner{width:30px;height:30px}.gts-editor-player-loading{gap:10px}.gts-editor-range-timecode{font-size:12px}.gts-editor-range-times input{min-width:0}}
 `;
