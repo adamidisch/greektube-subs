@@ -43,6 +43,12 @@ function cleanError(error: unknown) {
   return error instanceof Error ? error.message : String(error || "unknown-error");
 }
 
+function normalizeSource(source: unknown): CaptionSourceProvenance["source"] {
+  return source === "youtube-manual" || source === "youtube-auto" || source === "supadata-native"
+    ? source
+    : "unknown";
+}
+
 function isRateLimited(message: string) {
   return /(?:\b429\b|rate.?limit|limit-exceeded)/i.test(message);
 }
@@ -62,7 +68,7 @@ const providers: Provider[] = [
       const result = await fetchYouTubeEnglishSource(videoId);
       return {
         cues: result.cues,
-        source: result.source,
+        source: normalizeSource(result.source),
         languageCode: result.languageCode || "en",
         providerDetail: result.client,
       };
@@ -74,7 +80,7 @@ const providers: Provider[] = [
       const result = await fetchSupadataTranscript(videoId);
       return {
         cues: result.cues,
-        source: result.source || "unknown",
+        source: normalizeSource(result.source),
         languageCode: result.lang || "en",
         providerDetail: "native-transcript-api",
       };
