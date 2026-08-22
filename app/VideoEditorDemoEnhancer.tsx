@@ -205,9 +205,9 @@ export default function VideoEditorDemoEnhancer(){
     void ensureYouTubeApi().then(YT=>{
       if(cancelled||!host.current)return;
       player.current?.destroy();host.current.innerHTML="";
-      const disableYouTubeCaptions=(target:PlayerLike)=>{if(target.getOptions?.().includes("captions"))target.unloadModule?.("captions");};
+      const disableYouTubeCaptions=(target:PlayerLike)=>{try{target.unloadModule?.("captions");}catch{}};
       player.current=new YT.Player(host.current,{videoId:video.id,width:"100%",height:"100%",playerVars:{autoplay:0,controls:0,disablekb:1,playsinline:1,rel:0,modestbranding:1,start:Math.floor(current),cc_load_policy:0,iv_load_policy:3},events:{
-        onReady:({target}:{target:PlayerLike})=>{if(cancelled)return;const d=target.getDuration();if(d>0)setDuration(d);target.seekTo(pendingSeek.current,true);disableYouTubeCaptions(target);window.setTimeout(()=>disableYouTubeCaptions(target),350);setPlayerReady(true);},
+        onReady:({target}:{target:PlayerLike})=>{if(cancelled)return;const d=target.getDuration();if(d>0)setDuration(d);target.seekTo(pendingSeek.current,true);setPlayerReady(true);disableYouTubeCaptions(target);window.setTimeout(()=>disableYouTubeCaptions(target),350);},
         onApiChange:({target}:{target:PlayerLike})=>disableYouTubeCaptions(target),
         onStateChange:({target,data}:{target:PlayerLike;data:number})=>{disableYouTubeCaptions(target);setPlaying(data===1);},
         onError:()=>{if(!cancelled){setPlayerReady(false);setStatus("Το YouTube δεν επέτρεψε την αναπαραγωγή αυτού του βίντεο στον editor.");}},
