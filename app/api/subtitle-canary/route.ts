@@ -12,19 +12,13 @@ type TranslationRow = { index?: unknown; text?: unknown };
 
 function cleanEnglish(cues: SubtitleCue[]) {
   return cues
-    .map(cue => ({
-      start: Number(cue.start),
-      duration: Number(cue.duration),
-      text: cue.text.replace(/\s+/g, " ").trim(),
-    }))
+    .map(cue => ({ start: Number(cue.start), duration: Number(cue.duration), text: cue.text.replace(/\s+/g, " ").trim() }))
     .filter(cue => cue.text && Number.isFinite(cue.start) && Number.isFinite(cue.duration) && cue.start >= 0 && cue.duration > 0);
 }
 
 function inversions(cues: SubtitleCue[]) {
   let count = 0;
-  for (let index = 1; index < cues.length; index += 1) {
-    if (cues[index].start < cues[index - 1].start) count += 1;
-  }
+  for (let index = 1; index < cues.length; index += 1) if (cues[index].start < cues[index - 1].start) count += 1;
   return count;
 }
 
@@ -55,14 +49,11 @@ async function translateBatch(english: SubtitleCue[], start: number) {
   if (!apiKey) throw new Error("GROQ_API_KEY is not configured");
   const batch = english.slice(start, start + BATCH_SIZE);
   const expected = new Set(batch.map((_, offset) => start + offset));
-  const before = english.slice(Math.max(0, start - 8), start).map((cue, offset) => ({
-    index: Math.max(0, start - 8) + offset,
-    text: cue.text,
-  }));
+  const beforeStart = Math.max(0, start - 8);
+  const before = english.slice(beforeStart, start).map((cue, offset) => ({ index: beforeStart + offset, text: cue.text }));
   const afterStart = start + batch.length;
   const after = english.slice(afterStart, afterStart + 8).map((cue, offset) => ({ index: afterStart + offset, text: cue.text }));
   const requested = batch.map((cue, offset) => ({ index: start + offset, text: cue.text }));
-
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 35_000);
   try {
@@ -76,15 +67,8 @@ async function translateBatch(english: SubtitleCue[], start: number) {
         max_tokens: 3600,
         response_format: { type: "json_object" },
         messages: [
-          {
-            role: "system",
-            content:
-              "Translate English timed subtitle cues into natural, precise Greek. The English source is immutable and speaker-faithful. Context is only for disambiguation. Never add, remove or move facts between cues. Preserve negation, uncertainty, attribution, chronology, numbers, doses, units, names, acronyms and technical meaning. Return every requested index exactly once as JSON: {\"translations\":[{\"index\":N,\"text\":\"Greek\"}]}. Do not return any other text.",
-          },
-          {
-            role: "user",
-            content: JSON.stringify({ contextBefore: before, requestedCues: requested, contextAfter: after }),
-          },
+          { role: "system", content: "Translate English timed subtitle cues into natural, precise Greek. The English source is immutable and speaker-faithful. Context is only for disambiguation. Never add, remove or move facts between cues. Preserve negation, uncertainty, attribution, chronology, numbers, doses, units, names, acronyms and technical meaning. Return every requested index exactly once as JSON: {\"translations\":[{\"index\":N,\"text\":\"Greek\"}]}. Do not return any other text." },
+          { role: "user", content: JSON.stringify({ contextBefore: before, requestedCues: requested, contextAfter: after }) },
         ],
       }),
     });
@@ -101,16 +85,10 @@ async function translateBatch(english: SubtitleCue[], start: number) {
 }
 
 export async function GET(request: Request) {
-  if (process.env.VERCEL_ENV === "production") {
-    return NextResponse.json({ error: "preview-only" }, { status: 403 });
-  }
-
+  if (process.env.VERCEL_ENV === "production") return NextResponse.json({ error: "preview-only" }, { status: 403 });
   const url = new URL(request.url);
   const videoId = url.searchParams.get("videoId")?.trim() || CANARY_VIDEO;
-  if (!/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) {
-    return NextResponse.json({ error: "invalid-video-id" }, { status: 400 });
-  }
-
+  if (!/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) return NextResponse.json({ error: "invalid-video-id" }, { status: 400 });
   const startedAt = Date.now();
   try {
     const acquired = await fetchSupadataTranscript(videoId);
@@ -118,16 +96,13 @@ export async function GET(request: Request) {
     const timingInversions = inversions(english);
     if (!english.length) throw new Error("empty-english-source");
     if (timingInversions) throw new Error(`english-timing-inversions:${timingInversions}`);
-
     const batches = Array.from({ length: Math.ceil(english.length / BATCH_SIZE) }, (_, index) => index * BATCH_SIZE);
     const translatedBatches = await Promise.all(batches.map(start => translateBatch(english, start)));
     const greek = translatedBatches.flat();
     const validation = validateSubtitlePair(english, greek);
-
     const sourceHash = await sha256(english.map(cue => cue.text));
     const timestampHash = await sha256(english.map(cue => [cue.start, cue.duration]));
-
-    return NextResponse.json({
+    const result = {
       dryRun: true,
       writesPerformed: false,
       videoId,
@@ -139,14 +114,12 @@ export async function GET(request: Request) {
       validation,
       elapsedMs: Date.now() - startedAt,
       sample: english.slice(0, 8).map((cue, index) => ({ index, start: cue.start, duration: cue.duration, english: cue.text, greek: greek[index]?.text || "" })),
-    }, { headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+    };
+    console.info("[subtitle-canary-result]", JSON.stringify({ ...result, sample: undefined }));
+    return NextResponse.json(result, { headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
   } catch (error) {
-    return NextResponse.json({
-      dryRun: true,
-      writesPerformed: false,
-      videoId,
-      error: error instanceof Error ? error.message : "canary-failed",
-      elapsedMs: Date.now() - startedAt,
-    }, { status: 500, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+    const result = { dryRun: true, writesPerformed: false, videoId, error: error instanceof Error ? error.message : "canary-failed", elapsedMs: Date.now() - startedAt };
+    console.error("[subtitle-canary-error]", JSON.stringify(result));
+    return NextResponse.json(result, { status: 500, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
   }
 }
