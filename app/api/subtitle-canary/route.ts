@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { fetchSupadataTranscript } from "../supadata";
 import { validateSubtitlePair, type SubtitleCue } from "../captions/subtitle-contract";
-import { fetchYouTubeEnglishSource } from "./youtube-source";
+import { acquireEnglishCaptions } from "../captions/acquisition";
 
 export const maxDuration = 60;
 
@@ -85,22 +84,6 @@ async function translateBatch(english: SubtitleCue[], start: number) {
   }
 }
 
-async function acquireEnglish(videoId: string) {
-  try {
-    const direct = await fetchYouTubeEnglishSource(videoId);
-    return { cues: direct.cues, source: direct.source, acquisition: "youtube-direct", client: direct.client };
-  } catch (youtubeError) {
-    const youtubeFailure = youtubeError instanceof Error ? youtubeError.message : "youtube-direct-failed";
-    try {
-      const fallback = await fetchSupadataTranscript(videoId);
-      return { cues: fallback.cues as SubtitleCue[], source: fallback.source || "supadata", acquisition: "supadata-fallback", youtubeFailure };
-    } catch (fallbackError) {
-      const fallbackFailure = fallbackError instanceof Error ? fallbackError.message : "supadata-failed";
-      throw new Error(`${youtubeFailure};fallback:${fallbackFailure}`);
-    }
-  }
-}
-
 export async function GET(request: Request) {
   if (process.env.VERCEL_ENV === "production") return NextResponse.json({ error: "preview-only" }, { status: 403 });
   const url = new URL(request.url);
@@ -108,7 +91,7 @@ export async function GET(request: Request) {
   if (!/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) return NextResponse.json({ error: "invalid-video-id" }, { status: 400 });
   const startedAt = Date.now();
   try {
-    const acquired = await acquireEnglish(videoId);
+    const acquired = await acquireEnglishCaptions(videoId);
     const english = cleanEnglish(acquired.cues);
     const timingInversions = inversions(english);
     if (!english.length) throw new Error("empty-english-source");
@@ -123,10 +106,8 @@ export async function GET(request: Request) {
       dryRun: true,
       writesPerformed: false,
       videoId,
-      source: acquired.source,
-      acquisition: acquired.acquisition,
-      client: "client" in acquired ? acquired.client : undefined,
-      youtubeFailure: "youtubeFailure" in acquired ? acquired.youtubeFailure : undefined,
+      provenance: acquired.provenance,
+      attempts: acquired.attempts,
       cueCount: english.length,
       timingInversions,
       sourceHash,
