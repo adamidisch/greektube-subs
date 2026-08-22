@@ -48,6 +48,17 @@ function editorButton(videoId: string): HTMLButtonElement | null {
   return buttons.find(button => videoIdFromEditButton(button) === videoId) || null;
 }
 
+function fullscreenVideoFrame(): HTMLElement | null {
+  const fullscreenDocument = document as Document & { webkitFullscreenElement?: Element | null };
+  const nativeFullscreen = document.fullscreenElement || fullscreenDocument.webkitFullscreenElement || null;
+  if (nativeFullscreen instanceof HTMLElement && nativeFullscreen.classList.contains("video-frame")) return nativeFullscreen;
+  return document.querySelector<HTMLElement>(".video-frame.pseudo-fullscreen");
+}
+
+function blocksFullscreenShortcutBridge(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]'));
+}
+
 export default function NavigationAwareGreekTubePlayer() {
   const [navigationEpoch, setNavigationEpoch] = useState(0);
   const routeRef = useRef<AppRoute | null>(null);
@@ -228,6 +239,34 @@ export default function NavigationAwareGreekTubePlayer() {
     document.addEventListener("pointerup", restoreEditorShortcutFocus, true);
     document.addEventListener("pointercancel", restoreEditorShortcutFocus, true);
 
+    // Desktop native fullscreen can leave keyboard focus on fullscreen chrome instead of
+    // the player surface. Re-dispatch only the seek arrows from the fullscreen frame so
+    // the existing GreekTubePlayer keyboard implementation remains the single source of
+    // truth for ±5 second seeking. Editable controls are deliberately excluded.
+    const bridgedFullscreenKeys = new WeakSet<Event>();
+    const bridgeFullscreenSeekKeys = (event: KeyboardEvent) => {
+      if (bridgedFullscreenKeys.has(event)) return;
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.code !== "ArrowLeft" && event.code !== "ArrowRight") return;
+      if (blocksFullscreenShortcutBridge(event.target)) return;
+      const frame = fullscreenVideoFrame();
+      if (!frame) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const forwarded = new KeyboardEvent("keydown", {
+        key: event.key,
+        code: event.code,
+        location: event.location,
+        repeat: event.repeat,
+        bubbles: true,
+        cancelable: true,
+      });
+      bridgedFullscreenKeys.add(forwarded);
+      frame.dispatchEvent(forwarded);
+    };
+    document.addEventListener("keydown", bridgeFullscreenSeekKeys, true);
+
     const finishReplay = (sequence: number) => {
       if (sequence !== syncSequence.current) return;
       window.requestAnimationFrame(() => {
@@ -347,10 +386,20 @@ export default function NavigationAwareGreekTubePlayer() {
       document.removeEventListener("click", captureEditorTarget, true);
       document.removeEventListener("pointerup", restoreEditorShortcutFocus, true);
       document.removeEventListener("pointercancel", restoreEditorShortcutFocus, true);
+      document.removeEventListener("keydown", bridgeFullscreenSeekKeys, true);
       window.removeEventListener("popstate", onPopState);
       syncSequence.current += 1;
     };
   }, []);
 
-  return <GreekTubePlayer key={navigationEpoch} />;
+  return <>
+    <GreekTubePlayer key={navigationEpoch} />
+    <style>{`
+      @media (min-width: 621px) {
+        .video-frame:fullscreen .custom-fullscreen {
+          top: 28px !important;
+        }
+      }
+    `}</style>
+  </>;
 }
