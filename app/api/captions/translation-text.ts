@@ -3,12 +3,34 @@ export function hasTranslatableWordTokens(tokens: string[], protectedTokens: str
   return tokens.some(token => /\p{L}/u.test(token) && !protectedSet.has(token.toLowerCase()));
 }
 
+/**
+ * Normalize text that is allowed to appear in the stored/display English track.
+ *
+ * Contract: this function may remove non-spoken markup and repair whitespace or
+ * punctuation artifacts, but it must never remove spoken words. In particular,
+ * hesitation words such as "um", "uh" and "erm" are part of the verbatim source
+ * and stay in the English subtitle track.
+ */
 export function stripEnglishSpeechFillers(text: string) {
   return text
     // Supadata/YouTube can occasionally expose SSML-style silence markers as
-    // transcript text. They are timing metadata, not spoken content, and must
-    // never enter translation or semantic-review cues.
+    // transcript text. They are timing metadata rather than spoken words.
     .replace(/<break\b[^>]*\/?\s*>/giu, " ")
+    .replace(/^[,;:]+\s*/, "")
+    .replace(/\s+([,.;:!?…])/g, "$1")
+    .replace(/([,;:])\s*\1+/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Translation-only normalization. This is deliberately separate from the
+ * English display-track contract above: translation context may drop isolated
+ * hesitation noises to improve semantic continuity, but those words are never
+ * deleted from the canonical English subtitles stored for the user.
+ */
+function stripTranslationSpeechFillers(text: string) {
+  return stripEnglishSpeechFillers(text)
     .replace(/(^|[^\p{L}\p{N}])(?:u+m+|u+h+|e+r+m+|h+m+|a+h+)(?=$|[^\p{L}\p{N}])/giu, "$1")
     .replace(/^[,;:]+\s*/, "")
     .replace(/\s+([,.;:!?…])/g, "$1")
@@ -44,7 +66,7 @@ export function groupEnglishCuesForContext(
   };
 
   for (const cue of cues) {
-    const clean = stripEnglishSpeechFillers(cue.text);
+    const clean = stripTranslationSpeechFillers(cue.text);
     if (!clean) continue;
     const next = { ...cue, text: clean };
     if (!block.length) { block.push(next); continue; }
