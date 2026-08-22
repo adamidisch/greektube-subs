@@ -60,6 +60,7 @@ function suppressNativeCaptions(target:PlayerLike){
   window.setTimeout(()=>{try{target.unloadModule?.("captions");}catch{}},0);
 }
 function blocksEditorShortcut(target:EventTarget|null){
+  if(target instanceof HTMLInputElement&&target.type==="range"&&target.closest(".gts-editor-timeline"))return false;
   return target instanceof Element&&Boolean(target.closest("input,textarea,select,[contenteditable=true]"));
 }
 function videoIdFromButton(button:HTMLElement){
