@@ -31,7 +31,8 @@ function metadataFrom(video:EditorVideo):MetadataDraft{
   return {title:video.title||"",originalTitle:video.originalTitle||"",speakerName:video.speakerName||"",speakerRole:video.speakerRole||"",channel:video.channel||"",channelUrl:video.channelUrl||"",originalVideoUrl:video.originalVideoUrl||video.url||`https://www.youtube.com/watch?v=${video.id}`,category:video.category||"Other",tags:Array.isArray(video.tags)?video.tags:[],description:video.description||""};
 }
 function snapshotOf(metadata:MetadataDraft,ranges:SkipRange[]){return JSON.stringify({metadata,ranges});}
-function activeCueIndex(cues:Cue[],time:number){let result=-1;for(let index=0;index<cues.length;index+=1){if(cues[index].start<=time)result=index;else break;}return result;}
+function cueIsActive(cue:Cue|undefined,time:number){return Boolean(cue&&Number.isFinite(time)&&Number.isFinite(cue.start)&&Number.isFinite(cue.duration)&&cue.duration>0&&time>=cue.start&&time<cue.start+cue.duration);}
+function activeCueIndex(cues:Cue[],time:number){let result=-1;let latestStart=-Infinity;for(let index=0;index<cues.length;index+=1){const cue=cues[index];if(cueIsActive(cue,time)&&cue.start>=latestStart){result=index;latestStart=cue.start;}}return result;}
 function subtitleFrames(text:string,maxLineCharacters=42){
   const clean=text.replace(/\s+/g," ").trim();if(!clean)return [];
   const lines:string[]=[];let line="";
@@ -40,7 +41,7 @@ function subtitleFrames(text:string,maxLineCharacters=42){
   return lines.flatMap((_,index)=>index%2===0?[lines.slice(index,index+2).join("\n")]:[]);
 }
 function subtitleWindow(cue:Cue|undefined,currentTime:number,nextCue?:Cue){
-  if(!cue)return "";const frames=subtitleFrames(cue.text);if(frames.length<=1)return frames[0]||"";
+  if(!cue||!cueIsActive(cue,currentTime))return "";const frames=subtitleFrames(cue.text);if(frames.length<=1)return frames[0]||"";
   const boundary=nextCue&&nextCue.start>cue.start?nextCue.start-cue.start:cue.duration;
   const duration=Math.max(.1,Math.min(cue.duration,boundary));const elapsed=Math.max(0,Math.min(duration-.001,currentTime-cue.start));
   const minReadable=duration>=frames.length*1.35?1.35:duration/frames.length;const remaining=Math.max(0,duration-minReadable*frames.length);
