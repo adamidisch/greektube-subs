@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { database } from "@/db/postgres";
-import GreekTubePlayer from "./GreekTubePlayer";
+import NavigationAwareGreekTubePlayer from "./NavigationAwareGreekTubePlayer";
 import TranscriptPerformanceEnhancer from "./TranscriptPerformanceEnhancer";
 import CueEditEnhancer from "./CueEditEnhancer";
 import ThemeToggleEnhancer from "./ThemeToggleEnhancer";
@@ -99,7 +99,7 @@ export async function generateMetadata({
 export default function Home() {
   return (
     <>
-      <GreekTubePlayer />
+      <NavigationAwareGreekTubePlayer />
       <TranscriptPerformanceEnhancer />
       <CueEditEnhancer />
       <ThemeToggleEnhancer />
