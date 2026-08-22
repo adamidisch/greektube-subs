@@ -1,4 +1,4 @@
-import { canonicalNumberTokens, numberTokensMatch } from "./numeric-integrity";
+import { canonicalNumberTokens, numberTokensMatch } from "./numeric-integrity.ts";
 
 export type SubtitleCue = { start: number; duration: number; text: string };
 
