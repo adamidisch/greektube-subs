@@ -2,11 +2,11 @@ import type { SubtitleCue } from "./subtitle-contract";
 import { fetchSupadataTranscript } from "../supadata";
 import { fetchYouTubeEnglishSource } from "../subtitle-canary/youtube-source";
 
-export const CAPTION_ACQUISITION_VERSION = 1;
+export const CAPTION_ACQUISITION_VERSION = 2;
 
 export type CaptionSourceProvenance = {
-  provider: "youtube-direct" | "supadata";
-  source: "youtube-manual" | "youtube-auto" | "supadata-native" | "unknown";
+  provider: "youtube-direct" | "scrapecreators" | "supadata";
+  source: "youtube-manual" | "youtube-auto" | "scrapecreators-native" | "supadata-native" | "unknown";
   languageCode: string;
   acquiredAt: string;
   providerDetail?: string;
@@ -36,6 +36,18 @@ type Provider = {
   }>;
 };
 
+type ScrapeCreatorsTranscriptResponse = {
+  success?: unknown;
+  language?: unknown;
+  transcript?: unknown;
+};
+
+type ScrapeCreatorsTranscriptRow = {
+  text?: unknown;
+  startMs?: unknown;
+  endMs?: unknown;
+};
+
 const providerCooldownUntil = new Map<CaptionSourceProvenance["provider"], number>();
 const RATE_LIMIT_COOLDOWN_MS = 5 * 60_000;
 
@@ -44,7 +56,7 @@ function cleanError(error: unknown) {
 }
 
 function normalizeSource(source: unknown): CaptionSourceProvenance["source"] {
-  return source === "youtube-manual" || source === "youtube-auto" || source === "supadata-native"
+  return source === "youtube-manual" || source === "youtube-auto" || source === "scrapecreators-native" || source === "supadata-native"
     ? source
     : "unknown";
 }
@@ -61,6 +73,61 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function fetchScrapeCreatorsEnglish(videoId: string) {
+  const apiKey = process.env.SCRAPECREATORS_API_KEY?.trim();
+  if (!apiKey) throw new Error("SCRAPECREATORS_API_KEY is not configured");
+
+  const endpoint = new URL("https://api.scrapecreators.com/v1/youtube/video/transcript");
+  endpoint.searchParams.set("url", `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`);
+  endpoint.searchParams.set("language", "en");
+  endpoint.searchParams.set("cache_max_age", "7d");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetch(endpoint.toString(), {
+      cache: "no-store",
+      signal: controller.signal,
+      headers: { "x-api-key": apiKey },
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`ScrapeCreators ${response.status}: ${body.slice(0, 300) || response.statusText}`);
+    }
+
+    const payload = await response.json() as ScrapeCreatorsTranscriptResponse;
+    if (!Array.isArray(payload.transcript)) throw new Error("ScrapeCreators returned no English transcript");
+
+    const cues = (payload.transcript as ScrapeCreatorsTranscriptRow[])
+      .map(row => {
+        const text = typeof row.text === "string" ? row.text.replace(/\s+/g, " ").trim() : "";
+        const startMs = Number(row.startMs);
+        const endMs = Number(row.endMs);
+        if (!text || !Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return null;
+        return {
+          start: Math.max(0, startMs / 1000),
+          duration: Math.max(0.05, (endMs - startMs) / 1000),
+          text,
+        } satisfies SubtitleCue;
+      })
+      .filter((cue): cue is SubtitleCue => cue !== null);
+
+    if (!cues.length) throw new Error("ScrapeCreators returned an empty English transcript");
+    const language = typeof payload.language === "string" && payload.language.trim()
+      ? payload.language.trim().toLowerCase()
+      : "en";
+
+    return {
+      cues,
+      source: "scrapecreators-native" as const,
+      languageCode: language.includes("english") ? "en" : language,
+      providerDetail: "youtube-transcript-api",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 const providers: Provider[] = [
   {
     name: "youtube-direct",
@@ -72,6 +139,12 @@ const providers: Provider[] = [
         languageCode: result.languageCode || "en",
         providerDetail: result.client,
       };
+    },
+  },
+  {
+    name: "scrapecreators",
+    async acquire(videoId) {
+      return fetchScrapeCreatorsEnglish(videoId);
     },
   },
   {
@@ -91,10 +164,10 @@ const providers: Provider[] = [
 /**
  * Acquire an English caption source for a new subtitle revision.
  *
- * Order is deterministic: direct YouTube first, then the transcript provider
- * fallback. The result includes provenance and every provider attempt so the
- * caller can freeze an auditable raw source artifact. This function performs
- * no database or Blob writes.
+ * Order is deterministic: direct YouTube first, ScrapeCreators second and
+ * Supadata last. The result includes provenance and every provider attempt so
+ * the caller can freeze an auditable raw source artifact. This function
+ * performs no database or Blob writes.
  *
  * Cooldowns are deliberately best-effort and process-local. They avoid
  * hammering a provider from a warm serverless instance after a 429 without
