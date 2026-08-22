@@ -1,5 +1,3 @@
-import { canonicalNumberTokens, numberTokensMatch } from "./numeric-integrity.ts";
-
 export type SubtitleCue = { start: number; duration: number; text: string };
 
 export type SubtitlePairValidation = {
@@ -15,6 +13,17 @@ export type SubtitlePairValidation = {
 };
 
 const TIMING_TOLERANCE_SECONDS = 0.002;
+
+function canonicalNumberTokens(text: string) {
+  return (text.match(/\b\d+(?:[.,]\d+)?(?:\s*(?:mg|mcg|g|ml|IU|iu|%))?\b/g) || [])
+    .map(token => token.replace(/\s+/g, "").replace(",", ".").toLowerCase());
+}
+
+function numberTokensMatch(source: string, target: string) {
+  const left = canonicalNumberTokens(source).sort();
+  const right = canonicalNumberTokens(target).sort();
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
 
 function finiteCue(cue: SubtitleCue) {
   return Number.isFinite(cue.start) && Number.isFinite(cue.duration) && cue.start >= 0 && cue.duration > 0;
