@@ -22,6 +22,8 @@ const EDITOR_SELECTOR = ".gts-editor-screen";
 const EDITOR_CLOSE_SELECTOR = ".gts-editor-back,.gts-editor-auth-cancel";
 const EDITOR_BUTTON_SELECTOR = 'button[aria-label="Επεξεργασία βίντεο"],button.card-edit';
 const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+const HOLD_SPEED_DELAY_MS = 420;
+const HOLD_SPEED_MOVE_THRESHOLD_PX = 16;
 
 function markerFor(route: AppRoute, inApp: boolean, direct: boolean): NavigationMarker {
   return { kind: route.kind, videoId: route.videoId, inApp, direct };
@@ -57,6 +59,20 @@ function fullscreenVideoFrame(): HTMLElement | null {
 
 function blocksFullscreenShortcutBridge(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]'));
+}
+
+function videoTapButton(target: EventTarget | null): HTMLButtonElement | null {
+  return target instanceof Element ? target.closest<HTMLButtonElement>(".video-tap-toggle") : null;
+}
+
+function playbackRateFromUi(): number {
+  const value = Number(document.querySelector<HTMLSelectElement>(".gts31-speed select")?.value);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function sendPlaybackRate(frame: HTMLElement, rate: number): void {
+  const iframe = frame.querySelector<HTMLIFrameElement>("iframe");
+  iframe?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "setPlaybackRate", args: [rate] }), "*");
 }
 
 export default function NavigationAwareGreekTubePlayer() {
@@ -239,6 +255,103 @@ export default function NavigationAwareGreekTubePlayer() {
     document.addEventListener("pointerup", restoreEditorShortcutFocus, true);
     document.addEventListener("pointercancel", restoreEditorShortcutFocus, true);
 
+    // Mobile touch/pen hold mirrors the familiar temporary 2x gesture without changing
+    // the saved speed. The YouTube iframe receives the temporary rate directly. Releasing,
+    // cancelling, hiding the tab or losing focus always restores the exact UI-selected rate.
+    let holdTimer: number | null = null;
+    let holdPointerId: number | null = null;
+    let holdStartX = 0;
+    let holdStartY = 0;
+    let holdFrame: HTMLElement | null = null;
+    let holdPreviousRate = 1;
+    let holdActive = false;
+    let suppressHoldClick = false;
+    let suppressHoldClickTimer: number | null = null;
+
+    const removeHoldIndicator = () => {
+      holdFrame?.querySelector(".gts-hold-speed-indicator")?.remove();
+    };
+
+    const clearHoldTimer = () => {
+      if (holdTimer !== null) window.clearTimeout(holdTimer);
+      holdTimer = null;
+    };
+
+    const finishHoldSpeed = (suppressClick: boolean) => {
+      clearHoldTimer();
+      if (holdActive && holdFrame) sendPlaybackRate(holdFrame, holdPreviousRate);
+      removeHoldIndicator();
+      holdActive = false;
+      holdPointerId = null;
+      holdFrame = null;
+      if (suppressHoldClickTimer !== null) window.clearTimeout(suppressHoldClickTimer);
+      suppressHoldClick = suppressClick;
+      suppressHoldClickTimer = suppressClick
+        ? window.setTimeout(() => { suppressHoldClick = false; suppressHoldClickTimer = null; }, 600)
+        : null;
+    };
+
+    const startHoldSpeed = (event: PointerEvent) => {
+      if (event.button !== 0 || event.pointerType === "mouse") return;
+      const button = videoTapButton(event.target);
+      const frame = button?.closest<HTMLElement>(".video-frame") || null;
+      if (!button || !frame) return;
+
+      finishHoldSpeed(false);
+      holdPointerId = event.pointerId;
+      holdStartX = event.clientX;
+      holdStartY = event.clientY;
+      holdFrame = frame;
+      holdPreviousRate = playbackRateFromUi();
+      holdTimer = window.setTimeout(() => {
+        if (holdPointerId !== event.pointerId || !holdFrame) return;
+        holdTimer = null;
+        holdActive = true;
+        suppressHoldClick = true;
+        sendPlaybackRate(holdFrame, 2);
+        const indicator = document.createElement("div");
+        indicator.className = "gts-hold-speed-indicator";
+        indicator.textContent = "2×";
+        indicator.setAttribute("aria-hidden", "true");
+        holdFrame.appendChild(indicator);
+      }, HOLD_SPEED_DELAY_MS);
+    };
+
+    const moveHoldSpeed = (event: PointerEvent) => {
+      if (holdPointerId !== event.pointerId || holdActive) return;
+      const distance = Math.hypot(event.clientX - holdStartX, event.clientY - holdStartY);
+      if (distance <= HOLD_SPEED_MOVE_THRESHOLD_PX) return;
+      clearHoldTimer();
+      holdPointerId = null;
+      holdFrame = null;
+    };
+
+    const endHoldSpeed = (event: PointerEvent) => {
+      if (holdPointerId !== event.pointerId) return;
+      finishHoldSpeed(holdActive && event.type === "pointerup");
+    };
+
+    const suppressClickAfterHold = (event: MouseEvent) => {
+      if (!suppressHoldClick || !videoTapButton(event.target)) return;
+      suppressHoldClick = false;
+      if (suppressHoldClickTimer !== null) window.clearTimeout(suppressHoldClickTimer);
+      suppressHoldClickTimer = null;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+
+    const cancelHoldSpeed = () => finishHoldSpeed(false);
+    const cancelHiddenHoldSpeed = () => { if (document.hidden) finishHoldSpeed(false); };
+
+    document.addEventListener("pointerdown", startHoldSpeed, true);
+    document.addEventListener("pointermove", moveHoldSpeed, true);
+    document.addEventListener("pointerup", endHoldSpeed, true);
+    document.addEventListener("pointercancel", endHoldSpeed, true);
+    document.addEventListener("lostpointercapture", endHoldSpeed, true);
+    document.addEventListener("click", suppressClickAfterHold, true);
+    window.addEventListener("blur", cancelHoldSpeed);
+    document.addEventListener("visibilitychange", cancelHiddenHoldSpeed);
+
     // Desktop native fullscreen can leave keyboard focus on fullscreen chrome instead of
     // the player surface. Re-dispatch only the seek arrows from the fullscreen frame so
     // the existing GreekTubePlayer keyboard implementation remains the single source of
@@ -381,11 +494,20 @@ export default function NavigationAwareGreekTubePlayer() {
     }
 
     return () => {
+      finishHoldSpeed(false);
       historyObject.replaceState = originalReplaceState;
       observer.disconnect();
       document.removeEventListener("click", captureEditorTarget, true);
       document.removeEventListener("pointerup", restoreEditorShortcutFocus, true);
       document.removeEventListener("pointercancel", restoreEditorShortcutFocus, true);
+      document.removeEventListener("pointerdown", startHoldSpeed, true);
+      document.removeEventListener("pointermove", moveHoldSpeed, true);
+      document.removeEventListener("pointerup", endHoldSpeed, true);
+      document.removeEventListener("pointercancel", endHoldSpeed, true);
+      document.removeEventListener("lostpointercapture", endHoldSpeed, true);
+      document.removeEventListener("click", suppressClickAfterHold, true);
+      window.removeEventListener("blur", cancelHoldSpeed);
+      document.removeEventListener("visibilitychange", cancelHiddenHoldSpeed);
       document.removeEventListener("keydown", bridgeFullscreenSeekKeys, true);
       window.removeEventListener("popstate", onPopState);
       syncSequence.current += 1;
@@ -395,10 +517,38 @@ export default function NavigationAwareGreekTubePlayer() {
   return <>
     <GreekTubePlayer key={navigationEpoch} />
     <style>{`
-      @media (min-width: 621px) {
-        .video-frame:fullscreen .custom-fullscreen {
-          top: 28px !important;
-        }
+      .video-tap-toggle {
+        -webkit-touch-callout: none;
+        user-select: none;
+      }
+      .gts-hold-speed-indicator {
+        position: absolute;
+        z-index: 1004;
+        top: max(14px, env(safe-area-inset-top));
+        left: 50%;
+        transform: translateX(-50%);
+        display: grid;
+        place-items: center;
+        min-width: 54px;
+        height: 34px;
+        padding: 0 13px;
+        border: 1px solid rgba(255,255,255,.22);
+        border-radius: 999px;
+        background: rgba(8,9,13,.78);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 750;
+        letter-spacing: -.02em;
+        line-height: 1;
+        backdrop-filter: blur(10px);
+        pointer-events: none;
+      }
+      .video-frame:not(:fullscreen):not(.pseudo-fullscreen) .gts-hold-speed-indicator {
+        top: 12px;
+        min-width: 48px;
+        height: 30px;
+        padding-inline: 11px;
+        font-size: 13px;
       }
     `}</style>
   </>;
