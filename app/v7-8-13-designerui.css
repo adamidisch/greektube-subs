@@ -48,7 +48,10 @@ html body .app-shell.app-shell.app-shell .brand-version{
   transition:border-color .16s ease,background .16s ease,box-shadow .16s ease;
 }
 .user-profile-trigger:hover,.user-profile-trigger:focus-visible{border-color:rgba(124,116,224,.36);background:rgba(124,116,224,.07);outline:0}
+.user-profile-recovery{position:relative}.user-profile-recovery:disabled{cursor:wait;opacity:.78}.user-profile-recovery.error{border-color:rgba(220,102,92,.28)}
+.user-profile-recovery.error .user-avatar:after{content:"";position:absolute;right:-2px;bottom:-2px;width:7px;height:7px;border:2px solid var(--panel);border-radius:50%;background:#df7169}
 .user-avatar{width:29px;height:29px;display:grid;place-items:center;flex:0 0 auto;border:1px solid rgba(124,116,224,.22);border-radius:9px;background:linear-gradient(145deg,rgba(124,116,224,.18),rgba(64,157,180,.08));color:#aaa2f3}
+.user-avatar{position:relative}
 .user-avatar svg,.user-menu-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
 .user-profile-name{max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:650;letter-spacing:-.01em}
 .user-profile-chevron{margin-top:-2px;color:var(--soft);font-size:12px}

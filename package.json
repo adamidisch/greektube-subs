@@ -16,7 +16,8 @@
     "test:caption-edgecases": "node --experimental-strip-types scripts/caption-translation-edgecases.test.mjs",
     "test:caption-quality-review": "node --experimental-strip-types scripts/caption-quality-review.test.mjs",
     "test:manual-captions": "node --experimental-strip-types scripts/manual-captions-parser.test.mjs",
-    "test:skip-ranges": "node --experimental-strip-types scripts/skip-ranges.test.mjs"
+    "test:skip-ranges": "node --experimental-strip-types scripts/skip-ranges.test.mjs",
+    "test:profile-recovery": "node --experimental-strip-types scripts/profile-recovery.test.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",
