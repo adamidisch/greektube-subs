@@ -107,6 +107,12 @@ export function ensureOwnerTranslationTable() {
   return ownerTableReady;
 }
 
+function assertOwnerMutationEnvironment() {
+  if (process.env.VERCEL_ENV === "preview") {
+    throw new Error("Owner translation mutations είναι απενεργοποιημένα στα Preview deployments μέχρι να υπάρχουν αποδεδειγμένα ξεχωριστά Neon και Blob resources.");
+  }
+}
+
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
 }
@@ -258,6 +264,7 @@ async function releaseOwnerLease(videoId: string, token: string) {
 }
 
 export async function freezeOwnerSource(videoId: string, newRevision = false) {
+  assertOwnerMutationEnvironment();
   await ensureOwnerTranslationTable();
   const existingManifest = await getOwnerTranslationManifest(videoId);
   if (existingManifest && !newRevision) return { manifest: existingManifest, created: false };
@@ -332,6 +339,7 @@ export async function ownerTranslationPackage(videoId: string) {
 }
 
 export async function validateOwnerGreek(videoId: string, subtitleText: string) {
+  assertOwnerMutationEnvironment();
   if (subtitleText.length > 2_000_000) throw new Error("Το ελληνικό SRT είναι υπερβολικά μεγάλο.");
   const manifest = await getOwnerTranslationManifest(videoId);
   if (!manifest) throw new Error("Κάνε πρώτα Freeze Source.");
@@ -438,6 +446,7 @@ async function transcriptMatchesOwnerManifest(manifest: OwnerTranslationManifest
 export async function reconcileOwnerPublishing(videoId: string) {
   const manifest = await getOwnerTranslationManifest(videoId);
   if (!manifest || manifest.status !== "publishing") return manifest;
+  if (process.env.VERCEL_ENV === "preview") return manifest;
   const db = database();
   const leaseRows = await db.query(
     "SELECT lock_token,lock_expires_at FROM video_transcripts WHERE video_id=$1 LIMIT 1",
@@ -467,6 +476,7 @@ export async function reconcileOwnerPublishing(videoId: string) {
 }
 
 export async function publishOwnerTranslation(videoId: string) {
+  assertOwnerMutationEnvironment();
   let manifest = await getOwnerTranslationManifest(videoId);
   if (!manifest) throw new Error("Δεν υπάρχει owner manifest.");
   if (manifest.status === "published") return { manifest, alreadyPublished: true };
