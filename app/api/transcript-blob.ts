@@ -1,4 +1,5 @@
 import { get, put } from "@vercel/blob";
+import { validateSubtitlePair, type SubtitleCue } from "./captions/subtitle-contract";
 
 type PublishedTranscript = {
   status?: unknown;
@@ -246,6 +247,17 @@ export async function readPublishedTranscript(videoId: string, transcriptVersion
 
 export async function publishTranscript(videoId: string, transcriptVersion: number, payload: unknown) {
   if (!configured() || !validPayload(payload, videoId, transcriptVersion)) return false;
+  if (Array.isArray(payload.englishCues) && payload.englishCues.length) {
+    const contract = validateSubtitlePair(payload.englishCues as SubtitleCue[], payload.cues as SubtitleCue[]);
+    if (!contract.ok) {
+      console.warn("[transcript-blob:publish-contract-rejected]", JSON.stringify({
+        videoId,
+        transcriptVersion,
+        errors: contract.errors.slice(0, 20),
+      }));
+      return false;
+    }
+  }
   try {
     const greekPayload = greekOnly(payload);
     const writes = [
