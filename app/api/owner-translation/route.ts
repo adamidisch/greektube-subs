@@ -6,6 +6,7 @@ import {
   getOwnerTranslationManifest,
   ownerTranslationPackage,
   publishOwnerTranslation,
+  reconcileOwnerPublishing,
   validateOwnerGreek,
 } from "./store";
 
@@ -48,7 +49,8 @@ export async function GET(request: Request) {
         },
       });
     }
-    const manifest = await getOwnerTranslationManifest(videoId);
+    let manifest = await getOwnerTranslationManifest(videoId);
+    if (manifest?.status === "publishing") manifest = await reconcileOwnerPublishing(videoId);
     const legacyOwner = !manifest && await isOwnerChatgptVideo(videoId);
     return NextResponse.json({ manifest, legacyOwner }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

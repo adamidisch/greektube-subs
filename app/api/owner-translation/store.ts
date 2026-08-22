@@ -12,7 +12,7 @@ import { publishTranscript, publishTranscriptCheckpoint, readPublishedTranscript
 import { numberTokensMatch } from "../captions/numeric-integrity";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "../manual-captions/parser";
 
-export type OwnerTranslationStatus = "frozen" | "validated" | "published";
+export type OwnerTranslationStatus = "frozen" | "validated" | "publishing" | "published";
 
 export type OwnerTranslationManifest = {
   videoId: string;
@@ -99,28 +99,7 @@ export function ensureOwnerTranslationTable() {
   if (ownerTableReady) return ownerTableReady;
   ownerTableReady = (async () => {
     const db = database();
-    await db.query(`CREATE TABLE IF NOT EXISTS owner_translation_manifests (
-      video_id TEXT NOT NULL,
-      revision INTEGER NOT NULL,
-      transcript_version INTEGER NOT NULL,
-      cue_count INTEGER NOT NULL,
-      source_hash TEXT NOT NULL,
-      timestamp_hash TEXT NOT NULL,
-      source_blob_path TEXT NOT NULL,
-      greek_draft_blob_path TEXT,
-      greek_draft_hash TEXT,
-      status TEXT NOT NULL DEFAULT 'frozen',
-      translation_mode TEXT NOT NULL DEFAULT 'owner',
-      translation_method TEXT NOT NULL DEFAULT 'manual_chatgpt_pro_v1',
-      validation_json TEXT,
-      owner_locked_at TEXT NOT NULL,
-      validated_at TEXT,
-      published_at TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      PRIMARY KEY (video_id, revision)
-    )`);
-    await db.query("CREATE INDEX IF NOT EXISTS owner_translation_video_status_idx ON owner_translation_manifests (video_id, status, revision DESC)");
+    await db.query("SELECT 1 FROM owner_translation_manifests LIMIT 1");
   })().catch((error: unknown) => {
     ownerTableReady = null;
     throw error;
@@ -282,6 +261,7 @@ export async function freezeOwnerSource(videoId: string, newRevision = false) {
   await ensureOwnerTranslationTable();
   const existingManifest = await getOwnerTranslationManifest(videoId);
   if (existingManifest && !newRevision) return { manifest: existingManifest, created: false };
+  if (existingManifest?.status === "publishing") throw new Error("Η προηγούμενη owner revision είναι ακόμη σε publishing/recovery.");
 
   const token = crypto.randomUUID();
   if (!await claimOwnerLease(videoId, token)) throw new Error("Το βίντεο επεξεργάζεται αυτή τη στιγμή. Περίμενε να ολοκληρωθεί το τρέχον processing slice και ξαναπάτησε Freeze Source.");
@@ -356,6 +336,7 @@ export async function validateOwnerGreek(videoId: string, subtitleText: string) 
   const manifest = await getOwnerTranslationManifest(videoId);
   if (!manifest) throw new Error("Κάνε πρώτα Freeze Source.");
   if (manifest.status === "published") throw new Error("Αυτή η owner revision έχει ήδη δημοσιευτεί.");
+  if (manifest.status === "publishing") throw new Error("Η owner revision είναι σε publishing/recovery. Περίμενε να ολοκληρωθεί το reconcile.");
   const source = await readSource(manifest);
   const greek = parseManualSubtitleText(subtitleText).map(normalizeCue);
   if (!greek.length || greek.some(cue => !cue) || !hasValidManualCueTimings(greek as CachedCue[])) throw new Error("Το ελληνικό SRT δεν περιέχει έγκυρα timed cues.");
@@ -420,7 +401,7 @@ export async function validateOwnerGreek(videoId: string, subtitleText: string) 
   const db = database();
   const validationRows = await db.query(
     `UPDATE owner_translation_manifests SET greek_draft_blob_path=$1,greek_draft_hash=$2,status='validated',validation_json=$3,validated_at=$4,updated_at=$4
-     WHERE video_id=$5 AND revision=$6 AND source_hash=$7 AND status!='published' RETURNING video_id`,
+     WHERE video_id=$5 AND revision=$6 AND source_hash=$7 AND status IN ('frozen','validated') RETURNING video_id`,
     [path, greekHash, JSON.stringify(validation), now, videoId, manifest.revision, manifest.sourceHash],
   ) as { video_id: string }[];
   if (validationRows.length !== 1) throw new Error("Το validated draft δεν μπόρεσε να δεθεί με το active owner manifest.");
@@ -443,10 +424,49 @@ async function readDraft(manifest: OwnerTranslationManifest) {
   return normalized;
 }
 
-export async function publishOwnerTranslation(videoId: string) {
+async function transcriptMatchesOwnerManifest(manifest: OwnerTranslationManifest) {
+  const readBack = await getTranscript(manifest.videoId);
+  return Boolean(readBack &&
+    readBack.status === "ready" &&
+    readBack.englishTranscript.length === manifest.cueCount &&
+    readBack.greekTranscript.length === manifest.cueCount &&
+    ownerSourceHash(readBack.englishTranscript) === manifest.sourceHash &&
+    Boolean(manifest.greekDraftHash) &&
+    ownerSourceHash(readBack.greekTranscript) === manifest.greekDraftHash);
+}
+
+export async function reconcileOwnerPublishing(videoId: string) {
   const manifest = await getOwnerTranslationManifest(videoId);
+  if (!manifest || manifest.status !== "publishing") return manifest;
+  const db = database();
+  const now = new Date().toISOString();
+  if (await transcriptMatchesOwnerManifest(manifest)) {
+    const rows = await db.query(
+      `UPDATE owner_translation_manifests SET status='published',published_at=COALESCE(published_at,$1),updated_at=$1
+       WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='publishing' RETURNING video_id`,
+      [now, videoId, manifest.revision, manifest.sourceHash],
+    ) as { video_id: string }[];
+    if (rows.length !== 1) throw new Error("Το publishing reconcile δεν μπόρεσε να ολοκληρώσει το manifest.");
+  } else {
+    const rows = await db.query(
+      `UPDATE owner_translation_manifests SET status='validated',updated_at=$1
+       WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='publishing' RETURNING video_id`,
+      [now, videoId, manifest.revision, manifest.sourceHash],
+    ) as { video_id: string }[];
+    if (rows.length !== 1) throw new Error("Το publishing reconcile δεν μπόρεσε να επαναφέρει το manifest σε validated.");
+  }
+  return await getOwnerTranslationManifest(videoId);
+}
+
+export async function publishOwnerTranslation(videoId: string) {
+  let manifest = await getOwnerTranslationManifest(videoId);
   if (!manifest) throw new Error("Δεν υπάρχει owner manifest.");
   if (manifest.status === "published") return { manifest, alreadyPublished: true };
+  if (manifest.status === "publishing") {
+    manifest = await reconcileOwnerPublishing(videoId);
+    if (!manifest) throw new Error("Το owner manifest χάθηκε κατά το reconcile.");
+    if (manifest.status === "published") return { manifest, alreadyPublished: true };
+  }
   if (manifest.status !== "validated" || !manifest.validation?.ok) throw new Error("Η μετάφραση πρέπει πρώτα να περάσει Validate.");
 
   const english = await readSource(manifest);
@@ -456,6 +476,18 @@ export async function publishOwnerTranslation(videoId: string) {
 
   const token = crypto.randomUUID();
   if (!await claimOwnerLease(videoId, token)) throw new Error("Το βίντεο επεξεργάζεται ήδη. Το Publish δεν ξεκίνησε.");
+
+  const db = database();
+  const publishingAt = new Date().toISOString();
+  const publishingRows = await db.query(
+    `UPDATE owner_translation_manifests SET status='publishing',updated_at=$1
+     WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='validated' RETURNING video_id`,
+    [publishingAt, videoId, manifest.revision, manifest.sourceHash],
+  ) as { video_id: string }[];
+  if (publishingRows.length !== 1) {
+    await releaseOwnerLease(videoId, token).catch(() => undefined);
+    throw new Error("Το owner manifest δεν μπόρεσε να περάσει σε publishing.");
+  }
 
   const previousPublished = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION, true).catch(() => null);
   const previousCheckpoint = await readTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, true).catch(() => null);
@@ -495,18 +527,16 @@ export async function publishOwnerTranslation(videoId: string) {
     };
     if (!await completeTranscript(record, token)) throw new Error("Το guarded Neon switch απέτυχε.");
     committed = true;
-    const readBack = await getTranscript(videoId);
-    if (!readBack || readBack.status !== "ready" || readBack.englishTranscript.length !== manifest.cueCount || readBack.greekTranscript.length !== manifest.cueCount || ownerSourceHash(readBack.englishTranscript) !== manifest.sourceHash || ownerSourceHash(readBack.greekTranscript) !== manifest.greekDraftHash) {
-      throw new Error("Το production read-back δεν ταίριαξε με το validated owner manifest.");
+    if (!await transcriptMatchesOwnerManifest(manifest)) {
+      throw new Error("Το production read-back δεν ταίριαξε με το validated owner manifest. Το manifest έμεινε σε publishing για recovery.");
     }
 
-    const db = database();
     const publishedRows = await db.query(
       `UPDATE owner_translation_manifests SET status='published',published_at=$1,updated_at=$1
-       WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='validated' RETURNING video_id`,
+       WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='publishing' RETURNING video_id`,
       [now, videoId, manifest.revision, manifest.sourceHash],
     ) as { video_id: string }[];
-    if (publishedRows.length !== 1) throw new Error("Το final owner manifest transition δεν ολοκληρώθηκε.");
+    if (publishedRows.length !== 1) throw new Error("Το final owner manifest transition δεν ολοκληρώθηκε. Το manifest έμεινε σε publishing για recovery.");
     const updated = await getOwnerTranslationManifest(videoId);
     if (!updated || updated.revision !== manifest.revision || updated.status !== "published") throw new Error("Το published owner manifest δεν επιβεβαιώθηκε.");
     return { manifest: updated, alreadyPublished: false };
@@ -514,6 +544,11 @@ export async function publishOwnerTranslation(videoId: string) {
     if (!committed) {
       if (previousPublished) await publishTranscript(videoId, TRANSCRIPT_VERSION, previousPublished).catch(() => undefined);
       if (previousCheckpoint) await publishTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, previousCheckpoint).catch(() => undefined);
+      await db.query(
+        `UPDATE owner_translation_manifests SET status='validated',updated_at=$1
+         WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='publishing'`,
+        [new Date().toISOString(), videoId, manifest.revision, manifest.sourceHash],
+      ).catch(() => undefined);
       await releaseOwnerLease(videoId, token).catch(() => undefined);
     }
     throw error;
