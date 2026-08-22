@@ -12,7 +12,7 @@ type EditorVideo={
 type MetadataDraft={title:string;originalTitle:string;speakerName:string;speakerRole:string;channel:string;channelUrl:string;originalVideoUrl:string;category:string;tags:string[];description:string};
 type Cue={start:number;duration:number;text:string};
 type EditorCaptions={videoId:string;cues:Cue[];duration?:number;transcriptVersion?:number};
-type PlayerLike={destroy:()=>void;playVideo:()=>void;pauseVideo:()=>void;getPlayerState:()=>number;getCurrentTime:()=>number;getDuration:()=>number;seekTo:(seconds:number,allow:boolean)=>void;getOptions?:()=>string[];unloadModule?:(module:string)=>void};
+type PlayerLike={destroy:()=>void;playVideo:()=>void;pauseVideo:()=>void;getPlayerState:()=>number;getCurrentTime:()=>number;getDuration:()=>number;seekTo:(seconds:number,allow:boolean)=>void};
 
 const CATEGORIES=[
   ["Medical","Ιατρικά"],["Tech","Τεχνολογία"],["Podcasts","Συζητήσεις"],["Comedy","Κωμωδία"],["Education","Εκπαίδευση"],["Documentaries","Ντοκιμαντέρ"],["Other","Άλλα"],
@@ -78,19 +78,13 @@ async function ensureYouTubeApi(){
   const target=window as unknown as {YT?:{Player:new(el:HTMLElement,options:Record<string,unknown>)=>PlayerLike};onYouTubeIframeAPIReady?:()=>void};
   if(target.YT?.Player)return target.YT;
   return await new Promise<NonNullable<typeof target.YT>>((resolve,reject)=>{
-    let settled=false;
     const previous=target.onYouTubeIframeAPIReady;
-    const cleanup=()=>{window.clearInterval(poll);window.clearTimeout(timeout);if(target.onYouTubeIframeAPIReady===finish)target.onYouTubeIframeAPIReady=previous;};
-    const finish=()=>{previous?.();if(target.YT?.Player&&!settled){settled=true;cleanup();resolve(target.YT);}};
-    const check=()=>{if(target.YT?.Player)finish();};
+    const finish=()=>{previous?.();if(target.YT?.Player)resolve(target.YT);else reject(new Error("youtube-api"));};
     target.onYouTubeIframeAPIReady=finish;
     let script=document.querySelector<HTMLScriptElement>('script[src="https://www.youtube.com/iframe_api"]');
     if(!script){script=document.createElement("script");script.src="https://www.youtube.com/iframe_api";script.async=true;document.head.appendChild(script);}
-    const poll=window.setInterval(check,50);
-    const timeout=window.setTimeout(()=>{if(!settled){settled=true;cleanup();reject(new Error("youtube-api"));}},12000);
-    script.addEventListener("load",check,{once:true});
-    script.addEventListener("error",()=>{if(!settled){settled=true;cleanup();reject(new Error("youtube-api"));}},{once:true});
-    check();
+    script.addEventListener("error",()=>reject(new Error("youtube-api")),{once:true});
+    window.setTimeout(()=>{if(target.YT?.Player)resolve(target.YT);},500);
   });
 }
 
@@ -110,14 +104,12 @@ export default function VideoEditorDemoEnhancer(){
   const [current,setCurrent]=useState(0);
   const [duration,setDuration]=useState(0);
   const [playing,setPlaying]=useState(false);
-  const [playerReady,setPlayerReady]=useState(false);
   const [previewIndex,setPreviewIndex]=useState<number|null>(null);
   const [status,setStatus]=useState("");
   const [saveBusy,setSaveBusy]=useState(false);
   const host=useRef<HTMLDivElement|null>(null);
   const player=useRef<PlayerLike|null>(null);
   const origin=useRef<{videoId:string;time:number}>({videoId:"",time:0});
-  const pendingSeek=useRef(0);
 
   const validationErrors=useMemo(()=>{
     const errors:string[]=[];
@@ -147,12 +139,15 @@ export default function VideoEditorDemoEnhancer(){
       const response=await fetch(`/api/video-editor?videoId=${encodeURIComponent(videoId)}`,{cache:"no-store",credentials:"same-origin"});
       const result=await response.json() as {video?:EditorVideo;error?:string};
       if(!response.ok||!result.video)throw new Error(result.error||"Το βίντεο δεν φορτώθηκε.");
-      const nextMetadata=metadataFrom(result.video),nextRanges=rangesFrom(result.video.skipRanges);
-      setVideo(result.video);setMetadata(nextMetadata);setRanges(nextRanges);setDuration(Number(result.video.duration||0));setCurrent(sourceTime);pendingSeek.current=sourceTime;setInitialSnapshot(snapshotOf(nextMetadata,nextRanges));setDraftStart(null);
-      const captionsResponse=await fetch(`/api/captions?videoId=${encodeURIComponent(videoId)}`,{cache:"no-store",credentials:"same-origin"});
-      const captionData=await captionsResponse.json().catch(()=>null) as EditorCaptions|null;
-      if(captionsResponse.ok&&isVerifiedGreekCaptions(captionData,Number(result.video.duration||0)))setCaptions(captionData);
-      else setStatus("Δεν υπάρχει ακόμη verified ελληνική μεταγραφή για το Video Editor.");
+      const editorVideo=result.video;
+      const nextMetadata=metadataFrom(editorVideo),nextRanges=rangesFrom(editorVideo.skipRanges);
+      setVideo(editorVideo);setMetadata(nextMetadata);setRanges(nextRanges);setDuration(Number(editorVideo.duration||0));setCurrent(sourceTime);setInitialSnapshot(snapshotOf(nextMetadata,nextRanges));setDraftStart(null);
+      void fetch(`/api/captions?videoId=${encodeURIComponent(videoId)}`,{cache:"no-store",credentials:"same-origin"})
+        .then(async captionsResponse=>{
+          const captionData=await captionsResponse.json().catch(()=>null) as EditorCaptions|null;
+          if(captionsResponse.ok&&isVerifiedGreekCaptions(captionData,Number(editorVideo.duration||0)))setCaptions(captionData);
+        })
+        .catch(()=>{});
     }catch(problem){setStatus(problem instanceof Error?problem.message:"Το βίντεο δεν φορτώθηκε.");}
     finally{setLoading(false);}
   }
@@ -201,25 +196,22 @@ export default function VideoEditorDemoEnhancer(){
 
   useEffect(()=>{
     if(!open||!video||!host.current||authRequired)return;
-    let cancelled=false;setPlayerReady(false);
+    let cancelled=false;
     void ensureYouTubeApi().then(YT=>{
       if(cancelled||!host.current)return;
       player.current?.destroy();host.current.innerHTML="";
-      const disableYouTubeCaptions=(target:PlayerLike)=>{if(target.getOptions?.().includes("captions"))target.unloadModule?.("captions");};
-      player.current=new YT.Player(host.current,{videoId:video.id,width:"100%",height:"100%",playerVars:{autoplay:0,controls:0,disablekb:1,playsinline:1,rel:0,modestbranding:1,start:Math.floor(current),cc_load_policy:0,iv_load_policy:3},events:{
-        onReady:({target}:{target:PlayerLike})=>{if(cancelled)return;const d=target.getDuration();if(d>0)setDuration(d);target.seekTo(pendingSeek.current,true);disableYouTubeCaptions(target);window.setTimeout(()=>disableYouTubeCaptions(target),350);setPlayerReady(true);},
-        onApiChange:({target}:{target:PlayerLike})=>disableYouTubeCaptions(target),
-        onStateChange:({target,data}:{target:PlayerLike;data:number})=>{disableYouTubeCaptions(target);setPlaying(data===1);},
-        onError:()=>{if(!cancelled){setPlayerReady(false);setStatus("Το YouTube δεν επέτρεψε την αναπαραγωγή αυτού του βίντεο στον editor.");}},
+      player.current=new YT.Player(host.current,{videoId:video.id,width:"100%",height:"100%",playerVars:{autoplay:0,controls:0,disablekb:1,playsinline:1,rel:0,modestbranding:1,start:Math.floor(current)},events:{
+        onReady:({target}:{target:PlayerLike})=>{const d=target.getDuration();if(d>0)setDuration(d);target.seekTo(current,true);},
+        onStateChange:({data}:{data:number})=>setPlaying(data===1),
       }});
     }).catch(()=>setStatus("Δεν ήταν δυνατή η φόρτωση του YouTube player."));
-    return()=>{cancelled=true;setPlayerReady(false);player.current?.destroy();player.current=null;};
+    return()=>{cancelled=true;player.current?.destroy();player.current=null;};
   },[open,video?.id,authRequired]);
 
   useEffect(()=>{
     if(!open||!video||authRequired)return;
     const timer=window.setInterval(()=>{
-      const target=player.current;if(!target||!playerReady)return;
+      const target=player.current;if(!target)return;
       const now=target.getCurrentTime();if(Number.isFinite(now))setCurrent(now);
       const d=target.getDuration();if(d>0&&Math.abs(d-duration)>.5)setDuration(d);
       if(previewIndex!==null){
@@ -230,7 +222,7 @@ export default function VideoEditorDemoEnhancer(){
       }
     },100);
     return()=>window.clearInterval(timer);
-  },[open,video?.id,authRequired,previewIndex,ranges,duration,playerReady]);
+  },[open,video?.id,authRequired,previewIndex,ranges,duration]);
 
   function closeEditor(){
     if(dirty&&!window.confirm("Υπάρχουν μη αποθηκευμένες αλλαγές. Θέλεις να φύγεις χωρίς αποθήκευση;"))return;
@@ -240,8 +232,8 @@ export default function VideoEditorDemoEnhancer(){
     }
     setOpen(false);setAuthRequired(false);setVideo(null);setCaptions(null);setMetadata(null);setRanges([]);setInitialSnapshot("");setPreviewIndex(null);setStatus("");
   }
-  function seek(next:number){const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));pendingSeek.current=safe;setCurrent(safe);const target=player.current;if(!target||!playerReady)return;target.seekTo(safe,true);}
-  function toggle(){const target=player.current;if(!target||!playerReady){setStatus("Ο player φορτώνει ακόμη.");return;}if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();}
+  function seek(next:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));target.seekTo(safe,true);setCurrent(safe);}
+  function toggle(){const target=player.current;if(!target)return;if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();}
   function markStart(){setDraftStart(current);setStatus(`Αρχή range: ${clock(current,true)}`);}
   function markEnd(){
     if(draftStart===null){setStatus("Όρισε πρώτα την αρχή του range.");return;}

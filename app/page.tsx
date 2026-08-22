@@ -15,7 +15,6 @@ import SkipRangeTransferEnhancer from "./SkipRangeTransferEnhancer";
 import NextVideosEnhancer from "./NextVideosEnhancer";
 import AnalyticsEnhancer from "./AnalyticsEnhancer";
 import EditorProductionPolishEnhancer from "./EditorProductionPolishEnhancer";
-import EditorFooterPortal from "./EditorFooterPortal";
 import GtsFooter from "./GtsFooter";
 
 const SITE_URL = "https://greektubesubs.com";
@@ -116,7 +115,6 @@ export default function Home() {
       <NextVideosEnhancer />
       <AnalyticsEnhancer />
       <EditorProductionPolishEnhancer />
-      <EditorFooterPortal />
       <GtsFooter />
     </>
   );
