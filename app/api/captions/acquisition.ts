@@ -1,0 +1,1 @@
+export const CAPTION_ACQUISITION_VERSION = 1;
