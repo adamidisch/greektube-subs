@@ -1,0 +1,356 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import GreekTubePlayer from "./GreekTubePlayer";
+import {
+  appRouteKey,
+  parseAppRoute,
+  readNavigationMarker,
+  routeWithoutView,
+  sameVideoContext,
+  shouldBackOnVideoClose,
+  shouldPromoteVideoReplaceToPush,
+  withNavigationMarker,
+  type AppRoute,
+  type AppRouteKind,
+  type NavigationMarker,
+} from "./navigation-history";
+
+const SETTINGS_SELECTOR = ".settings-page";
+const SETTINGS_CLOSE_SELECTOR = ".settings-page .settings-close";
+const EDITOR_SELECTOR = ".gts-editor-screen";
+const EDITOR_CLOSE_SELECTOR = ".gts-editor-back,.gts-editor-auth-cancel";
+const EDITOR_BUTTON_SELECTOR = 'button[aria-label="Επεξεργασία βίντεο"],button.card-edit';
+const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+
+function markerFor(route: AppRoute, inApp: boolean, direct: boolean): NavigationMarker {
+  return { kind: route.kind, videoId: route.videoId, inApp, direct };
+}
+
+function videoIdFromEditButton(button: HTMLElement): string {
+  const current = String(new URLSearchParams(location.search).get("video") || "").trim();
+  if (VIDEO_ID_PATTERN.test(current) && button.closest(".viewer")) return current;
+  const container = button.closest(".video-card,article") || button.parentElement;
+  const image = container?.querySelector<HTMLImageElement>('img[src*="i.ytimg.com/vi/"]');
+  return image?.src.match(/\/vi\/([A-Za-z0-9_-]{11})\//)?.[1] || "";
+}
+
+function settingsButton(): HTMLButtonElement | null {
+  const direct = document.querySelector<HTMLButtonElement>('button[aria-label="Ρυθμίσεις"]');
+  if (direct) return direct;
+  return [...document.querySelectorAll<HTMLButtonElement>(".mobile-menu > button")]
+    .find(button => button.textContent?.trim() === "Ρυθμίσεις") || null;
+}
+
+function editorButton(videoId: string): HTMLButtonElement | null {
+  const buttons = [...document.querySelectorAll<HTMLButtonElement>(EDITOR_BUTTON_SELECTOR)];
+  if (!videoId) return buttons[0] || null;
+  return buttons.find(button => videoIdFromEditButton(button) === videoId) || null;
+}
+
+export default function NavigationAwareGreekTubePlayer() {
+  const [navigationEpoch, setNavigationEpoch] = useState(0);
+  const routeRef = useRef<AppRoute | null>(null);
+  const replayingHistory = useRef(false);
+  const syncSequence = useRef(0);
+  const pendingEditorId = useRef("");
+  const overlayBackPending = useRef(false);
+
+  useEffect(() => {
+    const historyObject = window.history;
+    const originalReplaceState = historyObject.replaceState;
+    const nativeReplaceState = originalReplaceState.bind(historyObject);
+    const nativePushState = historyObject.pushState.bind(historyObject);
+    let settingsWasOpen = Boolean(document.querySelector(SETTINGS_SELECTOR));
+    let editorWasOpen = Boolean(document.querySelector(EDITOR_SELECTOR));
+
+    const writeState = (
+      mode: "replace" | "push",
+      url: string | URL,
+      route: AppRoute,
+      inApp: boolean,
+      direct: boolean,
+      state: unknown = historyObject.state,
+      title = "",
+    ) => {
+      const nextState = withNavigationMarker(state, markerFor(route, inApp, direct));
+      if (mode === "push") nativePushState(nextState, title, url);
+      else nativeReplaceState(nextState, title, url);
+      routeRef.current = route;
+    };
+
+    const initialRoute = parseAppRoute(location.href);
+    const initialMarker = readNavigationMarker(historyObject.state);
+    writeState(
+      "replace",
+      location.href,
+      initialRoute,
+      initialMarker?.inApp === true,
+      initialMarker ? initialMarker.direct : initialRoute.kind !== "home",
+    );
+
+    historyObject.replaceState = ((state: unknown, title: string, url?: string | URL | null) => {
+      if (url === undefined || url === null) {
+        nativeReplaceState(state, title, url);
+        return;
+      }
+
+      const current = parseAppRoute(location.href);
+      const nextUrl = new URL(String(url), location.href);
+      const next = parseAppRoute(nextUrl);
+      const currentMarker = readNavigationMarker(historyObject.state);
+
+      // Editor/settings are overlays over the current video. Existing player code updates
+      // the video URL while those overlays are open, so preserve the overlay route until
+      // the overlay itself closes and Browser History returns to the previous entry.
+      if ((current.kind === "editor" || current.kind === "settings")
+        && next.kind === "video"
+        && sameVideoContext(current, next)) {
+        nextUrl.searchParams.set("view", current.kind);
+        const overlayRoute = parseAppRoute(nextUrl);
+        writeState(
+          "replace",
+          nextUrl,
+          overlayRoute,
+          currentMarker?.inApp === true,
+          currentMarker?.direct === true,
+          state,
+          title,
+        );
+        return;
+      }
+
+      if (replayingHistory.current) {
+        writeState(
+          "replace",
+          nextUrl,
+          next,
+          currentMarker?.inApp === true,
+          currentMarker?.direct === true,
+          state,
+          title,
+        );
+        return;
+      }
+
+      if (shouldPromoteVideoReplaceToPush(current, next)) {
+        writeState("push", nextUrl, next, true, false, state, title);
+        return;
+      }
+
+      if (shouldBackOnVideoClose(current, next, currentMarker)) {
+        queueMicrotask(() => historyObject.back());
+        return;
+      }
+
+      writeState(
+        "replace",
+        nextUrl,
+        next,
+        currentMarker?.inApp === true,
+        next.kind === "home" ? false : currentMarker?.direct === true,
+        state,
+        title,
+      );
+    }) as History["replaceState"];
+
+    const pushOverlayRoute = (kind: Extract<AppRouteKind, "settings" | "editor">, videoId = "") => {
+      const current = parseAppRoute(location.href);
+      if (current.kind === kind) return;
+      const url = new URL(location.href);
+      url.searchParams.set("view", kind);
+      if (videoId && !url.searchParams.get("video")) url.searchParams.set("video", videoId);
+      const next = parseAppRoute(url);
+      writeState("push", url, next, true, false);
+    };
+
+    const returnFromOverlay = () => {
+      if (overlayBackPending.current) return;
+      overlayBackPending.current = true;
+      const marker = readNavigationMarker(historyObject.state);
+      if (marker?.inApp) {
+        historyObject.back();
+        return;
+      }
+      const url = routeWithoutView(location.href, location.href);
+      const route = parseAppRoute(url);
+      writeState("replace", url, route, false, false);
+      overlayBackPending.current = false;
+    };
+
+    const syncOverlayMutations = () => {
+      const settingsOpen = Boolean(document.querySelector(SETTINGS_SELECTOR));
+      const editorOpen = Boolean(document.querySelector(EDITOR_SELECTOR));
+
+      if (!replayingHistory.current) {
+        const route = routeRef.current || parseAppRoute(location.href);
+        if (settingsOpen && !settingsWasOpen && route.kind !== "settings") {
+          pushOverlayRoute("settings", route.videoId);
+        } else if (!settingsOpen && settingsWasOpen && route.kind === "settings") {
+          returnFromOverlay();
+        }
+
+        const currentRoute = routeRef.current || parseAppRoute(location.href);
+        if (editorOpen && !editorWasOpen && currentRoute.kind !== "editor") {
+          const id = pendingEditorId.current || currentRoute.videoId;
+          pushOverlayRoute("editor", id);
+        } else if (!editorOpen && editorWasOpen && currentRoute.kind === "editor") {
+          returnFromOverlay();
+        }
+      }
+
+      settingsWasOpen = settingsOpen;
+      editorWasOpen = editorOpen;
+    };
+
+    const observer = new MutationObserver(syncOverlayMutations);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    const captureEditorTarget = (event: MouseEvent) => {
+      const button = event.target instanceof Element
+        ? event.target.closest<HTMLElement>(EDITOR_BUTTON_SELECTOR)
+        : null;
+      if (!button) return;
+      const id = videoIdFromEditButton(button);
+      if (id) pendingEditorId.current = id;
+    };
+    document.addEventListener("click", captureEditorTarget, true);
+
+    const restoreEditorShortcutFocus = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      if (target.type !== "range" || !target.closest(".gts-editor-timeline")) return;
+      window.requestAnimationFrame(() => {
+        if (document.activeElement === target) target.blur();
+        document.querySelector<HTMLElement>(EDITOR_SELECTOR)?.focus({ preventScroll: true });
+      });
+    };
+    document.addEventListener("pointerup", restoreEditorShortcutFocus, true);
+    document.addEventListener("pointercancel", restoreEditorShortcutFocus, true);
+
+    const finishReplay = (sequence: number) => {
+      if (sequence !== syncSequence.current) return;
+      window.requestAnimationFrame(() => {
+        if (sequence !== syncSequence.current) return;
+        replayingHistory.current = false;
+        overlayBackPending.current = false;
+        settingsWasOpen = Boolean(document.querySelector(SETTINGS_SELECTOR));
+        editorWasOpen = Boolean(document.querySelector(EDITOR_SELECTOR));
+      });
+    };
+
+    const syncUiToRoute = (route: AppRoute, sequence: number) => {
+      let attempts = 0;
+      let clicked = false;
+      const attempt = () => {
+        if (sequence !== syncSequence.current) return;
+        attempts += 1;
+
+        if (route.kind === "settings") {
+          if (document.querySelector(SETTINGS_SELECTOR)) {
+            finishReplay(sequence);
+            return;
+          }
+          if (route.videoId && !document.querySelector(".viewer")) {
+            if (attempts < 60) window.setTimeout(attempt, 100);
+            else finishReplay(sequence);
+            return;
+          }
+          const button = settingsButton();
+          if (button && !clicked) {
+            clicked = true;
+            button.click();
+          }
+          if (attempts < 60) window.setTimeout(attempt, 100);
+          else finishReplay(sequence);
+          return;
+        }
+
+        if (route.kind === "editor") {
+          if (document.querySelector(EDITOR_SELECTOR)) {
+            finishReplay(sequence);
+            return;
+          }
+          const button = editorButton(route.videoId);
+          if (button && !clicked) {
+            clicked = true;
+            pendingEditorId.current = route.videoId || videoIdFromEditButton(button);
+            button.click();
+          }
+          if (attempts < 80) window.setTimeout(attempt, 100);
+          else finishReplay(sequence);
+          return;
+        }
+
+        finishReplay(sequence);
+      };
+      attempt();
+    };
+
+    const closeOverlayForHistory = (selector: string, targetRoute: AppRoute, sequence: number) => {
+      const button = document.querySelector<HTMLButtonElement>(selector);
+      button?.click();
+      window.setTimeout(() => {
+        if (sequence !== syncSequence.current) return;
+        const editorStillOpen = selector === EDITOR_CLOSE_SELECTOR && Boolean(document.querySelector(EDITOR_SELECTOR));
+        if (editorStillOpen) {
+          // Dirty editor close can be cancelled. Restore the history entry instead of
+          // leaving the visible editor on a non-editor URL.
+          replayingHistory.current = false;
+          routeRef.current = parseAppRoute(location.href);
+          historyObject.forward();
+          return;
+        }
+        routeRef.current = parseAppRoute(location.href);
+        syncUiToRoute(targetRoute, sequence);
+      }, 0);
+    };
+
+    const onPopState = () => {
+      const previous = routeRef.current || parseAppRoute(location.href);
+      const next = parseAppRoute(location.href);
+      routeRef.current = next;
+      replayingHistory.current = true;
+      overlayBackPending.current = false;
+      const sequence = ++syncSequence.current;
+
+      if (previous.kind === "editor" && next.kind !== "editor") {
+        closeOverlayForHistory(EDITOR_CLOSE_SELECTOR, next, sequence);
+        return;
+      }
+      if (previous.kind === "settings" && next.kind !== "settings") {
+        closeOverlayForHistory(SETTINGS_CLOSE_SELECTOR, next, sequence);
+        return;
+      }
+
+      const previousIsBase = previous.kind === "home" || previous.kind === "video";
+      const nextIsBase = next.kind === "home" || next.kind === "video";
+      if (previousIsBase && nextIsBase && appRouteKey(previous) !== appRouteKey(next)) {
+        setNavigationEpoch(value => value + 1);
+      }
+
+      syncUiToRoute(next, sequence);
+    };
+    window.addEventListener("popstate", onPopState);
+
+    const initialSequence = ++syncSequence.current;
+    if (initialRoute.kind === "settings" || initialRoute.kind === "editor") {
+      replayingHistory.current = true;
+      syncUiToRoute(initialRoute, initialSequence);
+    } else {
+      finishReplay(initialSequence);
+    }
+
+    return () => {
+      historyObject.replaceState = originalReplaceState;
+      observer.disconnect();
+      document.removeEventListener("click", captureEditorTarget, true);
+      document.removeEventListener("pointerup", restoreEditorShortcutFocus, true);
+      document.removeEventListener("pointercancel", restoreEditorShortcutFocus, true);
+      window.removeEventListener("popstate", onPopState);
+      syncSequence.current += 1;
+    };
+  }, []);
+
+  return <GreekTubePlayer key={navigationEpoch} />;
+}
