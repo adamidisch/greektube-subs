@@ -439,6 +439,14 @@ export async function reconcileOwnerPublishing(videoId: string) {
   const manifest = await getOwnerTranslationManifest(videoId);
   if (!manifest || manifest.status !== "publishing") return manifest;
   const db = database();
+  const leaseRows = await db.query(
+    "SELECT lock_token,lock_expires_at FROM video_transcripts WHERE video_id=$1 LIMIT 1",
+    [videoId],
+  ) as { lock_token: string | null; lock_expires_at: string | null }[];
+  const lease = leaseRows[0];
+  const leaseActive = Boolean(lease?.lock_token && lease.lock_expires_at && Date.parse(lease.lock_expires_at) > Date.now());
+  const publishingAgeMs = Date.now() - Date.parse(manifest.updatedAt);
+  if (leaseActive || !Number.isFinite(publishingAgeMs) || publishingAgeMs < 10_000) return manifest;
   const now = new Date().toISOString();
   if (await transcriptMatchesOwnerManifest(manifest)) {
     const rows = await db.query(
@@ -536,7 +544,11 @@ export async function publishOwnerTranslation(videoId: string) {
        WHERE video_id=$2 AND revision=$3 AND source_hash=$4 AND status='publishing' RETURNING video_id`,
       [now, videoId, manifest.revision, manifest.sourceHash],
     ) as { video_id: string }[];
-    if (publishedRows.length !== 1) throw new Error("Το final owner manifest transition δεν ολοκληρώθηκε. Το manifest έμεινε σε publishing για recovery.");
+    if (publishedRows.length !== 1) {
+      const concurrent = await getOwnerTranslationManifest(videoId);
+      if (concurrent?.revision === manifest.revision && concurrent.status === "published") return { manifest: concurrent, alreadyPublished: false };
+      throw new Error("Το final owner manifest transition δεν ολοκληρώθηκε. Το manifest έμεινε σε publishing για recovery.");
+    }
     const updated = await getOwnerTranslationManifest(videoId);
     if (!updated || updated.revision !== manifest.revision || updated.status !== "published") throw new Error("Το published owner manifest δεν επιβεβαιώθηκε.");
     return { manifest: updated, alreadyPublished: false };
