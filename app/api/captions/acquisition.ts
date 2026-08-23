@@ -2,7 +2,7 @@ import type { SubtitleCue } from "./subtitle-contract";
 import { fetchYouTubeNativeEnglish } from "./youtube-native-source";
 import { fetchSupadataTranscript } from "../supadata";
 
-export const CAPTION_ACQUISITION_VERSION = 4;
+export const CAPTION_ACQUISITION_VERSION = 5;
 
 export type CaptionSourceProvenance = {
   provider: "youtube-direct" | "supadata";
@@ -14,7 +14,7 @@ export type CaptionSourceProvenance = {
 
 export type CaptionAcquisitionAttempt = {
   provider: CaptionSourceProvenance["provider"];
-  status: "success" | "failed";
+  status: "success" | "failed" | "skipped";
   elapsedMs: number;
   error?: string;
 };
@@ -23,6 +23,10 @@ export type CaptionAcquisitionResult = {
   cues: SubtitleCue[];
   provenance: CaptionSourceProvenance;
   attempts: CaptionAcquisitionAttempt[];
+};
+
+export type CaptionAcquisitionOptions = {
+  allowPaidFallback?: boolean;
 };
 
 function cleanCues(cues: SubtitleCue[]) {
@@ -50,9 +54,15 @@ function errorMessage(error: unknown) {
  * page polling and resume flows must reuse that stored source and must never
  * call this function again for the same subtitle revision.
  *
+ * Test/canary callers can set allowPaidFallback:false so a failed free source
+ * cannot silently consume Supadata credits.
+ *
  * This function itself performs no database or Blob writes.
  */
-export async function acquireEnglishCaptions(videoId: string): Promise<CaptionAcquisitionResult> {
+export async function acquireEnglishCaptions(
+  videoId: string,
+  options: CaptionAcquisitionOptions = {},
+): Promise<CaptionAcquisitionResult> {
   const attempts: CaptionAcquisitionAttempt[] = [];
 
   const youtubeStartedAt = Date.now();
@@ -80,6 +90,17 @@ export async function acquireEnglishCaptions(videoId: string): Promise<CaptionAc
       elapsedMs: Date.now() - youtubeStartedAt,
       error: errorMessage(error),
     });
+  }
+
+  if (options.allowPaidFallback === false) {
+    attempts.push({
+      provider: "supadata",
+      status: "skipped",
+      elapsedMs: 0,
+      error: "paid-fallback-disabled",
+    });
+    const summary = attempts.map(item => `${item.provider}:${item.status}${item.error ? `:${item.error}` : ""}`).join(" | ");
+    throw new Error(`caption-acquisition-failed:${summary}`);
   }
 
   const supadataStartedAt = Date.now();
