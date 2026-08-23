@@ -88,10 +88,11 @@ export async function GET(request: Request) {
   if (process.env.VERCEL_ENV === "production") return NextResponse.json({ error: "preview-only" }, { status: 403 });
   const url = new URL(request.url);
   const videoId = url.searchParams.get("videoId")?.trim() || CANARY_VIDEO;
+  const allowPaidFallback = url.searchParams.get("paid") === "1";
   if (!/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) return NextResponse.json({ error: "invalid-video-id" }, { status: 400 });
   const startedAt = Date.now();
   try {
-    const acquired = await acquireEnglishCaptions(videoId);
+    const acquired = await acquireEnglishCaptions(videoId, { allowPaidFallback });
     const english = cleanEnglish(acquired.cues);
     const timingInversions = inversions(english);
     if (!english.length) throw new Error("empty-english-source");
@@ -105,6 +106,7 @@ export async function GET(request: Request) {
     const result = {
       dryRun: true,
       writesPerformed: false,
+      paidFallbackAllowed: allowPaidFallback,
       videoId,
       provenance: acquired.provenance,
       attempts: acquired.attempts,
@@ -119,7 +121,14 @@ export async function GET(request: Request) {
     console.info("[subtitle-canary-result]", JSON.stringify({ ...result, sample: undefined }));
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
   } catch (error) {
-    const result = { dryRun: true, writesPerformed: false, videoId, error: error instanceof Error ? error.message : "canary-failed", elapsedMs: Date.now() - startedAt };
+    const result = {
+      dryRun: true,
+      writesPerformed: false,
+      paidFallbackAllowed: allowPaidFallback,
+      videoId,
+      error: error instanceof Error ? error.message : "canary-failed",
+      elapsedMs: Date.now() - startedAt,
+    };
     console.error("[subtitle-canary-error]", JSON.stringify(result));
     return NextResponse.json(result, { status: 500, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
   }
