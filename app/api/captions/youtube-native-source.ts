@@ -169,11 +169,11 @@ function extractInitialPlayerResponse(html: string) {
   return null;
 }
 
-async function fetchWatchPagePlayer(videoId: string) {
+async function fetchPublicPagePlayer(url: string, clientName: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 3500);
   try {
-    const response = await fetch(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&hl=en`, {
+    const response = await fetch(url, {
       signal: controller.signal,
       cache: "no-store",
       headers: {
@@ -181,10 +181,10 @@ async function fetchWatchPagePlayer(videoId: string) {
         "Accept-Language": "en-US,en;q=0.9",
       },
     });
-    if (!response.ok) throw new Error(`WEB_PAGE:${response.status}`);
+    if (!response.ok) throw new Error(`${clientName}:${response.status}`);
     const player = extractInitialPlayerResponse(await response.text());
-    if (!player) throw new Error("WEB_PAGE:no-player-response");
-    return { player, userAgent: WEB_USER_AGENT, clientName: "WEB_PAGE" };
+    if (!player) throw new Error(`${clientName}:no-player-response`);
+    return { player, userAgent: WEB_USER_AGENT, clientName };
   } finally {
     clearTimeout(timeout);
   }
@@ -256,10 +256,8 @@ async function usableEnglishFromCandidate(
 }
 
 /**
- * Free first-choice source, matching the pre-7.8 behaviour: obtain the native
- * English timed-text track directly from YouTube. Manual English is preferred
- * over ASR when both are exposed. If Innertube clients are challenged by
- * YouTube, try the public watch-page player response before any paid provider.
+ * Free first-choice source: obtain native English timed text from public YouTube
+ * surfaces before any paid provider. Manual English is preferred over ASR.
  * This function performs no database/Blob writes.
  */
 export async function fetchYouTubeNativeEnglish(videoId: string) {
@@ -274,11 +272,28 @@ export async function fetchYouTubeNativeEnglish(videoId: string) {
     }
   }
 
-  try {
-    const result = await usableEnglishFromCandidate(await fetchWatchPagePlayer(videoId), failures);
-    if (result) return result;
-  } catch (error) {
-    failures.push(error instanceof Error ? error.message : "WEB_PAGE:failed");
+  const publicPages = [
+    {
+      clientName: "WEB_PAGE",
+      url: `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&hl=en`,
+    },
+    {
+      clientName: "EMBED_PAGE",
+      url: `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?hl=en&cc_load_policy=1`,
+    },
+    {
+      clientName: "NOCOOKIE_EMBED_PAGE",
+      url: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?hl=en&cc_load_policy=1`,
+    },
+  ];
+
+  for (const page of publicPages) {
+    try {
+      const result = await usableEnglishFromCandidate(await fetchPublicPagePlayer(page.url, page.clientName), failures);
+      if (result) return result;
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : `${page.clientName}:failed`);
+    }
   }
 
   throw new Error(`youtube-native-failed:${failures.join("|")}`);
