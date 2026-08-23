@@ -25,12 +25,13 @@ type ClientProfile = {
 
 const API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const PLAYER_URL = `https://www.youtube.com/youtubei/v1/player?key=${API_KEY}&prettyPrint=false`;
+const WEB_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0.0.0 Safari/537.36";
 
 const CLIENTS: ClientProfile[] = [
   {
     clientName: "WEB",
     clientVersion: "2.20260723.00.00",
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0.0.0 Safari/537.36",
+    userAgent: WEB_USER_AGENT,
   },
   {
     clientName: "ANDROID",
@@ -135,6 +136,60 @@ async function fetchPlayer(videoId: string, profile: ClientProfile) {
   }
 }
 
+function extractInitialPlayerResponse(html: string) {
+  const marker = "ytInitialPlayerResponse";
+  const markerIndex = html.indexOf(marker);
+  const objectStart = markerIndex >= 0 ? html.indexOf("{", markerIndex + marker.length) : -1;
+  if (objectStart < 0) return null;
+
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let index = objectStart; index < html.length; index += 1) {
+    const character = html[index];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') quoted = false;
+      continue;
+    }
+    if (character === '"') quoted = true;
+    else if (character === "{") depth += 1;
+    else if (character === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        try {
+          return JSON.parse(html.slice(objectStart, index + 1)) as PlayerResponse;
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+async function fetchWatchPagePlayer(videoId: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3500);
+  try {
+    const response = await fetch(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&hl=en`, {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: {
+        "User-Agent": WEB_USER_AGENT,
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+    if (!response.ok) throw new Error(`WEB_PAGE:${response.status}`);
+    const player = extractInitialPlayerResponse(await response.text());
+    if (!player) throw new Error("WEB_PAGE:no-player-response");
+    return { player, userAgent: WEB_USER_AGENT, clientName: "WEB_PAGE" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function englishTracks(tracks: CaptionTrack[]) {
   return tracks
     .filter(track => {
@@ -176,36 +231,54 @@ async function fetchTrack(track: CaptionTrack, userAgent: string) {
   return [] as SubtitleCue[];
 }
 
+async function usableEnglishFromCandidate(
+  candidate: { player: PlayerResponse; userAgent: string; clientName: string },
+  failures: string[],
+) {
+  const { player, userAgent, clientName } = candidate;
+  if (player.playabilityStatus?.status !== "OK") {
+    failures.push(`${clientName}:${player.playabilityStatus?.reason || player.playabilityStatus?.status || "not-playable"}`);
+    return null;
+  }
+
+  for (const track of englishTracks(player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [])) {
+    const cues = await fetchTrack(track, userAgent);
+    if (!cues.length) continue;
+    return {
+      cues,
+      source: track.kind === "asr" ? "youtube-auto" as const : "youtube-manual" as const,
+      languageCode: track.languageCode?.toLowerCase() || "en",
+      client: clientName,
+    };
+  }
+  failures.push(`${clientName}:no-usable-english-track`);
+  return null;
+}
+
 /**
  * Free first-choice source, matching the pre-7.8 behaviour: obtain the native
  * English timed-text track directly from YouTube. Manual English is preferred
- * over ASR when both are exposed. This function performs no database/Blob writes.
+ * over ASR when both are exposed. If Innertube clients are challenged by
+ * YouTube, try the public watch-page player response before any paid provider.
+ * This function performs no database/Blob writes.
  */
 export async function fetchYouTubeNativeEnglish(videoId: string) {
   const failures: string[] = [];
 
   for (const profile of CLIENTS) {
     try {
-      const { player, userAgent, clientName } = await fetchPlayer(videoId, profile);
-      if (player.playabilityStatus?.status !== "OK") {
-        failures.push(`${clientName}:${player.playabilityStatus?.reason || player.playabilityStatus?.status || "not-playable"}`);
-        continue;
-      }
-
-      for (const track of englishTracks(player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [])) {
-        const cues = await fetchTrack(track, userAgent);
-        if (!cues.length) continue;
-        return {
-          cues,
-          source: track.kind === "asr" ? "youtube-auto" as const : "youtube-manual" as const,
-          languageCode: track.languageCode?.toLowerCase() || "en",
-          client: clientName,
-        };
-      }
-      failures.push(`${clientName}:no-usable-english-track`);
+      const result = await usableEnglishFromCandidate(await fetchPlayer(videoId, profile), failures);
+      if (result) return result;
     } catch (error) {
       failures.push(error instanceof Error ? error.message : `${profile.clientName}:failed`);
     }
+  }
+
+  try {
+    const result = await usableEnglishFromCandidate(await fetchWatchPagePlayer(videoId), failures);
+    if (result) return result;
+  } catch (error) {
+    failures.push(error instanceof Error ? error.message : "WEB_PAGE:failed");
   }
 
   throw new Error(`youtube-native-failed:${failures.join("|")}`);
