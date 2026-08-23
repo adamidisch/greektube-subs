@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { POST as captionsPOST } from "../captions/route";
+import { POST as semanticPOST } from "../captions/semantic-route";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${VIDEO_ID}` }),
     });
-    const response = await captionsPOST(internalRequest);
+    const response = await semanticPOST(internalRequest);
     const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
     history.push({ attempt, status: response.status, payload });
 
