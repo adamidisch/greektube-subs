@@ -84,8 +84,10 @@ async function writeJson(pathname: string, value: unknown) {
 }
 
 function toSeconds(value: string) {
-  const [h, m, s] = value.split(":").map(Number);
-  return h * 3600 + m * 60 + s;
+  const parts = value.split(":").map(Number);
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return 0;
 }
 
 function cleanStageDirections(text: string) {
@@ -101,20 +103,13 @@ function splitAtSpeakerMarkers(text: string) {
 }
 
 function parseTranscript(markdown: string) {
-  const firstTimestamp = markdown.search(/^\d{2}:\d{2}:\d{2}\s*$/m);
-  const transcriptEnd = markdown.search(/^##\s+(?:Badges|Episode Highlights|About|Links)/m);
-  const body = markdown.slice(firstTimestamp >= 0 ? firstTimestamp : 0, transcriptEnd > firstTimestamp ? transcriptEnd : undefined);
-  const timeMatches = [...body.matchAll(/^(\d{2}:\d{2}:\d{2})\s*$/gm)];
-  if (timeMatches.length < 100) throw new Error(`speaker-transcript-too-short:${timeMatches.length}`);
-
-  const chunks = timeMatches.map((match, chunkIndex) => {
-    const startIndex = (match.index || 0) + match[0].length;
-    const endIndex = chunkIndex + 1 < timeMatches.length ? (timeMatches[chunkIndex + 1].index || body.length) : body.length;
-    return {
-      time: match[1],
-      text: body.slice(startIndex, endIndex).replace(/\n+/g, " ").trim(),
-    };
-  }).filter(chunk => cleanStageDirections(chunk.text));
+  const rowMatches = [...markdown.matchAll(/^\s*(\d+)\.\s+(\d{1,2}:\d{2}(?::\d{2})?)\s*(.*)$/gm)];
+  if (rowMatches.length < 500) throw new Error(`speaker-transcript-too-short:${rowMatches.length}`);
+  const chunks = rowMatches.map(match => ({
+    sourceRow: Number(match[1]),
+    time: match[2],
+    text: match[3].trim(),
+  })).filter(chunk => cleanStageDirections(chunk.text));
 
   const pieces: SourcePiece[] = [];
   let speaker: Speaker = "speaker-a";
@@ -137,7 +132,7 @@ function parseTranscript(markdown: string) {
       const duration = partIndex === parts.length - 1 ? remaining : Math.max(0.55, (end - start) * (weights[partIndex] / totalWeight));
       const pieceEnd = Math.min(end, cursor + duration);
       pieces.push({
-        id: `p${chunkIndex + 1}.${partIndex + 1}`,
+        id: `r${chunk.sourceRow}.${partIndex + 1}`,
         start: Number(cursor.toFixed(3)),
         end: Number(pieceEnd.toFixed(3)),
         text: part,
@@ -196,7 +191,7 @@ async function fetchTranscript() {
       const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 GreekTubeSubs review" }, cache: "no-store" });
       if (!response.ok) throw new Error(`http-${response.status}`);
       const text = await response.text();
-      if (!/^\d{2}:\d{2}:\d{2}\s*$/m.test(text) || text.length < 100000) throw new Error(`invalid-body:${text.length}`);
+      if (!/^\s*\d+\.\s+\d{1,2}:\d{2}(?::\d{2})?\s+/m.test(text) || text.length < 100000) throw new Error(`invalid-body:${text.length}`);
       return { text, url };
     } catch (error) {
       errors.push(`${url}:${error instanceof Error ? error.message : "failed"}`);
@@ -242,13 +237,7 @@ async function groqJson(system: string, user: unknown, maxTokens = 5000) {
 const TRANSLATION_SYSTEM = `You are the final Greek subtitle translator for a premium medical interview player. Translate every requested English speech block into natural, precise, easy-to-understand modern Greek. HARD RULES: preserve 100% of the source meaning; never summarize, compress away, omit, invent, soften or move facts. Preserve negation, uncertainty, attribution, chronology, numbers, percentages, units, names and technical meaning. Use Plain Medical Greek: medically correct but understandable to a general audience; prefer everyday precise wording over unnecessary medicalese. Keep necessary terms such as ινσουλίνη, γλυκόζη, λιπώδες ήπαρ when they are the accurate terms. Remove only nonsemantic fillers. Do not place a comma immediately before «και» or «ή». Respect speaker turns: each row is one speaker only and must remain separate. If source speech is interrupted, preserve the interruption naturally with an ellipsis rather than inventing completion. Return JSON only: {"translations":[{"index":N,"text":"..."}]}. Return every requested index exactly once.`;
 
 async function translateBatch(blocks: Block[]) {
-  const requested = blocks.map(block => ({
-    index: block.index,
-    speaker: block.speaker,
-    start: block.start,
-    duration: block.duration,
-    english: block.english,
-  }));
+  const requested = blocks.map(block => ({ index: block.index, speaker: block.speaker, start: block.start, duration: block.duration, english: block.english }));
   const value = await groqJson(TRANSLATION_SYSTEM, { requested }, 6200) as { translations?: unknown[] };
   const rows = Array.isArray(value.translations) ? value.translations : [];
   const map = new Map<number, string>();
@@ -297,10 +286,7 @@ async function repairBatch(blocks: Block[], translations: Translation[], issues:
 }
 
 function greekPolish(text: string) {
-  return text
-    .replace(/,\s+(και|ή)\b/giu, " $1")
-    .replace(/\s+/g, " ")
-    .trim();
+  return text.replace(/,\s+(και|ή)\b/giu, " $1").replace(/\s+/g, " ").trim();
 }
 
 function percentile(values: number[], p: number) {
@@ -312,19 +298,10 @@ function percentile(values: number[], p: number) {
 async function finalize(checkpoint: Checkpoint) {
   const translationMap = new Map(checkpoint.translations.map(row => [row.index, greekPolish(row.text)]));
   if (translationMap.size !== checkpoint.blocks.length) throw new Error(`coverage-failed:${translationMap.size}/${checkpoint.blocks.length}`);
-
   const cues: Zc8ReviewCue[] = checkpoint.blocks.map(block => {
     const text = translationMap.get(block.index) || "";
     if (!text) throw new Error(`empty-translation:${block.index}`);
-    return {
-      start: block.start,
-      duration: block.duration,
-      text,
-      speaker: block.speaker,
-      speakerConfidence: block.estimatedBoundary ? "medium" : "high",
-      sourceIds: block.sourceIds,
-      estimatedBoundary: block.estimatedBoundary,
-    };
+    return { start: block.start, duration: block.duration, text, speaker: block.speaker, speakerConfidence: block.estimatedBoundary ? "medium" : "high", sourceIds: block.sourceIds, estimatedBoundary: block.estimatedBoundary };
   });
 
   let previousEnd = -1;
@@ -393,11 +370,11 @@ async function init(force: boolean) {
     blocks,
     translations: [],
     sourceMeta: {
-      canonicalReference: "user-uploaded-srt",
+      userSrtReference: true,
       userSrtSha256: "632e7db92bc6157c0df6e81491a3aca0d34d8104e9d81bc9759bdb3d171a77cf",
       userSrtCueCount: 2504,
       userSrtEndSeconds: 7880.719,
-      speakerBoundaryReference: "podspun-detailed-transcript",
+      runtimeSpeakerTranscript: "podspun-detailed-transcript",
       runtimeSourceUrl: fetched.url,
       timedChunkCount: parsed.timedChunkCount,
       speakerPieceCount: parsed.pieces.length,
@@ -417,17 +394,13 @@ async function init(force: boolean) {
 async function step() {
   const checkpoint = await readJson<Checkpoint>(CHECKPOINT_PATH);
   if (!checkpoint || checkpoint.revision !== ZC8_REVIEW_REVISION) throw new Error("checkpoint-not-initialized");
-  if (checkpoint.status === "ready") {
-    const result = await readJson<Zc8ReviewResult>(ZC8_REVIEW_BLOB_PATH);
-    return { ready: true, result };
-  }
+  if (checkpoint.status === "ready") return { ready: true, result: await readJson<Zc8ReviewResult>(ZC8_REVIEW_BLOB_PATH) };
 
   const start = checkpoint.cursor;
   const end = Math.min(checkpoint.blocks.length, start + STEP_SIZE);
   if (start >= end) return { ready: true, result: await finalize(checkpoint) };
   const slice = checkpoint.blocks.slice(start, end);
   const batches = Array.from({ length: Math.ceil(slice.length / BATCH_SIZE) }, (_, index) => slice.slice(index * BATCH_SIZE, (index + 1) * BATCH_SIZE));
-
   const translatedBatches = await Promise.all(batches.map(translateBatch));
   const auditBatches = await Promise.all(batches.map((batch, index) => auditBatch(batch, translatedBatches[index])));
   const repairedBatches = await Promise.all(batches.map((batch, index) => repairBatch(batch, translatedBatches[index], auditBatches[index])));
@@ -441,15 +414,8 @@ async function step() {
   checkpoint.cursor = end;
   checkpoint.updatedAt = new Date().toISOString();
   await writeJson(CHECKPOINT_PATH, checkpoint);
-
   if (checkpoint.cursor >= checkpoint.blocks.length) return { ready: true, result: await finalize(checkpoint) };
-  return {
-    ready: false,
-    cursor: checkpoint.cursor,
-    total: checkpoint.blocks.length,
-    progress: Number((100 * checkpoint.cursor / checkpoint.blocks.length).toFixed(1)),
-    auditIssues: checkpoint.auditIssueCount,
-  };
+  return { ready: false, cursor: checkpoint.cursor, total: checkpoint.blocks.length, progress: Number((100 * checkpoint.cursor / checkpoint.blocks.length).toFixed(1)), auditIssues: checkpoint.auditIssueCount };
 }
 
 function response(value: unknown, status = 200) {
@@ -471,13 +437,7 @@ export async function GET(request: Request) {
     if (result?.status === "ready") return response({ status: "ready", quality: result.quality });
     const checkpoint = await readJson<Checkpoint>(CHECKPOINT_PATH);
     if (!checkpoint) return response({ status: "not_initialized" }, 404);
-    return response({
-      status: checkpoint.status,
-      cursor: checkpoint.cursor,
-      total: checkpoint.blocks.length,
-      progress: Number((100 * checkpoint.cursor / checkpoint.blocks.length).toFixed(1)),
-      auditIssues: checkpoint.auditIssueCount,
-    });
+    return response({ status: checkpoint.status, cursor: checkpoint.cursor, total: checkpoint.blocks.length, progress: Number((100 * checkpoint.cursor / checkpoint.blocks.length).toFixed(1)), auditIssues: checkpoint.auditIssueCount });
   } catch (error) {
     const message = error instanceof Error ? error.message : "review-v6-failed";
     console.error("[zc8-review-v6]", message);
