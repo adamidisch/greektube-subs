@@ -36,11 +36,11 @@ function InlineMetadataField({label,value,onCommit,wide=false,multiline=false,op
   return <div className={`gts-inline-field ${wide?"wide":""} ${multiline?"multiline":""} ${editing?"editing":""}`}>
     <span className="gts-inline-label">{label}</span>
     <button type="button" className="gts-inline-view" onClick={()=>{setDraft(value);setEditing(true);}} title={`${label}: ${displayValue}`}><span>{displayValue}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-    {editing&&<div className="gts-field-modal" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)cancel();}}><section className="gts-field-dialog" role="dialog" aria-modal="true" aria-labelledby="gts-field-dialog-title">
-      <div className="gts-field-dialog-head"><div><span className="gts-editor-kicker">EDIT FIELD</span><h3 id="gts-field-dialog-title">{label}</h3></div><button type="button" className="gts-field-dialog-close" onClick={cancel} aria-label="Κλείσιμο"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+    {editing&&createPortal(<div className="gts-field-modal" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)cancel();}}><section className="gts-field-dialog" role="dialog" aria-modal="true" aria-labelledby="gts-field-dialog-title">
+      <div className="gts-field-dialog-head"><div><span className="gts-editor-kicker">ΕΠΕΞΕΡΓΑΣΙΑ ΠΕΔΙΟΥ</span><h3 id="gts-field-dialog-title">{label}</h3></div><button type="button" className="gts-field-dialog-close" onClick={cancel} aria-label="Κλείσιμο"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
       <label className="gts-field-dialog-control"><span>{label}</span>{options?<select autoFocus value={draft} onChange={event=>setDraft(event.target.value)}>{options.map(([option,optionLabel])=><option key={option} value={option}>{optionLabel}</option>)}</select>:useTextarea?<textarea autoFocus value={draft} onChange={event=>setDraft(event.target.value)}/>:<input autoFocus value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();commit();}}}/>}</label>
       <div className="gts-field-dialog-actions"><button type="button" className="secondary" onClick={cancel}>Ακύρωση</button><button type="button" className="confirm" onClick={commit}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Αποθήκευση</button></div>
-    </section></div>}
+    </section></div>,document.body)}
   </div>;
 }
 
@@ -607,7 +607,7 @@ const styles=`
 .gts-inline-actions .cancel{color:var(--e-red)}
 .gts-inline-actions .cancel:hover{background:rgba(235,140,130,.14);border-color:rgba(235,140,130,.42)}
 .gts-inline-field.multiline .gts-inline-actions{align-self:start}
-.gts-field-modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:22px;background:rgba(7,9,13,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.gts-field-modal{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;padding:22px;background:rgba(7,9,13,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .gts-field-dialog{width:min(580px,100%);max-height:min(760px,calc(100dvh - 44px));overflow:auto;padding:24px;border:1px solid var(--e-hair-strong);border-radius:20px;background:var(--e-panel);box-shadow:0 34px 100px -28px rgba(0,0,0,.9)}
 .gts-field-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px}
 .gts-field-dialog-head h3{margin:5px 0 0;font-family:var(--e-display);font-size:22px;font-weight:620;line-height:1.25;letter-spacing:-.025em}
