@@ -19,6 +19,30 @@ import GtsFooter from "./GtsFooter";
 const SITE_URL = "https://greektubesubs.com";
 const BRAND_REV = "7820";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
+const REVIEW_VIDEO_ID = "WQCO8wlldAQ";
+
+const REVIEW_VIDEO = {
+  id: REVIEW_VIDEO_ID,
+  url: "https://www.youtube.com/watch?v=WQCO8wlldAQ",
+  title: "Δίαιτα Αποκλεισμού 2 Εβδομάδων: Τι να Τρώτε και Πώς να Επανεισάγετε Τροφές",
+  originalTitle: "Follow This 2 WEEK PROTOCOL to Reduce Inflammation & HEAL THE BODY | Dr. Elizabeth Bright",
+  channel: "Jesse Chappus",
+  channelUrl: "",
+  originalVideoUrl: "https://www.youtube.com/watch?v=WQCO8wlldAQ",
+  category: "Medical",
+  tags: ["υγεία", "διατροφή", "elimination diet"],
+  notes: "",
+  description: "Πρωτόκολλο αποκλεισμού δύο εβδομάδων, επανεισαγωγή τροφών και εξατομίκευση με βάση την απόκριση του οργανισμού.",
+  duration: 550,
+  addedAt: "2026-08-23T15:17:00.000Z",
+  favorite: false,
+  lastPosition: 0,
+  progress: 0,
+  speakerName: "Dr. Elizabeth Bright",
+  speakerRole: "Ιατρός",
+  metadataVersion: 6,
+  translationMode: "manual-pro",
+};
 
 type SharedVideo = {
   id?: unknown;
@@ -96,9 +120,24 @@ export async function generateMetadata({
   };
 }
 
-export default function Home() {
+function ReviewVideoBootstrap() {
+  const payload = JSON.stringify(REVIEW_VIDEO).replace(/</g, "\\u003c");
+  const script = `(()=>{try{const key="greektube-personal-state:v1";const video=${payload};let state={videos:[],moments:[],settings:{}};try{const parsed=JSON.parse(localStorage.getItem(key)||"null");if(parsed&&typeof parsed==="object")state=parsed;}catch{}if(!Array.isArray(state.videos))state.videos=[];const index=state.videos.findIndex(item=>item&&item.id===video.id);if(index>=0)state.videos[index]={...state.videos[index],...video};else state.videos.unshift(video);if(!Array.isArray(state.moments))state.moments=[];if(!state.settings||typeof state.settings!=="object")state.settings={};localStorage.setItem(key,JSON.stringify(state));}catch{}})();`;
+  return <script dangerouslySetInnerHTML={{ __html: script }} />;
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const rawVideo = Array.isArray(params.video) ? params.video[0] : params.video;
+  const reviewRequested = String(rawVideo || "").trim() === REVIEW_VIDEO_ID;
+
   return (
     <>
+      {reviewRequested ? <ReviewVideoBootstrap /> : null}
       <NavigationAwareGreekTubePlayer />
       <TranscriptPerformanceEnhancer />
       <CueEditEnhancer />
