@@ -101,20 +101,29 @@ function splitAtSpeakerMarkers(text: string) {
 }
 
 function parseTranscript(markdown: string) {
-  const transcriptStart = markdown.search(/^00:00:00\b/m);
-  const transcriptEnd = markdown.search(/^##\s+(?:Badges|About|Links)/m);
-  const body = markdown.slice(transcriptStart >= 0 ? transcriptStart : 0, transcriptEnd > transcriptStart ? transcriptEnd : undefined);
-  const matches = [...body.matchAll(/^(\d{2}:\d{2}:\d{2})\s+([\s\S]*?)(?=^\d{2}:\d{2}:\d{2}\s|\Z)/gm)];
-  if (matches.length < 100) throw new Error(`speaker-transcript-too-short:${matches.length}`);
+  const firstTimestamp = markdown.search(/^\d{2}:\d{2}:\d{2}\s*$/m);
+  const transcriptEnd = markdown.search(/^##\s+(?:Badges|Episode Highlights|About|Links)/m);
+  const body = markdown.slice(firstTimestamp >= 0 ? firstTimestamp : 0, transcriptEnd > firstTimestamp ? transcriptEnd : undefined);
+  const timeMatches = [...body.matchAll(/^(\d{2}:\d{2}:\d{2})\s*$/gm)];
+  if (timeMatches.length < 100) throw new Error(`speaker-transcript-too-short:${timeMatches.length}`);
+
+  const chunks = timeMatches.map((match, chunkIndex) => {
+    const startIndex = (match.index || 0) + match[0].length;
+    const endIndex = chunkIndex + 1 < timeMatches.length ? (timeMatches[chunkIndex + 1].index || body.length) : body.length;
+    return {
+      time: match[1],
+      text: body.slice(startIndex, endIndex).replace(/\n+/g, " ").trim(),
+    };
+  }).filter(chunk => cleanStageDirections(chunk.text));
 
   const pieces: SourcePiece[] = [];
   let speaker: Speaker = "speaker-a";
 
-  matches.forEach((match, chunkIndex) => {
-    const start = toSeconds(match[1]);
-    const nextStart = chunkIndex + 1 < matches.length ? toSeconds(matches[chunkIndex + 1][1]) : ZC8_REVIEW_DURATION;
+  chunks.forEach((chunk, chunkIndex) => {
+    const start = toSeconds(chunk.time);
+    const nextStart = chunkIndex + 1 < chunks.length ? toSeconds(chunks[chunkIndex + 1].time) : ZC8_REVIEW_DURATION;
     const end = Math.max(start + 0.5, nextStart);
-    const rawText = match[2].replace(/\n+/g, " ").trim();
+    const rawText = chunk.text;
     const hasMarker = rawText.includes(">>");
     const parts = splitAtSpeakerMarkers(rawText);
     if (!parts.length) return;
@@ -139,7 +148,7 @@ function parseTranscript(markdown: string) {
     });
   });
 
-  return { pieces, timedChunkCount: matches.length };
+  return { pieces, timedChunkCount: chunks.length };
 }
 
 function terminal(text: string) {
@@ -187,7 +196,7 @@ async function fetchTranscript() {
       const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 GreekTubeSubs review" }, cache: "no-store" });
       if (!response.ok) throw new Error(`http-${response.status}`);
       const text = await response.text();
-      if (!text.includes("00:00:00") || text.length < 100000) throw new Error(`invalid-body:${text.length}`);
+      if (!/^\d{2}:\d{2}:\d{2}\s*$/m.test(text) || text.length < 100000) throw new Error(`invalid-body:${text.length}`);
       return { text, url };
     } catch (error) {
       errors.push(`${url}:${error instanceof Error ? error.message : "failed"}`);
