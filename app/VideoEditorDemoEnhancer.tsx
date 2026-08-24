@@ -287,6 +287,9 @@ export default function VideoEditorDemoEnhancer(){
     setOpen(false);setAuthRequired(false);setLoading(false);setPlayerVisualReady(false);setVideo(null);setCaptions(null);setMetadata(null);setRanges([]);setTimecodeDrafts({});setInitialSnapshot("");setPreviewIndex(null);setTimelinePreview(null);setStatus("");
   }
   function seek(next:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));target.seekTo(safe,true);setCurrent(safe);}
+  const scrubbing=useRef(false);const scrubRaf=useRef(0);
+  function scrubTo(value:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,value));setCurrent(safe);if(scrubRaf.current)cancelAnimationFrame(scrubRaf.current);scrubRaf.current=requestAnimationFrame(()=>{try{target.seekTo(safe,false);}catch{}});}
+  function commitScrub(value:number){scrubbing.current=false;if(scrubRaf.current){cancelAnimationFrame(scrubRaf.current);scrubRaf.current=0;}seek(value);}
   function updateTimelinePreview(event:React.PointerEvent<HTMLInputElement>){if(duration<=0)return;const rect=event.currentTarget.getBoundingClientRect();const ratio=Math.max(0,Math.min(1,(event.clientX-rect.left)/Math.max(1,rect.width)));setTimelinePreview(ratio*duration);}
   function toggle(){const target=player.current;if(!target)return;if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();}
   function markStart(){setDraftStart(current);setStatus(`Αρχή range: ${clock(current,true)}`);}
@@ -328,9 +331,9 @@ export default function VideoEditorDemoEnhancer(){
     <div className="gts-editor-screen" ref={keyboardTarget} tabIndex={-1}>
       {authRequired?<section className="gts-editor-auth"><div className="gts-editor-auth-card"><span className="gts-editor-kicker">VIDEO EDITOR</span><h1>Προστατευμένη επεξεργασία</h1><p>Βάλε τον κωδικό διαχειριστή για να ανοίξει ο νέος editor.</p><form onSubmit={authorize}><input type="password" autoFocus value={password} onChange={event=>setPassword(event.target.value)} placeholder="Κωδικός πρόσβασης"/><button className="primary">Συνέχεια</button></form>{authError&&<small className="gts-editor-error">{authError}</small>}<button className="gts-editor-auth-cancel" onClick={closeEditor}>Ακύρωση</button></div></section>:<>
         <header className="gts-editor-header">
-          <button className="gts-editor-back" onClick={closeEditor}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span>Πίσω στο βίντεο</span></button>
-          <div className="gts-editor-title"><span className="gts-editor-kicker">VIDEO EDITOR</span><h1 title={metadata?.title||video?.title||"Επεξεργασία βίντεο"}><strong>{metadata?.title||video?.title||"Επεξεργασία βίντεο"}</strong></h1>{(metadata?.originalTitle||video?.originalTitle)&&<p title={metadata?.originalTitle||video?.originalTitle}>{metadata?.originalTitle||video?.originalTitle}</p>}</div>
-          <div className="gts-editor-save-state">{dirty?<span><i/>ΜΗ ΑΠΟΘΗΚΕΥΜΕΝΕΣ ΑΛΛΑΓΕΣ</span>:<span className="saved"><i/>ΑΠΟΘΗΚΕΥΜΕΝΟ</span>}<button className="primary" disabled={!dirty||validationErrors.length>0||saveBusy||loading} onClick={()=>void save()}>{saveBusy?"Αποθήκευση…":"Αποθήκευση"}</button></div>
+          <button className="gts-editor-back" onClick={closeEditor}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span>Πίσω</span></button>
+          <div className="gts-editor-title"><div className="gts-editor-title-row"><span className="gts-editor-kicker">EDITOR</span><h1 title={metadata?.title||video?.title||"Επεξεργασία βίντεο"}>{metadata?.title||video?.title||"Επεξεργασία βίντεο"}</h1></div>{(metadata?.originalTitle||video?.originalTitle)&&<p title={metadata?.originalTitle||video?.originalTitle}>{metadata?.originalTitle||video?.originalTitle}</p>}</div>
+          <div className="gts-editor-save-state"><span className={dirty?"dot dirty":"dot saved"} title={dirty?"Μη αποθηκευμένες αλλαγές":"Αποθηκευμένο"} aria-label={dirty?"Μη αποθηκευμένες αλλαγές":"Αποθηκευμένο"}><i/></span><button className="primary" disabled={!dirty||validationErrors.length>0||saveBusy||loading} onClick={()=>void save()}>{saveBusy?"Αποθήκευση…":"Αποθήκευση"}</button></div>
         </header>
         {loading?<div className="gts-editor-loading"><span className="gts-editor-player-spinner"/>Φόρτωση editor…</div>:video&&metadata?<main className="gts-editor-layout">
           <section className="gts-editor-stage">
@@ -343,7 +346,7 @@ export default function VideoEditorDemoEnhancer(){
                   {duration>0&&ranges.map((range,index)=><i key={`${range.start}-${range.end}-${index}`} className={previewIndex===index?"previewing":""} style={{left:`${Math.max(0,Math.min(100,range.start/duration*100))}%`,width:`${Math.max(.35,Math.min(100,(range.end-range.start)/duration*100))}%`} as CSSProperties}/>)}
                   {duration>0&&draftStart!==null&&<b style={{left:`${Math.max(0,Math.min(100,draftStart/duration*100))}%`} as CSSProperties}/>}
                   {timelinePreview!==null&&duration>0&&<output className="gts-editor-timeline-preview" style={{"--editor-preview-position":`${Math.max(0,Math.min(100,timelinePreview/duration*100))}%`} as CSSProperties}>{clock(timelinePreview,true)}</output>}
-                  <input type="range" min={0} max={Math.max(1,duration)} step="0.1" value={Math.min(current,Math.max(1,duration))} onPointerDown={updateTimelinePreview} onPointerMove={updateTimelinePreview} onPointerUp={()=>setTimelinePreview(null)} onPointerCancel={()=>setTimelinePreview(null)} onPointerLeave={()=>setTimelinePreview(null)} onChange={event=>seek(Number(event.target.value))} aria-label="Γραμμή χρόνου editor"/>
+                  <input type="range" min={0} max={Math.max(1,duration)} step="0.05" value={Math.min(current,Math.max(1,duration))} onPointerDown={event=>{scrubbing.current=true;updateTimelinePreview(event);}} onPointerMove={updateTimelinePreview} onPointerUp={event=>{setTimelinePreview(null);commitScrub(Number((event.currentTarget as HTMLInputElement).value));}} onPointerCancel={()=>{setTimelinePreview(null);scrubbing.current=false;}} onPointerLeave={()=>setTimelinePreview(null)} onChange={event=>{const v=Number(event.target.value);if(scrubbing.current)scrubTo(v);else seek(v);}} aria-label="Γραμμή χρόνου editor"/>
                 </div>
                 <div className="gts-editor-ruler" aria-hidden="true">{rulerTicks.map((tick,index)=><span key={index}>{clock(tick)}</span>)}</div>
               </div>
@@ -390,23 +393,27 @@ const styles=`
 .gts-editor-screen *:focus-visible{outline:2px solid var(--e-indigo);outline-offset:2px;border-radius:8px}
 .gts-editor-screen button{cursor:pointer;font-family:inherit}
 
-.gts-editor-header{position:sticky;top:0;z-index:20;height:84px;display:grid;grid-template-columns:1fr minmax(0,1.6fr) 1fr;align-items:center;gap:20px;padding:0 clamp(18px,3vw,44px);border-bottom:1px solid var(--e-hair);background:rgba(22,27,35,.94);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
-.gts-editor-back{justify-self:start;display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px 0 11px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--e-muted);font-size:15px;font-weight:550;transition:color .15s,background .15s,border-color .15s}
-.gts-editor-back svg{width:19px;height:19px;flex:none}
-.gts-editor-back:hover{color:#fff;background:var(--e-raised);border-color:var(--e-hair)}
-.gts-editor-title{display:grid;gap:4px;text-align:center;min-width:0}
+.gts-editor-header{position:sticky;top:0;z-index:20;height:72px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:24px;padding:0 clamp(18px,3vw,40px);border-bottom:1px solid var(--e-hair);background:rgba(22,27,35,.9);backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4)}
+.gts-editor-back{justify-self:start;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 15px 0 11px;border:1px solid var(--e-hair);border-radius:11px;background:var(--e-raised);color:var(--e-muted);font-family:var(--e-display);font-size:14px;font-weight:550;transition:color .15s,background .15s,border-color .15s}
+.gts-editor-back svg{width:17px;height:17px;flex:none}
+.gts-editor-back:hover{color:#fff;background:#2B333F;border-color:var(--e-hair-strong)}
+.gts-editor-title{display:grid;gap:2px;text-align:left;min-width:0}
 .gts-editor-title h1,.gts-editor-title p{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gts-editor-title h1{margin:0;font-family:var(--e-display);font-size:19px;font-weight:600;line-height:1.2;letter-spacing:-.02em}
-.gts-editor-title h1 strong{display:block;font:inherit}
-.gts-editor-title p{margin:0;color:var(--e-dim);font-size:13px;font-weight:500;line-height:1.2}
-.gts-editor-title .gts-editor-kicker{font-size:11px!important}
+.gts-editor-title-row{display:flex;align-items:center;gap:11px;min-width:0}
+.gts-editor-title h1{margin:0;font-family:var(--e-display);font-size:16.5px;font-weight:600;line-height:1.25;letter-spacing:-.015em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gts-editor-title-row .gts-editor-kicker{flex:none;padding:4px 9px;border-radius:7px;background:var(--e-indigo-soft);color:#ABA2F7;font-size:10px;letter-spacing:.13em}
+.gts-editor-title p{margin:0;color:#7A8393;font-size:12px;font-weight:500;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gts-editor-title p{max-width:100%}
 .gts-editor-title .gts-editor-kicker::after{content:none!important}
 .gts-editor-kicker{display:block;color:#ABA2F7;font-size:11px;font-weight:700;letter-spacing:.16em;font-family:var(--e-display)}
-.gts-editor-save-state{justify-self:end;display:flex;align-items:center;gap:15px}
-.gts-editor-save-state>span{display:inline-flex;align-items:center;gap:8px;color:var(--e-amber);font-size:11px;font-weight:700;letter-spacing:.08em;white-space:nowrap;font-family:var(--e-display)}
-.gts-editor-save-state>span i{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 0 4px var(--e-amber-soft)}
-.gts-editor-save-state>span.saved{color:var(--e-green)}
-.gts-editor-save-state>span.saved i{box-shadow:0 0 0 4px rgba(137,207,166,.16)}
+.gts-editor-save-state{justify-self:end;display:flex;align-items:center;gap:13px}
+.gts-editor-save-state .dot{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;border:1px solid var(--e-hair);background:var(--e-raised)}
+.gts-editor-save-state .dot i{width:9px;height:9px;border-radius:50%;background:var(--e-dim);transition:background .2s,box-shadow .2s}
+.gts-editor-save-state .dot.dirty i{background:var(--e-amber);box-shadow:0 0 0 4px var(--e-amber-soft)}
+.gts-editor-save-state .dot.saved i{background:var(--e-green);box-shadow:0 0 0 4px rgba(137,207,166,.16)}
+
+
+
 .gts-editor-save-state .primary,.gts-editor-mobile-save .primary,.gts-editor-auth .primary{min-height:46px;padding:0 22px;border:0;border-radius:12px;background:var(--e-indigo);color:#fff;font-family:var(--e-display);font-size:15px;font-weight:600;letter-spacing:-.01em;transition:filter .15s,transform .1s,box-shadow .15s;box-shadow:0 8px 22px -6px rgba(142,130,242,.65)}
 .gts-editor-save-state .primary:hover:not(:disabled),.gts-editor-mobile-save .primary:hover:not(:disabled),.gts-editor-auth .primary:hover{filter:brightness(1.1)}
 .gts-editor-save-state .primary:active:not(:disabled){transform:translateY(1px)}
@@ -441,18 +448,19 @@ const styles=`
 
 .gts-editor-timeline-wrap{margin-top:0;margin-bottom:20px}
 .gts-editor-timeline{position:relative;isolation:isolate;height:46px;display:flex;align-items:center}
-.gts-editor-timeline:before{content:"";position:absolute;top:50%;left:0;right:0;z-index:0;height:15px;transform:translateY(-50%);border-radius:99px;background:#313947;box-shadow:inset 0 1px 3px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.05)}
-.gts-editor-timeline:after{content:"";position:absolute;top:50%;left:0;z-index:1;width:var(--editor-seek-progress);height:15px;transform:translateY(-50%);border-radius:99px;background:linear-gradient(90deg,#7B6FE4,#AB9FF8);box-shadow:0 0 16px -2px rgba(146,133,236,.55);pointer-events:none}
-.gts-editor-timeline>i{position:absolute;top:50%;z-index:2;height:23px;transform:translateY(-50%);border-radius:7px;border:1px solid rgba(255,220,164,.42);background:repeating-linear-gradient(115deg,#E0A863 0 7px,#CC9550 7px 14px);box-shadow:0 0 0 1px rgba(0,0,0,.3),0 4px 14px -4px rgba(224,168,99,.72);pointer-events:none}
+.gts-editor-timeline:before{content:"";position:absolute;top:50%;left:0;right:0;z-index:0;height:12px;transform:translateY(-50%);border-radius:99px;background:#313947;box-shadow:inset 0 1px 3px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.05)}
+.gts-editor-timeline:after{content:"";position:absolute;top:50%;left:0;z-index:1;width:var(--editor-seek-progress);height:12px;transform:translateY(-50%);border-radius:99px;background:linear-gradient(90deg,#7B6FE4,#AB9FF8);box-shadow:0 0 16px -2px rgba(146,133,236,.55);pointer-events:none}
+.gts-editor-timeline>i{position:absolute;top:50%;z-index:2;height:20px;transform:translateY(-50%);border-radius:7px;border:1px solid rgba(255,220,164,.42);background:repeating-linear-gradient(115deg,#E0A863 0 7px,#CC9550 7px 14px);box-shadow:0 0 0 1px rgba(0,0,0,.3),0 4px 14px -4px rgba(224,168,99,.72);pointer-events:none}
 .gts-editor-timeline>i.previewing{border-color:rgba(179,169,249,.62);background:repeating-linear-gradient(115deg,#AB9FF8 0 7px,#9C90F5 7px 14px);box-shadow:0 0 18px -2px rgba(171,159,248,.82)}
-.gts-editor-timeline>b{position:absolute;z-index:3;top:5px;width:3px;height:36px;border-radius:2px;background:#F5D390;box-shadow:0 0 12px rgba(245,211,144,.75);pointer-events:none}
-.gts-editor-timeline>b:before{content:"";position:absolute;top:-6px;left:-4px;width:11px;height:11px;border-radius:50%;background:#F5D390}
+.gts-editor-timeline>b{position:absolute;z-index:3;top:8px;width:2px;height:30px;border-radius:2px;background:#F5D390;box-shadow:0 0 10px rgba(245,211,144,.6);pointer-events:none}
+.gts-editor-timeline>b:before{content:"";position:absolute;top:-4px;left:-2.5px;width:8px;height:8px;border-radius:50%;background:#F5D390;box-shadow:0 0 8px rgba(245,211,144,.6)}
 .gts-editor-timeline input{position:absolute;inset:0;z-index:4;width:100%;height:46px;margin:0;opacity:1;appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer;touch-action:pan-y}
 .gts-editor-timeline input::-webkit-slider-runnable-track{height:15px;border:0;background:transparent}
-.gts-editor-timeline input::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-3.5px;border:3px solid #fff;border-radius:50%;background:var(--e-indigo);box-shadow:0 3px 10px rgba(0,0,0,.6),0 0 0 3px rgba(142,130,242,.3)}
+.gts-editor-timeline input::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-1.5px;border:3px solid #fff;border-radius:50%;background:var(--e-indigo);box-shadow:0 2px 8px rgba(0,0,0,.55),0 0 0 3px rgba(142,130,242,.28);transition:transform .12s ease}
+.gts-editor-timeline input:active::-webkit-slider-thumb{transform:scale(1.18)}
 .gts-editor-timeline input::-moz-range-track{height:15px;border:0;background:transparent}
 .gts-editor-timeline input::-moz-range-progress{height:15px;background:transparent}
-.gts-editor-timeline input::-moz-range-thumb{width:19px;height:19px;border:3px solid #fff;border-radius:50%;background:var(--e-indigo);box-shadow:0 3px 10px rgba(0,0,0,.6),0 0 0 3px rgba(142,130,242,.3)}
+.gts-editor-timeline input::-moz-range-thumb{width:16px;height:16px;border:3px solid #fff;border-radius:50%;background:var(--e-indigo);box-shadow:0 2px 8px rgba(0,0,0,.55),0 0 0 3px rgba(142,130,242,.28)}
 .gts-editor-timeline input:focus-visible{outline:none}
 .gts-editor-timeline input:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 5px rgba(171,159,248,.42),0 3px 10px rgba(0,0,0,.6)}
 .gts-editor-timeline input:focus-visible::-moz-range-thumb{box-shadow:0 0 0 5px rgba(171,159,248,.42),0 3px 10px rgba(0,0,0,.6)}
@@ -565,6 +573,7 @@ const styles=`
 .gts-editor-back{height:40px;padding:0 10px}
 .gts-editor-back span,.gts-editor-save-state>span{display:none}
 .gts-editor-title{text-align:left}
+.gts-editor-title-row .gts-editor-kicker{display:none}
 .gts-editor-title h1{font-size:15px}
 .gts-editor-title p{font-size:11.5px}
 .gts-editor-save-state .primary{display:none}
