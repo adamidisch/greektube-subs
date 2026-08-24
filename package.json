@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/check-greek-uppercase.mjs app public && node scripts/brand-cleanup.mjs && node --experimental-strip-types scripts/navigation-history.test.mjs && next build",
-    "postbuild": "node scripts/zc8-v6-build-worker-v2.mjs",
+    "postbuild": "node scripts/zc8-v6-build-worker-v3.mjs",
     "start": "next start",
     "lint": "eslint .",
     "check:greek-uppercase": "node scripts/check-greek-uppercase.mjs app public",
