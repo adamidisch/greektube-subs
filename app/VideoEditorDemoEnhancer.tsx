@@ -356,7 +356,7 @@ export default function VideoEditorDemoEnhancer(){
       if(data?.type!=="greektube-editor")throw new Error("Μη έγκυρο αρχείο editor.");
       if(data.videoId&&data.videoId!==video.id)throw new Error("Το αρχείο ανήκει σε άλλο video.");
       const incoming=normalizeSkipRanges(Array.isArray(data.skipRanges)?data.skipRanges:[]);
-      const problems=validateSkipRanges(incoming,duration);
+      const problems=validateSkipRanges(incoming,duration).errors;
       if(problems.length)throw new Error(`Προβληματικά ranges: ${problems[0]}`);
       const nextMeta=data.metadata&&typeof data.metadata==="object"?{...metadata,...data.metadata,tags:Array.isArray(data.metadata.tags)?data.metadata.tags:metadata.tags}:metadata;
       setMetadata(nextMeta);setRanges(incoming);setTimecodeDrafts({});setDraftStart(null);
