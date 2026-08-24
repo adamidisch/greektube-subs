@@ -16,8 +16,6 @@ export type V5CoverageRow = {
   speakerConfidence: SpeakerConfidence;
 };
 
-// Plain Medical Greek: keep the medical meaning, but prefer everyday Greek when
-// a simpler phrase is equally accurate. Do not remove claims or source content.
 const TEXT_OVERRIDES: Record<number, string> = {
   4: "Τι είναι οι υδατάνθρακες; Στην ουσία είναι διεγερτικά και το θέμα είναι αν μπορείς να τους αντέξεις.",
   17: "Είναι κυρίως θέμα ποσότητας και λεπτομερειών: πόσο από αυτά θα φας.",
@@ -37,9 +35,6 @@ const TEXT_OVERRIDES: Record<number, string> = {
   200: "Ποια είναι λιγότερο πιθανό να προκαλέσουν αρνητική αντίδραση; — Κρόκος αυγού.",
 };
 
-// Only split a V4 block when the source timestamp gives us a clean, high-confidence
-// speaker turn. Where the turn happens inside one raw YouTube cue we keep one display
-// cue, mark it mixed and use an em dash rather than inventing a timestamp.
 const CLEAN_SPLITS = new Map<number, { splitAt: number; splitStart: number; leftText: string; rightText: string }>([
   [52, {
     splitAt: 55,
@@ -129,7 +124,7 @@ const OVER_MEDICAL = /\b(?:καταρροή|αρθραλγία|υπερευαι�
 
 function validateV5() {
   let expectedSourceCue = 0;
-  let minDuration = Infinity;
+  let observedMinDuration = Infinity;
   let maxDuration = 0;
   let maxCharsPerSecond = 0;
   let mixedSpeakerCueCount = 0;
@@ -144,9 +139,9 @@ function validateV5() {
     const text = row.text.replace(/\s+/g, " ").trim();
     const chars = text.replace(/\s/g, "").length;
     const cps = chars / row.duration;
-    const minDuration = row.speakerConfidence === "high" && chars <= 34 ? 1.8 : 2.2;
+    const requiredMinDuration = row.speakerConfidence === "high" && chars <= 34 ? 1.8 : 2.2;
 
-    if (!Number.isFinite(row.duration) || row.duration < minDuration) {
+    if (!Number.isFinite(row.duration) || row.duration < requiredMinDuration) {
       throw new Error(`WQCO v5 cue too short at ${row.start}: ${row.duration}s`);
     }
     if (row.duration > 12.5) throw new Error(`WQCO v5 cue too long at ${row.start}: ${row.duration}s`);
@@ -158,7 +153,7 @@ function validateV5() {
 
     if (row.speaker === "mixed") mixedSpeakerCueCount += 1;
     if (row.speakerConfidence === "high") highConfidenceSpeakerCueCount += 1;
-    minDuration = Math.min(minDuration, row.duration);
+    observedMinDuration = Math.min(observedMinDuration, row.duration);
     maxDuration = Math.max(maxDuration, row.duration);
     maxCharsPerSecond = Math.max(maxCharsPerSecond, cps);
   }
@@ -174,7 +169,7 @@ function validateV5() {
     displayCueCount: rows.length,
     mixedSpeakerCueCount,
     highConfidenceSpeakerCueCount,
-    minDuration: Number(minDuration.toFixed(2)),
+    minDuration: Number(observedMinDuration.toFixed(2)),
     maxDuration: Number(maxDuration.toFixed(2)),
     maxCharsPerSecond: Number(maxCharsPerSecond.toFixed(1)),
     plainMedicalGreek: true,
