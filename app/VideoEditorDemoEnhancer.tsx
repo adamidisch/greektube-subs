@@ -389,7 +389,7 @@ export default function VideoEditorDemoEnhancer(){
         {loading?<div className="gts-editor-loading"><span className="gts-editor-player-spinner"/>Φόρτωση editor…</div>:video&&metadata?<main className="gts-editor-layout">
           <section className="gts-editor-stage">
 
-            <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ</strong></div>{captions&&activeCaption>=0&&<div className="gts-editor-subtitles" aria-live="off">{subtitleWindow(captions.cues[activeCaption],current,captions.cues[activeCaption+1]).split("\n").map((line,index)=><span key={`${activeCaption}-${index}`}>{line}</span>)}</div>}<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div></div>
+            <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ</strong></div>{captions&&activeCaption>=0&&<div className="gts-editor-subtitles" aria-live="off">{subtitleWindow(captions.cues[activeCaption],current,captions.cues[activeCaption+1]).split("\n").map((line,index)=><span key={`${activeCaption}-${index}`}>{line}</span>)}</div>}{!playing&&<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div>}</div>
 
             <div className="gts-editor-console">
               <div className="gts-editor-timeline-wrap">
@@ -475,8 +475,8 @@ const styles=`
 
 .gts-editor-video{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid var(--e-hair);border-radius:20px;background:#000;box-shadow:0 30px 72px -24px rgba(0,0,0,.78)}
 .gts-editor-video>div:first-child,.gts-editor-video iframe{width:100%!important;height:100%!important;border:0}
-.gts-editor-timecode{position:absolute;right:16px;bottom:14px;z-index:5;padding:8px 12px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(14,17,22,.82);font:700 15px var(--e-mono);font-variant-numeric:tabular-nums;backdrop-filter:blur(10px)}
-.gts-editor-timecode span{color:var(--e-dim)}
+.gts-editor-timecode{position:absolute;right:16px;bottom:14px;z-index:5;padding:8px 12px;border:1px solid rgba(171,159,248,.28);border-radius:10px;background:rgba(31,37,48,.94);color:#F6F4FF;font:700 16.5px var(--e-mono);font-variant-numeric:tabular-nums;box-shadow:0 10px 28px -14px rgba(0,0,0,.8),inset 0 1px rgba(255,255,255,.05);backdrop-filter:blur(12px)}
+.gts-editor-timecode span{margin-left:3px;color:#9CA5B4;font-size:13.5px;font-weight:650}
 
 .gts-editor-console{padding:20px 22px 22px;border:1px solid var(--e-hair);border-radius:20px;background:var(--e-panel)}
 .gts-editor-console-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
