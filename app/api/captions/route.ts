@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { GET as semanticGET, POST as semanticPOST } from "./semantic-route";
 import { getTranscript, getTranscriptStatus, TRANSCRIPT_VERSION } from "../shared-cache";
 import { isOwnerChatgptVideo } from "./owner-mode";
-import { WQCO_REVIEW_VIDEO_ID, WQCO_REVIEW_V3_CUES, WQCO_REVIEW_V3_QUALITY } from "./wqco-review-v3";
+import { WQCO_REVIEW_VIDEO_ID, WQCO_REVIEW_V4_CUES, WQCO_REVIEW_V4_QUALITY } from "./wqco-review-v4";
 
 type TranslationRequestBody = {
   url?: unknown;
@@ -70,14 +70,13 @@ function isPreviewReviewVideo(videoId: string | null) {
 function reviewHeaders() {
   return {
     "Cache-Control": "private, no-store, max-age=0",
-    "X-GreekTube-Subtitle-Review": "wqco-v3",
-    "X-GreekTube-Translation-Mode": "review-v3",
+    "X-GreekTube-Subtitle-Review": "wqco-v4",
+    "X-GreekTube-Translation-Mode": "review-v4",
   };
 }
 
 function reviewPayload(videoId: string) {
   // Deliberately self-contained: preview review playback must not depend on Neon/Blob.
-  // This prevents schema/env differences in preview from hiding otherwise valid review cues.
   return {
     status: "ready",
     progress: 100,
@@ -88,12 +87,12 @@ function reviewPayload(videoId: string) {
     originalVideoUrl: `https://www.youtube.com/watch?v=${videoId}`,
     duration: 550,
     sourceLanguage: "en",
-    cues: WQCO_REVIEW_V3_CUES,
+    cues: WQCO_REVIEW_V4_CUES,
     transcriptVersion: TRANSCRIPT_VERSION,
-    translationMode: "review-v3",
-    translationMethod: "manual_semantic_timing_v3",
-    reviewRevision: "wqco-v3",
-    reviewQuality: WQCO_REVIEW_V3_QUALITY,
+    translationMode: "review-v4",
+    translationMethod: "manual_semantic_coverage_timing_v4",
+    reviewRevision: "wqco-v4",
+    reviewQuality: WQCO_REVIEW_V4_QUALITY,
     cached: true,
   };
 }
