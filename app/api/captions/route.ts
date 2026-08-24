@@ -75,23 +75,21 @@ function reviewHeaders() {
   };
 }
 
-async function reviewPayload(videoId: string) {
-  const record = await getTranscript(videoId);
-  if (!record) return null;
+function reviewPayload(videoId: string) {
+  // Deliberately self-contained: preview review playback must not depend on Neon/Blob.
+  // This prevents schema/env differences in preview from hiding otherwise valid review cues.
   return {
     status: "ready",
     progress: 100,
     videoId,
-    title: record.title,
-    originalTitle: record.title,
-    channel: record.channel,
-    duration: record.duration,
-    sourceLanguage: record.originalLanguage || "en",
+    title: "Δίαιτα Αποκλεισμού 2 Εβδομάδων: Τι να Τρώτε και Πώς να Επανεισάγετε Τροφές",
+    originalTitle: "Follow This 2 WEEK PROTOCOL to Reduce Inflammation & HEAL THE BODY",
+    channel: "Jesse Chappus",
+    originalVideoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+    duration: 550,
+    sourceLanguage: "en",
     cues: WQCO_REVIEW_V3_CUES,
-    englishCues: record.englishTranscript,
-    keyPoints: record.keyPoints,
-    topics: record.topics,
-    transcriptVersion: record.transcriptVersion,
+    transcriptVersion: TRANSCRIPT_VERSION,
     translationMode: "review-v3",
     translationMethod: "manual_semantic_timing_v3",
     reviewRevision: "wqco-v3",
@@ -105,8 +103,7 @@ export async function GET(request: Request) {
   const candidate = url.searchParams.get("videoId") || url.searchParams.get("video") || url.searchParams.get("id") || url.searchParams.get("url") || "";
   const videoId = extractVideoId(candidate);
   if (isPreviewReviewVideo(videoId)) {
-    const payload = await reviewPayload(videoId!);
-    if (payload) return NextResponse.json(payload, { headers: reviewHeaders() });
+    return NextResponse.json(reviewPayload(videoId!), { headers: reviewHeaders() });
   }
   return semanticGET(request);
 }
@@ -125,8 +122,7 @@ export async function POST(request: Request) {
 
     // Preview review must never start or mutate the production translation pipeline.
     if (isPreviewReviewVideo(videoId)) {
-      const payload = await reviewPayload(videoId!);
-      if (payload) return NextResponse.json(payload, { headers: reviewHeaders() });
+      return NextResponse.json(reviewPayload(videoId!), { headers: reviewHeaders() });
     }
 
     if (videoId && await isOwnerChatgptVideo(videoId)) {
