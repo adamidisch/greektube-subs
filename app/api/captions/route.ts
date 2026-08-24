@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { GET as semanticGET, POST as semanticPOST } from "./semantic-route";
 import { getTranscript, getTranscriptStatus, TRANSCRIPT_VERSION } from "../shared-cache";
 import { isOwnerChatgptVideo } from "./owner-mode";
-import { WQCO_REVIEW_VIDEO_ID, WQCO_REVIEW_V2_CUES } from "./wqco-review-v2";
+import { WQCO_REVIEW_VIDEO_ID, WQCO_REVIEW_V3_CUES, WQCO_REVIEW_V3_QUALITY } from "./wqco-review-v3";
 
 type TranslationRequestBody = {
   url?: unknown;
@@ -70,8 +70,8 @@ function isPreviewReviewVideo(videoId: string | null) {
 function reviewHeaders() {
   return {
     "Cache-Control": "private, no-store, max-age=0",
-    "X-GreekTube-Subtitle-Review": "wqco-v2",
-    "X-GreekTube-Translation-Mode": "review-v2",
+    "X-GreekTube-Subtitle-Review": "wqco-v3",
+    "X-GreekTube-Translation-Mode": "review-v3",
   };
 }
 
@@ -87,21 +87,22 @@ async function reviewPayload(videoId: string) {
     channel: record.channel,
     duration: record.duration,
     sourceLanguage: record.originalLanguage || "en",
-    cues: WQCO_REVIEW_V2_CUES,
+    cues: WQCO_REVIEW_V3_CUES,
     englishCues: record.englishTranscript,
     keyPoints: record.keyPoints,
     topics: record.topics,
     transcriptVersion: record.transcriptVersion,
-    translationMode: "review-v2",
-    translationMethod: "manual_semantic_segmentation_v2",
-    reviewRevision: "wqco-v2",
+    translationMode: "review-v3",
+    translationMethod: "manual_semantic_timing_v3",
+    reviewRevision: "wqco-v3",
+    reviewQuality: WQCO_REVIEW_V3_QUALITY,
     cached: true,
   };
 }
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const candidate = url.searchParams.get("video") || url.searchParams.get("id") || url.searchParams.get("url") || "";
+  const candidate = url.searchParams.get("videoId") || url.searchParams.get("video") || url.searchParams.get("id") || url.searchParams.get("url") || "";
   const videoId = extractVideoId(candidate);
   if (isPreviewReviewVideo(videoId)) {
     const payload = await reviewPayload(videoId!);
