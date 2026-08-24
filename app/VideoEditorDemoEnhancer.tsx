@@ -385,8 +385,7 @@ export default function VideoEditorDemoEnhancer(){
 
 
 const styles=`
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
-.gts-editor-screen{position:fixed;inset:0;z-index:2147483200;overflow:auto;background:#161B23;color:#EDF0F5;--e-sans:'Inter',var(--font-geist-sans),-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--e-display:'Sora','Inter',var(--font-geist-sans),sans-serif;--e-mono:'JetBrains Mono',var(--font-geist-mono),ui-monospace,monospace;font-family:var(--e-sans);font-size:16px;-webkit-font-smoothing:antialiased;--e-panel:#1E242E;--e-sunk:#191E27;--e-raised:#252C38;--e-hair:rgba(255,255,255,.12);--e-hair-strong:rgba(255,255,255,.22);--e-text:#EDF0F5;--e-muted:#A6AEBC;--e-dim:#828B9A;--e-indigo:#8E82F2;--e-indigo-soft:rgba(142,130,242,.16);--e-amber:#E0A863;--e-amber-soft:rgba(224,168,99,.16);--e-green:#89CFA6;--e-red:#EB8C82}
+.gts-editor-screen{position:fixed;inset:0;z-index:2147483200;overflow:auto;background:#161B23;color:#EDF0F5;--e-sans:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--e-display:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--e-mono:var(--font-geist-mono),ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-family:var(--e-sans);font-size:16px;-webkit-font-smoothing:antialiased;--e-panel:#1E242E;--e-sunk:#191E27;--e-raised:#252C38;--e-hair:rgba(255,255,255,.12);--e-hair-strong:rgba(255,255,255,.22);--e-text:#EDF0F5;--e-muted:#A6AEBC;--e-dim:#828B9A;--e-indigo:#8E82F2;--e-indigo-soft:rgba(142,130,242,.16);--e-amber:#E0A863;--e-amber-soft:rgba(224,168,99,.16);--e-green:#89CFA6;--e-red:#EB8C82}
 .gts-editor-screen:focus{outline:none}
 .gts-editor-screen *:focus-visible{outline:2px solid var(--e-indigo);outline-offset:2px;border-radius:8px}
 .gts-editor-screen button{cursor:pointer;font-family:inherit}
