@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { GET as semanticGET, POST as semanticPOST } from "./semantic-route";
 import { getTranscript, getTranscriptStatus, TRANSCRIPT_VERSION } from "../shared-cache";
 import { isOwnerChatgptVideo } from "./owner-mode";
-import { WQCO_REVIEW_VIDEO_ID, WQCO_REVIEW_V4_CUES, WQCO_REVIEW_V4_QUALITY } from "./wqco-review-v4";
+import { WQCO_REVIEW_VIDEO_ID, WQCO_REVIEW_V5_CUES, WQCO_REVIEW_V5_LEDGER, WQCO_REVIEW_V5_QUALITY } from "./wqco-review-v5";
 
 type TranslationRequestBody = {
   url?: unknown;
@@ -70,13 +70,13 @@ function isPreviewReviewVideo(videoId: string | null) {
 function reviewHeaders() {
   return {
     "Cache-Control": "private, no-store, max-age=0",
-    "X-GreekTube-Subtitle-Review": "wqco-v4",
-    "X-GreekTube-Translation-Mode": "review-v4",
+    "X-GreekTube-Subtitle-Review": "wqco-v5",
+    "X-GreekTube-Translation-Mode": "review-v5",
   };
 }
 
 function reviewPayload(videoId: string) {
-  // Deliberately self-contained: preview review playback must not depend on Neon/Blob.
+  // Self-contained review playback: no Neon/Blob dependency in preview.
   return {
     status: "ready",
     progress: 100,
@@ -87,12 +87,13 @@ function reviewPayload(videoId: string) {
     originalVideoUrl: `https://www.youtube.com/watch?v=${videoId}`,
     duration: 550,
     sourceLanguage: "en",
-    cues: WQCO_REVIEW_V4_CUES,
+    cues: WQCO_REVIEW_V5_CUES,
+    reviewLedger: WQCO_REVIEW_V5_LEDGER,
     transcriptVersion: TRANSCRIPT_VERSION,
-    translationMode: "review-v4",
-    translationMethod: "manual_semantic_coverage_timing_v4",
-    reviewRevision: "wqco-v4",
-    reviewQuality: WQCO_REVIEW_V4_QUALITY,
+    translationMode: "review-v5",
+    translationMethod: "manual_semantic_coverage_plain_medical_speaker_v5",
+    reviewRevision: "wqco-v5",
+    reviewQuality: WQCO_REVIEW_V5_QUALITY,
     cached: true,
   };
 }
@@ -119,7 +120,6 @@ export async function POST(request: Request) {
   if (typeof body.url === "string") {
     const videoId = extractVideoId(body.url);
 
-    // Preview review must never start or mutate the production translation pipeline.
     if (isPreviewReviewVideo(videoId)) {
       return NextResponse.json(reviewPayload(videoId!), { headers: reviewHeaders() });
     }
