@@ -23,19 +23,24 @@ function InlineMetadataField({label,value,onCommit,wide=false,multiline=false,op
   const [editing,setEditing]=useState(false);
   const [draft,setDraft]=useState(value);
   useEffect(()=>{if(!editing)setDraft(value);},[value,editing]);
+  useEffect(()=>{
+    if(!editing)return;
+    const close=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();setDraft(value);setEditing(false);}};
+    window.addEventListener("keydown",close,true);
+    return()=>window.removeEventListener("keydown",close,true);
+  },[editing,value]);
   const cancel=()=>{setDraft(value);setEditing(false);};
   const commit=()=>{onCommit(draft);setEditing(false);};
   const displayValue=options?.find(([option])=>option===value)?.[1]||value||"—";
-  const keyboard=(event:React.KeyboardEvent<HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement>)=>{
-    if(event.key==="Escape"){event.preventDefault();cancel();return;}
-    if(event.key==="Enter"&&!multiline){event.preventDefault();commit();}
-  };
+  const useTextarea=multiline||(!options&&Math.max(value.length,draft.length)>72);
   return <div className={`gts-inline-field ${wide?"wide":""} ${multiline?"multiline":""} ${editing?"editing":""}`}>
     <span className="gts-inline-label">{label}</span>
-    {editing?<div className="gts-inline-edit">
-      {options?<select autoFocus value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={keyboard}>{options.map(([option,optionLabel])=><option key={option} value={option}>{optionLabel}</option>)}</select>:multiline?<textarea autoFocus value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={keyboard}/>:<input autoFocus value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={keyboard}/>} 
-      <div className="gts-inline-actions"><button type="button" className="confirm" onClick={commit} aria-label={`Αποδοχή αλλαγής: ${label}`} title="Αποδοχή"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><button type="button" className="cancel" onClick={cancel} aria-label={`Ακύρωση αλλαγής: ${label}`} title="Ακύρωση"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
-    </div>:<button type="button" className="gts-inline-view" onClick={()=>{setDraft(value);setEditing(true);}} title={`${label}: ${displayValue}`}><span>{displayValue}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>}
+    <button type="button" className="gts-inline-view" onClick={()=>{setDraft(value);setEditing(true);}} title={`${label}: ${displayValue}`}><span>{displayValue}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+    {editing&&<div className="gts-field-modal" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)cancel();}}><section className="gts-field-dialog" role="dialog" aria-modal="true" aria-labelledby="gts-field-dialog-title">
+      <div className="gts-field-dialog-head"><div><span className="gts-editor-kicker">EDIT FIELD</span><h3 id="gts-field-dialog-title">{label}</h3></div><button type="button" className="gts-field-dialog-close" onClick={cancel} aria-label="Κλείσιμο"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+      <label className="gts-field-dialog-control"><span>{label}</span>{options?<select autoFocus value={draft} onChange={event=>setDraft(event.target.value)}>{options.map(([option,optionLabel])=><option key={option} value={option}>{optionLabel}</option>)}</select>:useTextarea?<textarea autoFocus value={draft} onChange={event=>setDraft(event.target.value)}/>:<input autoFocus value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();commit();}}}/>}</label>
+      <div className="gts-field-dialog-actions"><button type="button" className="secondary" onClick={cancel}>Ακύρωση</button><button type="button" className="confirm" onClick={commit}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Αποθήκευση</button></div>
+    </section></div>}
   </div>;
 }
 
@@ -602,6 +607,26 @@ const styles=`
 .gts-inline-actions .cancel{color:var(--e-red)}
 .gts-inline-actions .cancel:hover{background:rgba(235,140,130,.14);border-color:rgba(235,140,130,.42)}
 .gts-inline-field.multiline .gts-inline-actions{align-self:start}
+.gts-field-modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:22px;background:rgba(7,9,13,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.gts-field-dialog{width:min(580px,100%);max-height:min(760px,calc(100dvh - 44px));overflow:auto;padding:24px;border:1px solid var(--e-hair-strong);border-radius:20px;background:var(--e-panel);box-shadow:0 34px 100px -28px rgba(0,0,0,.9)}
+.gts-field-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px}
+.gts-field-dialog-head h3{margin:5px 0 0;font-family:var(--e-display);font-size:22px;font-weight:620;line-height:1.25;letter-spacing:-.025em}
+.gts-field-dialog-close{width:38px;height:38px;flex:none;display:grid;place-items:center;border:1px solid var(--e-hair);border-radius:11px;background:var(--e-raised);color:var(--e-muted);transition:background .15s,border-color .15s,color .15s}
+.gts-field-dialog-close:hover{border-color:var(--e-hair-strong);background:#2B333F;color:#fff}
+.gts-field-dialog-close svg{width:17px;height:17px}
+.gts-field-dialog-control{display:grid;gap:8px;color:var(--e-muted);font-size:12px;font-weight:650}
+.gts-field-dialog-control input,.gts-field-dialog-control select,.gts-field-dialog-control textarea{width:100%;border:1px solid var(--e-hair-strong);border-radius:13px;background:var(--e-sunk);color:var(--e-text);outline:none;font-family:var(--e-sans);font-size:16px;transition:border-color .15s,box-shadow .15s}
+.gts-field-dialog-control input,.gts-field-dialog-control select{height:50px;padding:0 14px}
+.gts-field-dialog-control textarea{min-height:210px;max-height:48dvh;padding:14px;resize:vertical;line-height:1.55}
+.gts-field-dialog-control input:focus,.gts-field-dialog-control select:focus,.gts-field-dialog-control textarea:focus{border-color:rgba(155,143,248,.72);box-shadow:0 0 0 4px rgba(155,143,248,.13)}
+.gts-field-dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+.gts-field-dialog-actions button{min-height:42px;padding:0 16px;border-radius:11px;font-size:14px;font-weight:620;transition:background .15s,border-color .15s,transform .1s}
+.gts-field-dialog-actions button:active{transform:translateY(1px)}
+.gts-field-dialog-actions .secondary{border:1px solid var(--e-hair);background:transparent;color:var(--e-muted)}
+.gts-field-dialog-actions .secondary:hover{border-color:var(--e-hair-strong);background:var(--e-raised);color:#fff}
+.gts-field-dialog-actions .confirm{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid rgba(155,143,248,.55);background:var(--e-indigo);color:#fff;box-shadow:0 10px 24px -10px rgba(142,130,242,.7)}
+.gts-field-dialog-actions .confirm:hover{background:#9C90F5}
+.gts-field-dialog-actions .confirm svg{width:17px;height:17px}
 .gts-editor-validation p,.gts-editor-validation ul{margin:15px 0 0;color:var(--e-muted);font-size:14px;line-height:1.65}
 .gts-editor-validation ul{padding-left:21px;color:var(--e-red)}
 .gts-editor-validation.ok{border-color:rgba(105,190,141,.28)}
@@ -685,6 +710,13 @@ const styles=`
 .gts-editor-mobile-save .primary{min-width:142px}
 }
 @media(max-width:430px){
+.gts-field-modal{align-items:end;padding:10px 10px calc(10px + env(safe-area-inset-bottom))}
+.gts-field-dialog{max-height:calc(100dvh - 20px);padding:20px 17px;border-radius:20px}
+.gts-field-dialog-head{margin-bottom:17px}
+.gts-field-dialog-head h3{font-size:20px}
+.gts-field-dialog-control textarea{min-height:190px;max-height:44dvh}
+.gts-field-dialog-actions{display:grid;grid-template-columns:1fr 1fr}
+.gts-field-dialog-actions button{min-height:46px}
 .gts-editor-form{grid-template-columns:1fr}
 .gts-inline-field.wide{grid-column:auto}
 .gts-editor-section-head{flex-wrap:wrap}
