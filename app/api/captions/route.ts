@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GET as semanticGET, POST as semanticPOST } from "./semantic-route";
 import { getTranscript, getTranscriptStatus, TRANSCRIPT_VERSION } from "../shared-cache";
 import { isOwnerChatgptVideo } from "./owner-mode";
+import { WQCO_REVIEW_VIDEO_ID, WQCO_REVIEW_V2_CUES } from "./wqco-review-v2";
 
 type TranslationRequestBody = {
   url?: unknown;
@@ -62,7 +63,50 @@ function ownerStatusPayload(record: Awaited<ReturnType<typeof getTranscriptStatu
   };
 }
 
+function isPreviewReviewVideo(videoId: string | null) {
+  return process.env.VERCEL_ENV === "preview" && videoId === WQCO_REVIEW_VIDEO_ID;
+}
+
+function reviewHeaders() {
+  return {
+    "Cache-Control": "private, no-store, max-age=0",
+    "X-GreekTube-Subtitle-Review": "wqco-v2",
+    "X-GreekTube-Translation-Mode": "review-v2",
+  };
+}
+
+async function reviewPayload(videoId: string) {
+  const record = await getTranscript(videoId);
+  if (!record) return null;
+  return {
+    status: "ready",
+    progress: 100,
+    videoId,
+    title: record.title,
+    originalTitle: record.title,
+    channel: record.channel,
+    duration: record.duration,
+    sourceLanguage: record.originalLanguage || "en",
+    cues: WQCO_REVIEW_V2_CUES,
+    englishCues: record.englishTranscript,
+    keyPoints: record.keyPoints,
+    topics: record.topics,
+    transcriptVersion: record.transcriptVersion,
+    translationMode: "review-v2",
+    translationMethod: "manual_semantic_segmentation_v2",
+    reviewRevision: "wqco-v2",
+    cached: true,
+  };
+}
+
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const candidate = url.searchParams.get("video") || url.searchParams.get("id") || url.searchParams.get("url") || "";
+  const videoId = extractVideoId(candidate);
+  if (isPreviewReviewVideo(videoId)) {
+    const payload = await reviewPayload(videoId!);
+    if (payload) return NextResponse.json(payload, { headers: reviewHeaders() });
+  }
   return semanticGET(request);
 }
 
@@ -77,6 +121,13 @@ export async function POST(request: Request) {
 
   if (typeof body.url === "string") {
     const videoId = extractVideoId(body.url);
+
+    // Preview review must never start or mutate the production translation pipeline.
+    if (isPreviewReviewVideo(videoId)) {
+      const payload = await reviewPayload(videoId!);
+      if (payload) return NextResponse.json(payload, { headers: reviewHeaders() });
+    }
+
     if (videoId && await isOwnerChatgptVideo(videoId)) {
       const status = await getTranscriptStatus(videoId);
       const ownerHeaders = { "Cache-Control": "no-store", "X-GreekTube-Translation-Mode": "owner-chatgpt" };
