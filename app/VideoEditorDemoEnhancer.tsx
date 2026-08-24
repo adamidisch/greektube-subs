@@ -338,12 +338,6 @@ export default function VideoEditorDemoEnhancer(){
             <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ</strong></div>{captions&&activeCaption>=0&&<div className="gts-editor-subtitles" aria-live="off">{subtitleWindow(captions.cues[activeCaption],current,captions.cues[activeCaption+1]).split("\n").map((line,index)=><span key={`${activeCaption}-${index}`}>{line}</span>)}</div>}<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div></div>
 
             <div className="gts-editor-console">
-              <div className="gts-editor-console-top">
-                <div className="gts-editor-transport"><button onClick={()=>seek(current-5)} aria-label="Πίσω 5 δευτερόλεπτα"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 19 2 12l9-7v14z"/><path d="M22 19l-9-7 9-7v14z"/></svg><em>5</em></button><button className="gts-editor-play" onClick={toggle} aria-label={playing?"Παύση":"Αναπαραγωγή"}>{playing?<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>:<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.53.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>}</button><button onClick={()=>seek(current+5)} aria-label="Μπροστά 5 δευτερόλεπτα"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m13 19 9-7-9-7v14z"/><path d="M2 19l9-7-9-7v14z"/></svg><em>5</em></button></div>
-                <div className="gts-editor-readout"><strong>{clock(current,true)}</strong><span>/ {clock(duration)}</span></div>
-                <div className="gts-editor-summary"><span><b>{ranges.length}</b>SKIP RANGES</span><span><b>{clock(totalSkipped)}</b>ΣΥΝΟΛΟ</span></div>
-              </div>
-
               <div className="gts-editor-timeline-wrap">
                 <div className="gts-editor-timeline" style={{"--editor-seek-progress":`${progress}%`} as CSSProperties}>
                   {duration>0&&ranges.map((range,index)=><i key={`${range.start}-${range.end}-${index}`} className={previewIndex===index?"previewing":""} style={{left:`${Math.max(0,Math.min(100,range.start/duration*100))}%`,width:`${Math.max(.35,Math.min(100,(range.end-range.start)/duration*100))}%`} as CSSProperties}/>)}
@@ -352,6 +346,12 @@ export default function VideoEditorDemoEnhancer(){
                   <input type="range" min={0} max={Math.max(1,duration)} step="0.1" value={Math.min(current,Math.max(1,duration))} onPointerDown={updateTimelinePreview} onPointerMove={updateTimelinePreview} onPointerUp={()=>setTimelinePreview(null)} onPointerCancel={()=>setTimelinePreview(null)} onPointerLeave={()=>setTimelinePreview(null)} onChange={event=>seek(Number(event.target.value))} aria-label="Γραμμή χρόνου editor"/>
                 </div>
                 <div className="gts-editor-ruler" aria-hidden="true">{rulerTicks.map((tick,index)=><span key={index}>{clock(tick)}</span>)}</div>
+              </div>
+
+              <div className="gts-editor-console-top">
+                <div className="gts-editor-transport"><button onClick={()=>seek(current-5)} aria-label="Πίσω 5 δευτερόλεπτα"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 19 2 12l9-7v14z"/><path d="M22 19l-9-7 9-7v14z"/></svg><em>5</em></button><button className="gts-editor-play" onClick={toggle} aria-label={playing?"Παύση":"Αναπαραγωγή"}>{playing?<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>:<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.53.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>}</button><button onClick={()=>seek(current+5)} aria-label="Μπροστά 5 δευτερόλεπτα"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m13 19 9-7-9-7v14z"/><path d="M2 19l9-7-9-7v14z"/></svg><em>5</em></button></div>
+                <div className="gts-editor-readout"><strong>{clock(current,true)}</strong><span>/ {clock(duration)}</span></div>
+                <div className="gts-editor-summary"><span><b>{ranges.length}</b>SKIP RANGES</span><span><b>{clock(totalSkipped)}</b>ΣΥΝΟΛΟ</span></div>
               </div>
 
               <div className="gts-editor-mark-actions" data-armed={draftStart!==null?"1":"0"}>
@@ -421,24 +421,25 @@ const styles=`
 .gts-editor-timecode span{color:var(--e-dim)}
 
 .gts-editor-console{padding:20px 22px 22px;border:1px solid var(--e-hair);border-radius:20px;background:var(--e-panel)}
-.gts-editor-console-top{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.gts-editor-console-top{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .gts-editor-transport{display:flex;align-items:center;gap:11px}
-.gts-editor-transport button{position:relative;width:56px;height:50px;display:grid;place-items:center;border:1px solid var(--e-hair);border-radius:14px;background:var(--e-raised);color:#E3E7EE;transition:border-color .15s,background .15s,transform .1s}
-.gts-editor-transport button svg{width:21px;height:21px}
+.gts-editor-transport button>*{pointer-events:none}
+.gts-editor-transport button{position:relative;width:48px;height:44px;display:grid;place-items:center;border:1px solid var(--e-hair);border-radius:14px;background:var(--e-raised);color:#E3E7EE;transition:border-color .15s,background .15s,transform .1s}
+.gts-editor-transport button svg{width:18px;height:18px}
 .gts-editor-transport button em{position:absolute;right:8px;bottom:5px;font:700 10px var(--e-mono);font-style:normal;color:var(--e-dim)}
 .gts-editor-transport button:hover{border-color:var(--e-hair-strong);background:#2B333F}
 .gts-editor-transport button:active{transform:translateY(1px)}
-.gts-editor-transport .gts-editor-play{width:70px;height:58px;border-color:rgba(155,143,248,.5);background:linear-gradient(150deg,#9C90F5,#7C6FE0);color:#fff;box-shadow:0 12px 28px -8px rgba(122,110,215,.78)}
-.gts-editor-transport .gts-editor-play svg{width:25px;height:25px}
+.gts-editor-transport .gts-editor-play{width:56px;height:48px;border-color:rgba(155,143,248,.5);background:linear-gradient(150deg,#9C90F5,#7C6FE0);color:#fff;box-shadow:0 12px 28px -8px rgba(122,110,215,.78)}
+.gts-editor-transport .gts-editor-play svg{width:21px;height:21px}
 .gts-editor-transport .gts-editor-play:hover{border-color:rgba(179,169,249,.72);background:linear-gradient(150deg,#A79CF7,#877BE3)}
 .gts-editor-readout{display:flex;align-items:baseline;gap:8px;font-family:var(--e-mono);font-variant-numeric:tabular-nums}
-.gts-editor-readout strong{font-size:30px;font-weight:700;letter-spacing:-.03em;color:var(--e-text)}
+.gts-editor-readout strong{font-size:26px;font-weight:700;letter-spacing:-.03em;color:var(--e-text)}
 .gts-editor-readout span{font-size:15px;color:var(--e-dim)}
 .gts-editor-summary{margin-left:auto;display:flex;gap:11px}
-.gts-editor-summary span{display:grid;gap:3px;min-width:104px;padding:11px 15px;border:1px solid var(--e-hair);border-radius:13px;background:var(--e-sunk);color:var(--e-dim);font-size:10.5px;font-weight:700;letter-spacing:.09em;font-family:var(--e-display)}
-.gts-editor-summary b{font:700 20px var(--e-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--e-amber)}
+.gts-editor-summary span{display:grid;gap:2px;min-width:92px;padding:8px 13px;border:1px solid var(--e-hair);border-radius:13px;background:var(--e-sunk);color:var(--e-muted);font-size:11px;font-weight:700;letter-spacing:.09em;font-family:var(--e-display)}
+.gts-editor-summary b{font:700 17px var(--e-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--e-amber)}
 
-.gts-editor-timeline-wrap{margin-top:22px}
+.gts-editor-timeline-wrap{margin-top:0;margin-bottom:20px}
 .gts-editor-timeline{position:relative;isolation:isolate;height:46px;display:flex;align-items:center}
 .gts-editor-timeline:before{content:"";position:absolute;top:50%;left:0;right:0;z-index:0;height:15px;transform:translateY(-50%);border-radius:99px;background:#313947;box-shadow:inset 0 1px 3px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.05)}
 .gts-editor-timeline:after{content:"";position:absolute;top:50%;left:0;z-index:1;width:var(--editor-seek-progress);height:15px;transform:translateY(-50%);border-radius:99px;background:linear-gradient(90deg,#7B6FE4,#AB9FF8);box-shadow:0 0 16px -2px rgba(146,133,236,.55);pointer-events:none}
@@ -466,6 +467,7 @@ const styles=`
 .gts-editor-mark-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px;position:relative}
 .gts-editor-mark-actions:before{content:"";position:absolute;left:50%;top:50%;width:34px;height:2px;transform:translate(-50%,-50%);background:var(--e-hair);border-radius:2px;z-index:1}
 .gts-editor-mark-actions[data-armed="1"]:before{background:linear-gradient(90deg,var(--e-amber),var(--e-indigo));box-shadow:0 0 12px rgba(171,159,248,.5)}
+.gts-mark>*{pointer-events:none}
 .gts-mark{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:13px;min-height:82px;padding:16px 18px;border:1px solid var(--e-hair);border-radius:17px;background:var(--e-raised);color:var(--e-text);text-align:left;transition:border-color .15s,background .15s,box-shadow .15s,transform .1s}
 .gts-mark:hover{border-color:var(--e-hair-strong);background:#2B333F}
 .gts-mark:active{transform:translateY(1px)}
@@ -501,7 +503,7 @@ const styles=`
 .gts-editor-range-timecode span{padding:0 8px;color:#A197EC}
 .gts-editor-range-timecode em{margin-left:auto;padding:5px 11px;border-radius:8px;background:var(--e-amber-soft);color:var(--e-amber);font-size:13px;font-weight:700;font-style:normal;letter-spacing:0}
 .gts-editor-range-times{display:grid;grid-template-columns:minmax(112px,1fr) auto minmax(112px,1fr);gap:11px;align-items:end}
-.gts-editor-range-times label{display:grid;color:var(--e-dim);font-size:10.5px;font-weight:700;letter-spacing:.1em;font-family:var(--e-display)}
+.gts-editor-range-times label{display:grid;color:var(--e-muted);font-size:11px;font-weight:700;letter-spacing:.1em;font-family:var(--e-display)}
 .gts-editor-range-times input{width:100%;height:44px;margin-top:7px;padding:0 12px;border:1px solid var(--e-hair);border-radius:11px;background:var(--e-sunk);color:var(--e-text);font:700 16px var(--e-mono);font-variant-numeric:tabular-nums;outline:none;transition:border-color .15s,box-shadow .15s}
 .gts-editor-range-times input:hover{border-color:var(--e-hair-strong)}
 .gts-editor-range-times input:focus{border-color:rgba(155,143,248,.65);box-shadow:0 0 0 3px rgba(155,143,248,.14)}
