@@ -3,6 +3,12 @@ import { GET as semanticGET, POST as semanticPOST } from "./semantic-route";
 import { getTranscript, getTranscriptStatus, TRANSCRIPT_VERSION } from "../shared-cache";
 import { isOwnerChatgptVideo } from "./owner-mode";
 import { WQCO_REVIEW_VIDEO_ID, WQCO_REVIEW_V5_CUES, WQCO_REVIEW_V5_LEDGER, WQCO_REVIEW_V5_QUALITY } from "./wqco-review-v5";
+import {
+  ZC8_REVIEW_VIDEO_ID,
+  readZc8ReviewResult,
+  zc8ReviewHeaders,
+  zc8ReviewPayload,
+} from "./zc8-review-v6";
 
 type TranslationRequestBody = {
   url?: unknown;
@@ -63,11 +69,15 @@ function ownerStatusPayload(record: Awaited<ReturnType<typeof getTranscriptStatu
   };
 }
 
-function isPreviewReviewVideo(videoId: string | null) {
+function isPreviewWqco(videoId: string | null) {
   return process.env.VERCEL_ENV === "preview" && videoId === WQCO_REVIEW_VIDEO_ID;
 }
 
-function reviewHeaders() {
+function isPreviewZc8(videoId: string | null) {
+  return process.env.VERCEL_ENV === "preview" && videoId === ZC8_REVIEW_VIDEO_ID;
+}
+
+function wqcoReviewHeaders() {
   return {
     "Cache-Control": "private, no-store, max-age=0",
     "X-GreekTube-Subtitle-Review": "wqco-v5",
@@ -75,8 +85,7 @@ function reviewHeaders() {
   };
 }
 
-function reviewPayload(videoId: string) {
-  // Self-contained review playback: no Neon/Blob dependency in preview.
+function wqcoReviewPayload(videoId: string) {
   return {
     status: "ready",
     progress: 100,
@@ -98,13 +107,28 @@ function reviewPayload(videoId: string) {
   };
 }
 
+async function zc8Response() {
+  const result = await readZc8ReviewResult();
+  if (!result) {
+    return NextResponse.json({
+      status: "processing",
+      progress: 0,
+      videoId: ZC8_REVIEW_VIDEO_ID,
+      stage: "review-v6",
+      error: "ZC8 v6 review subtitles are still being prepared.",
+    }, { status: 202, headers: { ...zc8ReviewHeaders(), "Retry-After": "10" } });
+  }
+  return NextResponse.json(zc8ReviewPayload(result), { headers: zc8ReviewHeaders() });
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const candidate = url.searchParams.get("videoId") || url.searchParams.get("video") || url.searchParams.get("id") || url.searchParams.get("url") || "";
   const videoId = extractVideoId(candidate);
-  if (isPreviewReviewVideo(videoId)) {
-    return NextResponse.json(reviewPayload(videoId!), { headers: reviewHeaders() });
+  if (isPreviewWqco(videoId)) {
+    return NextResponse.json(wqcoReviewPayload(videoId!), { headers: wqcoReviewHeaders() });
   }
+  if (isPreviewZc8(videoId)) return zc8Response();
   return semanticGET(request);
 }
 
@@ -120,9 +144,10 @@ export async function POST(request: Request) {
   if (typeof body.url === "string") {
     const videoId = extractVideoId(body.url);
 
-    if (isPreviewReviewVideo(videoId)) {
-      return NextResponse.json(reviewPayload(videoId!), { headers: reviewHeaders() });
+    if (isPreviewWqco(videoId)) {
+      return NextResponse.json(wqcoReviewPayload(videoId!), { headers: wqcoReviewHeaders() });
     }
+    if (isPreviewZc8(videoId)) return zc8Response();
 
     if (videoId && await isOwnerChatgptVideo(videoId)) {
       const status = await getTranscriptStatus(videoId);
