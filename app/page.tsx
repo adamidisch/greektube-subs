@@ -19,30 +19,55 @@ import GtsFooter from "./GtsFooter";
 const SITE_URL = "https://greektubesubs.com";
 const BRAND_REV = "7820";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
-const REVIEW_VIDEO_ID = "WQCO8wlldAQ";
 
-const REVIEW_VIDEO = {
-  id: REVIEW_VIDEO_ID,
-  url: "https://www.youtube.com/watch?v=WQCO8wlldAQ",
-  title: "Δίαιτα Αποκλεισμού 2 Εβδομάδων: Τι να Τρώτε και Πώς να Επανεισάγετε Τροφές",
-  originalTitle: "Follow This 2 WEEK PROTOCOL to Reduce Inflammation & HEAL THE BODY | Dr. Elizabeth Bright",
-  channel: "Jesse Chappus",
-  channelUrl: "",
-  originalVideoUrl: "https://www.youtube.com/watch?v=WQCO8wlldAQ",
-  category: "Medical",
-  tags: ["υγεία", "διατροφή", "elimination diet"],
-  notes: "",
-  description: "Πρωτόκολλο αποκλεισμού δύο εβδομάδων, επανεισαγωγή τροφών και εξατομίκευση με βάση την απόκριση του οργανισμού.",
-  duration: 550,
-  addedAt: "2026-08-23T15:17:00.000Z",
-  favorite: false,
-  lastPosition: 0,
-  progress: 0,
-  speakerName: "Dr. Elizabeth Bright",
-  speakerRole: "Ιατρός",
-  metadataVersion: 6,
-  translationMode: "manual-pro",
-};
+const REVIEW_VIDEOS = {
+  WQCO8wlldAQ: {
+    id: "WQCO8wlldAQ",
+    url: "https://www.youtube.com/watch?v=WQCO8wlldAQ",
+    title: "Δίαιτα Αποκλεισμού 2 Εβδομάδων: Τι να Τρώτε και Πώς να Επανεισάγετε Τροφές",
+    originalTitle: "Follow This 2 WEEK PROTOCOL to Reduce Inflammation & HEAL THE BODY | Dr. Elizabeth Bright",
+    channel: "Jesse Chappus",
+    channelUrl: "",
+    originalVideoUrl: "https://www.youtube.com/watch?v=WQCO8wlldAQ",
+    category: "Medical",
+    tags: ["υγεία", "διατροφή", "elimination diet"],
+    notes: "",
+    description: "Πρωτόκολλο αποκλεισμού δύο εβδομάδων, επανεισαγωγή τροφών και εξατομίκευση με βάση την απόκριση του οργανισμού.",
+    duration: 550,
+    addedAt: "2026-08-23T15:17:00.000Z",
+    favorite: false,
+    lastPosition: 0,
+    progress: 0,
+    speakerName: "Dr. Elizabeth Bright",
+    speakerRole: "Ιατρός",
+    metadataVersion: 6,
+    translationMode: "manual-pro",
+  },
+  zc8Nh4TMB1s: {
+    id: "zc8Nh4TMB1s",
+    url: "https://www.youtube.com/watch?v=zc8Nh4TMB1s",
+    title: "Λιπώδες Ήπαρ: Η Κρυφή Ζάχαρη που Επιβαρύνει το Συκώτι",
+    originalTitle: "Fatty Liver Expert: Your Liver Is Filling With Fat Right Now - Dr David Unwin",
+    channel: "The Diary Of A CEO",
+    channelUrl: "",
+    originalVideoUrl: "https://www.youtube.com/watch?v=zc8Nh4TMB1s",
+    category: "Medical",
+    tags: ["υγεία", "διαβήτης", "λιπώδες ήπαρ", "διατροφή"],
+    notes: "",
+    description: "Ο Dr. David Unwin εξηγεί το λιπώδες ήπαρ, την ινσουλινοαντίσταση, τον διαβήτη τύπου 2 και πώς οι καθημερινές διατροφικές επιλογές επηρεάζουν τη μεταβολική υγεία.",
+    duration: 7885,
+    addedAt: "2026-08-24T12:00:00.000Z",
+    favorite: false,
+    lastPosition: 0,
+    progress: 0,
+    speakerName: "Dr. David Unwin",
+    speakerRole: "Ιατρός",
+    metadataVersion: 6,
+    translationMode: "manual-pro",
+  },
+} as const;
+
+type ReviewVideo = (typeof REVIEW_VIDEOS)[keyof typeof REVIEW_VIDEOS];
 
 type SharedVideo = {
   id?: unknown;
@@ -75,7 +100,8 @@ export async function generateMetadata({
 
   if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return {};
 
-  const record = await getSharedVideo(videoId);
+  const reviewRecord = REVIEW_VIDEOS[videoId as keyof typeof REVIEW_VIDEOS];
+  const record = reviewRecord || await getSharedVideo(videoId);
   const videoTitle = typeof record?.title === "string" && record.title.trim()
     ? record.title.trim()
     : "Βίντεο με ελληνικούς υπότιτλους";
@@ -120,8 +146,8 @@ export async function generateMetadata({
   };
 }
 
-function ReviewVideoBootstrap() {
-  const payload = JSON.stringify(REVIEW_VIDEO).replace(/</g, "\\u003c");
+function ReviewVideoBootstrap({ video }: { video: ReviewVideo }) {
+  const payload = JSON.stringify(video).replace(/</g, "\\u003c");
   const script = `(()=>{try{const key="greektube-personal-state:v1";const video=${payload};let state={videos:[],moments:[],settings:{}};try{const parsed=JSON.parse(localStorage.getItem(key)||"null");if(parsed&&typeof parsed==="object")state=parsed;}catch{}if(!Array.isArray(state.videos))state.videos=[];const index=state.videos.findIndex(item=>item&&item.id===video.id);if(index>=0)state.videos[index]={...state.videos[index],...video};else state.videos.unshift(video);if(!Array.isArray(state.moments))state.moments=[];if(!state.settings||typeof state.settings!=="object")state.settings={};localStorage.setItem(key,JSON.stringify(state));}catch{}})();`;
   return <script dangerouslySetInnerHTML={{ __html: script }} />;
 }
@@ -133,11 +159,12 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const rawVideo = Array.isArray(params.video) ? params.video[0] : params.video;
-  const reviewRequested = String(rawVideo || "").trim() === REVIEW_VIDEO_ID;
+  const requestedId = String(rawVideo || "").trim();
+  const reviewVideo = REVIEW_VIDEOS[requestedId as keyof typeof REVIEW_VIDEOS];
 
   return (
     <>
-      {reviewRequested ? <ReviewVideoBootstrap /> : null}
+      {reviewVideo ? <ReviewVideoBootstrap video={reviewVideo} /> : null}
       <NavigationAwareGreekTubePlayer />
       <TranscriptPerformanceEnhancer />
       <CueEditEnhancer />
