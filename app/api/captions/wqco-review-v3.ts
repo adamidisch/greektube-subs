@@ -28,9 +28,9 @@ const TEXT_OVERRIDES: Record<number, string> = {
 };
 
 const SOURCE_ANCHORS = new Set(WQCO_REVIEW_V2_CUES.map(cue => cue.start));
-const TERMINAL_PUNCTUATION = /[.!?…»”]$/u;
+const TERMINAL_PUNCTUATION = /[.!?;…»”]$/u;
 const SPOKEN_FILLER = /(^|[\s,.!?;:—-])(?:ε|εε|uh|um)(?=$|[\s,.!?;:—-])/iu;
-const ORPHAN_END = /(?:^|\s)(?:η|ο|το|τη|την|του|της|να|και|για|με|σε|από|που|ότι|θα|στο|στη|στην|τον|ένα|μια|ή)[.!?…»”]?$/iu;
+const ORPHAN_END = /(?:^|\s)(?:η|ο|το|τη|την|του|της|να|και|για|με|σε|από|που|ότι|θα|στο|στη|στην|τον|ένα|μια|ή)[.!?;…»”]?$/iu;
 
 export type ReviewQuality = {
   cueCount: number;
