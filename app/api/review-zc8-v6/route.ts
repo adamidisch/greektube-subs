@@ -125,7 +125,6 @@ function parseTranscript(markdown: string) {
     parts.forEach((part, partIndex) => {
       if (partIndex > 0) speaker = speaker === "speaker-a" ? "speaker-b" : "speaker-a";
       const remaining = end - cursor;
-      const ratio = weights.slice(partIndex).reduce((sum, value) => sum + value, 0);
       const duration = partIndex === parts.length - 1 ? remaining : Math.max(0.55, (end - start) * (weights[partIndex] / totalWeight));
       const pieceEnd = Math.min(end, cursor + duration);
       pieces.push({
@@ -137,7 +136,6 @@ function parseTranscript(markdown: string) {
         estimatedBoundary: hasMarker && parts.length > 1,
       });
       cursor = pieceEnd;
-      void ratio;
     });
   });
 
@@ -145,7 +143,7 @@ function parseTranscript(markdown: string) {
 }
 
 function terminal(text: string) {
-  return /[.!?][”'\"]?$/u.test(text.trim());
+  return /[.!?][”'"]?$/u.test(text.trim());
 }
 
 function buildBlocks(pieces: SourcePiece[]) {
@@ -422,17 +420,15 @@ async function step() {
   const batches = Array.from({ length: Math.ceil(slice.length / BATCH_SIZE) }, (_, index) => slice.slice(index * BATCH_SIZE, (index + 1) * BATCH_SIZE));
 
   const translatedBatches = await Promise.all(batches.map(translateBatch));
-  const initial = translatedBatches.flat();
   const auditBatches = await Promise.all(batches.map((batch, index) => auditBatch(batch, translatedBatches[index])));
-  const issueBatches = auditBatches;
-  const repairedBatches = await Promise.all(batches.map((batch, index) => repairBatch(batch, translatedBatches[index], issueBatches[index])));
+  const repairedBatches = await Promise.all(batches.map((batch, index) => repairBatch(batch, translatedBatches[index], auditBatches[index])));
   const finalRows = repairedBatches.flat().map(row => ({ ...row, text: greekPolish(row.text) }));
 
   const existing = new Map(checkpoint.translations.map(row => [row.index, row]));
   finalRows.forEach(row => existing.set(row.index, row));
   checkpoint.translations = [...existing.values()].sort((a, b) => a.index - b.index);
-  checkpoint.auditIssueCount += issueBatches.flat().length;
-  checkpoint.repairedIssueCount += issueBatches.flat().length;
+  checkpoint.auditIssueCount += auditBatches.flat().length;
+  checkpoint.repairedIssueCount += auditBatches.flat().length;
   checkpoint.cursor = end;
   checkpoint.updatedAt = new Date().toISOString();
   await writeJson(CHECKPOINT_PATH, checkpoint);
