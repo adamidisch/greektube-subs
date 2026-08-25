@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { database } from "@/db/postgres";
 import NavigationAwareGreekTubePlayer from "./NavigationAwareGreekTubePlayer";
+import GreekTubePlayer from "./GreekTubePlayer";
 import TranscriptPerformanceEnhancer from "./TranscriptPerformanceEnhancer";
 import CueEditEnhancer from "./CueEditEnhancer";
 import ThemeToggleEnhancer from "./ThemeToggleEnhancer";
@@ -15,6 +16,10 @@ import NextVideosEnhancer from "./NextVideosEnhancer";
 import AnalyticsEnhancer from "./AnalyticsEnhancer";
 import EditorProductionPolishEnhancer from "./EditorProductionPolishEnhancer";
 import GtsFooter from "./GtsFooter";
+import {
+  ALIGNMENT_PROOF_QUERY_VALUE,
+  ALIGNMENT_PROOF_VIDEO_ID,
+} from "./alignment-proof";
 
 const SITE_URL = "https://greektubesubs.com";
 const BRAND_REV = "7820";
@@ -48,6 +53,15 @@ export async function generateMetadata({
   const params = await searchParams;
   const rawVideo = Array.isArray(params.video) ? params.video[0] : params.video;
   const videoId = String(rawVideo || "").trim();
+  const rawProof = Array.isArray(params.proof) ? params.proof[0] : params.proof;
+
+  if (videoId === ALIGNMENT_PROOF_VIDEO_ID && rawProof === ALIGNMENT_PROOF_QUERY_VALUE) {
+    return {
+      title: "Δοκιμή νέου συγχρονισμού · GreekTube Subs",
+      description: "Πραγματικό video με το νέο semantic alignment των ελληνικών υποτίτλων.",
+      robots: { index: false, follow: false },
+    };
+  }
 
   if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return {};
 
@@ -96,7 +110,26 @@ export async function generateMetadata({
   };
 }
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const rawVideo = Array.isArray(params.video) ? params.video[0] : params.video;
+  const rawProof = Array.isArray(params.proof) ? params.proof[0] : params.proof;
+  const proofMode = rawVideo === ALIGNMENT_PROOF_VIDEO_ID
+    && rawProof === ALIGNMENT_PROOF_QUERY_VALUE;
+
+  if (proofMode) {
+    return (
+      <>
+        <GreekTubePlayer />
+        <GtsFooter />
+      </>
+    );
+  }
+
   return (
     <>
       <NavigationAwareGreekTubePlayer />
