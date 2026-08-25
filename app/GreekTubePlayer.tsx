@@ -4,6 +4,12 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSP
 import { APP_VERSION } from "./version";
 import { canonicalSpeakerForVideo, type CanonicalSpeakerProfile } from "./speaker-catalog";
 import {activeSkipTarget,normalizeSkipRanges,SKIP_RANGES_UPDATED_EVENT,type SkipRange} from "./skip-ranges";
+import {
+  ALIGNMENT_PROOF_CAPTIONS,
+  ALIGNMENT_PROOF_QUERY_VALUE,
+  ALIGNMENT_PROOF_VIDEO_ID,
+  isAlignmentProofRequest,
+} from "./alignment-proof";
 
 type Cue = { start: number; duration: number; text: string };
 type SpeakerProfile = { name:string; role:string; importance:string; currentWork:string; highlights:string[] };
@@ -449,6 +455,7 @@ export default function GreekTubePlayer() {
   const lastProgressSave=useRef(0);
   const lastSkipJump=useRef<{videoId:string;target:number;at:number}|null>(null);
   const lastTelemetryUpdatedAt=useRef<string|null>(null);
+  const proofModeRef=useRef(false);
   const selected=state.videos.find(v=>v.id===selectedId)||null;
 
   function getReadyCaptions(video:Video){
@@ -485,6 +492,7 @@ export default function GreekTubePlayer() {
   },[]);
 
   useEffect(()=>{
+    if(proofModeRef.current)return;
     if(!selectedId||!captions||state.settings.subtitleMode==="el"||captions.englishCues?.length)return;
     let active=true;
     void fetch(`/api/captions?videoId=${encodeURIComponent(selectedId)}&includeEnglish=1`,{cache:"no-store"})
@@ -499,6 +507,11 @@ export default function GreekTubePlayer() {
   },[selectedId,captions,state.settings.subtitleMode]);
 
   useEffect(()=>{ void (async()=>{
+    if(isAlignmentProofRequest(location.search)){
+      proofModeRef.current=true;
+      setHydrated(true);
+      return;
+    }
     let fallback:AppState|null=null;
     try{const raw=localStorage.getItem(PERSONAL_CACHE_KEY);if(raw)fallback=JSON.parse(raw) as AppState;}catch{}
     if(fallback?.videos){
@@ -516,7 +529,7 @@ export default function GreekTubePlayer() {
   })(); },[]);
   useEffect(()=>{
     stateRef.current=state;
-    if(!hydrated)return;
+    if(!hydrated||proofModeRef.current)return;
     const payload=JSON.stringify(personalStatePayload(state));
     try{localStorage.setItem(PERSONAL_CACHE_KEY,payload);}catch{}
     window.clearTimeout(saveTimer.current);
@@ -537,7 +550,7 @@ export default function GreekTubePlayer() {
     return()=>window.removeEventListener(SKIP_RANGES_UPDATED_EVENT,syncSkipRanges);
   },[]);
   useEffect(()=>{
-    if(!hydrated)return;
+    if(!hydrated||proofModeRef.current)return;
     const saveBeforeLeaving=()=>{
       void saveStateToServer(stateRef.current,true);
     };
@@ -545,7 +558,7 @@ export default function GreekTubePlayer() {
     return()=>window.removeEventListener("pagehide",saveBeforeLeaving);
   },[hydrated]);
   useEffect(()=>{
-    if(!hydrated)return;
+    if(!hydrated||proofModeRef.current)return;
     const missing=state.videos.filter(video=>video.metadataVersion!==6);
     if(!missing.length)return;
     let cancelled=false;
@@ -718,7 +731,7 @@ export default function GreekTubePlayer() {
     return [...state.videos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt))[0]||null;
   },[state.videos]);
   const featuredMoments=featured?state.moments.filter(m=>m.videoId===featured.id):[];
-  useEffect(()=>{if(hydrated&&featured)void getReadyCaptions(featured);},[hydrated,featured?.id]);
+  useEffect(()=>{if(hydrated&&featured&&!proofModeRef.current)void getReadyCaptions(featured);},[hydrated,featured?.id]);
   useEffect(()=>{const reset=window.setTimeout(()=>setVisibleCount(INITIAL_LIBRARY_SIZE),0);return()=>window.clearTimeout(reset);},[search,category,sort,filter]);
 
   function patchVideo(id:string,patch:Partial<Video>){setState(s=>({...s,videos:s.videos.map(v=>v.id===id?{...v,...patch}:v)}));}
@@ -798,13 +811,20 @@ export default function GreekTubePlayer() {
   async function openVideo(video:Video,start?:number,showTranscript=false,forceTranslation=false,readyCaptions?:Captions){
     window.scrollTo(0,0);
     window.requestAnimationFrame(()=>window.scrollTo(0,0));
+    const proofMode=proofModeRef.current&&video.id===ALIGNMENT_PROOF_VIDEO_ID;
     const translationMode:TranslationMode=video.translationMode||"legacy";
     const knownPoints=transcriptHighlights(video.captions||[]);
     patchVideo(video.id,{views:(video.views||0)+1});
     player.current?.pauseVideo();setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);
     pendingPlayerStart.current=start??video.lastPosition;
     setSelectedId(video.id); setView("library"); setSpeakerBioOpen(false); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
-    history.replaceState(null,"",`/?video=${video.id}${start?`&t=${Math.floor(start)}`:""}`);
+    history.replaceState(null,"",`/?video=${video.id}${proofMode?`&proof=${ALIGNMENT_PROOF_QUERY_VALUE}`:""}${start?`&t=${Math.floor(start)}`:""}`);
+    if(proofMode){
+      const proofCaptions=ALIGNMENT_PROOF_CAPTIONS as Captions;
+      setProgress(100);setCaptions(proofCaptions);setLoading(false);setCheckingReady(false);
+      patchVideo(video.id,{duration:proofCaptions.duration,lastWatched:new Date().toISOString()});
+      return;
+    }
     setCheckingReady(!readyCaptions&&!forceTranslation);
     if(readyCaptions){
       localStorage.setItem(`greektube-transcript:${video.id}:v12`,JSON.stringify(readyCaptions));
