@@ -10,34 +10,13 @@ type CaptionTrack = {
   name?: { simpleText?: string };
 };
 
-function extractJsonArray(html: string, marker: string): CaptionTrack[] {
-  const markerIndex = html.indexOf(marker);
-  if (markerIndex < 0) throw new Error("captionTracks marker not found");
-  const start = html.indexOf("[", markerIndex + marker.length);
-  if (start < 0) throw new Error("captionTracks array not found");
-
-  let depth = 0;
-  let quoted = false;
-  let escaped = false;
-
-  for (let index = start; index < html.length; index += 1) {
-    const char = html[index];
-    if (quoted) {
-      if (escaped) escaped = false;
-      else if (char === "\\") escaped = true;
-      else if (char === '"') quoted = false;
-      continue;
-    }
-    if (char === '"') quoted = true;
-    else if (char === "[") depth += 1;
-    else if (char === "]") {
-      depth -= 1;
-      if (depth === 0) return JSON.parse(html.slice(start, index + 1));
-    }
-  }
-
-  throw new Error("captionTracks array is incomplete");
-}
+type PlayerResponse = {
+  captions?: {
+    playerCaptionsTracklistRenderer?: {
+      captionTracks?: CaptionTrack[];
+    };
+  };
+};
 
 export async function GET(request: NextRequest) {
   const videoId = request.nextUrl.searchParams.get("video") ?? "";
@@ -46,24 +25,38 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const watchResponse = await fetch(
-      `https://www.youtube.com/watch?v=${videoId}&hl=en`,
+    const playerResponse = await fetch(
+      "https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
       {
+        method: "POST",
         cache: "no-store",
         headers: {
-          "Accept-Language": "en-US,en;q=0.9",
+          "Content-Type": "application/json",
+          Origin: "https://www.youtube.com",
           "User-Agent":
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
         },
+        body: JSON.stringify({
+          context: {
+            client: {
+              clientName: "WEB",
+              clientVersion: "2.20260824.01.00",
+              hl: "en",
+              gl: "US",
+            },
+          },
+          videoId,
+        }),
       },
     );
 
-    if (!watchResponse.ok) {
-      throw new Error(`YouTube watch page returned ${watchResponse.status}`);
+    if (!playerResponse.ok) {
+      throw new Error(`YouTube player API returned ${playerResponse.status}`);
     }
 
-    const html = await watchResponse.text();
-    const tracks = extractJsonArray(html, '"captionTracks":');
+    const player = (await playerResponse.json()) as PlayerResponse;
+    const tracks =
+      player.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
     const track =
       tracks.find(
         (candidate) =>
@@ -101,11 +94,7 @@ export async function GET(request: NextRequest) {
         track_kind: track.kind ?? null,
         json3: JSON.parse(raw),
       },
-      {
-        headers: {
-          "Cache-Control": "no-store, max-age=0",
-        },
-      },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
   } catch (error) {
     return NextResponse.json(
