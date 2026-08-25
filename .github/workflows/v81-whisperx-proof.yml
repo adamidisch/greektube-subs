@@ -1,0 +1,49 @@
+name: v8.1 WhisperX proof
+
+on:
+  push:
+    branches:
+      - preview/translation-pipeline-v8-1-youtube-asr
+    paths:
+      - worker/proof-request-v81.txt
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: worker/requirements.txt
+      - name: Install FFmpeg and CPU dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+            torch==2.8.0+cpu torchaudio==2.8.0+cpu torchvision==0.23.0+cpu
+          python -m pip install -r worker/requirements.txt
+      - name: Generate v8.1 timing proof
+        env:
+          PYTHONPATH: worker
+          WHISPER_MODEL: medium.en
+          WHISPER_DEVICE: cpu
+          WHISPER_COMPUTE_TYPE: int8
+          WHISPER_BATCH_SIZE: "8"
+        run: |
+          python worker/scripts/run_proof.py \
+            --source worker/fixtures/D2RjneeG_xA-source.srt \
+            --alignment worker/fixtures/D2RjneeG_xA-v8-alignment.json \
+            --output proof-v81
+      - uses: actions/upload-artifact@v4
+        with:
+          name: D2RjneeG_xA-v81-proof
+          path: proof-v81
+          if-no-files-found: error
+          retention-days: 7

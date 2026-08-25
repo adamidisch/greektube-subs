@@ -1,0 +1,3 @@
+request=1
+video_id=D2RjneeG_xA
+purpose=one-shot CPU timing proof without model API credits

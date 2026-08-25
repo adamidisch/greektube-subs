@@ -27,6 +27,7 @@ class SourceToken:
     source_index: int
     cue_id: int
     cue_word_index: int
+    cue_subword_index: int
     cue_start_ms: int
     cue_end_ms: int
     text: str
@@ -51,6 +52,7 @@ class TimelineWord:
     source_index: int
     cue_id: int
     cue_word_index: int
+    cue_subword_index: int
     text: str
     normalized: str
     source_punctuation: str

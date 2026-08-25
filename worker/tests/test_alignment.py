@@ -1,6 +1,6 @@
 import unittest
 
-from greektube_worker.alignment import build_word_timeline, normalize_token
+from greektube_worker.alignment import build_word_timeline, normalize_token, tokenize_source
 from greektube_worker.models import SourceCue, source_cues_hash
 
 
@@ -14,6 +14,14 @@ class AlignmentTests(unittest.TestCase):
             source_cues_hash(cues),
             "70b9370feca20f15dab2e4be1df8f7c5a31b5fecb06a4422416144d0a09462bc",
         )
+
+    def test_word_indexes_stay_compatible_with_v8_source_refs(self):
+        tokens = tokenize_source([SourceCue(5, 0, 2000, ">> It is time-restricted.")])
+        self.assertEqual(
+            [(token.text, token.cue_word_index, token.cue_subword_index) for token in tokens],
+            [("It", 1, 0), ("is", 2, 0), ("time", 3, 0), ("restricted", 3, 1)],
+        )
+        self.assertEqual(tokens[-1].trailing_punctuation, ".")
 
     def test_exact_and_fuzzy_source_words_receive_audio_anchors(self):
         cues = [SourceCue(1, 0, 2400, "The insulin receptar works.")]

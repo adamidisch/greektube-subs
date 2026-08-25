@@ -10,6 +10,7 @@ def word(number, start, end, punctuation="", speaker="SPEAKER_00", status="exact
         source_index=number - 1,
         cue_id=number,
         cue_word_index=0,
+        cue_subword_index=0,
         text="word",
         normalized="word",
         source_punctuation=punctuation,

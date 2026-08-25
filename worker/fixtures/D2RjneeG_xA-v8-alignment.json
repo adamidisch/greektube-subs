@@ -1,0 +1,5743 @@
+{
+  "units": [
+    {
+      "alignment_id": "A001",
+      "greek_range": {
+        "start_char": 0,
+        "end_char": 45
+      },
+      "greek_text": "Κάποιος που παρακολουθεί μέχρι αυτό το σημείο",
+      "source_refs": [
+        {
+          "cue_id": 1,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 80,
+          "cue_end_ms": 7359
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 80,
+      "end_ms": 3077,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 13.01,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "Κάποιος που παρακολουθεί μέχρι αυτό το\nσημείο"
+    },
+    {
+      "alignment_id": "A002",
+      "greek_range": {
+        "start_char": 46,
+        "end_char": 110
+      },
+      "greek_text": "πιθανότατα ανήκει στην κατηγορία της μεταβολικής δυσλειτουργίας.",
+      "source_refs": [
+        {
+          "cue_id": 1,
+          "token_start": 7,
+          "token_end": 14,
+          "cue_start_ms": 80,
+          "cue_end_ms": 7359
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 3077,
+      "end_ms": 6074,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 19.35,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "πιθανότατα ανήκει στην κατηγορία της\nμεταβολικής δυσλειτουργίας."
+    },
+    {
+      "alignment_id": "A003",
+      "greek_range": {
+        "start_char": 111,
+        "end_char": 146
+      },
+      "greek_text": "Έχει λίγα παραπανίσια κιλά να χάσει",
+      "source_refs": [
+        {
+          "cue_id": 1,
+          "token_start": 14,
+          "token_end": 17,
+          "cue_start_ms": 80,
+          "cue_end_ms": 7359
+        },
+        {
+          "cue_id": 2,
+          "token_start": 0,
+          "token_end": 4,
+          "cue_start_ms": 7359,
+          "cue_end_ms": 12080
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 6074,
+      "end_ms": 8812,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 10.96,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "Έχει λίγα παραπανίσια κιλά να χάσει"
+    },
+    {
+      "alignment_id": "A004",
+      "greek_range": {
+        "start_char": 147,
+        "end_char": 204
+      },
+      "greek_text": "αλλά έχει εμπνευστεί και είναι έτοιμος να αναλάβει δράση.",
+      "source_refs": [
+        {
+          "cue_id": 2,
+          "token_start": 4,
+          "token_end": 13,
+          "cue_start_ms": 7359,
+          "cue_end_ms": 12080
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 8812,
+      "end_ms": 12080,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 14.99,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "αλλά έχει εμπνευστεί και είναι έτοιμος να\nαναλάβει δράση."
+    },
+    {
+      "alignment_id": "A005",
+      "greek_range": {
+        "start_char": 205,
+        "end_char": 263
+      },
+      "greek_text": "Αν πρόκειται να εφαρμόσει πολλά από όσα συζητήσαμε σήμερα,",
+      "source_refs": [
+        {
+          "cue_id": 3,
+          "token_start": 0,
+          "token_end": 13,
+          "cue_start_ms": 12080,
+          "cue_end_ms": 19279
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 12080,
+      "end_ms": 16334,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 11.75,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "Αν πρόκειται να εφαρμόσει πολλά από όσα\nσυζητήσαμε σήμερα,"
+    },
+    {
+      "alignment_id": "A006",
+      "greek_range": {
+        "start_char": 264,
+        "end_char": 278
+      },
+      "greek_text": "τι προτείνετε;",
+      "source_refs": [
+        {
+          "cue_id": 3,
+          "token_start": 13,
+          "token_end": 17,
+          "cue_start_ms": 12080,
+          "cue_end_ms": 19279
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 16334,
+      "end_ms": 17643,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 9.93,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "τι προτείνετε;"
+    },
+    {
+      "alignment_id": "A007",
+      "greek_range": {
+        "start_char": 279,
+        "end_char": 306
+      },
+      "greek_text": "Να τα ξεκινήσει όλα απότομα",
+      "source_refs": [
+        {
+          "cue_id": 3,
+          "token_start": 17,
+          "token_end": 22,
+          "cue_start_ms": 12080,
+          "cue_end_ms": 19279
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 17643,
+      "end_ms": 19279,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 14.06,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "Να τα ξεκινήσει όλα απότομα"
+    },
+    {
+      "alignment_id": "A008",
+      "greek_range": {
+        "start_char": 307,
+        "end_char": 331
+      },
+      "greek_text": "και να τα κάνει όλα μαζί",
+      "source_refs": [
+        {
+          "cue_id": 4,
+          "token_start": 0,
+          "token_end": 3,
+          "cue_start_ms": 19279,
+          "cue_end_ms": 26000
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 19279,
+      "end_ms": 20623,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 14.13,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "και να τα κάνει όλα μαζί"
+    },
+    {
+      "alignment_id": "A009",
+      "greek_range": {
+        "start_char": 332,
+        "end_char": 357
+      },
+      "greek_text": "ή να προχωρήσει πιο αργά,",
+      "source_refs": [
+        {
+          "cue_id": 4,
+          "token_start": 3,
+          "token_end": 10,
+          "cue_start_ms": 19279,
+          "cue_end_ms": 26000
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 20623,
+      "end_ms": 23760,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 6.7,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "ή να προχωρήσει πιο αργά,"
+    },
+    {
+      "alignment_id": "A010",
+      "greek_range": {
+        "start_char": 358,
+        "end_char": 402
+      },
+      "greek_text": "δίνοντας χρόνο στο σώμα του να προσαρμοστεί;",
+      "source_refs": [
+        {
+          "cue_id": 4,
+          "token_start": 10,
+          "token_end": 15,
+          "cue_start_ms": 19279,
+          "cue_end_ms": 26000
+        }
+      ],
+      "speaker": "interviewer",
+      "start_ms": 23760,
+      "end_ms": 26000,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 16.96,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "δίνοντας χρόνο στο σώμα του να\nπροσαρμοστεί;"
+    },
+    {
+      "alignment_id": "A011",
+      "greek_range": {
+        "start_char": 404,
+        "end_char": 441
+      },
+      "greek_text": "Εξαρτάται από το πόσο άρρωστος είσαι.",
+      "source_refs": [
+        {
+          "cue_id": 5,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 26000,
+          "cue_end_ms": 33200
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 26000,
+      "end_ms": 28100,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 15.24,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "Εξαρτάται από το πόσο άρρωστος είσαι."
+    },
+    {
+      "alignment_id": "A012",
+      "greek_range": {
+        "start_char": 442,
+        "end_char": 477
+      },
+      "greek_text": "Βλέπω ανθρώπους με σύνδρομα κόπωσης",
+      "source_refs": [
+        {
+          "cue_id": 5,
+          "token_start": 7,
+          "token_end": 16,
+          "cue_start_ms": 26000,
+          "cue_end_ms": 33200
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 28100,
+      "end_ms": 30800,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 11.48,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "Βλέπω ανθρώπους με σύνδρομα κόπωσης"
+    },
+    {
+      "alignment_id": "A013",
+      "greek_range": {
+        "start_char": 478,
+        "end_char": 512
+      },
+      "greek_text": "και ορισμένοι είναι πολύ άρρωστοι.",
+      "source_refs": [
+        {
+          "cue_id": 5,
+          "token_start": 16,
+          "token_end": 24,
+          "cue_start_ms": 26000,
+          "cue_end_ms": 33200
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 30800,
+      "end_ms": 33200,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 12.5,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "και ορισμένοι είναι πολύ άρρωστοι."
+    },
+    {
+      "alignment_id": "A014",
+      "greek_range": {
+        "start_char": 513,
+        "end_char": 551
+      },
+      "greek_text": "Όταν εφαρμόζονται αυτές οι παρεμβάσεις",
+      "source_refs": [
+        {
+          "cue_id": 6,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 33200,
+          "cue_end_ms": 40480
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 33200,
+      "end_ms": 36597,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 10.01,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "Όταν εφαρμόζονται αυτές οι παρεμβάσεις"
+    },
+    {
+      "alignment_id": "A015",
+      "greek_range": {
+        "start_char": 552,
+        "end_char": 590
+      },
+      "greek_text": "εμφανίζονται αντιδράσεις αποτοξίνωσης,",
+      "source_refs": [
+        {
+          "cue_id": 6,
+          "token_start": 7,
+          "token_end": 11,
+          "cue_start_ms": 33200,
+          "cue_end_ms": 40480
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 36597,
+      "end_ms": 38539,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 18.54,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "εμφανίζονται αντιδράσεις αποτοξίνωσης,"
+    },
+    {
+      "alignment_id": "A016",
+      "greek_range": {
+        "start_char": 591,
+        "end_char": 614
+      },
+      "greek_text": "κετογονική υπογλυκαιμία",
+      "source_refs": [
+        {
+          "cue_id": 6,
+          "token_start": 11,
+          "token_end": 15,
+          "cue_start_ms": 33200,
+          "cue_end_ms": 40480
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 38539,
+      "end_ms": 40480,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 11.33,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "κετογονική υπογλυκαιμία"
+    },
+    {
+      "alignment_id": "A017",
+      "greek_range": {
+        "start_char": 615,
+        "end_char": 649
+      },
+      "greek_text": "και η λεγόμενη «κετογονική γρίπη».",
+      "source_refs": [
+        {
+          "cue_id": 7,
+          "token_start": 0,
+          "token_end": 4,
+          "cue_start_ms": 40480,
+          "cue_end_ms": 43440
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 40480,
+      "end_ms": 43440,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 10.14,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "και η λεγόμενη «κετογονική γρίπη»."
+    },
+    {
+      "alignment_id": "A018",
+      "greek_range": {
+        "start_char": 650,
+        "end_char": 699
+      },
+      "greek_text": "Μερικές φορές, αν έχεις αλλεργία σε κάποια τροφή,",
+      "source_refs": [
+        {
+          "cue_id": 8,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 43440,
+          "cue_end_ms": 49200
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 43440,
+      "end_ms": 45634,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 19.14,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "Μερικές φορές, αν έχεις αλλεργία σε κάποια\nτροφή,"
+    },
+    {
+      "alignment_id": "A019",
+      "greek_range": {
+        "start_char": 700,
+        "end_char": 763
+      },
+      "greek_text": "η αλλεργία και η εξάρτηση είναι δύο όψεις του ίδιου νομίσματος.",
+      "source_refs": [
+        {
+          "cue_id": 8,
+          "token_start": 8,
+          "token_end": 21,
+          "cue_start_ms": 43440,
+          "cue_end_ms": 49200
+        },
+        {
+          "cue_id": 9,
+          "token_start": 0,
+          "token_end": 1,
+          "cue_start_ms": 49200,
+          "cue_end_ms": 51520
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 45634,
+      "end_ms": 49587,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 13.41,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "η αλλεργία και η εξάρτηση είναι δύο όψεις\nτου ίδιου νομίσματος."
+    },
+    {
+      "alignment_id": "A020",
+      "greek_range": {
+        "start_char": 764,
+        "end_char": 806
+      },
+      "greek_text": "Μπορεί να εμφανιστούν συμπτώματα στέρησης.",
+      "source_refs": [
+        {
+          "cue_id": 9,
+          "token_start": 1,
+          "token_end": 6,
+          "cue_start_ms": 49200,
+          "cue_end_ms": 51520
+        }
+      ],
+      "speaker": "guest",
+      "start_ms": 49587,
+      "end_ms": 51520,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.9,
+      "reading_speed_cps": 19.66,
+      "status": "pass",
+      "issues": [],
+      "rendered_text": "Μπορεί να εμφανιστούν συμπτώματα στέρησης."
+    },
+    {
+      "alignment_id": "A021",
+      "source_cue_ids": [
+        10
+      ],
+      "source_refs": [
+        {
+          "cue_id": 10,
+          "token_start": 0,
+          "token_end": 6,
+          "cue_start_ms": 51520,
+          "cue_end_ms": 58800,
+          "source_text": "So if you're otherwise completely well"
+        }
+      ],
+      "greek_range": {
+        "start_char": 0,
+        "end_char": 36
+      },
+      "greek_text": "Αν κατά τα άλλα είσαι απολύτως καλά,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 51520,
+      "end_ms": 53200,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 21.43,
+      "rendered_text": "Αν κατά τα άλλα είσαι απολύτως καλά,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A022",
+      "source_cue_ids": [
+        10
+      ],
+      "source_refs": [
+        {
+          "cue_id": 10,
+          "token_start": 6,
+          "token_end": 15,
+          "cue_start_ms": 51520,
+          "cue_end_ms": 58800,
+          "source_text": "and I'd use just jump in and do it."
+        }
+      ],
+      "greek_range": {
+        "start_char": 37,
+        "end_char": 83
+      },
+      "greek_text": "θα έλεγα να μπεις κατευθείαν και να το κάνεις.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 53200,
+      "end_ms": 55720,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.25,
+      "rendered_text": "θα έλεγα να μπεις\nκατευθείαν και να το κάνεις.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A023",
+      "source_cue_ids": [
+        10
+      ],
+      "source_refs": [
+        {
+          "cue_id": 10,
+          "token_start": 15,
+          "token_end": 26,
+          "cue_start_ms": 51520,
+          "cue_end_ms": 58800,
+          "source_text": "But if you are sick, I think you have to do"
+        }
+      ],
+      "greek_range": {
+        "start_char": 84,
+        "end_char": 141
+      },
+      "greek_text": "Αν όμως είσαι άρρωστος, πιστεύω ότι πρέπει να προχωρήσεις",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 55720,
+      "end_ms": 58800,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.51,
+      "rendered_text": "Αν όμως είσαι άρρωστος, πιστεύω\nότι πρέπει να προχωρήσεις",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A024",
+      "source_cue_ids": [
+        11
+      ],
+      "source_refs": [
+        {
+          "cue_id": 11,
+          "token_start": 0,
+          "token_end": 12,
+          "cue_start_ms": 58800,
+          "cue_end_ms": 65680,
+          "source_text": "it more slowly. And the other point here is if if people"
+        }
+      ],
+      "greek_range": {
+        "start_char": 142,
+        "end_char": 203
+      },
+      "greek_text": "πιο αργά. Ένα άλλο σημείο είναι ότι, αν κάποιος λειτουργεί με",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 58800,
+      "end_ms": 62390,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.99,
+      "rendered_text": "πιο αργά. Ένα άλλο σημείο είναι\nότι, αν κάποιος λειτουργεί με",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A025",
+      "source_cue_ids": [
+        11
+      ],
+      "source_refs": [
+        {
+          "cue_id": 11,
+          "token_start": 12,
+          "token_end": 23,
+          "cue_start_ms": 58800,
+          "cue_end_ms": 65680,
+          "source_text": "have been running on carbohydrates for all their life and the"
+        }
+      ],
+      "greek_range": {
+        "start_char": 204,
+        "end_char": 265
+      },
+      "greek_text": "κύρια πηγή ενέργειας τους υδατάνθρακες σε όλη του τη ζωή —και",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 62390,
+      "end_ms": 65680,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.54,
+      "rendered_text": "κύρια πηγή ενέργειας τους\nυδατάνθρακες σε όλη του τη ζωή —και",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A026",
+      "source_cue_ids": [
+        12
+      ],
+      "source_refs": [
+        {
+          "cue_id": 12,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 65680,
+          "cue_end_ms": 70880,
+          "source_text": "most the vast majority of people have,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 266,
+        "end_char": 296
+      },
+      "greek_text": "αυτό ισχύει για τη συντριπτική",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 65680,
+      "end_ms": 68280,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 11.54,
+      "rendered_text": "αυτό ισχύει για τη συντριπτική",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A027",
+      "source_cue_ids": [
+        12
+      ],
+      "source_refs": [
+        {
+          "cue_id": 12,
+          "token_start": 7,
+          "token_end": 14,
+          "cue_start_ms": 65680,
+          "cue_end_ms": 70880,
+          "source_text": "then they will often struggle with a"
+        }
+      ],
+      "greek_range": {
+        "start_char": 297,
+        "end_char": 337
+      },
+      "greek_text": "πλειονότητα— συχνά θα δυσκολευτεί με μια",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 68280,
+      "end_ms": 70880,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.38,
+      "rendered_text": "πλειονότητα— συχνά θα δυσκολευτεί με μια",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A028",
+      "source_cue_ids": [
+        13
+      ],
+      "source_refs": [
+        {
+          "cue_id": 13,
+          "token_start": 0,
+          "token_end": 15,
+          "cue_start_ms": 70880,
+          "cue_end_ms": 76240,
+          "source_text": "highfat diet. And the reason for that is that the business of digesting fat is"
+        }
+      ],
+      "greek_range": {
+        "start_char": 338,
+        "end_char": 416
+      },
+      "greek_text": "διατροφή πλούσια σε λίπος. Ο λόγος είναι ότι η διαδικασία της πέψης του λίπους",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 70880,
+      "end_ms": 76240,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.55,
+      "rendered_text": "διατροφή πλούσια σε λίπος. Ο λόγος είναι\nότι η διαδικασία της πέψης του λίπους",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A029",
+      "source_cue_ids": [
+        14
+      ],
+      "source_refs": [
+        {
+          "cue_id": 14,
+          "token_start": 0,
+          "token_end": 4,
+          "cue_start_ms": 76240,
+          "cue_end_ms": 83680,
+          "source_text": "enormously demanding of energy."
+        }
+      ],
+      "greek_range": {
+        "start_char": 417,
+        "end_char": 443
+      },
+      "greek_text": "απαιτεί τεράστια ενέργεια.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 76240,
+      "end_ms": 77806,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.6,
+      "rendered_text": "απαιτεί τεράστια ενέργεια.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A030",
+      "source_cue_ids": [
+        14
+      ],
+      "source_refs": [
+        {
+          "cue_id": 14,
+          "token_start": 4,
+          "token_end": 11,
+          "cue_start_ms": 76240,
+          "cue_end_ms": 83680,
+          "source_text": "The pancreas has to produce a lot"
+        }
+      ],
+      "greek_range": {
+        "start_char": 444,
+        "end_char": 473
+      },
+      "greek_text": "Το πάγκρεας πρέπει να παράγει",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 77806,
+      "end_ms": 80547,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 10.58,
+      "rendered_text": "Το πάγκρεας πρέπει να παράγει",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A031",
+      "source_cue_ids": [
+        14
+      ],
+      "source_refs": [
+        {
+          "cue_id": 14,
+          "token_start": 11,
+          "token_end": 19,
+          "cue_start_ms": 76240,
+          "cue_end_ms": 83680,
+          "source_text": "of enzymes and the business of generating enzymes,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 474,
+        "end_char": 506
+      },
+      "greek_text": "πολλά ένζυμα και η παραγωγή τους",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 80547,
+      "end_ms": 83680,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 10.21,
+      "rendered_text": "πολλά ένζυμα και η παραγωγή τους",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A032",
+      "source_cue_ids": [
+        15
+      ],
+      "source_refs": [
+        {
+          "cue_id": 15,
+          "token_start": 0,
+          "token_end": 10,
+          "cue_start_ms": 83680,
+          "cue_end_ms": 89520,
+          "source_text": "it requires a lot of energy. And so if that"
+        }
+      ],
+      "greek_range": {
+        "start_char": 507,
+        "end_char": 560
+      },
+      "greek_text": "χρειάζεται πολλή ενέργεια. Αν λοιπόν αυτός ο άνθρωπος",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 83680,
+      "end_ms": 86335,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 19.96,
+      "rendered_text": "χρειάζεται πολλή ενέργεια.\nΑν λοιπόν αυτός ο άνθρωπος",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A033",
+      "source_cue_ids": [
+        15
+      ],
+      "source_refs": [
+        {
+          "cue_id": 15,
+          "token_start": 10,
+          "token_end": 22,
+          "cue_start_ms": 83680,
+          "cue_end_ms": 89520,
+          "source_text": "person has been running on carbohydrates for for ever and a day,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 561,
+        "end_char": 619
+      },
+      "greek_text": "λειτουργούσε με υδατάνθρακες ουσιαστικά σε όλη του τη ζωή,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 86335,
+      "end_ms": 89520,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.21,
+      "rendered_text": "λειτουργούσε με υδατάνθρακες\nουσιαστικά σε όλη του τη ζωή,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A034",
+      "source_cue_ids": [
+        16
+      ],
+      "source_refs": [
+        {
+          "cue_id": 16,
+          "token_start": 0,
+          "token_end": 11,
+          "cue_start_ms": 89520,
+          "cue_end_ms": 96479,
+          "source_text": "then they're just not going to be able to produce the"
+        }
+      ],
+      "greek_range": {
+        "start_char": 620,
+        "end_char": 686
+      },
+      "greek_text": "δεν θα μπορεί ξαφνικά να παράγει επαρκώς τα ένζυμα που χρειάζονται",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 89520,
+      "end_ms": 93000,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.97,
+      "rendered_text": "δεν θα μπορεί ξαφνικά να παράγει\nεπαρκώς τα ένζυμα που χρειάζονται",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A035",
+      "source_cue_ids": [
+        16
+      ],
+      "source_refs": [
+        {
+          "cue_id": 16,
+          "token_start": 11,
+          "token_end": 22,
+          "cue_start_ms": 89520,
+          "cue_end_ms": 96479,
+          "source_text": "enzymes to digest that fat. So sometimes you just have to"
+        }
+      ],
+      "greek_range": {
+        "start_char": 687,
+        "end_char": 752
+      },
+      "greek_text": "για να χωνέψει αυτό το λίπος. Γι’ αυτό μερικές φορές πρέπει απλώς",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 93000,
+      "end_ms": 96479,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.68,
+      "rendered_text": "για να χωνέψει αυτό το λίπος. Γι’\nαυτό μερικές φορές πρέπει απλώς",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A036",
+      "source_cue_ids": [
+        17
+      ],
+      "source_refs": [
+        {
+          "cue_id": 17,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 96479,
+          "cue_end_ms": 103520,
+          "source_text": "go into it slowly and maybe take extra"
+        }
+      ],
+      "greek_range": {
+        "start_char": 753,
+        "end_char": 798
+      },
+      "greek_text": "να μπεις σταδιακά και ίσως να πάρεις επιπλέον",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 96479,
+      "end_ms": 99161,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.78,
+      "rendered_text": "να μπεις σταδιακά και\nίσως να πάρεις επιπλέον",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A037",
+      "source_cue_ids": [
+        17
+      ],
+      "source_refs": [
+        {
+          "cue_id": 17,
+          "token_start": 8,
+          "token_end": 14,
+          "cue_start_ms": 96479,
+          "cue_end_ms": 103520,
+          "source_text": "pancreatic enzymes and maybe take some"
+        }
+      ],
+      "greek_range": {
+        "start_char": 799,
+        "end_char": 842
+      },
+      "greek_text": "παγκρεατικά ένζυμα και κάποια χολικά άλατα,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 99161,
+      "end_ms": 101173,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 21.37,
+      "rendered_text": "παγκρεατικά ένζυμα και\nκάποια χολικά άλατα,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A038",
+      "source_cue_ids": [
+        17
+      ],
+      "source_refs": [
+        {
+          "cue_id": 17,
+          "token_start": 14,
+          "token_end": 21,
+          "cue_start_ms": 96479,
+          "cue_end_ms": 103520,
+          "source_text": "bile salts to help emulsify the fat"
+        }
+      ],
+      "greek_range": {
+        "start_char": 843,
+        "end_char": 890
+      },
+      "greek_text": "ώστε να βοηθηθεί η γαλακτωματοποίηση του λίπους",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 101173,
+      "end_ms": 103520,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.03,
+      "rendered_text": "ώστε να βοηθηθεί η\nγαλακτωματοποίηση του λίπους",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A039",
+      "source_cue_ids": [
+        18
+      ],
+      "source_refs": [
+        {
+          "cue_id": 18,
+          "token_start": 0,
+          "token_end": 13,
+          "cue_start_ms": 103520,
+          "cue_end_ms": 110880,
+          "source_text": "in order to facilitate, you know, fat that you can tolerate that fat."
+        }
+      ],
+      "greek_range": {
+        "start_char": 891,
+        "end_char": 947
+      },
+      "greek_text": "και έτσι να διευκολυνθεί η πέψη του και να μπορείς να το",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 103520,
+      "end_ms": 107680,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 13.46,
+      "rendered_text": "και έτσι να διευκολυνθεί η\nπέψη του και να μπορείς να το",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A040",
+      "source_cue_ids": [
+        18
+      ],
+      "source_refs": [
+        {
+          "cue_id": 18,
+          "token_start": 13,
+          "token_end": 23,
+          "cue_start_ms": 103520,
+          "cue_end_ms": 110880,
+          "source_text": "But so it the answer is it depends and the"
+        }
+      ],
+      "greek_range": {
+        "start_char": 948,
+        "end_char": 1007
+      },
+      "greek_text": "ανεχτείς καλύτερα. Άρα η απάντηση είναι: εξαρτάται. Και όσο",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 107680,
+      "end_ms": 110880,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.44,
+      "rendered_text": "ανεχτείς καλύτερα. Άρα η απάντηση\nείναι: εξαρτάται. Και όσο",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A041",
+      "source_cue_ids": [
+        19
+      ],
+      "source_refs": [
+        {
+          "cue_id": 19,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 110880,
+          "cue_end_ms": 116479,
+          "source_text": "sicker you are, the slower you go."
+        }
+      ],
+      "greek_range": {
+        "start_char": 1008,
+        "end_char": 1051
+      },
+      "greek_text": "πιο άρρωστος είσαι, τόσο πιο αργά προχωράς.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 110880,
+      "end_ms": 113680,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.36,
+      "rendered_text": "πιο άρρωστος είσαι,\nτόσο πιο αργά προχωράς.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A042",
+      "source_cue_ids": [
+        19
+      ],
+      "source_refs": [
+        {
+          "cue_id": 19,
+          "token_start": 7,
+          "token_end": 14,
+          "cue_start_ms": 110880,
+          "cue_end_ms": 116479,
+          "source_text": "For somebody that is very enthusiastic, they"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1052,
+        "end_char": 1096
+      },
+      "greek_text": "Για κάποιον όμως που είναι πολύ ενθουσιώδης,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 113680,
+      "end_ms": 116479,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.72,
+      "rendered_text": "Για κάποιον όμως που\nείναι πολύ ενθουσιώδης,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A043",
+      "source_cue_ids": [
+        20
+      ],
+      "source_refs": [
+        {
+          "cue_id": 20,
+          "token_start": 0,
+          "token_end": 5,
+          "cue_start_ms": 116479,
+          "cue_end_ms": 121200,
+          "source_text": "jump in, they're very committed,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1097,
+        "end_char": 1132
+      },
+      "greek_text": "ξεκινά με ενθουσιασμό και αφοσίωση,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 116479,
+      "end_ms": 118446,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.79,
+      "rendered_text": "ξεκινά με ενθουσιασμό και αφοσίωση,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A044",
+      "source_cue_ids": [
+        20
+      ],
+      "source_refs": [
+        {
+          "cue_id": 20,
+          "token_start": 5,
+          "token_end": 12,
+          "cue_start_ms": 116479,
+          "cue_end_ms": 121200,
+          "source_text": "how quickly can they turn this around?"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1133,
+        "end_char": 1182
+      },
+      "greek_text": "πόσο γρήγορα μπορεί να αντιστρέψει την κατάσταση;",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 118446,
+      "end_ms": 121200,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.79,
+      "rendered_text": "πόσο γρήγορα μπορεί να\nαντιστρέψει την κατάσταση;",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A045",
+      "source_cue_ids": [
+        21
+      ],
+      "source_refs": [
+        {
+          "cue_id": 21,
+          "token_start": 0,
+          "token_end": 21,
+          "cue_start_ms": 121200,
+          "cue_end_ms": 127200,
+          "source_text": ">> Oh, very quickly. You know, in a in in a in a few days or weeks. As soon as you"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1183,
+        "end_char": 1236
+      },
+      "greek_text": "Πολύ γρήγορα. Μέσα σε λίγες ημέρες ή εβδομάδες. Μόλις",
+      "speaker": "guest",
+      "speaker_boundary_before": true,
+      "start_ms": 121200,
+      "end_ms": 127200,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 8.83,
+      "rendered_text": "Πολύ γρήγορα. Μέσα σε λίγες\nημέρες ή εβδομάδες. Μόλις",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A046",
+      "source_cue_ids": [
+        22
+      ],
+      "source_refs": [
+        {
+          "cue_id": 22,
+          "token_start": 0,
+          "token_end": 6,
+          "cue_start_ms": 127200,
+          "cue_end_ms": 132640,
+          "source_text": "get into ketosis, everything just starts"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1237,
+        "end_char": 1278
+      },
+      "greek_text": "μπεις σε κέτωση, όλα αρχίζουν να μπαίνουν",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 127200,
+      "end_ms": 129711,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.33,
+      "rendered_text": "μπεις σε κέτωση, όλα αρχίζουν να μπαίνουν",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A047",
+      "source_cue_ids": [
+        22
+      ],
+      "source_refs": [
+        {
+          "cue_id": 22,
+          "token_start": 6,
+          "token_end": 13,
+          "cue_start_ms": 127200,
+          "cue_end_ms": 132640,
+          "source_text": "to fall into place., you your blood"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1279,
+        "end_char": 1313
+      },
+      "greek_text": "στη θέση τους. Τα επίπεδα στο αίμα",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 129711,
+      "end_ms": 132640,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 11.61,
+      "rendered_text": "στη θέση τους. Τα επίπεδα στο αίμα",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A048",
+      "source_cue_ids": [
+        23
+      ],
+      "source_refs": [
+        {
+          "cue_id": 23,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 132640,
+          "cue_end_ms": 140080,
+          "source_text": "vessel your blood levels, you know, level out."
+        }
+      ],
+      "greek_range": {
+        "start_char": 1314,
+        "end_char": 1360
+      },
+      "greek_text": "σταθεροποιούνται. Σταματούν οι απότομες αιχμές",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 132640,
+      "end_ms": 135947,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 13.91,
+      "rendered_text": "σταθεροποιούνται. Σταματούν\nοι απότομες αιχμές",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A049",
+      "source_cue_ids": [
+        23
+      ],
+      "source_refs": [
+        {
+          "cue_id": 23,
+          "token_start": 8,
+          "token_end": 18,
+          "cue_start_ms": 132640,
+          "cue_end_ms": 140080,
+          "source_text": "You stop spiking insulin and and adrenaline. The brain settles"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1361,
+        "end_char": 1407
+      },
+      "greek_text": "ινσουλίνης και αδρεναλίνης. Ο εγκέφαλος ηρεμεί",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 135947,
+      "end_ms": 140080,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 11.13,
+      "rendered_text": "ινσουλίνης και αδρεναλίνης.\nΟ εγκέφαλος ηρεμεί",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A050",
+      "source_cue_ids": [
+        24
+      ],
+      "source_refs": [
+        {
+          "cue_id": 24,
+          "token_start": 0,
+          "token_end": 6,
+          "cue_start_ms": 140080,
+          "cue_end_ms": 142560,
+          "source_text": "down. Your quality of sleep improves."
+        }
+      ],
+      "greek_range": {
+        "start_char": 1408,
+        "end_char": 1445
+      },
+      "greek_text": "και η ποιότητα του ύπνου βελτιώνεται.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 140080,
+      "end_ms": 142560,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.92,
+      "rendered_text": "και η ποιότητα του ύπνου βελτιώνεται.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A051",
+      "source_cue_ids": [
+        25
+      ],
+      "source_refs": [
+        {
+          "cue_id": 25,
+          "token_start": 0,
+          "token_end": 10,
+          "cue_start_ms": 142560,
+          "cue_end_ms": 147760,
+          "source_text": "the fermenting guts. So if you've got any gut symptoms,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1446,
+        "end_char": 1492
+      },
+      "greek_text": "Υποχωρεί η ζύμωση στο έντερο και εξαφανίζονται",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 142560,
+      "end_ms": 145160,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.69,
+      "rendered_text": "Υποχωρεί η ζύμωση στο\nέντερο και εξαφανίζονται",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A052",
+      "source_cue_ids": [
+        25
+      ],
+      "source_refs": [
+        {
+          "cue_id": 25,
+          "token_start": 10,
+          "token_end": 20,
+          "cue_start_ms": 142560,
+          "cue_end_ms": 147760,
+          "source_text": "they disappear and it's the starting if you've got any"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1493,
+        "end_char": 1539
+      },
+      "greek_text": "τα γαστρεντερικά συμπτώματα. Αν υπάρχει κάποια",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 145160,
+      "end_ms": 147760,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.69,
+      "rendered_text": "τα γαστρεντερικά συμπτώματα.\nΑν υπάρχει κάποια",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A053",
+      "source_cue_ids": [
+        26
+      ],
+      "source_refs": [
+        {
+          "cue_id": 26,
+          "token_start": 0,
+          "token_end": 9,
+          "cue_start_ms": 147760,
+          "cue_end_ms": 153440,
+          "source_text": "condition associated with inflammation and I think much inflammation"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1540,
+        "end_char": 1588
+      },
+      "greek_text": "πάθηση που σχετίζεται με φλεγμονή —η οποία συχνά",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 147760,
+      "end_ms": 150600,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.9,
+      "rendered_text": "πάθηση που σχετίζεται με\nφλεγμονή —η οποία συχνά",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A054",
+      "source_cue_ids": [
+        26
+      ],
+      "source_refs": [
+        {
+          "cue_id": 26,
+          "token_start": 9,
+          "token_end": 18,
+          "cue_start_ms": 147760,
+          "cue_end_ms": 153440,
+          "source_text": "is driven by allergy to microbes in the upper"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1589,
+        "end_char": 1648
+      },
+      "greek_text": "προκαλείται από αλλεργική αντίδραση σε μικρόβια στο ανώτερο",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 150600,
+      "end_ms": 153440,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.77,
+      "rendered_text": "προκαλείται από αλλεργική\nαντίδραση σε μικρόβια στο ανώτερο",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A055",
+      "source_cue_ids": [
+        27
+      ],
+      "source_refs": [
+        {
+          "cue_id": 27,
+          "token_start": 0,
+          "token_end": 12,
+          "cue_start_ms": 153440,
+          "cue_end_ms": 159360,
+          "source_text": "fermenting gut. Then the inflam inflammatory markers settle down and in parallel"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1649,
+        "end_char": 1713
+      },
+      "greek_text": "έντερο όπου γίνεται ζύμωση— τότε οι δείκτες φλεγμονής υποχωρούν.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 153440,
+      "end_ms": 157179,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.12,
+      "rendered_text": "έντερο όπου γίνεται ζύμωση— τότε\nοι δείκτες φλεγμονής υποχωρούν.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A056",
+      "source_cue_ids": [
+        27
+      ],
+      "source_refs": [
+        {
+          "cue_id": 27,
+          "token_start": 12,
+          "token_end": 19,
+          "cue_start_ms": 153440,
+          "cue_end_ms": 159360,
+          "source_text": "with this you know put in place"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1714,
+        "end_char": 1747
+      },
+      "greek_text": "Παράλληλα με όλα αυτά, εφαρμόζεις",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 157179,
+      "end_ms": 159360,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.13,
+      "rendered_text": "Παράλληλα με όλα αυτά, εφαρμόζεις",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A057",
+      "source_cue_ids": [
+        28
+      ],
+      "source_refs": [
+        {
+          "cue_id": 28,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 159360,
+          "cue_end_ms": 166640,
+          "source_text": "the detox regimes because we're all poisoned MSM"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1748,
+        "end_char": 1819
+      },
+      "greek_text": "και προγράμματα αποτοξίνωσης, γιατί όλοι έχουμε επιβαρυνθεί με τοξίνες.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 159360,
+      "end_ms": 162786,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.72,
+      "rendered_text": "και προγράμματα αποτοξίνωσης, γιατί\nόλοι έχουμε επιβαρυνθεί με τοξίνες.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A058",
+      "source_cue_ids": [
+        28
+      ],
+      "source_refs": [
+        {
+          "cue_id": 28,
+          "token_start": 8,
+          "token_end": 17,
+          "cue_start_ms": 159360,
+          "cue_end_ms": 166640,
+          "source_text": "and maybe metal collalation therapy. You know I'm increasingly"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1820,
+        "end_char": 1880
+      },
+      "greek_text": "MSM και ίσως θεραπεία χηλίωσης μετάλλων. Όλο και περισσότερο",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 162786,
+      "end_ms": 166640,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.57,
+      "rendered_text": "MSM και ίσως θεραπεία χηλίωσης\nμετάλλων. Όλο και περισσότερο",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A059",
+      "source_cue_ids": [
+        29
+      ],
+      "source_refs": [
+        {
+          "cue_id": 29,
+          "token_start": 0,
+          "token_end": 12,
+          "cue_start_ms": 166640,
+          "cue_end_ms": 171680,
+          "source_text": "coming to the view that we all have to do it all."
+        }
+      ],
+      "greek_range": {
+        "start_char": 1881,
+        "end_char": 1942
+      },
+      "greek_text": "καταλήγω στην άποψη ότι τελικά όλοι πρέπει να τα κάνουμε όλα.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 166640,
+      "end_ms": 169823,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 19.16,
+      "rendered_text": "καταλήγω στην άποψη ότι τελικά\nόλοι πρέπει να τα κάνουμε όλα.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A060",
+      "source_cue_ids": [
+        29
+      ],
+      "source_refs": [
+        {
+          "cue_id": 29,
+          "token_start": 12,
+          "token_end": 19,
+          "cue_start_ms": 166640,
+          "cue_end_ms": 171680,
+          "source_text": "Now, when I started work as a"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1943,
+        "end_char": 1972
+      },
+      "greek_text": "Όταν ξεκίνησα να εργάζομαι ως",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 169823,
+      "end_ms": 171680,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.62,
+      "rendered_text": "Όταν ξεκίνησα να εργάζομαι ως",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A061",
+      "source_cue_ids": [
+        30
+      ],
+      "source_refs": [
+        {
+          "cue_id": 30,
+          "token_start": 0,
+          "token_end": 12,
+          "cue_start_ms": 171680,
+          "cue_end_ms": 178480,
+          "source_text": "GP in the 19 early 1980s, it was relatively easy to get"
+        }
+      ],
+      "greek_range": {
+        "start_char": 1973,
+        "end_char": 2035
+      },
+      "greek_text": "γενικός ιατρός στις αρχές της δεκαετίας του 1980, ήταν σχετικά",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 171680,
+      "end_ms": 175389,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.72,
+      "rendered_text": "γενικός ιατρός στις αρχές της\nδεκαετίας του 1980, ήταν σχετικά",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A062",
+      "source_cue_ids": [
+        30
+      ],
+      "source_refs": [
+        {
+          "cue_id": 30,
+          "token_start": 12,
+          "token_end": 22,
+          "cue_start_ms": 171680,
+          "cue_end_ms": 178480,
+          "source_text": "people well with a simple elimination diets and a few"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2036,
+        "end_char": 2094
+      },
+      "greek_text": "εύκολο να βελτιωθεί κάποιος με δίαιτα αποκλεισμού και λίγα",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 175389,
+      "end_ms": 178480,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.76,
+      "rendered_text": "εύκολο να βελτιωθεί κάποιος\nμε δίαιτα αποκλεισμού και λίγα",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A063",
+      "source_cue_ids": [
+        31,
+        32,
+        33
+      ],
+      "source_refs": [
+        {
+          "cue_id": 31,
+          "token_start": 0,
+          "token_end": 6,
+          "cue_start_ms": 178480,
+          "cue_end_ms": 184879,
+          "source_text": "supplements. Nowadays, it's much more difficult."
+        }
+      ],
+      "greek_range": {
+        "start_char": 2095,
+        "end_char": 2139
+      },
+      "greek_text": "συμπληρώματα. Σήμερα είναι πολύ πιο δύσκολο.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 178480,
+      "end_ms": 181040,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.19,
+      "rendered_text": "συμπληρώματα. Σήμερα\nείναι πολύ πιο δύσκολο.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A064",
+      "source_cue_ids": [
+        31,
+        32,
+        33
+      ],
+      "source_refs": [
+        {
+          "cue_id": 31,
+          "token_start": 6,
+          "token_end": 13,
+          "cue_start_ms": 178480,
+          "cue_end_ms": 184879,
+          "source_text": "It's much more difficult because because most"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2140,
+        "end_char": 2204
+      },
+      "greek_text": "Και είναι πολύ πιο δύσκολο επειδή οι περισσότεροι άνθρωποι είναι",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 181040,
+      "end_ms": 184026,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 21.43,
+      "rendered_text": "Και είναι πολύ πιο δύσκολο επειδή\nοι περισσότεροι άνθρωποι είναι",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A065",
+      "source_cue_ids": [
+        31,
+        32,
+        33
+      ],
+      "source_refs": [
+        {
+          "cue_id": 31,
+          "token_start": 13,
+          "token_end": 15,
+          "cue_start_ms": 178480,
+          "cue_end_ms": 184879,
+          "source_text": "people are"
+        },
+        {
+          "cue_id": 32,
+          "token_start": 0,
+          "token_end": 5,
+          "cue_start_ms": 184879,
+          "cue_end_ms": 191360,
+          "source_text": "carbohydrate addicts. We're all poisoned.,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2205,
+        "end_char": 2270
+      },
+      "greek_text": "εξαρτημένοι από τους υδατάνθρακες. Όλοι έχουμε τοξική επιβάρυνση.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 184026,
+      "end_ms": 187194,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.52,
+      "rendered_text": "εξαρτημένοι από τους υδατάνθρακες.\nΌλοι έχουμε τοξική επιβάρυνση.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A066",
+      "source_cue_ids": [
+        31,
+        32,
+        33
+      ],
+      "source_refs": [
+        {
+          "cue_id": 32,
+          "token_start": 5,
+          "token_end": 12,
+          "cue_start_ms": 184879,
+          "cue_end_ms": 191360,
+          "source_text": "underactive thyroids and poor adrenal functions are"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2271,
+        "end_char": 2341
+      },
+      "greek_text": "Η υπολειτουργία του θυρεοειδούς, η αδύναμη λειτουργία των επινεφριδίων",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 187194,
+      "end_ms": 190434,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 21.6,
+      "rendered_text": "Η υπολειτουργία του θυρεοειδούς, η\nαδύναμη λειτουργία των επινεφριδίων",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A067",
+      "source_cue_ids": [
+        31,
+        32,
+        33
+      ],
+      "source_refs": [
+        {
+          "cue_id": 32,
+          "token_start": 12,
+          "token_end": 14,
+          "cue_start_ms": 184879,
+          "cue_end_ms": 191360,
+          "source_text": "and poor"
+        },
+        {
+          "cue_id": 33,
+          "token_start": 0,
+          "token_end": 5,
+          "cue_start_ms": 191360,
+          "cue_end_ms": 193920,
+          "source_text": "mitochondrial functions are very common."
+        }
+      ],
+      "greek_range": {
+        "start_char": 2342,
+        "end_char": 2396
+      },
+      "greek_text": "και η κακή μιτοχονδριακή λειτουργία είναι πολύ συχνές.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 190434,
+      "end_ms": 193920,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.49,
+      "rendered_text": "και η κακή μιτοχονδριακή\nλειτουργία είναι πολύ συχνές.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A068",
+      "source_cue_ids": [
+        34
+      ],
+      "source_refs": [
+        {
+          "cue_id": 34,
+          "token_start": 0,
+          "token_end": 13,
+          "cue_start_ms": 193920,
+          "cue_end_ms": 200800,
+          "source_text": "So, you know, you know, we just all have to do it all."
+        }
+      ],
+      "greek_range": {
+        "start_char": 2397,
+        "end_char": 2442
+      },
+      "greek_text": "Άρα, ξέρετε, τελικά πρέπει να τα κάνουμε όλα.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 193920,
+      "end_ms": 197647,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.07,
+      "rendered_text": "Άρα, ξέρετε, τελικά\nπρέπει να τα κάνουμε όλα.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A069",
+      "source_cue_ids": [
+        34
+      ],
+      "source_refs": [
+        {
+          "cue_id": 34,
+          "token_start": 13,
+          "token_end": 24,
+          "cue_start_ms": 193920,
+          "cue_end_ms": 200800,
+          "source_text": "And it always starts with diet and sorting out the upper"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2443,
+        "end_char": 2499
+      },
+      "greek_text": "Ξεκινάμε πάντα από τη διατροφή και τη ζύμωση στο ανώτερο",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 197647,
+      "end_ms": 200800,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.76,
+      "rendered_text": "Ξεκινάμε πάντα από τη διατροφή\nκαι τη ζύμωση στο ανώτερο",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A070",
+      "source_cue_ids": [
+        35
+      ],
+      "source_refs": [
+        {
+          "cue_id": 35,
+          "token_start": 0,
+          "token_end": 10,
+          "cue_start_ms": 200800,
+          "cue_end_ms": 207760,
+          "source_text": "fermenting gut and taking a basic package of nutritional supplements"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2500,
+        "end_char": 2566
+      },
+      "greek_text": "έντερο και παίρνοντας ένα βασικό πακέτο διατροφικών συμπληρωμάτων.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 200800,
+      "end_ms": 204280,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.97,
+      "rendered_text": "έντερο και παίρνοντας ένα βασικό\nπακέτο διατροφικών συμπληρωμάτων.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A071",
+      "source_cue_ids": [
+        35
+      ],
+      "source_refs": [
+        {
+          "cue_id": 35,
+          "token_start": 10,
+          "token_end": 20,
+          "cue_start_ms": 200800,
+          "cue_end_ms": 207760,
+          "source_text": "and then playing it by ear from there on. If"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2567,
+        "end_char": 2620
+      },
+      "greek_text": "Από εκεί και πέρα προχωράμε ανάλογα με την πορεία. Αν",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 204280,
+      "end_ms": 207760,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.23,
+      "rendered_text": "Από εκεί και πέρα προχωράμε\nανάλογα με την πορεία. Αν",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A072",
+      "source_cue_ids": [
+        36
+      ],
+      "source_refs": [
+        {
+          "cue_id": 36,
+          "token_start": 0,
+          "token_end": 10,
+          "cue_start_ms": 207760,
+          "cue_end_ms": 215040,
+          "source_text": "you've got something, if you've got nasty pathology like cancer,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2621,
+        "end_char": 2668
+      },
+      "greek_text": "υπάρχει κάποια σοβαρή παθολογία, όπως καρκίνος,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 207760,
+      "end_ms": 211400,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.91,
+      "rendered_text": "υπάρχει κάποια σοβαρή\nπαθολογία, όπως καρκίνος,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A073",
+      "source_cue_ids": [
+        36
+      ],
+      "source_refs": [
+        {
+          "cue_id": 36,
+          "token_start": 10,
+          "token_end": 20,
+          "cue_start_ms": 207760,
+          "cue_end_ms": 215040,
+          "source_text": "then we haven't got time to muck about. You just"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2669,
+        "end_char": 2722
+      },
+      "greek_text": "τότε δεν έχουμε χρόνο για καθυστερήσεις. Πρέπει απλώς",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 211400,
+      "end_ms": 215040,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.56,
+      "rendered_text": "τότε δεν έχουμε χρόνο για\nκαθυστερήσεις. Πρέπει απλώς",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A074",
+      "source_cue_ids": [
+        37
+      ],
+      "source_refs": [
+        {
+          "cue_id": 37,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 215040,
+          "cue_end_ms": 221200,
+          "source_text": "have to dive in you know and"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2723,
+        "end_char": 2760
+      },
+      "greek_text": "να μπεις αμέσως και να εφαρμόσεις την",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 215040,
+      "end_ms": 218120,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.01,
+      "rendered_text": "να μπεις αμέσως και να εφαρμόσεις την",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A075",
+      "source_cue_ids": [
+        37
+      ],
+      "source_refs": [
+        {
+          "cue_id": 37,
+          "token_start": 7,
+          "token_end": 14,
+          "cue_start_ms": 215040,
+          "cue_end_ms": 221200,
+          "source_text": "and do the keto diet ASAP because"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2761,
+        "end_char": 2809
+      },
+      "greek_text": "κετογονική διατροφή το συντομότερο δυνατό, γιατί",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 218120,
+      "end_ms": 221200,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.58,
+      "rendered_text": "κετογονική διατροφή το\nσυντομότερο δυνατό, γιατί",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A076",
+      "source_cue_ids": [
+        38,
+        39,
+        40
+      ],
+      "source_refs": [
+        {
+          "cue_id": 38,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 221200,
+          "cue_end_ms": 223200,
+          "source_text": "you can't afford to waste time whilst"
+        },
+        {
+          "cue_id": 39,
+          "token_start": 0,
+          "token_end": 3,
+          "cue_start_ms": 223200,
+          "cue_end_ms": 228640,
+          "source_text": "the cancer grows."
+        }
+      ],
+      "greek_range": {
+        "start_char": 2810,
+        "end_char": 2868
+      },
+      "greek_text": "δεν μπορούμε να χάνουμε χρόνο ενώ ο καρκίνος αναπτύσσεται.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 221200,
+      "end_ms": 224059,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.29,
+      "rendered_text": "δεν μπορούμε να χάνουμε χρόνο\nενώ ο καρκίνος αναπτύσσεται.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A077",
+      "source_cue_ids": [
+        38,
+        39,
+        40
+      ],
+      "source_refs": [
+        {
+          "cue_id": 39,
+          "token_start": 3,
+          "token_end": 19,
+          "cue_start_ms": 223200,
+          "cue_end_ms": 228640,
+          "source_text": "As you know the difference between cancer cells and normal cells is cancer cells can only"
+        },
+        {
+          "cue_id": 40,
+          "token_start": 0,
+          "token_end": 1,
+          "cue_start_ms": 228640,
+          "cue_end_ms": 235280,
+          "source_text": "run"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2869,
+        "end_char": 2925
+      },
+      "greek_text": "Η διαφορά είναι ότι τα καρκινικά κύτταρα μπορούν να ζουν",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 224059,
+      "end_ms": 228942,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 11.47,
+      "rendered_text": "Η διαφορά είναι ότι τα καρκινικά\nκύτταρα μπορούν να ζουν",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A078",
+      "source_cue_ids": [
+        38,
+        39,
+        40
+      ],
+      "source_refs": [
+        {
+          "cue_id": 40,
+          "token_start": 1,
+          "token_end": 12,
+          "cue_start_ms": 228640,
+          "cue_end_ms": 235280,
+          "source_text": "on sugars and carbs. whereas our immune system which is what"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2926,
+        "end_char": 2979
+      },
+      "greek_text": "μόνο με σάκχαρα και υδατάνθρακες ενώ το ανοσοποιητικό",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 228942,
+      "end_ms": 232262,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.96,
+      "rendered_text": "μόνο με σάκχαρα και υδατάνθρακες\nενώ το ανοσοποιητικό",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A079",
+      "source_cue_ids": [
+        38,
+        39,
+        40
+      ],
+      "source_refs": [
+        {
+          "cue_id": 40,
+          "token_start": 12,
+          "token_end": 22,
+          "cue_start_ms": 228640,
+          "cue_end_ms": 235280,
+          "source_text": "we need to fight cancer that can run very happily"
+        }
+      ],
+      "greek_range": {
+        "start_char": 2980,
+        "end_char": 3023
+      },
+      "greek_text": "που πολεμά τον καρκίνο λειτουργεί πολύ καλά",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 232262,
+      "end_ms": 235280,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.25,
+      "rendered_text": "που πολεμά τον καρκίνο\nλειτουργεί πολύ καλά",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A080",
+      "source_cue_ids": [
+        41
+      ],
+      "source_refs": [
+        {
+          "cue_id": 41,
+          "token_start": 0,
+          "token_end": 13,
+          "cue_start_ms": 235280,
+          "cue_end_ms": 241599,
+          "source_text": "on fats. So it very much depends on the pathology. But these interventions"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3024,
+        "end_char": 3089
+      },
+      "greek_text": "με λίπος. Άρα εξαρτάται από την πάθηση. Όμως αυτές οι παρεμβάσεις",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 235280,
+      "end_ms": 241599,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 10.29,
+      "rendered_text": "με λίπος. Άρα εξαρτάται από την\nπάθηση. Όμως αυτές οι παρεμβάσεις",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A081",
+      "source_cue_ids": [
+        42
+      ],
+      "source_refs": [
+        {
+          "cue_id": 42,
+          "token_start": 0,
+          "token_end": 4,
+          "cue_start_ms": 241599,
+          "cue_end_ms": 246000,
+          "source_text": "really are the starting"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3090,
+        "end_char": 3126
+      },
+      "greek_text": "είναι πραγματικά το σημείο εκκίνησης",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 241599,
+      "end_ms": 243555,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.4,
+      "rendered_text": "είναι πραγματικά το σημείο εκκίνησης",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A082",
+      "source_cue_ids": [
+        42
+      ],
+      "source_refs": [
+        {
+          "cue_id": 42,
+          "token_start": 4,
+          "token_end": 9,
+          "cue_start_ms": 241599,
+          "cue_end_ms": 246000,
+          "source_text": "point to treat absolutely everything."
+        }
+      ],
+      "greek_range": {
+        "start_char": 3127,
+        "end_char": 3166
+      },
+      "greek_text": "για την αντιμετώπιση σχεδόν των πάντων.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 243555,
+      "end_ms": 246000,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.95,
+      "rendered_text": "για την αντιμετώπιση σχεδόν των πάντων.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A083",
+      "source_cue_ids": [
+        43
+      ],
+      "source_refs": [
+        {
+          "cue_id": 43,
+          "token_start": 0,
+          "token_end": 10,
+          "cue_start_ms": 246000,
+          "cue_end_ms": 252239,
+          "source_text": ">> For somebody that wants to throw everything at this."
+        }
+      ],
+      "greek_range": {
+        "start_char": 3167,
+        "end_char": 3211
+      },
+      "greek_text": "Για κάποιον που θέλει να δοκιμάσει τα πάντα,",
+      "speaker": "guest",
+      "speaker_boundary_before": true,
+      "start_ms": 246000,
+      "end_ms": 248836,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.51,
+      "rendered_text": "Για κάποιον που θέλει\nνα δοκιμάσει τα πάντα,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A084",
+      "source_cue_ids": [
+        43
+      ],
+      "source_refs": [
+        {
+          "cue_id": 43,
+          "token_start": 10,
+          "token_end": 22,
+          "cue_start_ms": 246000,
+          "cue_end_ms": 252239,
+          "source_text": "How do you feel about some of these newer tools that are"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3212,
+        "end_char": 3262
+      },
+      "greek_text": "πώς βλέπετε ορισμένα από τα νεότερα μέσα που είναι",
+      "speaker": "guest",
+      "speaker_boundary_before": false,
+      "start_ms": 248836,
+      "end_ms": 252239,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.69,
+      "rendered_text": "πώς βλέπετε ορισμένα από\nτα νεότερα μέσα που είναι",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A085",
+      "source_cue_ids": [
+        44
+      ],
+      "source_refs": [
+        {
+          "cue_id": 44,
+          "token_start": 0,
+          "token_end": 4,
+          "cue_start_ms": 252239,
+          "cue_end_ms": 257040,
+          "source_text": "popular in the health"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3263,
+        "end_char": 3293
+      },
+      "greek_text": "δημοφιλή στον χώρο της υγείας,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 252239,
+      "end_ms": 253839,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.75,
+      "rendered_text": "δημοφιλή στον χώρο της υγείας,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A086",
+      "source_cue_ids": [
+        44
+      ],
+      "source_refs": [
+        {
+          "cue_id": 44,
+          "token_start": 4,
+          "token_end": 12,
+          "cue_start_ms": 252239,
+          "cue_end_ms": 257040,
+          "source_text": "world right now like methylene blue creatine anything"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3294,
+        "end_char": 3340
+      },
+      "greek_text": "όπως το μπλε του μεθυλενίου, η κρεατίνη ή κάτι",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 253839,
+      "end_ms": 257040,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.37,
+      "rendered_text": "όπως το μπλε του μεθυλενίου,\nη κρεατίνη ή κάτι",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A087",
+      "source_cue_ids": [
+        45
+      ],
+      "source_refs": [
+        {
+          "cue_id": 45,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 257040,
+          "cue_end_ms": 263520,
+          "source_text": "else in that realm that has a"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3341,
+        "end_char": 3370
+      },
+      "greek_text": "άλλο που έχει γίνει δημοφιλές",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 257040,
+      "end_ms": 259875,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 10.23,
+      "rendered_text": "άλλο που έχει γίνει δημοφιλές",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A088",
+      "source_cue_ids": [
+        45
+      ],
+      "source_refs": [
+        {
+          "cue_id": 45,
+          "token_start": 7,
+          "token_end": 16,
+          "cue_start_ms": 257040,
+          "cue_end_ms": 263520,
+          "source_text": "lot of momentum that people can stack on? Well,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3371,
+        "end_char": 3417
+      },
+      "greek_text": "και μπορεί να προστεθεί στο πρόγραμμα; Λοιπόν,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 259875,
+      "end_ms": 263520,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.62,
+      "rendered_text": "και μπορεί να προστεθεί\nστο πρόγραμμα; Λοιπόν,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A089",
+      "source_cue_ids": [
+        46
+      ],
+      "source_refs": [
+        {
+          "cue_id": 46,
+          "token_start": 0,
+          "token_end": 6,
+          "cue_start_ms": 263520,
+          "cue_end_ms": 268800,
+          "source_text": "creatine is very good for muscles"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3418,
+        "end_char": 3457
+      },
+      "greek_text": "η κρεατίνη είναι πολύ καλή για τους μυς",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 263520,
+      "end_ms": 266160,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.77,
+      "rendered_text": "η κρεατίνη είναι πολύ καλή για τους μυς",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A090",
+      "source_cue_ids": [
+        46
+      ],
+      "source_refs": [
+        {
+          "cue_id": 46,
+          "token_start": 6,
+          "token_end": 12,
+          "cue_start_ms": 263520,
+          "cue_end_ms": 268800,
+          "source_text": "and again keeping strong is very"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3458,
+        "end_char": 3500
+      },
+      "greek_text": "και η διατήρηση της δύναμής μας είναι πολύ",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 266160,
+      "end_ms": 268800,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.91,
+      "rendered_text": "και η διατήρηση της δύναμής μας είναι πολύ",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A091",
+      "source_cue_ids": [
+        47
+      ],
+      "source_refs": [
+        {
+          "cue_id": 47,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 268800,
+          "cue_end_ms": 274880,
+          "source_text": "important. So yes I'm very happy for people"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3501,
+        "end_char": 3550
+      },
+      "greek_text": "σημαντική. Ναι, μπορεί κανείς να παίρνει κρεατίνη",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 268800,
+      "end_ms": 271502,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.13,
+      "rendered_text": "σημαντική. Ναι, μπορεί\nκανείς να παίρνει κρεατίνη",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A092",
+      "source_cue_ids": [
+        47
+      ],
+      "source_refs": [
+        {
+          "cue_id": 47,
+          "token_start": 8,
+          "token_end": 18,
+          "cue_start_ms": 268800,
+          "cue_end_ms": 274880,
+          "source_text": "take creatine and for many it helps energy delivery mechanisms."
+        }
+      ],
+      "greek_range": {
+        "start_char": 3551,
+        "end_char": 3606
+      },
+      "greek_text": "και σε πολλούς βοηθά την παραγωγή και παροχή ενέργειας.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 271502,
+      "end_ms": 274880,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.28,
+      "rendered_text": "και σε πολλούς βοηθά την\nπαραγωγή και παροχή ενέργειας.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A093",
+      "source_cue_ids": [
+        48
+      ],
+      "source_refs": [
+        {
+          "cue_id": 48,
+          "token_start": 0,
+          "token_end": 9,
+          "cue_start_ms": 274880,
+          "cue_end_ms": 282320,
+          "source_text": "Metalene blue I would wouldn't do that straight away."
+        }
+      ],
+      "greek_range": {
+        "start_char": 3607,
+        "end_char": 3674
+      },
+      "greek_text": "Το μπλε του μεθυλενίου δεν θα το έβαζα από την αρχή. Ναι, θεωρείται",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 274880,
+      "end_ms": 278404,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 19.01,
+      "rendered_text": "Το μπλε του μεθυλενίου δεν θα το\nέβαζα από την αρχή. Ναι, θεωρείται",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A094",
+      "source_cue_ids": [
+        48
+      ],
+      "source_refs": [
+        {
+          "cue_id": 48,
+          "token_start": 9,
+          "token_end": 19,
+          "cue_start_ms": 274880,
+          "cue_end_ms": 282320,
+          "source_text": "yes it's a very safe intervention. It's good for energy"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3675,
+        "end_char": 3737
+      },
+      "greek_text": "μια πολύ ασφαλής παρέμβαση. Είναι χρήσιμο για τους μηχανισμούς",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 278404,
+      "end_ms": 282320,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.83,
+      "rendered_text": "μια πολύ ασφαλής παρέμβαση. Είναι\nχρήσιμο για τους μηχανισμούς",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A095",
+      "source_cue_ids": [
+        49
+      ],
+      "source_refs": [
+        {
+          "cue_id": 49,
+          "token_start": 0,
+          "token_end": 5,
+          "cue_start_ms": 282320,
+          "cue_end_ms": 288240,
+          "source_text": "delivery mechanisms and it's you"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3738,
+        "end_char": 3769
+      },
+      "greek_text": "παραγωγής και παροχής ενέργειας",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 282320,
+      "end_ms": 284787,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.57,
+      "rendered_text": "παραγωγής και παροχής ενέργειας",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A096",
+      "source_cue_ids": [
+        49
+      ],
+      "source_refs": [
+        {
+          "cue_id": 49,
+          "token_start": 5,
+          "token_end": 12,
+          "cue_start_ms": 282320,
+          "cue_end_ms": 288240,
+          "source_text": "know it's it has good antimicrobial activity."
+        }
+      ],
+      "greek_range": {
+        "start_char": 3770,
+        "end_char": 3812
+      },
+      "greek_text": "και έχει επίσης καλή αντιμικροβιακή δράση.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 284787,
+      "end_ms": 288240,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.16,
+      "rendered_text": "και έχει επίσης καλή αντιμικροβιακή δράση.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A097",
+      "source_cue_ids": [
+        50
+      ],
+      "source_refs": [
+        {
+          "cue_id": 50,
+          "token_start": 0,
+          "token_end": 6,
+          "cue_start_ms": 288240,
+          "cue_end_ms": 293440,
+          "source_text": "So so for some people that"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3813,
+        "end_char": 3851
+      },
+      "greek_text": "Άρα για ορισμένους ανθρώπους μπορεί να",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 288240,
+      "end_ms": 290469,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.05,
+      "rendered_text": "Άρα για ορισμένους ανθρώπους μπορεί να",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A098",
+      "source_cue_ids": [
+        50
+      ],
+      "source_refs": [
+        {
+          "cue_id": 50,
+          "token_start": 6,
+          "token_end": 14,
+          "cue_start_ms": 288240,
+          "cue_end_ms": 293440,
+          "source_text": "is very helpful too but people are always"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3852,
+        "end_char": 3896
+      },
+      "greek_text": "είναι πολύ βοηθητικό. Όμως οι άνθρωποι πάντα",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 290469,
+      "end_ms": 293440,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.81,
+      "rendered_text": "είναι πολύ βοηθητικό.\nΌμως οι άνθρωποι πάντα",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A099",
+      "source_cue_ids": [
+        51
+      ],
+      "source_refs": [
+        {
+          "cue_id": 51,
+          "token_start": 0,
+          "token_end": 16,
+          "cue_start_ms": 293440,
+          "cue_end_ms": 298720,
+          "source_text": "looking for the quick fix and they come to me and they they want me to"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3897,
+        "end_char": 3961
+      },
+      "greek_text": "ψάχνουν τη γρήγορη λύση. Έρχονται σε μένα και θέλουν να τους πω:",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 293440,
+      "end_ms": 296819,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.94,
+      "rendered_text": "ψάχνουν τη γρήγορη λύση. Έρχονται\nσε μένα και θέλουν να τους πω:",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A100",
+      "source_cue_ids": [
+        51
+      ],
+      "source_refs": [
+        {
+          "cue_id": 51,
+          "token_start": 16,
+          "token_end": 25,
+          "cue_start_ms": 293440,
+          "cue_end_ms": 298720,
+          "source_text": "say you take this herb or you take that"
+        }
+      ],
+      "greek_range": {
+        "start_char": 3962,
+        "end_char": 3998
+      },
+      "greek_text": "«Πάρε αυτό το βότανο» ή «πάρε εκείνο",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 296819,
+      "end_ms": 298720,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.94,
+      "rendered_text": "«Πάρε αυτό το βότανο» ή «πάρε εκείνο",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A101",
+      "source_cue_ids": [
+        52
+      ],
+      "source_refs": [
+        {
+          "cue_id": 52,
+          "token_start": 0,
+          "token_end": 14,
+          "cue_start_ms": 298720,
+          "cue_end_ms": 306080,
+          "source_text": "methylene blue or you do this and you'll be fine. It's not like that."
+        }
+      ],
+      "greek_range": {
+        "start_char": 3999,
+        "end_char": 4070
+      },
+      "greek_text": "το μπλε του μεθυλενίου» ή «κάνε αυτό και θα είσαι καλά». Δεν λειτουργεί",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 298720,
+      "end_ms": 303200,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.85,
+      "rendered_text": "το μπλε του μεθυλενίου» ή «κάνε αυτό\nκαι θα είσαι καλά». Δεν λειτουργεί",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A102",
+      "source_cue_ids": [
+        52
+      ],
+      "source_refs": [
+        {
+          "cue_id": 52,
+          "token_start": 14,
+          "token_end": 23,
+          "cue_start_ms": 298720,
+          "cue_end_ms": 306080,
+          "source_text": "It's hard work and you know we're talking the"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4071,
+        "end_char": 4133
+      },
+      "greek_text": "έτσι. Χρειάζεται δουλειά και, ξέρετε, εμείς εδώ μπορούμε να τα",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 303200,
+      "end_ms": 306080,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 21.53,
+      "rendered_text": "έτσι. Χρειάζεται δουλειά και,\nξέρετε, εμείς εδώ μπορούμε να τα",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A103",
+      "source_cue_ids": [
+        53
+      ],
+      "source_refs": [
+        {
+          "cue_id": 53,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 306080,
+          "cue_end_ms": 310320,
+          "source_text": "talk but that poor person then has to"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4134,
+        "end_char": 4177
+      },
+      "greek_text": "συζητάμε, αλλά μετά αυτός ο άνθρωπος πρέπει",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 306080,
+      "end_ms": 308075,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 21.55,
+      "rendered_text": "συζητάμε, αλλά μετά\nαυτός ο άνθρωπος πρέπει",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A104",
+      "source_cue_ids": [
+        53
+      ],
+      "source_refs": [
+        {
+          "cue_id": 53,
+          "token_start": 8,
+          "token_end": 17,
+          "cue_start_ms": 306080,
+          "cue_end_ms": 310320,
+          "source_text": "go away and walk the walk and actually do"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4178,
+        "end_char": 4217
+      },
+      "greek_text": "να φύγει και να τα εφαρμόσει πραγματικά",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 308075,
+      "end_ms": 310320,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.37,
+      "rendered_text": "να φύγει και να τα εφαρμόσει πραγματικά",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A105",
+      "source_cue_ids": [
+        54
+      ],
+      "source_refs": [
+        {
+          "cue_id": 54,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 310320,
+          "cue_end_ms": 315520,
+          "source_text": "it. So I try to concentrate on"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4218,
+        "end_char": 4278
+      },
+      "greek_text": "στην καθημερινότητά του. Γι’ αυτό προσπαθώ να επικεντρώνομαι",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 310320,
+      "end_ms": 315520,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 11.54,
+      "rendered_text": "στην καθημερινότητά του. Γι’\nαυτό προσπαθώ να επικεντρώνομαι",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A106",
+      "source_cue_ids": [
+        55
+      ],
+      "source_refs": [
+        {
+          "cue_id": 55,
+          "token_start": 0,
+          "token_end": 12,
+          "cue_start_ms": 315520,
+          "cue_end_ms": 322880,
+          "source_text": "what I call the bleeding obvious and you know we must all"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4279,
+        "end_char": 4331
+      },
+      "greek_text": "στα «απολύτως προφανή». Πρέπει όλοι να κάνουμε σωστά",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 315520,
+      "end_ms": 319200,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.13,
+      "rendered_text": "στα «απολύτως προφανή».\nΠρέπει όλοι να κάνουμε σωστά",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A107",
+      "source_cue_ids": [
+        55
+      ],
+      "source_refs": [
+        {
+          "cue_id": 55,
+          "token_start": 12,
+          "token_end": 24,
+          "cue_start_ms": 315520,
+          "cue_end_ms": 322880,
+          "source_text": "do the basics and for the vast majority of people all this"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4332,
+        "end_char": 4379
+      },
+      "greek_text": "τα βασικά και για τους περισσότερους, όταν αυτά",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 319200,
+      "end_ms": 322880,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.77,
+      "rendered_text": "τα βασικά και για τους\nπερισσότερους, όταν αυτά",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A108",
+      "source_cue_ids": [
+        56
+      ],
+      "source_refs": [
+        {
+          "cue_id": 56,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 322880,
+          "cue_end_ms": 327919,
+          "source_text": "basic stuff done really well gets you"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4380,
+        "end_char": 4413
+      },
+      "greek_text": "τα βασικά γίνουν πραγματικά καλά,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 322880,
+      "end_ms": 325085,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.97,
+      "rendered_text": "τα βασικά γίνουν πραγματικά καλά,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A109",
+      "source_cue_ids": [
+        56
+      ],
+      "source_refs": [
+        {
+          "cue_id": 56,
+          "token_start": 7,
+          "token_end": 16,
+          "cue_start_ms": 322880,
+          "cue_end_ms": 327919,
+          "source_text": "an awful long way but better than that it"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4414,
+        "end_char": 4460
+      },
+      "greek_text": "σε πηγαίνουν πάρα πολύ μακριά. Ακόμη καλύτερα,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 325085,
+      "end_ms": 327919,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.23,
+      "rendered_text": "σε πηγαίνουν πάρα πολύ\nμακριά. Ακόμη καλύτερα,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A110",
+      "source_cue_ids": [
+        57
+      ],
+      "source_refs": [
+        {
+          "cue_id": 57,
+          "token_start": 0,
+          "token_end": 10,
+          "cue_start_ms": 327919,
+          "cue_end_ms": 335199,
+          "source_text": "as I call it it clarifies those muddy clinical waters"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4461,
+        "end_char": 4514
+      },
+      "greek_text": "όπως λέω, ξεκαθαρίζουν τα θολά κλινικά νερά, γιατί οι",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 327919,
+      "end_ms": 331386,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.29,
+      "rendered_text": "όπως λέω, ξεκαθαρίζουν τα\nθολά κλινικά νερά, γιατί οι",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A111",
+      "source_cue_ids": [
+        57
+      ],
+      "source_refs": [
+        {
+          "cue_id": 57,
+          "token_start": 10,
+          "token_end": 21,
+          "cue_start_ms": 327919,
+          "cue_end_ms": 335199,
+          "source_text": "because people come to me with shopping lists of symptoms and"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4515,
+        "end_char": 4576
+      },
+      "greek_text": "άνθρωποι έρχονται σε μένα με ολόκληρες λίστες συμπτωμάτων και",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 331386,
+      "end_ms": 335199,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.0,
+      "rendered_text": "άνθρωποι έρχονται σε μένα με\nολόκληρες λίστες συμπτωμάτων και",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A112",
+      "source_cue_ids": [
+        58
+      ],
+      "source_refs": [
+        {
+          "cue_id": 58,
+          "token_start": 0,
+          "token_end": 16,
+          "cue_start_ms": 335199,
+          "cue_end_ms": 338320,
+          "source_text": "sometimes I don't know if this is going to cause that or if that's going to"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4577,
+        "end_char": 4639
+      },
+      "greek_text": "μερικές φορές δεν ξέρω αν το ένα προκαλεί το άλλο ή αν το άλλο",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 335199,
+      "end_ms": 338320,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 19.87,
+      "rendered_text": "μερικές φορές δεν ξέρω αν το ένα\nπροκαλεί το άλλο ή αν το άλλο",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A113",
+      "source_cue_ids": [
+        59
+      ],
+      "source_refs": [
+        {
+          "cue_id": 59,
+          "token_start": 0,
+          "token_end": 6,
+          "cue_start_ms": 338320,
+          "cue_end_ms": 343199,
+          "source_text": "cause the other but when you"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4640,
+        "end_char": 4678
+      },
+      "greek_text": "προκαλεί το άλλο. Όταν όμως εφαρμόσεις",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 338320,
+      "end_ms": 340411,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.17,
+      "rendered_text": "προκαλεί το άλλο. Όταν όμως εφαρμόσεις",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A114",
+      "source_cue_ids": [
+        59
+      ],
+      "source_refs": [
+        {
+          "cue_id": 59,
+          "token_start": 6,
+          "token_end": 14,
+          "cue_start_ms": 338320,
+          "cue_end_ms": 343199,
+          "source_text": "put in place all these interventions then cause"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4679,
+        "end_char": 4719
+      },
+      "greek_text": "όλες αυτές τις παρεμβάσεις, τότε η σχέση",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 340411,
+      "end_ms": 343199,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.35,
+      "rendered_text": "όλες αυτές τις παρεμβάσεις, τότε η σχέση",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A115",
+      "source_cue_ids": [
+        60,
+        61,
+        62,
+        63
+      ],
+      "source_refs": [
+        {
+          "cue_id": 60,
+          "token_start": 0,
+          "token_end": 10,
+          "cue_start_ms": 343199,
+          "cue_end_ms": 350560,
+          "source_text": "and effect becomes much more obvious and and then people"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4720,
+        "end_char": 4780
+      },
+      "greek_text": "αιτίας και αποτελέσματος γίνεται σαφέστερη. Τότε οι άνθρωποι",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 343199,
+      "end_ms": 347073,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.49,
+      "rendered_text": "αιτίας και αποτελέσματος γίνεται\nσαφέστερη. Τότε οι άνθρωποι",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A116",
+      "source_cue_ids": [
+        60,
+        61,
+        62,
+        63
+      ],
+      "source_refs": [
+        {
+          "cue_id": 60,
+          "token_start": 10,
+          "token_end": 19,
+          "cue_start_ms": 343199,
+          "cue_end_ms": 350560,
+          "source_text": "then become their own doctors. They become their own"
+        },
+        {
+          "cue_id": 61,
+          "token_start": 0,
+          "token_end": 6,
+          "cue_start_ms": 350560,
+          "cue_end_ms": 356479,
+          "source_text": "detectives because being a doctor should"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4781,
+        "end_char": 4843
+      },
+      "greek_text": "γίνονται οι ίδιοι οι γιατροί και οι ερευνητές της υγείας τους.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 347073,
+      "end_ms": 352174,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.15,
+      "rendered_text": "γίνονται οι ίδιοι οι γιατροί και\nοι ερευνητές της υγείας τους.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A117",
+      "source_cue_ids": [
+        60,
+        61,
+        62,
+        63
+      ],
+      "source_refs": [
+        {
+          "cue_id": 61,
+          "token_start": 6,
+          "token_end": 16,
+          "cue_start_ms": 350560,
+          "cue_end_ms": 356479,
+          "source_text": "be like a detective. Then we get the symptoms which"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4844,
+        "end_char": 4889
+      },
+      "greek_text": "Ο γιατρός πρέπει να λειτουργεί σαν ντετέκτιβ.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 352174,
+      "end_ms": 354865,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.72,
+      "rendered_text": "Ο γιατρός πρέπει να\nλειτουργεί σαν ντετέκτιβ.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A118",
+      "source_cue_ids": [
+        60,
+        61,
+        62,
+        63
+      ],
+      "source_refs": [
+        {
+          "cue_id": 61,
+          "token_start": 16,
+          "token_end": 22,
+          "cue_start_ms": 350560,
+          "cue_end_ms": 356479,
+          "source_text": "are our clues and then we"
+        },
+        {
+          "cue_id": 62,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 356479,
+          "cue_end_ms": 361360,
+          "source_text": "put in place various interventions and see"
+        }
+      ],
+      "greek_range": {
+        "start_char": 4890,
+        "end_char": 4959
+      },
+      "greek_text": "Τα συμπτώματα είναι τα στοιχεία μας και μετά δοκιμάζουμε παρεμβάσεις.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 354865,
+      "end_ms": 358277,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.22,
+      "rendered_text": "Τα συμπτώματα είναι τα στοιχεία μας\nκαι μετά δοκιμάζουμε παρεμβάσεις.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A119",
+      "source_cue_ids": [
+        60,
+        61,
+        62,
+        63
+      ],
+      "source_refs": [
+        {
+          "cue_id": 62,
+          "token_start": 7,
+          "token_end": 19,
+          "cue_start_ms": 356479,
+          "cue_end_ms": 361360,
+          "source_text": "if those symptoms improve. If they don't improve, we've got the diagnosis"
+        },
+        {
+          "cue_id": 63,
+          "token_start": 0,
+          "token_end": 1,
+          "cue_start_ms": 361360,
+          "cue_end_ms": 366800,
+          "source_text": "wrong."
+        }
+      ],
+      "greek_range": {
+        "start_char": 4960,
+        "end_char": 5021
+      },
+      "greek_text": "Αν δεν βελτιωθούν, η διάγνωσή μας είναι λανθασμένη και πρέπει",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 358277,
+      "end_ms": 361723,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.7,
+      "rendered_text": "Αν δεν βελτιωθούν, η διάγνωσή\nμας είναι λανθασμένη και πρέπει",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A120",
+      "source_cue_ids": [
+        60,
+        61,
+        62,
+        63
+      ],
+      "source_refs": [
+        {
+          "cue_id": 63,
+          "token_start": 1,
+          "token_end": 15,
+          "cue_start_ms": 361360,
+          "cue_end_ms": 366800,
+          "source_text": "We have to go back to base. But doctors don't think like this. They"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5022,
+        "end_char": 5085
+      },
+      "greek_text": "να επιστρέψουμε στην αρχή. Όμως οι γιατροί δεν σκέφτονται έτσι.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 361723,
+      "end_ms": 366800,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.41,
+      "rendered_text": "να επιστρέψουμε στην αρχή. Όμως\nοι γιατροί δεν σκέφτονται έτσι.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A121",
+      "source_cue_ids": [
+        64
+      ],
+      "source_refs": [
+        {
+          "cue_id": 64,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 366800,
+          "cue_end_ms": 371039,
+          "source_text": "don't think causation. And so what you"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5086,
+        "end_char": 5121
+      },
+      "greek_text": "Δεν σκέφτονται με όρους αιτιότητας.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 366800,
+      "end_ms": 368655,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.87,
+      "rendered_text": "Δεν σκέφτονται με όρους αιτιότητας.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A122",
+      "source_cue_ids": [
+        64
+      ],
+      "source_refs": [
+        {
+          "cue_id": 64,
+          "token_start": 7,
+          "token_end": 16,
+          "cue_start_ms": 366800,
+          "cue_end_ms": 371039,
+          "source_text": "know it's important to is we all have to"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5122,
+        "end_char": 5155
+      },
+      "greek_text": "Γι’ αυτό είναι σημαντικό όλοι μας",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 368655,
+      "end_ms": 371039,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 13.84,
+      "rendered_text": "Γι’ αυτό είναι σημαντικό όλοι μας",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A123",
+      "source_cue_ids": [
+        65
+      ],
+      "source_refs": [
+        {
+          "cue_id": 65,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 371039,
+          "cue_end_ms": 377360,
+          "source_text": "become our own doctor. We all have to"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5156,
+        "end_char": 5219
+      },
+      "greek_text": "να γίνουμε ο ίδιος μας ο γιατρός. Πρέπει όλοι να ενδιαφερόμαστε",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 371039,
+      "end_ms": 374410,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.69,
+      "rendered_text": "να γίνουμε ο ίδιος μας ο γιατρός.\nΠρέπει όλοι να ενδιαφερόμαστε",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A124",
+      "source_cue_ids": [
+        65
+      ],
+      "source_refs": [
+        {
+          "cue_id": 65,
+          "token_start": 8,
+          "token_end": 15,
+          "cue_start_ms": 371039,
+          "cue_end_ms": 377360,
+          "source_text": "be interested in self and nobody's going"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5220,
+        "end_char": 5269
+      },
+      "greek_text": "ενεργά για τον εαυτό μας και κανείς δεν πρόκειται",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 374410,
+      "end_ms": 377360,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.61,
+      "rendered_text": "ενεργά για τον εαυτό μας\nκαι κανείς δεν πρόκειται",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A125",
+      "source_cue_ids": [
+        66,
+        67
+      ],
+      "source_refs": [
+        {
+          "cue_id": 66,
+          "token_start": 0,
+          "token_end": 16,
+          "cue_start_ms": 377360,
+          "cue_end_ms": 382800,
+          "source_text": "to be better motivated and nobody's going to be in a better position to do it"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5270,
+        "end_char": 5334
+      },
+      "greek_text": "να έχει μεγαλύτερο κίνητρο ή καλύτερη θέση από εμάς τους ίδιους,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 377360,
+      "end_ms": 381316,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.18,
+      "rendered_text": "να έχει μεγαλύτερο κίνητρο ή\nκαλύτερη θέση από εμάς τους ίδιους,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A126",
+      "source_cue_ids": [
+        66,
+        67
+      ],
+      "source_refs": [
+        {
+          "cue_id": 66,
+          "token_start": 16,
+          "token_end": 22,
+          "cue_start_ms": 377360,
+          "cue_end_ms": 382800,
+          "source_text": "than self because there's only one"
+        },
+        {
+          "cue_id": 67,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 382800,
+          "cue_end_ms": 384080,
+          "source_text": "person that puts food in your mouth."
+        }
+      ],
+      "greek_range": {
+        "start_char": 5335,
+        "end_char": 5384
+      },
+      "greek_text": "γιατί μόνο εμείς βάζουμε το φαγητό στο στόμα μας.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 381316,
+      "end_ms": 384080,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.73,
+      "rendered_text": "γιατί μόνο εμείς βάζουμε\nτο φαγητό στο στόμα μας.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A127",
+      "source_cue_ids": [
+        68,
+        69,
+        70
+      ],
+      "source_refs": [
+        {
+          "cue_id": 68,
+          "token_start": 0,
+          "token_end": 11,
+          "cue_start_ms": 384080,
+          "cue_end_ms": 389039,
+          "source_text": "There's only one person that does your shopping and your cooking."
+        }
+      ],
+      "greek_range": {
+        "start_char": 5385,
+        "end_char": 5434
+      },
+      "greek_text": "Υπάρχει μόνο ένας άνθρωπος που κάνει τα ψώνια σου",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 384080,
+      "end_ms": 387110,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.17,
+      "rendered_text": "Υπάρχει μόνο ένας άνθρωπος\nπου κάνει τα ψώνια σου",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A128",
+      "source_cue_ids": [
+        68,
+        69,
+        70
+      ],
+      "source_refs": [
+        {
+          "cue_id": 68,
+          "token_start": 11,
+          "token_end": 18,
+          "cue_start_ms": 384080,
+          "cue_end_ms": 389039,
+          "source_text": "and there's only one person that observes"
+        },
+        {
+          "cue_id": 69,
+          "token_start": 0,
+          "token_end": 2,
+          "cue_start_ms": 389039,
+          "cue_end_ms": 394160,
+          "source_text": "those symptoms."
+        }
+      ],
+      "greek_range": {
+        "start_char": 5435,
+        "end_char": 5490
+      },
+      "greek_text": "και μαγειρεύει για σένα. Και υπάρχει μόνο ένας άνθρωπος",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 387110,
+      "end_ms": 389641,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 21.73,
+      "rendered_text": "και μαγειρεύει για σένα. Και\nυπάρχει μόνο ένας άνθρωπος",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A129",
+      "source_cue_ids": [
+        68,
+        69,
+        70
+      ],
+      "source_refs": [
+        {
+          "cue_id": 69,
+          "token_start": 2,
+          "token_end": 17,
+          "cue_start_ms": 389039,
+          "cue_end_ms": 394160,
+          "source_text": "And you know you know I after four and a half decades of of of"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5491,
+        "end_char": 5557
+      },
+      "greek_text": "που παρατηρεί αυτά τα συμπτώματα. Έπειτα από τεσσεράμισι δεκαετίες",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 389641,
+      "end_ms": 394160,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.61,
+      "rendered_text": "που παρατηρεί αυτά τα συμπτώματα.\nΈπειτα από τεσσεράμισι δεκαετίες",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A130",
+      "source_cue_ids": [
+        68,
+        69,
+        70
+      ],
+      "source_refs": [
+        {
+          "cue_id": 70,
+          "token_start": 0,
+          "token_end": 10,
+          "cue_start_ms": 394160,
+          "cue_end_ms": 401039,
+          "source_text": "of going up every blind alley possible you know I'm"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5558,
+        "end_char": 5613
+      },
+      "greek_text": "και έχοντας ακολουθήσει σχεδόν κάθε πιθανό λάθος δρόμο,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 394160,
+      "end_ms": 397600,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.99,
+      "rendered_text": "και έχοντας ακολουθήσει σχεδόν\nκάθε πιθανό λάθος δρόμο,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A131",
+      "source_cue_ids": [
+        68,
+        69,
+        70
+      ],
+      "source_refs": [
+        {
+          "cue_id": 70,
+          "token_start": 10,
+          "token_end": 20,
+          "cue_start_ms": 394160,
+          "cue_end_ms": 401039,
+          "source_text": "now descending on the bleeding obvious and we all need"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5614,
+        "end_char": 5666
+      },
+      "greek_text": "καταλήγω πλέον στα απολύτως προφανή. Και όλοι πρέπει",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 397600,
+      "end_ms": 401039,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.12,
+      "rendered_text": "καταλήγω πλέον στα απολύτως\nπροφανή. Και όλοι πρέπει",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A132",
+      "source_cue_ids": [
+        71
+      ],
+      "source_refs": [
+        {
+          "cue_id": 71,
+          "token_start": 0,
+          "token_end": 9,
+          "cue_start_ms": 401039,
+          "cue_end_ms": 407039,
+          "source_text": "to do that and that will get the majority"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5667,
+        "end_char": 5709
+      },
+      "greek_text": "να κάνουμε το ίδιο. Αυτό μπορεί να πάει τη",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 401039,
+      "end_ms": 404639,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 11.67,
+      "rendered_text": "να κάνουμε το ίδιο. Αυτό μπορεί να πάει τη",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A133",
+      "source_cue_ids": [
+        71
+      ],
+      "source_refs": [
+        {
+          "cue_id": 71,
+          "token_start": 9,
+          "token_end": 15,
+          "cue_start_ms": 401039,
+          "cue_end_ms": 407039,
+          "source_text": "of people an awful long way."
+        }
+      ],
+      "greek_range": {
+        "start_char": 5710,
+        "end_char": 5754
+      },
+      "greek_text": "μεγάλη πλειονότητα των ανθρώπων πολύ μακριά.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 404639,
+      "end_ms": 407039,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.33,
+      "rendered_text": "μεγάλη πλειονότητα των\nανθρώπων πολύ μακριά.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A134",
+      "source_cue_ids": [
+        72
+      ],
+      "source_refs": [
+        {
+          "cue_id": 72,
+          "token_start": 0,
+          "token_end": 12,
+          "cue_start_ms": 407039,
+          "cue_end_ms": 413520,
+          "source_text": "Well, I think in conversations like this, we have to be careful"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5755,
+        "end_char": 5809
+      },
+      "greek_text": "Νομίζω ότι σε συζητήσεις σαν κι αυτή πρέπει να είμαστε",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 407039,
+      "end_ms": 410574,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.28,
+      "rendered_text": "Νομίζω ότι σε συζητήσεις σαν\nκι αυτή πρέπει να είμαστε",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A135",
+      "source_cue_ids": [
+        72
+      ],
+      "source_refs": [
+        {
+          "cue_id": 72,
+          "token_start": 12,
+          "token_end": 22,
+          "cue_start_ms": 407039,
+          "cue_end_ms": 413520,
+          "source_text": "along the lines of what you're saying, not to make"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5810,
+        "end_char": 5858
+      },
+      "greek_text": "προσεκτικοί, ακριβώς όπως λέτε, ώστε να μη γίνει",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 410574,
+      "end_ms": 413520,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.29,
+      "rendered_text": "προσεκτικοί, ακριβώς όπως\nλέτε, ώστε να μη γίνει",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A136",
+      "source_cue_ids": [
+        73
+      ],
+      "source_refs": [
+        {
+          "cue_id": 73,
+          "token_start": 0,
+          "token_end": 15,
+          "cue_start_ms": 413520,
+          "cue_end_ms": 420160,
+          "source_text": "it too costly if we don't have to and not to make it too complicated"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5859,
+        "end_char": 5926
+      },
+      "greek_text": "πιο ακριβό απ’ όσο χρειάζεται και να μη γίνει υπερβολικά περίπλοκο,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 413520,
+      "end_ms": 417504,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.82,
+      "rendered_text": "πιο ακριβό απ’ όσο χρειάζεται και\nνα μη γίνει υπερβολικά περίπλοκο,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A137",
+      "source_cue_ids": [
+        73
+      ],
+      "source_refs": [
+        {
+          "cue_id": 73,
+          "token_start": 15,
+          "token_end": 25,
+          "cue_start_ms": 413520,
+          "cue_end_ms": 420160,
+          "source_text": "because people are just going to turn an eye and"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5927,
+        "end_char": 5972
+      },
+      "greek_text": "γιατί τότε οι άνθρωποι απλώς θα αποθαρρυνθούν",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 417504,
+      "end_ms": 420160,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.94,
+      "rendered_text": "γιατί τότε οι άνθρωποι\nαπλώς θα αποθαρρυνθούν",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A138",
+      "source_cue_ids": [
+        74
+      ],
+      "source_refs": [
+        {
+          "cue_id": 74,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 420160,
+          "cue_end_ms": 426080,
+          "source_text": "not get started. So, let's take it the"
+        }
+      ],
+      "greek_range": {
+        "start_char": 5973,
+        "end_char": 6019
+      },
+      "greek_text": "και δεν θα ξεκινήσουν ποτέ. Ας το δούμε λοιπόν",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 420160,
+      "end_ms": 423317,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.57,
+      "rendered_text": "και δεν θα ξεκινήσουν\nποτέ. Ας το δούμε λοιπόν",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A139",
+      "source_cue_ids": [
+        74
+      ],
+      "source_refs": [
+        {
+          "cue_id": 74,
+          "token_start": 8,
+          "token_end": 15,
+          "cue_start_ms": 420160,
+          "cue_end_ms": 426080,
+          "source_text": "other way as our final question here."
+        }
+      ],
+      "greek_range": {
+        "start_char": 6020,
+        "end_char": 6066
+      },
+      "greek_text": "από την αντίθετη πλευρά, ως τελευταία ερώτηση.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 423317,
+      "end_ms": 426080,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.65,
+      "rendered_text": "από την αντίθετη πλευρά,\nως τελευταία ερώτηση.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A140",
+      "source_cue_ids": [
+        75
+      ],
+      "source_refs": [
+        {
+          "cue_id": 75,
+          "token_start": 0,
+          "token_end": 11,
+          "cue_start_ms": 426080,
+          "cue_end_ms": 433360,
+          "source_text": "The opposite of bringing in things like methylene, blue, and creatine."
+        }
+      ],
+      "greek_range": {
+        "start_char": 6067,
+        "end_char": 6134
+      },
+      "greek_text": "Αντί να προσθέτουμε πράγματα όπως μπλε του μεθυλενίου και κρεατίνη,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 426080,
+      "end_ms": 430295,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.9,
+      "rendered_text": "Αντί να προσθέτουμε πράγματα όπως\nμπλε του μεθυλενίου και κρεατίνη,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A141",
+      "source_cue_ids": [
+        75
+      ],
+      "source_refs": [
+        {
+          "cue_id": 75,
+          "token_start": 11,
+          "token_end": 19,
+          "cue_start_ms": 426080,
+          "cue_end_ms": 433360,
+          "source_text": "What is the simplest formula for people? We've"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6135,
+        "end_char": 6185
+      },
+      "greek_text": "ποια είναι η πιο απλή φόρμουλα για κάποιον; Έχουμε",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 430295,
+      "end_ms": 433360,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.31,
+      "rendered_text": "ποια είναι η πιο απλή\nφόρμουλα για κάποιον; Έχουμε",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A142",
+      "source_cue_ids": [
+        76
+      ],
+      "source_refs": [
+        {
+          "cue_id": 76,
+          "token_start": 0,
+          "token_end": 9,
+          "cue_start_ms": 433360,
+          "cue_end_ms": 440000,
+          "source_text": "shared a lot here over the last 90 minutes."
+        }
+      ],
+      "greek_range": {
+        "start_char": 6186,
+        "end_char": 6233
+      },
+      "greek_text": "μοιραστεί πάρα πολλά εδώ τα τελευταία 90 λεπτά.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 433360,
+      "end_ms": 436076,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.3,
+      "rendered_text": "μοιραστεί πάρα πολλά εδώ\nτα τελευταία 90 λεπτά.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A143",
+      "source_cue_ids": [
+        76
+      ],
+      "source_refs": [
+        {
+          "cue_id": 76,
+          "token_start": 9,
+          "token_end": 22,
+          "cue_start_ms": 433360,
+          "cue_end_ms": 440000,
+          "source_text": "I'm sure ketogenic diet is going to be the foundation, but what is"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6234,
+        "end_char": 6303
+      },
+      "greek_text": "Φαντάζομαι ότι η κετογονική διατροφή θα είναι η βάση, αλλά ποιο είναι",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 436076,
+      "end_ms": 440000,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.58,
+      "rendered_text": "Φαντάζομαι ότι η κετογονική διατροφή\nθα είναι η βάση, αλλά ποιο είναι",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A144",
+      "source_cue_ids": [
+        77
+      ],
+      "source_refs": [
+        {
+          "cue_id": 77,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 440000,
+          "cue_end_ms": 444240,
+          "source_text": "the simplest protocol somebody can adopt today?"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6304,
+        "end_char": 6370
+      },
+      "greek_text": "το πιο απλό πρωτόκολλο που μπορεί κάποιος να ξεκινήσει από σήμερα;",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 440000,
+      "end_ms": 444240,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.57,
+      "rendered_text": "το πιο απλό πρωτόκολλο που μπορεί\nκάποιος να ξεκινήσει από σήμερα;",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A145",
+      "source_cue_ids": [
+        78
+      ],
+      "source_refs": [
+        {
+          "cue_id": 78,
+          "token_start": 0,
+          "token_end": 5,
+          "cue_start_ms": 444240,
+          "cue_end_ms": 446080,
+          "source_text": "Correct. To get that momentum."
+        }
+      ],
+      "greek_range": {
+        "start_char": 6371,
+        "end_char": 6399
+      },
+      "greek_text": "Σωστά. Για να μπει σε ρυθμό.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 444240,
+      "end_ms": 446080,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.22,
+      "rendered_text": "Σωστά. Για να μπει σε ρυθμό.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A146",
+      "source_cue_ids": [
+        79,
+        80,
+        81,
+        82,
+        83
+      ],
+      "source_refs": [
+        {
+          "cue_id": 79,
+          "token_start": 0,
+          "token_end": 13,
+          "cue_start_ms": 446080,
+          "cue_end_ms": 452639,
+          "source_text": ">> Well, ketogenic diet and then take vitamin C and iodine to sort"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6400,
+        "end_char": 6459
+      },
+      "greek_text": "Κετογονική διατροφή, βιταμίνη C και ιώδιο για τη ζύμωση στο",
+      "speaker": "guest",
+      "speaker_boundary_before": true,
+      "start_ms": 446080,
+      "end_ms": 449956,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.22,
+      "rendered_text": "Κετογονική διατροφή, βιταμίνη\nC και ιώδιο για τη ζύμωση στο",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A147",
+      "source_cue_ids": [
+        79,
+        80,
+        81,
+        82,
+        83
+      ],
+      "source_refs": [
+        {
+          "cue_id": 79,
+          "token_start": 13,
+          "token_end": 22,
+          "cue_start_ms": 446080,
+          "cue_end_ms": 452639,
+          "source_text": "out the upper fermenting gut because that is so"
+        },
+        {
+          "cue_id": 80,
+          "token_start": 0,
+          "token_end": 1,
+          "cue_start_ms": 452639,
+          "cue_end_ms": 453440,
+          "source_text": "common."
+        },
+        {
+          "cue_id": 81,
+          "token_start": 0,
+          "token_end": 4,
+          "cue_start_ms": 453440,
+          "cue_end_ms": 456880,
+          "source_text": ">> And if you've"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6460,
+        "end_char": 6517
+      },
+      "greek_text": "ανώτερο έντερο, που είναι πολύ συχνή. Αν έχεις ζύμωση στο",
+      "speaker": "guest",
+      "speaker_boundary_before": false,
+      "start_ms": 449956,
+      "end_ms": 454423,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.76,
+      "rendered_text": "ανώτερο έντερο, που είναι πολύ\nσυχνή. Αν έχεις ζύμωση στο",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A148",
+      "source_cue_ids": [
+        79,
+        80,
+        81,
+        82,
+        83
+      ],
+      "source_refs": [
+        {
+          "cue_id": 81,
+          "token_start": 4,
+          "token_end": 14,
+          "cue_start_ms": 453440,
+          "cue_end_ms": 456880,
+          "source_text": "got an upper fermenting gut, then you will malabsorb nutritional"
+        },
+        {
+          "cue_id": 82,
+          "token_start": 0,
+          "token_end": 1,
+          "cue_start_ms": 456880,
+          "cue_end_ms": 464080,
+          "source_text": "supplements."
+        }
+      ],
+      "greek_range": {
+        "start_char": 6518,
+        "end_char": 6575
+      },
+      "greek_text": "ανώτερο έντερο, δεν απορροφάς σωστά τα συμπληρώματα. Άρα:",
+      "speaker": "guest",
+      "speaker_boundary_before": false,
+      "start_ms": 454423,
+      "end_ms": 457223,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.36,
+      "rendered_text": "ανώτερο έντερο, δεν απορροφάς\nσωστά τα συμπληρώματα. Άρα:",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A149",
+      "source_cue_ids": [
+        79,
+        80,
+        81,
+        82,
+        83
+      ],
+      "source_refs": [
+        {
+          "cue_id": 82,
+          "token_start": 1,
+          "token_end": 15,
+          "cue_start_ms": 456880,
+          "cue_end_ms": 464080,
+          "source_text": "So, ketogenic diet, iodine and vitamin C to sort out the up fermenting gut."
+        }
+      ],
+      "greek_range": {
+        "start_char": 6576,
+        "end_char": 6640
+      },
+      "greek_text": "κετογονική διατροφή, ιώδιο και βιταμίνη C για το ανώτερο έντερο.",
+      "speaker": "guest",
+      "speaker_boundary_before": false,
+      "start_ms": 457223,
+      "end_ms": 462023,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 13.33,
+      "rendered_text": "κετογονική διατροφή, ιώδιο και\nβιταμίνη C για το ανώτερο έντερο.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A150",
+      "source_cue_ids": [
+        79,
+        80,
+        81,
+        82,
+        83
+      ],
+      "source_refs": [
+        {
+          "cue_id": 82,
+          "token_start": 15,
+          "token_end": 21,
+          "cue_start_ms": 456880,
+          "cue_end_ms": 464080,
+          "source_text": "Then we all need a basic"
+        },
+        {
+          "cue_id": 83,
+          "token_start": 0,
+          "token_end": 2,
+          "cue_start_ms": 464080,
+          "cue_end_ms": 468960,
+          "source_text": "package of"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6641,
+        "end_char": 6696
+      },
+      "greek_text": "Μετά όλοι χρειαζόμαστε ένα βασικό πακέτο συμπληρωμάτων:",
+      "speaker": "guest",
+      "speaker_boundary_before": false,
+      "start_ms": 462023,
+      "end_ms": 465056,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 18.13,
+      "rendered_text": "Μετά όλοι χρειαζόμαστε ένα\nβασικό πακέτο συμπληρωμάτων:",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A151",
+      "source_cue_ids": [
+        79,
+        80,
+        81,
+        82,
+        83
+      ],
+      "source_refs": [
+        {
+          "cue_id": 83,
+          "token_start": 2,
+          "token_end": 10,
+          "cue_start_ms": 464080,
+          "cue_end_ms": 468960,
+          "source_text": "nutritional supplements which a multivitamin a good multi-mineral"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6697,
+        "end_char": 6740
+      },
+      "greek_text": "μια πολυβιταμίνη και ένα καλό πολυμεταλλικό",
+      "speaker": "guest",
+      "speaker_boundary_before": false,
+      "start_ms": 465056,
+      "end_ms": 468960,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 11.01,
+      "rendered_text": "μια πολυβιταμίνη και\nένα καλό πολυμεταλλικό",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A152",
+      "source_cue_ids": [
+        84
+      ],
+      "source_refs": [
+        {
+          "cue_id": 84,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 468960,
+          "cue_end_ms": 474479,
+          "source_text": "vitamin D 10,000 IU a day vitamin"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6741,
+        "end_char": 6784
+      },
+      "greek_text": "συμπλήρωμα, βιταμίνη D 10.000 IU την ημέρα,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 468960,
+      "end_ms": 471375,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.81,
+      "rendered_text": "συμπλήρωμα, βιταμίνη\nD 10.000 IU την ημέρα,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A153",
+      "source_cue_ids": [
+        84
+      ],
+      "source_refs": [
+        {
+          "cue_id": 84,
+          "token_start": 7,
+          "token_end": 16,
+          "cue_start_ms": 468960,
+          "cue_end_ms": 474479,
+          "source_text": "C 5 grams a day iodine lugal iodine three"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6785,
+        "end_char": 6840
+      },
+      "greek_text": "βιταμίνη C 5 γραμμάρια την ημέρα και ιώδιο Lugol, τρεις",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 471375,
+      "end_ms": 474479,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.72,
+      "rendered_text": "βιταμίνη C 5 γραμμάρια την\nημέρα και ιώδιο Lugol, τρεις",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A154",
+      "source_cue_ids": [
+        85
+      ],
+      "source_refs": [
+        {
+          "cue_id": 85,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 474479,
+          "cue_end_ms": 481680,
+          "source_text": "drops which you already started on and"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6841,
+        "end_char": 6896
+      },
+      "greek_text": "σταγόνες —που εσύ έχεις ήδη ξεκινήσει— και στη συνέχεια",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 474479,
+      "end_ms": 478356,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.19,
+      "rendered_text": "σταγόνες —που εσύ έχεις ήδη\nξεκινήσει— και στη συνέχεια",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A155",
+      "source_cue_ids": [
+        85
+      ],
+      "source_refs": [
+        {
+          "cue_id": 85,
+          "token_start": 7,
+          "token_end": 13,
+          "cue_start_ms": 474479,
+          "cue_end_ms": 481680,
+          "source_text": "then timerestrict eat consume all your"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6897,
+        "end_char": 6949
+      },
+      "greek_text": "χρονικά περιορισμένη σίτιση: να καταναλώνεις όλη την",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 478356,
+      "end_ms": 481680,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.64,
+      "rendered_text": "χρονικά περιορισμένη σίτιση:\nνα καταναλώνεις όλη την",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A156",
+      "source_cue_ids": [
+        86
+      ],
+      "source_refs": [
+        {
+          "cue_id": 86,
+          "token_start": 0,
+          "token_end": 16,
+          "cue_start_ms": 481680,
+          "cue_end_ms": 487599,
+          "source_text": "food within a six-h hour window of time and if you've got the energy in parallel"
+        }
+      ],
+      "greek_range": {
+        "start_char": 6950,
+        "end_char": 7017
+      },
+      "greek_text": "τροφή σου μέσα σε ένα παράθυρο έξι ωρών. Και αν έχεις την ενέργεια,",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 481680,
+      "end_ms": 485468,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.69,
+      "rendered_text": "τροφή σου μέσα σε ένα παράθυρο έξι\nωρών. Και αν έχεις την ενέργεια,",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A157",
+      "source_cue_ids": [
+        86
+      ],
+      "source_refs": [
+        {
+          "cue_id": 86,
+          "token_start": 16,
+          "token_end": 25,
+          "cue_start_ms": 481680,
+          "cue_end_ms": 487599,
+          "source_text": "with that you know we all need to be"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7018,
+        "end_char": 7062
+      },
+      "greek_text": "παράλληλα με αυτό όλοι χρειάζεται να είμαστε",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 485468,
+      "end_ms": 487599,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.65,
+      "rendered_text": "παράλληλα με αυτό όλοι\nχρειάζεται να είμαστε",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A158",
+      "source_cue_ids": [
+        87
+      ],
+      "source_refs": [
+        {
+          "cue_id": 87,
+          "token_start": 0,
+          "token_end": 15,
+          "cue_start_ms": 487599,
+          "cue_end_ms": 494879,
+          "source_text": "strong we all need to do some exercise which benefits in so many ways PH"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7063,
+        "end_char": 7123
+      },
+      "greek_text": "δυνατοί και να κάνουμε κάποια άσκηση, η οποία ωφελεί με πάρα",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 487599,
+      "end_ms": 491967,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 13.74,
+      "rendered_text": "δυνατοί και να κάνουμε κάποια\nάσκηση, η οποία ωφελεί με πάρα",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A159",
+      "source_cue_ids": [
+        87
+      ],
+      "source_refs": [
+        {
+          "cue_id": 87,
+          "token_start": 15,
+          "token_end": 25,
+          "cue_start_ms": 487599,
+          "cue_end_ms": 494879,
+          "source_text": "and you don't have to do be a jogger. Just"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7124,
+        "end_char": 7184
+      },
+      "greek_text": "πολλούς τρόπους. Και δεν χρειάζεται να είσαι δρομέας. Αρκούν",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 491967,
+      "end_ms": 494879,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.6,
+      "rendered_text": "πολλούς τρόπους. Και δεν\nχρειάζεται να είσαι δρομέας. Αρκούν",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A160",
+      "source_cue_ids": [
+        88
+      ],
+      "source_refs": [
+        {
+          "cue_id": 88,
+          "token_start": 0,
+          "token_end": 6,
+          "cue_start_ms": 494879,
+          "cue_end_ms": 500560,
+          "source_text": "simple isometric exercises that should become"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7185,
+        "end_char": 7232
+      },
+      "greek_text": "απλές ισομετρικές ασκήσεις, οι οποίες θα πρέπει",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 494879,
+      "end_ms": 497978,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 15.17,
+      "rendered_text": "απλές ισομετρικές ασκήσεις,\nοι οποίες θα πρέπει",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A161",
+      "source_cue_ids": [
+        88
+      ],
+      "source_refs": [
+        {
+          "cue_id": 88,
+          "token_start": 6,
+          "token_end": 11,
+          "cue_start_ms": 494879,
+          "cue_end_ms": 500560,
+          "source_text": "part of our daily routine"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7233,
+        "end_char": 7278
+      },
+      "greek_text": "να γίνουν μέρος της καθημερινής μας ρουτίνας.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 497978,
+      "end_ms": 500560,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.43,
+      "rendered_text": "να γίνουν μέρος της\nκαθημερινής μας ρουτίνας.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A162",
+      "source_cue_ids": [
+        89,
+        90,
+        91,
+        92
+      ],
+      "source_refs": [
+        {
+          "cue_id": 89,
+          "token_start": 0,
+          "token_end": 12,
+          "cue_start_ms": 500560,
+          "cue_end_ms": 507440,
+          "source_text": "and that all that done really well is get going to get"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7279,
+        "end_char": 7332
+      },
+      "greek_text": "Αν γίνουν όλα σωστά, βοηθούν πολύ τους περισσότερους.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 500560,
+      "end_ms": 503862,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.05,
+      "rendered_text": "Αν γίνουν όλα σωστά, βοηθούν\nπολύ τους περισσότερους.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A163",
+      "source_cue_ids": [
+        89,
+        90,
+        91,
+        92
+      ],
+      "source_refs": [
+        {
+          "cue_id": 89,
+          "token_start": 12,
+          "token_end": 23,
+          "cue_start_ms": 500560,
+          "cue_end_ms": 507440,
+          "source_text": "the vast majority of people a long way. Keep it simple."
+        }
+      ],
+      "greek_range": {
+        "start_char": 7333,
+        "end_char": 7376
+      },
+      "greek_text": "Κρατήστε το απλό. Α, συγγνώμη, ξέχασα κάτι:",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 503862,
+      "end_ms": 506890,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.2,
+      "rendered_text": "Κρατήστε το απλό. Α,\nσυγγνώμη, ξέχασα κάτι:",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A164",
+      "source_cue_ids": [
+        89,
+        90,
+        91,
+        92
+      ],
+      "source_refs": [
+        {
+          "cue_id": 89,
+          "token_start": 23,
+          "token_end": 25,
+          "cue_start_ms": 500560,
+          "cue_end_ms": 507440,
+          "source_text": "Oh, a"
+        },
+        {
+          "cue_id": 90,
+          "token_start": 0,
+          "token_end": 9,
+          "cue_start_ms": 507440,
+          "cue_end_ms": 513680,
+          "source_text": "big pardon. And we should be doing detox regimes."
+        }
+      ],
+      "greek_range": {
+        "start_char": 7377,
+        "end_char": 7432
+      },
+      "greek_text": "χρειάζονται και προγράμματα αποτοξίνωσης. Βαρέα μέταλλα",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 506890,
+      "end_ms": 511451,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.06,
+      "rendered_text": "χρειάζονται και προγράμματα\nαποτοξίνωσης. Βαρέα μέταλλα",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A165",
+      "source_cue_ids": [
+        89,
+        90,
+        91,
+        92
+      ],
+      "source_refs": [
+        {
+          "cue_id": 90,
+          "token_start": 9,
+          "token_end": 14,
+          "cue_start_ms": 507440,
+          "cue_end_ms": 513680,
+          "source_text": "Think heavy metals and MSM"
+        },
+        {
+          "cue_id": 91,
+          "token_start": 0,
+          "token_end": 11,
+          "cue_start_ms": 513680,
+          "cue_end_ms": 519200,
+          "source_text": "for the heavy metals and then some sort of heating regime."
+        }
+      ],
+      "greek_range": {
+        "start_char": 7433,
+        "end_char": 7492
+      },
+      "greek_text": "και MSM για τα βαρέα μέταλλα, μαζί με κάποια θερμική αγωγή.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 511451,
+      "end_ms": 516210,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.4,
+      "rendered_text": "και MSM για τα βαρέα μέταλλα,\nμαζί με κάποια θερμική αγωγή.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A166",
+      "source_cue_ids": [
+        89,
+        90,
+        91,
+        92
+      ],
+      "source_refs": [
+        {
+          "cue_id": 91,
+          "token_start": 11,
+          "token_end": 23,
+          "cue_start_ms": 513680,
+          "cue_end_ms": 519200,
+          "source_text": "So if you're a runner then just going for a little jog"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7493,
+        "end_char": 7550
+      },
+      "greek_text": "Αν είσαι δρομέας, κάνε ένα ελαφρύ τρέξιμο και μετά ντους.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 516210,
+      "end_ms": 518970,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.65,
+      "rendered_text": "Αν είσαι δρομέας, κάνε ένα\nελαφρύ τρέξιμο και μετά ντους.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A167",
+      "source_cue_ids": [
+        89,
+        90,
+        91,
+        92
+      ],
+      "source_refs": [
+        {
+          "cue_id": 91,
+          "token_start": 23,
+          "token_end": 24,
+          "cue_start_ms": 513680,
+          "cue_end_ms": 519200,
+          "source_text": "and"
+        },
+        {
+          "cue_id": 92,
+          "token_start": 0,
+          "token_end": 9,
+          "cue_start_ms": 519200,
+          "cue_end_ms": 526000,
+          "source_text": "showering off afterwards. Fantastic. If you're not a runner,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7551,
+        "end_char": 7592
+      },
+      "greek_text": "Αν δεν είσαι, κάνε λουτρά με άλατα Epsom.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 518970,
+      "end_ms": 522421,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 11.88,
+      "rendered_text": "Αν δεν είσαι, κάνε λουτρά με άλατα Epsom.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A168",
+      "source_cue_ids": [
+        89,
+        90,
+        91,
+        92
+      ],
+      "source_refs": [
+        {
+          "cue_id": 92,
+          "token_start": 9,
+          "token_end": 19,
+          "cue_start_ms": 519200,
+          "cue_end_ms": 526000,
+          "source_text": "Epsom salt bars, fantastic., and we can all do that."
+        }
+      ],
+      "greek_range": {
+        "start_char": 7593,
+        "end_char": 7633
+      },
+      "greek_text": "Εξαιρετικά. Όλοι μπορούμε να το κάνουμε.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 522421,
+      "end_ms": 526000,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 11.18,
+      "rendered_text": "Εξαιρετικά. Όλοι μπορούμε να το κάνουμε.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A169",
+      "source_cue_ids": [
+        93
+      ],
+      "source_refs": [
+        {
+          "cue_id": 93,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 526000,
+          "cue_end_ms": 530880,
+          "source_text": "So, these are all things that can be"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7634,
+        "end_char": 7672
+      },
+      "greek_text": "Όλα αυτά είναι πράγματα που μπορούν να",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 526000,
+      "end_ms": 529003,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.65,
+      "rendered_text": "Όλα αυτά είναι πράγματα που μπορούν να",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A170",
+      "source_cue_ids": [
+        93
+      ],
+      "source_refs": [
+        {
+          "cue_id": 93,
+          "token_start": 8,
+          "token_end": 13,
+          "cue_start_ms": 526000,
+          "cue_end_ms": 530880,
+          "source_text": "incorporated into our everyday life."
+        }
+      ],
+      "greek_range": {
+        "start_char": 7673,
+        "end_char": 7710
+      },
+      "greek_text": "ενσωματωθούν στην καθημερινή μας ζωή.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 529003,
+      "end_ms": 530880,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 19.71,
+      "rendered_text": "ενσωματωθούν στην καθημερινή μας ζωή.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A171",
+      "source_cue_ids": [
+        94
+      ],
+      "source_refs": [
+        {
+          "cue_id": 94,
+          "token_start": 0,
+          "token_end": 12,
+          "cue_start_ms": 530880,
+          "cue_end_ms": 535600,
+          "source_text": "They are the most frictionless interventions I can think of, and all"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7711,
+        "end_char": 7778
+      },
+      "greek_text": "Είναι οι ευκολότερες παρεμβάσεις που μπορώ να σκεφτώ και είναι όλες",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 530880,
+      "end_ms": 535600,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.19,
+      "rendered_text": "Είναι οι ευκολότερες παρεμβάσεις\nπου μπορώ να σκεφτώ και είναι όλες",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A172",
+      "source_cue_ids": [
+        95
+      ],
+      "source_refs": [
+        {
+          "cue_id": 95,
+          "token_start": 0,
+          "token_end": 4,
+          "cue_start_ms": 535600,
+          "cue_end_ms": 540959,
+          "source_text": "affordable, all intrinsically safe."
+        }
+      ],
+      "greek_range": {
+        "start_char": 7779,
+        "end_char": 7820
+      },
+      "greek_text": "οικονομικά προσιτές και εγγενώς ασφαλείς.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 535600,
+      "end_ms": 537549,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 21.04,
+      "rendered_text": "οικονομικά προσιτές και εγγενώς ασφαλείς.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A173",
+      "source_cue_ids": [
+        95
+      ],
+      "source_refs": [
+        {
+          "cue_id": 95,
+          "token_start": 4,
+          "token_end": 11,
+          "cue_start_ms": 535600,
+          "cue_end_ms": 540959,
+          "source_text": "The potential for harm is effectively zero,"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7821,
+        "end_char": 7864
+      },
+      "greek_text": "Η πιθανότητα βλάβης είναι πρακτικά μηδενική",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 537549,
+      "end_ms": 540959,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 12.61,
+      "rendered_text": "Η πιθανότητα βλάβης\nείναι πρακτικά μηδενική",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A174",
+      "source_cue_ids": [
+        96
+      ],
+      "source_refs": [
+        {
+          "cue_id": 96,
+          "token_start": 0,
+          "token_end": 8,
+          "cue_start_ms": 540959,
+          "cue_end_ms": 544320,
+          "source_text": "and, just essential for us all to do."
+        }
+      ],
+      "greek_range": {
+        "start_char": 7865,
+        "end_char": 7915
+      },
+      "greek_text": "και είναι απλώς απαραίτητο να τα εφαρμόζουμε όλοι.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 540959,
+      "end_ms": 544320,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 14.88,
+      "rendered_text": "και είναι απλώς απαραίτητο\nνα τα εφαρμόζουμε όλοι.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A175",
+      "source_cue_ids": [
+        97
+      ],
+      "source_refs": [
+        {
+          "cue_id": 97,
+          "token_start": 0,
+          "token_end": 12,
+          "cue_start_ms": 544320,
+          "cue_end_ms": 549760,
+          "source_text": ">> If you enjoyed that clip, you're going to want to head"
+        }
+      ],
+      "greek_range": {
+        "start_char": 7916,
+        "end_char": 7963
+      },
+      "greek_text": "Αν σου άρεσε αυτό το απόσπασμα, πήγαινε εδώ για",
+      "speaker": "guest",
+      "speaker_boundary_before": true,
+      "start_ms": 544320,
+      "end_ms": 547040,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.28,
+      "rendered_text": "Αν σου άρεσε αυτό το\nαπόσπασμα, πήγαινε εδώ για",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A176",
+      "source_cue_ids": [
+        97
+      ],
+      "source_refs": [
+        {
+          "cue_id": 97,
+          "token_start": 12,
+          "token_end": 24,
+          "cue_start_ms": 544320,
+          "cue_end_ms": 549760,
+          "source_text": "over here and catch the full episode. I'll see you over there."
+        }
+      ],
+      "greek_range": {
+        "start_char": 7964,
+        "end_char": 8009
+      },
+      "greek_text": "να δεις ολόκληρο το επεισόδιο. Θα σε δω εκεί.",
+      "speaker": "guest",
+      "speaker_boundary_before": false,
+      "start_ms": 547040,
+      "end_ms": 549760,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 16.54,
+      "rendered_text": "να δεις ολόκληρο το\nεπεισόδιο. Θα σε δω εκεί.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A177",
+      "source_cue_ids": [
+        98,
+        99,
+        100
+      ],
+      "source_refs": [
+        {
+          "cue_id": 98,
+          "token_start": 0,
+          "token_end": 11,
+          "cue_start_ms": 549760,
+          "cue_end_ms": 554320,
+          "source_text": "For insulin to work, it's got to have some essential co-actors."
+        }
+      ],
+      "greek_range": {
+        "start_char": 8010,
+        "end_char": 8077
+      },
+      "greek_text": "Για να λειτουργήσει η ινσουλίνη, χρειάζεται ορισμένους απαραίτητους",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 549760,
+      "end_ms": 553618,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.37,
+      "rendered_text": "Για να λειτουργήσει η ινσουλίνη,\nχρειάζεται ορισμένους απαραίτητους",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A178",
+      "source_cue_ids": [
+        98,
+        99,
+        100
+      ],
+      "source_refs": [
+        {
+          "cue_id": 98,
+          "token_start": 11,
+          "token_end": 13,
+          "cue_start_ms": 549760,
+          "cue_end_ms": 554320,
+          "source_text": "Things like"
+        },
+        {
+          "cue_id": 99,
+          "token_start": 0,
+          "token_end": 7,
+          "cue_start_ms": 554320,
+          "cue_end_ms": 559200,
+          "source_text": "chromium, carnitine, vitamin B3, and vitamin B1."
+        }
+      ],
+      "greek_range": {
+        "start_char": 8078,
+        "end_char": 8145
+      },
+      "greek_text": "συμπαράγοντες, όπως χρώμιο, καρνιτίνη, βιταμίνη B3 και βιταμίνη B1.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 553618,
+      "end_ms": 557425,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 17.6,
+      "rendered_text": "συμπαράγοντες, όπως χρώμιο, καρνιτίνη,\nβιταμίνη B3 και βιταμίνη B1.",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A179",
+      "source_cue_ids": [
+        98,
+        99,
+        100
+      ],
+      "source_refs": [
+        {
+          "cue_id": 99,
+          "token_start": 7,
+          "token_end": 11,
+          "cue_start_ms": 554320,
+          "cue_end_ms": 559200,
+          "source_text": "We can have insulin"
+        },
+        {
+          "cue_id": 100,
+          "token_start": 0,
+          "token_end": 1,
+          "cue_start_ms": 559200,
+          "cue_end_ms": 565560,
+          "source_text": "resistance"
+        }
+      ],
+      "greek_range": {
+        "start_char": 8146,
+        "end_char": 8198
+      },
+      "greek_text": "Μπορεί να εμφανιστεί αντίσταση στην ινσουλίνη επειδή",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 557425,
+      "end_ms": 559907,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 20.95,
+      "rendered_text": "Μπορεί να εμφανιστεί αντίσταση\nστην ινσουλίνη επειδή",
+      "status": "pass",
+      "issues": []
+    },
+    {
+      "alignment_id": "A180",
+      "source_cue_ids": [
+        98,
+        99,
+        100
+      ],
+      "source_refs": [
+        {
+          "cue_id": 100,
+          "token_start": 1,
+          "token_end": 9,
+          "cue_start_ms": 559200,
+          "cue_end_ms": 565560,
+          "source_text": "because the insulin receptor is blocked by something."
+        }
+      ],
+      "greek_range": {
+        "start_char": 8199,
+        "end_char": 8253
+      },
+      "greek_text": "ο υποδοχέας της ινσουλίνης έχει μπλοκαριστεί από κάτι.",
+      "speaker": "continuing",
+      "speaker_boundary_before": false,
+      "start_ms": 559907,
+      "end_ms": 565560,
+      "timing_precision": "source_token_interpolated",
+      "confidence": 0.86,
+      "reading_speed_cps": 9.55,
+      "rendered_text": "ο υποδοχέας της ινσουλίνης\nέχει μπλοκαριστεί από κάτι.",
+      "status": "pass",
+      "issues": []
+    }
+  ]
+}

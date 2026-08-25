@@ -20,7 +20,7 @@ def validate_artifact(
     unaligned_ratio = unaligned / total if total else 1.0
 
     word_ids = [word.word_id for word in timeline]
-    source_coordinates = [(word.cue_id, word.cue_word_index) for word in timeline]
+    source_coordinates = [(word.cue_id, word.cue_word_index, word.cue_subword_index) for word in timeline]
     duplicate_word_ids = total - len(set(word_ids))
     duplicate_source_coordinates = total - len(set(source_coordinates))
     invalid_durations = sum(

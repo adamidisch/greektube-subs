@@ -11,6 +11,7 @@ def timeline_word(number, start, end, status="exact"):
         source_index=number - 1,
         cue_id=1,
         cue_word_index=number - 1,
+        cue_subword_index=0,
         text=f"w{number}",
         normalized=f"w{number}",
         source_punctuation="",

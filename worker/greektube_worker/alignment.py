@@ -9,6 +9,7 @@ from .models import AsrWord, SourceCue, SourceToken, TimelineWord
 
 
 TOKEN_RE = re.compile(r"[^\W_]+(?:['’][^\W_]+)?", re.UNICODE)
+WHITESPACE_TOKEN_RE = re.compile(r"\S+", re.UNICODE)
 
 
 def normalize_token(value: str) -> str:
@@ -20,26 +21,28 @@ def tokenize_source(cues: list[SourceCue]) -> list[SourceToken]:
     tokens: list[SourceToken] = []
     source_index = 0
     for cue in cues:
-        matches = list(TOKEN_RE.finditer(cue.text))
-        for cue_word_index, match in enumerate(matches):
-            next_start = matches[cue_word_index + 1].start() if cue_word_index + 1 < len(matches) else len(cue.text)
-            suffix = cue.text[match.end():next_start]
-            punctuation = "".join(char for char in suffix if not char.isspace() and not char.isalnum())
-            text = match.group(0)
-            normalized = normalize_token(text)
-            if not normalized:
-                continue
-            tokens.append(SourceToken(
-                source_index=source_index,
-                cue_id=cue.cue_id,
-                cue_word_index=cue_word_index,
-                cue_start_ms=cue.start_ms,
-                cue_end_ms=cue.end_ms,
-                text=text,
-                normalized=normalized,
-                trailing_punctuation=punctuation,
-            ))
-            source_index += 1
+        for cue_word_index, whitespace_match in enumerate(WHITESPACE_TOKEN_RE.finditer(cue.text)):
+            raw_token = whitespace_match.group(0)
+            lexical_matches = list(TOKEN_RE.finditer(raw_token))
+            for cue_subword_index, match in enumerate(lexical_matches):
+                suffix = raw_token[match.end():] if cue_subword_index == len(lexical_matches) - 1 else ""
+                punctuation = "".join(char for char in suffix if not char.isspace() and not char.isalnum())
+                text = match.group(0)
+                normalized = normalize_token(text)
+                if not normalized:
+                    continue
+                tokens.append(SourceToken(
+                    source_index=source_index,
+                    cue_id=cue.cue_id,
+                    cue_word_index=cue_word_index,
+                    cue_subword_index=cue_subword_index,
+                    cue_start_ms=cue.start_ms,
+                    cue_end_ms=cue.end_ms,
+                    text=text,
+                    normalized=normalized,
+                    trailing_punctuation=punctuation,
+                ))
+                source_index += 1
     return tokens
 
 
@@ -195,6 +198,7 @@ def build_word_timeline(cues: list[SourceCue], aligned_result: dict[str, Any]) -
             source_index=token.source_index,
             cue_id=token.cue_id,
             cue_word_index=token.cue_word_index,
+            cue_subword_index=token.cue_subword_index,
             text=token.text,
             normalized=token.normalized,
             source_punctuation=token.trailing_punctuation,

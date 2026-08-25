@@ -48,6 +48,7 @@ def build_prosody_map(timeline: list[TimelineWord]) -> list[dict[str, Any]]:
         boundaries.append({
             "after_cue_id": current.cue_id,
             "after_word_index": current.cue_word_index,
+            "after_subword_index": current.cue_subword_index,
             "after_word_id": current.word_id,
             "pause_ms": pause_ms,
             "speaker_id": following.speaker_id or current.speaker_id,
