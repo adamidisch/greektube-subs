@@ -19,6 +19,14 @@ type TimingJob = { jobId: string; status: string; stage: string; progress: numbe
 
 const YOUTUBE_PLAYING = 1;
 const YOUTUBE_ENDED = 0;
+const MAX_MEDIA_BYTES = 250 * 1024 * 1024;
+const MEDIA_TYPES: Record<string, string> = {
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  webm: "audio/webm",
+  m4a: "audio/mp4",
+  mp4: "video/mp4",
+};
 
 function clock(value: number) {
   const seconds = Math.max(0, Math.floor(value));
@@ -33,6 +41,7 @@ function recorderMimeType() {
 }
 
 function phaseLabel(phase: CapturePhase, stage: string) {
+  if (phase === "idle") return "Ανέβασε το MP3 ή το βίντεο χωρίς να περιμένεις αναπαραγωγή σε πραγματικό χρόνο.";
   if (phase === "permission") return "Επίλεξε αυτή την καρτέλα και ενεργοποίησε τον ήχο καρτέλας.";
   if (phase === "recording") return "Η καταγραφή ακολουθεί την πραγματική αναπαραγωγή στο 1×.";
   if (phase === "uploading") return "Ανεβαίνει μόνο το προσωρινό αρχείο ήχου.";
@@ -40,6 +49,15 @@ function phaseLabel(phase: CapturePhase, stage: string) {
   if (phase === "processing") return `WhisperX · ${stage || "επεξεργασία"}`;
   if (phase === "ready") return "Το WordTimeline και το ProsodyMap είναι έτοιμα.";
   return "Ο ήχος διαγράφεται μόλις ολοκληρωθεί ή αποτύχει οριστικά η εργασία.";
+}
+
+function mediaDetails(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() || "";
+  const contentType = MEDIA_TYPES[extension];
+  if (!contentType) throw new Error("Επίλεξε αρχείο MP3, WAV, M4A, MP4 ή WebM.");
+  if (file.size <= 0) throw new Error("Το αρχείο ήχου είναι κενό.");
+  if (file.size > MAX_MEDIA_BYTES) throw new Error("Το αρχείο ξεπερνά το όριο των 250 MB.");
+  return { extension, contentType };
 }
 
 export default function AudioTimingCapturePanel({
@@ -61,6 +79,7 @@ export default function AudioTimingCapturePanel({
   const [job, setJob] = useState<TimingJob | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const displayStreamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const monitorRef = useRef<number | null>(null);
   const abortedRef = useRef(false);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
@@ -122,15 +141,17 @@ export default function AudioTimingCapturePanel({
     return () => { active = false; window.clearInterval(timer); };
   }, [job?.jobId, phase]);
 
-  const queueBlob = useCallback(async (blob: Blob) => {
+  const queueMedia = useCallback(async (blob: Blob, extension: string, contentType: string) => {
     setPhase("uploading");
     setUploadProgress(0);
-    const pathname = `audio-timing-inputs/v1/${videoId}/${Date.now()}.webm`;
+    setMessage("");
+    setJob(null);
+    const pathname = `audio-timing-inputs/v1/${videoId}/${Date.now()}.${extension}`;
     const uploaded = await upload(pathname, blob, {
       access: "public",
       handleUploadUrl: "/api/audio-timing/upload",
       clientPayload: JSON.stringify({ videoId }),
-      contentType: blob.type || "audio/webm",
+      contentType,
       onUploadProgress: event => setUploadProgress(Math.round(event.percentage)),
     });
     const response = await fetch("/api/audio-timing", {
@@ -142,7 +163,7 @@ export default function AudioTimingCapturePanel({
         media: {
           url: uploaded.url,
           pathname: uploaded.pathname,
-          contentType: blob.type || uploaded.contentType || "audio/webm",
+          contentType: contentType || uploaded.contentType,
           size: blob.size,
         },
       }),
@@ -161,6 +182,21 @@ export default function AudioTimingCapturePanel({
     setJob(result.job);
     setPhase(result.job.status === "processing" ? "processing" : "queued");
   }, [videoId]);
+
+  const chooseMedia = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      const { extension, contentType } = mediaDetails(file);
+      await queueMedia(file, extension, contentType);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Δεν ανέβηκε το αρχείο ήχου.");
+      setPhase("error");
+    } finally {
+      input.value = "";
+    }
+  }, [queueMedia]);
 
   const beginCapture = useCallback(async () => {
     const player = getPlayer();
@@ -216,7 +252,7 @@ export default function AudioTimingCapturePanel({
             return;
           }
           if (blob.size < 1_024) throw new Error("Η καταγραφή ήχου είναι κενή.");
-          await queueBlob(blob);
+          await queueMedia(blob, "webm", blob.type || "audio/webm");
         }).catch(error => {
           setMessage(error instanceof Error ? error.message : "Η αποστολή του ήχου απέτυχε.");
           setPhase("error");
@@ -258,7 +294,7 @@ export default function AudioTimingCapturePanel({
       setMessage(error instanceof Error ? error.message : "Δεν ξεκίνησε η καταγραφή ήχου.");
       setPhase("error");
     }
-  }, [duration, getPlayer, playerReady, queueBlob, releaseCapture]);
+  }, [duration, getPlayer, playerReady, queueMedia, releaseCapture]);
 
   const abortCapture = useCallback(() => {
     abortedRef.current = true;
@@ -297,7 +333,7 @@ export default function AudioTimingCapturePanel({
     <div className="audio-proof-copy">
       <span className="audio-proof-kicker"><i/> V8.1 AUDIO PROOF · OWNER</span>
       <h2>Ξεκλείδωμα πραγματικού proof</h2>
-      <p>Η καταγραφή ήχου είναι διαθέσιμη μόνο στον owner.</p>
+      <p>Το ανέβασμα ή η καταγραφή ήχου είναι διαθέσιμα μόνο στον owner.</p>
     </div>
     <form onSubmit={unlock}>
       <input name="password" type="password" autoComplete="current-password" aria-label="Κωδικός owner" placeholder="Κωδικός owner"/>
@@ -322,11 +358,22 @@ export default function AudioTimingCapturePanel({
     </div>
     {message && <p className="audio-proof-message" role="alert">{message}</p>}
     <div className="audio-proof-actions">
-      {!active && phase !== "ready" && <button type="button" onClick={() => void beginCapture()} disabled={!playerReady}>Έναρξη καταγραφής</button>}
+      <input
+        ref={fileInputRef}
+        hidden
+        type="file"
+        aria-label="Επιλογή αρχείου ήχου ή βίντεο"
+        accept=".mp3,.wav,.m4a,.mp4,.webm,audio/mpeg,audio/wav,audio/mp4,audio/webm,video/mp4,video/webm"
+        onChange={event => void chooseMedia(event)}
+      />
+      {!active && phase !== "ready" && <>
+        <button type="button" onClick={() => fileInputRef.current?.click()}>Επιλογή MP3 ή βίντεο</button>
+        <button type="button" className="secondary" onClick={() => void beginCapture()} disabled={!playerReady}>Καταγραφή καρτέλας</button>
+      </>}
       {(phase === "permission" || phase === "recording") && <button type="button" className="secondary" onClick={abortCapture}>Ακύρωση</button>}
       {phase === "ready" && <><a href={`/?proof=alignment-v8-1-full&video=${videoId}`}>Άνοιγμα v8.1 proof</a><a className="secondary" href={`/api/audio-timing?video=${videoId}&download=srt`}>Λήψη SRT</a></>}
       {phase === "error" && <button type="button" className="secondary" onClick={() => { setMessage(""); setPhase("idle"); }}>Καθαρισμός</button>}
     </div>
-    {phase === "idle" && <small>Chrome ή Edge · Αυτή η καρτέλα · Κοινή χρήση ήχου καρτέλας · 1×</small>}
+    {phase === "idle" && <small>MP3, WAV, M4A, MP4 ή WebM · έως 250 MB · η καταγραφή καρτέλας παραμένει fallback</small>}
   </section>;
 }
