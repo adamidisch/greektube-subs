@@ -52,6 +52,7 @@ export default function AudioTimingCapturePanel({
   getPlayer: () => AudioTimingPlayer | null;
 }) {
   const [authorized, setAuthorized] = useState(false);
+  const [loginBusy, setLoginBusy] = useState(false);
   const [phase, setPhase] = useState<CapturePhase>("idle");
   const [message, setMessage] = useState("");
   const [elapsed, setElapsed] = useState(0);
@@ -268,7 +269,42 @@ export default function AudioTimingCapturePanel({
     setMessage("Η καταγραφή ακυρώθηκε και δεν ανέβηκε αρχείο.");
   }, [getPlayer, releaseCapture]);
 
-  if (!authorized) return null;
+  async function unlock(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (loginBusy) return;
+    const password = String(new FormData(event.currentTarget).get("password") || "");
+    if (!password) return;
+    setLoginBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin-auth", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const result = await response.json() as { authorized?: boolean; error?: string };
+      if (!response.ok || !result.authorized) throw new Error(result.error || "Ο κωδικός δεν είναι σωστός.");
+      setAuthorized(true);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Δεν ολοκληρώθηκε η σύνδεση owner.");
+    } finally {
+      setLoginBusy(false);
+    }
+  }
+
+  if (!authorized) return <section className="audio-proof-panel audio-proof-login">
+    <div className="audio-proof-copy">
+      <span className="audio-proof-kicker"><i/> V8.1 AUDIO PROOF · OWNER</span>
+      <h2>Ξεκλείδωμα πραγματικού proof</h2>
+      <p>Η καταγραφή ήχου είναι διαθέσιμη μόνο στον owner.</p>
+    </div>
+    <form onSubmit={unlock}>
+      <input name="password" type="password" autoComplete="current-password" aria-label="Κωδικός owner" placeholder="Κωδικός owner"/>
+      <button type="submit" disabled={loginBusy}>{loginBusy ? "Έλεγχος…" : "Ξεκλείδωμα"}</button>
+    </form>
+    {message && <p className="audio-proof-message" role="alert">{message}</p>}
+  </section>;
   const active = phase === "permission" || phase === "recording" || phase === "uploading" || phase === "queued" || phase === "processing";
   const progress = phase === "recording" && duration > 0
     ? Math.min(100, (elapsed / duration) * 100)

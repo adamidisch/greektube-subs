@@ -60,6 +60,23 @@
 .audio-proof-actions button:disabled { opacity: .45; cursor: not-allowed; }
 .audio-proof-panel > small { grid-column: 1 / -1; margin-top: -7px; color: rgba(229, 226, 241, .42); font-size: 10.5px; }
 .audio-proof-message { grid-column: 1 / -1; margin: -5px 0 0; color: #ffb2b6; font-size: 12px; }
+.audio-proof-login { grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); }
+.audio-proof-login form { display: flex; gap: 8px; }
+.audio-proof-login input {
+  min-width: 0;
+  min-height: 36px;
+  flex: 1;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 9px;
+  outline: none;
+  background: rgba(255, 255, 255, .055);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+.audio-proof-login input:focus { border-color: rgba(166, 144, 255, .72); box-shadow: 0 0 0 3px rgba(132, 104, 245, .13); }
+.audio-proof-login form button { min-height: 36px; padding: 0 13px; border: 0; border-radius: 9px; background: #8a70f5; color: #fff; font: inherit; font-size: 12px; font-weight: 650; }
 
 @media (max-width: 760px) {
   .audio-proof-panel { grid-template-columns: 1fr; gap: 13px; padding: 15px; }
@@ -71,4 +88,8 @@
   .audio-proof-actions button,
   .audio-proof-actions a { min-height: 44px; flex: 1; font-size: 13px; }
   .audio-proof-panel > small { margin-top: -4px; font-size: 11px; line-height: 1.45; }
+  .audio-proof-login form { display: grid; grid-template-columns: 1fr; }
+  .audio-proof-login input,
+  .audio-proof-login form button { min-height: 44px; font-size: 16px; }
+  .audio-proof-login form button { font-size: 13px; }
 }
