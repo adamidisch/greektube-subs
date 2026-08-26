@@ -1,14 +1,17 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import AudioTimingCapturePanel from "./AudioTimingCapturePanel";
 import { APP_VERSION } from "./version";
 import { canonicalSpeakerForVideo, type CanonicalSpeakerProfile } from "./speaker-catalog";
 import {activeSkipTarget,normalizeSkipRanges,SKIP_RANGES_UPDATED_EVENT,type SkipRange} from "./skip-ranges";
 import {
   ALIGNMENT_PROOF_CAPTIONS,
   ALIGNMENT_PROOF_QUERY_VALUE,
+  ALIGNMENT_V81_PROOF_QUERY_VALUE,
   ALIGNMENT_PROOF_VIDEO_ID,
   isAlignmentProofRequest,
+  isV81AlignmentProofRequest,
 } from "./alignment-proof";
 
 type Cue = { start: number; duration: number; text: string };
@@ -456,6 +459,7 @@ export default function GreekTubePlayer() {
   const lastSkipJump=useRef<{videoId:string;target:number;at:number}|null>(null);
   const lastTelemetryUpdatedAt=useRef<string|null>(null);
   const proofModeRef=useRef(false);
+  const proofVersionRef=useRef<"v8"|"v81"|null>(null);
   const selected=state.videos.find(v=>v.id===selectedId)||null;
 
   function getReadyCaptions(video:Video){
@@ -509,6 +513,7 @@ export default function GreekTubePlayer() {
   useEffect(()=>{ void (async()=>{
     if(isAlignmentProofRequest(location.search)){
       proofModeRef.current=true;
+      proofVersionRef.current=isV81AlignmentProofRequest(location.search)?"v81":"v8";
       setHydrated(true);
       return;
     }
@@ -818,8 +823,24 @@ export default function GreekTubePlayer() {
     player.current?.pauseVideo();setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);
     pendingPlayerStart.current=start??video.lastPosition;
     setSelectedId(video.id); setView("library"); setSpeakerBioOpen(false); setError(""); setLoadingDescription(video.description||"Ετοιμάζουμε την ελληνική περιγραφή του βίντεο."); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
-    history.replaceState(null,"",`/?video=${video.id}${proofMode?`&proof=${ALIGNMENT_PROOF_QUERY_VALUE}`:""}${start?`&t=${Math.floor(start)}`:""}`);
+    const proofQuery=proofVersionRef.current==="v81"?ALIGNMENT_V81_PROOF_QUERY_VALUE:ALIGNMENT_PROOF_QUERY_VALUE;
+    history.replaceState(null,"",`/?video=${video.id}${proofMode?`&proof=${proofQuery}`:""}${start?`&t=${Math.floor(start)}`:""}`);
     if(proofMode){
+      if(proofVersionRef.current==="v81"){
+        setLoading(true);setCheckingReady(false);setCaptions(null);
+        try{
+          const response=await fetch(`/api/audio-timing?video=${video.id}&include=artifact`,{cache:"no-store",credentials:"same-origin"});
+          const result=await response.json() as {artifact?:{durationMs?:number;proofReady?:boolean;proofAlignment?:{units?:Array<{start_ms:number;end_ms:number;rendered_text?:string;greek_text:string}>}};error?:string};
+          const units=result.artifact?.proofAlignment?.units||[];
+          if(!response.ok||!result.artifact?.proofReady||!units.length)throw new Error(result.error||"Το πραγματικό v8.1 proof δεν είναι ακόμη έτοιμο.");
+          const proofCaptions={...ALIGNMENT_PROOF_CAPTIONS,duration:(result.artifact.durationMs||565560)/1000,cues:units.map(unit=>({start:unit.start_ms/1000,duration:Math.max(.001,(unit.end_ms-unit.start_ms)/1000),text:unit.rendered_text||unit.greek_text}))} as Captions;
+          setProgress(100);setCaptions(proofCaptions);setLoading(false);
+          patchVideo(video.id,{duration:proofCaptions.duration,lastWatched:new Date().toISOString()});
+        }catch(problem){
+          setLoading(false);setError(problem instanceof Error?problem.message:"Το πραγματικό v8.1 proof δεν είναι ακόμη έτοιμο.");
+        }
+        return;
+      }
       const proofCaptions=ALIGNMENT_PROOF_CAPTIONS as Captions;
       setProgress(100);setCaptions(proofCaptions);setLoading(false);setCheckingReady(false);
       patchVideo(video.id,{duration:proofCaptions.duration,lastWatched:new Date().toISOString()});
@@ -1374,6 +1395,7 @@ export default function GreekTubePlayer() {
               </div>
             </div>
             <div className="video-heading player-info-card"><div><small className="video-meta-kicker"><span className="video-category-label" data-category={selected.category}>{upperGreekLabel(CATEGORY_LABELS[selected.category])}</span></small><h1 className="player-greek-title">{isGreekTitle(selected.title)?selected.title:isGreekTitle(captions.title)?captions.title:"Βίντεο με ελληνικούς υπότιτλους"}</h1>{(selected.originalTitle||captions.originalTitle||englishTitle(selected))&&<a className="player-original-title" href={sourceVideoUrl} target="_blank" rel="noreferrer" title="Άνοιγμα αρχικού βίντεο στο YouTube">{selected.originalTitle||captions.originalTitle||englishTitle(selected)} ↗</a>}<div className="video-source-row"><span>ΠΗΓΗ</span>{sourceChannelUrl?<a href={sourceChannelUrl} target="_blank" rel="noreferrer" title="Άνοιγμα καναλιού στο YouTube">{selected.channel} ↗</a>:<strong>{selected.channel}</strong>}</div><p className="mobile-video-description">{mobileSummary(selected,captions)}</p></div></div>
+            <AudioTimingCapturePanel videoId={selected.id} playerReady={playerReady} getPlayer={currentPlayer}/>
             <div className="mobile-watch-summary"><p>{selected.channel} · {CATEGORY_LABELS[selected.category]} · {selected.views||0} προβολές</p><section><span>{(speaker.name||selected.speakerName||selected.channel).slice(0,1)}</span><div><strong>{displaySpeakerName}</strong><small>{displaySpeakerRole}</small></div><button type="button" aria-label="Διαχείριση υποτίτλων" onClick={()=>setTranslationChoiceVideo(selected)}>CC</button><button type="button" aria-label="Επεξεργασία βίντεο" onClick={()=>void requestEdit(selected)}>✎</button><button type="button" aria-label="Αγαπημένο" className={selected.favorite?"active":""} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♡</button></section></div>
             <section className="moments"><div className="section-title"><h2>Αποθηκευμένες στιγμές</h2><small>{moments.length}</small></div>{moments.length===0?<p className="muted">Πάτησε M ή το κουμπί πάνω για να κρατήσεις ένα σημείο.</p>:moments.map(m=><article className="moment" key={m.id} onClick={()=>seek(m.time)}><time>{clock(m.time)}</time><div><strong>{m.note}</strong><p>{m.excerpt}</p></div><div className="moment-actions"><button onClick={e=>{e.stopPropagation();seek(m.time)}}>Αναπαραγωγή</button><button onClick={e=>{e.stopPropagation();void copyMoment(m)}}>Αντιγραφή συνδέσμου</button><button onClick={e=>{e.stopPropagation();void shareMoment(m)}}>Κοινοποίηση</button><button onClick={e=>{e.stopPropagation();setState(s=>({...s,moments:s.moments.filter(x=>x.id!==m.id)}))}}>Διαγραφή</button></div></article>)}</section>
             {guideItems.length>0&&<section className={`video-guide editorial-guide ${guideOpen?"open":""}`}><button type="button" className="guide-toggle" aria-expanded={guideOpen} onClick={()=>setGuideOpen(open=>!open)}><span><small>{selected.creatorChapters?.length?"YOUTUBE CHAPTERS":"EDITORIAL GUIDE"}</small><strong>Οδηγός βίντεο</strong></span><span className="guide-toggle-meta">{guideItems.length?`${guideItems.length} βασικά σημεία`:"Υπό επιμέλεια"}<i aria-hidden="true">⌄</i></span></button>{guideOpen&&<div className="guide-content"><p className="guide-intro">{selected.creatorChapters?.length?"Κεφάλαια που έχει ορίσει ο δημιουργός του βίντεο στο YouTube.":"Επιλεγμένα σημεία με σύντομη περίληψη και context ώστε να πηγαίνεις κατευθείαν στην ουσία."}</p>{guideItems.length?<div className="guide-list editorial-guide-list">{guideItems.map((item,index)=><button key={`${item.time}-${index}`} onClick={()=>seek(item.time)}><time>{clock(item.time)}</time><span><strong>{item.title}</strong>{item.summary&&<small>{item.summary}</small>}{item.comment&&<em><b>Σχόλιο</b>{item.comment}</em>}</span><i aria-hidden="true">▶</i></button>)}</div>:<div className="guide-empty">Ο οδηγός δεν έχει ακόμη επιμεληθεί για αυτό το βίντεο. Δεν εμφανίζουμε αυτόματα raw subtitle fragments.</div>}</div>}</section>}

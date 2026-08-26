@@ -1,6 +1,7 @@
 name: v8.1 WhisperX proof
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - preview/translation-pipeline-v8-1-youtube-asr
@@ -13,9 +14,16 @@ permissions:
 jobs:
   proof:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
+      - name: Verify isolated proof credentials
+        env:
+          AUDIO_TIMING_DATABASE_URL: ${{ secrets.V81_AUDIO_TIMING_DATABASE_URL }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          test -n "$AUDIO_TIMING_DATABASE_URL" || { echo "Missing V81_AUDIO_TIMING_DATABASE_URL"; exit 1; }
+          test -n "$HF_TOKEN" || { echo "Missing HF_TOKEN required for speaker diarization"; exit 1; }
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -29,21 +37,15 @@ jobs:
           python -m pip install --index-url https://download.pytorch.org/whl/cpu \
             torch==2.8.0+cpu torchaudio==2.8.0+cpu torchvision==0.23.0+cpu
           python -m pip install -r worker/requirements.txt
-      - name: Generate v8.1 timing proof
+      - name: Process one queued v8.1 proof
         env:
           PYTHONPATH: worker
+          AUDIO_TIMING_DATABASE_URL: ${{ secrets.V81_AUDIO_TIMING_DATABASE_URL }}
+          AUDIO_TIMING_CLEANUP_URL: https://greektube-subs-git-preview-translation-pipeline-v-c31d25-ja-dam.vercel.app/api/audio-timing/upload
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           WHISPER_MODEL: medium.en
           WHISPER_DEVICE: cpu
           WHISPER_COMPUTE_TYPE: int8
           WHISPER_BATCH_SIZE: "8"
         run: |
-          python worker/scripts/run_proof.py \
-            --source worker/fixtures/D2RjneeG_xA-source.srt \
-            --alignment worker/fixtures/D2RjneeG_xA-v8-alignment.json \
-            --output proof-v81
-      - uses: actions/upload-artifact@v4
-        with:
-          name: D2RjneeG_xA-v81-proof
-          path: proof-v81
-          if-no-files-found: error
-          retention-days: 7
+          python worker/scripts/run_queued_job.py

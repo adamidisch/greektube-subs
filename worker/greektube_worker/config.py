@@ -28,6 +28,8 @@ class Settings:
     language: str
     hf_token: str | None
     yt_dlp_cookies_file: str | None
+    cleanup_url: str | None
+    max_media_bytes: int
     min_direct_alignment_ratio: float
     max_unaligned_ratio: float
 
@@ -50,6 +52,8 @@ class Settings:
             language=os.getenv("WHISPER_LANGUAGE", "en"),
             hf_token=os.getenv("HF_TOKEN") or None,
             yt_dlp_cookies_file=os.getenv("YTDLP_COOKIES_FILE") or None,
+            cleanup_url=os.getenv("AUDIO_TIMING_CLEANUP_URL") or None,
+            max_media_bytes=_integer("MAX_MEDIA_BYTES", 250 * 1024 * 1024),
             min_direct_alignment_ratio=_floating("MIN_DIRECT_ALIGNMENT_RATIO", 0.70),
             max_unaligned_ratio=_floating("MAX_UNALIGNED_RATIO", 0.02),
         )

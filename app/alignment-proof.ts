@@ -1,9 +1,16 @@
 export const ALIGNMENT_PROOF_QUERY_VALUE = "alignment-v8-full";
+export const ALIGNMENT_V81_PROOF_QUERY_VALUE = "alignment-v8-1-full";
 export const ALIGNMENT_PROOF_VIDEO_ID = "D2RjneeG_xA";
 
 export function isAlignmentProofRequest(search: string) {
   const params = new URLSearchParams(search);
-  return params.get("proof") === ALIGNMENT_PROOF_QUERY_VALUE
+  return [ALIGNMENT_PROOF_QUERY_VALUE, ALIGNMENT_V81_PROOF_QUERY_VALUE].includes(params.get("proof") || "")
+    && params.get("video") === ALIGNMENT_PROOF_VIDEO_ID;
+}
+
+export function isV81AlignmentProofRequest(search: string) {
+  const params = new URLSearchParams(search);
+  return params.get("proof") === ALIGNMENT_V81_PROOF_QUERY_VALUE
     && params.get("video") === ALIGNMENT_PROOF_VIDEO_ID;
 }
 

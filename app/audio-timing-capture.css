@@ -1,0 +1,74 @@
+.audio-proof-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px auto;
+  gap: 18px;
+  align-items: center;
+  margin: 14px 0 0;
+  padding: 15px 16px;
+  border: 1px solid rgba(151, 132, 255, .25);
+  border-radius: 14px;
+  background: linear-gradient(125deg, rgba(37, 29, 64, .78), rgba(20, 22, 31, .92));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045);
+}
+
+.audio-proof-copy { min-width: 0; }
+.audio-proof-kicker {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin-bottom: 5px;
+  color: #b9aaff;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .11em;
+}
+.audio-proof-kicker i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8d73ff;
+  box-shadow: 0 0 12px rgba(141, 115, 255, .9);
+}
+.audio-proof-copy h2 { margin: 0; color: #fff; font-size: 14px; font-weight: 680; letter-spacing: -.015em; }
+.audio-proof-copy p { margin: 4px 0 0; color: rgba(236, 235, 246, .66); font-size: 12px; line-height: 1.45; }
+.audio-proof-status { min-width: 0; }
+.audio-proof-status > span { display: block; margin-top: 6px; color: rgba(244, 242, 251, .72); font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; }
+.audio-proof-progress { overflow: hidden; height: 4px; border-radius: 99px; background: rgba(255, 255, 255, .09); }
+.audio-proof-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #8066f2, #b7a8ff); transition: width .2s ease; }
+.audio-proof-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.audio-proof-actions button,
+.audio-proof-actions a {
+  display: inline-flex;
+  min-height: 36px;
+  padding: 0 13px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: #8a70f5;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+.audio-proof-actions button:hover,
+.audio-proof-actions a:hover { background: #9882f8; }
+.audio-proof-actions button.secondary { border-color: rgba(255, 255, 255, .13); background: rgba(255, 255, 255, .055); color: rgba(255, 255, 255, .8); }
+.audio-proof-actions a.secondary { border-color: rgba(255, 255, 255, .13); background: rgba(255, 255, 255, .055); color: rgba(255, 255, 255, .8); }
+.audio-proof-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.audio-proof-panel > small { grid-column: 1 / -1; margin-top: -7px; color: rgba(229, 226, 241, .42); font-size: 10.5px; }
+.audio-proof-message { grid-column: 1 / -1; margin: -5px 0 0; color: #ffb2b6; font-size: 12px; }
+
+@media (max-width: 760px) {
+  .audio-proof-panel { grid-template-columns: 1fr; gap: 13px; padding: 15px; }
+  .audio-proof-copy h2 { font-size: 15px; }
+  .audio-proof-copy p,
+  .audio-proof-message { font-size: 13px; }
+  .audio-proof-status > span { font-size: 12px; }
+  .audio-proof-actions { justify-content: stretch; }
+  .audio-proof-actions button,
+  .audio-proof-actions a { min-height: 44px; flex: 1; font-size: 13px; }
+  .audio-proof-panel > small { margin-top: -4px; font-size: 11px; line-height: 1.45; }
+}

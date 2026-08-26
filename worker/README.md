@@ -1,6 +1,6 @@
 # GreekTube Subs v8.1 audio timing worker
 
-This worker is deliberately separate from Vercel. It downloads temporary YouTube audio, converts it to 16 kHz mono WAV, runs WhisperX word alignment and optionally diarization, maps the authoritative English source words onto the audio anchors and persists only a versioned `WordTimeline` plus `ProsodyMap` in Neon.
+This worker is deliberately separate from Vercel. Its preferred input is a temporary owner-authorized browser capture uploaded directly to Vercel Blob. It converts that media to 16 kHz mono WAV, runs WhisperX word alignment and optionally diarization, maps the authoritative English source words onto the audio anchors and persists a versioned `WordTimeline`, `ProsodyMap` and gated proof output in Neon. YouTube download remains only as a backwards-compatible fallback.
 
 Audio is stored only inside a `TemporaryDirectory` and is deleted after each job, including failures.
 
@@ -30,18 +30,18 @@ docker build -t greektube-audio-timing-v81 .
 docker run --env-file .env -p 8080:8080 greektube-audio-timing-v81
 ```
 
-Required environment variable: `AUDIO_TIMING_DATABASE_URL`. Use a Neon connection string with SSL. `HF_TOKEN` enables speaker diarization. `YTDLP_COOKIES_FILE` is an optional escape hatch for YouTube bot challenges.
+Required environment variable: `AUDIO_TIMING_DATABASE_URL`. Use a Neon connection string with SSL. `AUDIO_TIMING_CLEANUP_URL` must point to the isolated preview endpoint `/api/audio-timing/upload` so uploaded media is deleted after success or terminal failure. `HF_TOKEN` enables speaker diarization. `YTDLP_COOKIES_FILE` is an optional legacy escape hatch.
 
 Health endpoint: `GET /` on `PORT` (default `8080`).
 
 ## Job flow
 
-1. The admin-only Vercel route queues `video_id + source_hash + source_cues`.
-2. One worker claims the job with `FOR UPDATE SKIP LOCKED`.
-3. Lease heartbeats make restarts and retries safe.
-4. `yt-dlp` downloads audio into a temporary directory.
-5. FFmpeg creates a 16 kHz mono WAV.
+1. The admin captures current-tab audio and uploads it through a short-lived scoped Blob token.
+2. The admin-only Vercel route queues `video_id + source_hash + source_cues + temporary media`.
+3. One worker claims the job with `FOR UPDATE SKIP LOCKED`.
+4. Lease heartbeats make restarts and retries safe.
+5. FFmpeg creates a 16 kHz mono WAV inside a temporary directory.
 6. WhisperX generates audio word anchors and optional speaker IDs.
 7. The source transcript is aligned to those anchors.
-8. Validation, `WordTimeline` and `ProsodyMap` are committed atomically.
-9. Temporary audio is deleted.
+8. Validation, `WordTimeline`, `ProsodyMap` and the CPS-gated proof are committed atomically.
+9. The Blob object and local temporary audio are deleted.

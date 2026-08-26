@@ -4,10 +4,12 @@ import json
 import logging
 import signal
 import threading
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
+from urllib.request import Request, urlopen
 
 from . import __version__
 from .alignment import build_word_timeline
@@ -15,6 +17,7 @@ from .config import Settings
 from .engine import WhisperXEngine
 from .models import SourceCue, source_cues_hash
 from .prosody import build_prosody_map
+from .proof import render_proof, srt_text
 from .repository import TimingJob, TimingRepository
 from .validation import validate_artifact
 
@@ -86,15 +89,71 @@ def _validated_source_cues(job: TimingJob) -> list[SourceCue]:
     return cues
 
 
-def process_job(repository: TimingRepository, engine: WhisperXEngine, settings: Settings, job: TimingJob):
+def _cleanup_uploaded_media(job: TimingJob, settings: Settings) -> None:
+    if job.input_kind != "uploaded_media":
+        return
+    if not settings.cleanup_url or not job.media_cleanup_token:
+        LOGGER.error("Temporary media cleanup is not configured for job %s", job.job_id)
+        return
+    payload = json.dumps({"jobId": job.job_id, "cleanupToken": job.media_cleanup_token}).encode("utf-8")
+    request = Request(
+        settings.cleanup_url,
+        data=payload,
+        method="DELETE",
+        headers={"Content-Type": "application/json", "User-Agent": "GreekTube-Audio-Timing-Worker/1"},
+    )
+    try:
+        with urlopen(request, timeout=30) as response:
+            if response.status < 200 or response.status >= 300:
+                raise RuntimeError(f"Cleanup endpoint returned HTTP {response.status}")
+        LOGGER.info("Deleted temporary media for job %s", job.job_id)
+    except Exception:
+        LOGGER.exception("Temporary media cleanup failed for job %s", job.job_id)
+
+
+def _format_srt_time(value: int) -> str:
+    value = max(0, round(value))
+    hours, remainder = divmod(value, 3_600_000)
+    minutes, remainder = divmod(remainder, 60_000)
+    seconds, millis = divmod(remainder, 1_000)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d},{millis:03d}"
+
+
+def _proof_payload(job: TimingJob, timeline: list[dict[str, Any]], prosody_map: list[dict[str, Any]], duration_ms: int, validation_ok: bool):
+    if job.video_id != "D2RjneeG_xA":
+        return None, None, None
+    fixture = Path(__file__).resolve().parents[1] / "fixtures" / "D2RjneeG_xA-v8-alignment.json"
+    alignment = json.loads(fixture.read_text(encoding="utf-8"))
+    proof_alignment, proof_audit = render_proof(alignment, timeline, prosody_map, duration_ms)
+    proof_audit["timing_validation_ok"] = validation_ok
+    proof_audit["final_output_allowed"] = bool(proof_audit["final_output_allowed"] and validation_ok)
+    proof_srt = srt_text(proof_alignment["units"], _format_srt_time) if proof_audit["final_output_allowed"] else None
+    return proof_alignment, proof_srt, proof_audit
+
+
+def process_job(
+    repository: TimingRepository,
+    engine: WhisperXEngine,
+    settings: Settings,
+    job: TimingJob,
+    single_attempt: bool = False,
+):
     heartbeat = Heartbeat(repository, job, settings.heartbeat_seconds)
     heartbeat.start()
     HEALTH.update({"state": "processing", "job_id": job.job_id, "video_id": job.video_id})
     try:
         cues = _validated_source_cues(job)
         with TemporaryDirectory(prefix=f"gts-{job.video_id}-") as temporary:
-            heartbeat.update("download_audio", 8)
-            audio_path, duration_ms = engine.download_audio(job.video_id, Path(temporary))
+            if job.input_kind == "uploaded_media":
+                if not job.media_url or not job.media_size_bytes or not job.media_expires_at:
+                    raise ValueError("Uploaded media metadata is incomplete")
+                if job.media_expires_at <= datetime.now(timezone.utc):
+                    raise ValueError("Uploaded media has expired")
+                heartbeat.update("download_uploaded_media", 8)
+                audio_path, duration_ms = engine.download_uploaded_media(job.media_url, job.media_size_bytes, Path(temporary))
+            else:
+                heartbeat.update("download_audio", 8)
+                audio_path, duration_ms = engine.download_audio(job.video_id, Path(temporary))
             heartbeat.update("whisperx_transcribe", 30)
             aligned_result = engine.transcribe_and_align(audio_path)
             heartbeat.update("source_word_alignment", 78)
@@ -112,6 +171,14 @@ def process_job(repository: TimingRepository, engine: WhisperXEngine, settings: 
             )
             validation["asr_word_count"] = len(asr_words)
             validation["source_cue_count"] = len(cues)
+            word_timeline = [word.to_dict() for word in timeline]
+            proof_alignment, proof_srt, proof_audit = _proof_payload(
+                job,
+                word_timeline,
+                prosody_map,
+                duration_ms,
+                bool(validation["ok"]),
+            )
             artifact = {
                 "timing_version": 1,
                 "engine": engine.engine_name,
@@ -120,19 +187,33 @@ def process_job(repository: TimingRepository, engine: WhisperXEngine, settings: 
                 "language": str(aligned_result.get("language") or settings.language),
                 "duration_ms": duration_ms,
                 "word_count": len(timeline),
-                "word_timeline": [word.to_dict() for word in timeline],
+                "word_timeline": word_timeline,
                 "prosody_map": prosody_map,
                 "validation": validation,
+                "proof_alignment": proof_alignment,
+                "proof_srt": proof_srt,
+                "proof_audit": proof_audit,
             }
             heartbeat.update("commit_artifact", 96)
             repository.complete(job, artifact, __version__)
-        HEALTH.update({"ok": True, "state": "idle", "last_job_id": job.job_id, "validation_ok": validation["ok"]})
+            _cleanup_uploaded_media(job, settings)
+        HEALTH.update({
+            "ok": True,
+            "state": "idle",
+            "last_job_id": job.job_id,
+            "validation_ok": validation["ok"],
+            "proof_ready": bool(proof_audit and proof_audit.get("final_output_allowed")),
+        })
         LOGGER.info("Completed job %s with validation_ok=%s", job.job_id, validation["ok"])
+        return True
     except Exception as error:
-        permanent = isinstance(error, ValueError)
-        repository.fail(job, error, permanent=permanent)
+        permanent = single_attempt or isinstance(error, ValueError)
+        terminal = repository.fail(job, error, permanent=permanent)
+        if terminal:
+            _cleanup_uploaded_media(job, settings)
         HEALTH.update({"ok": True, "state": "idle", "last_error": str(error)[:300]})
         LOGGER.exception("Job %s failed", job.job_id)
+        return False
     finally:
         heartbeat.close()
         HEALTH.pop("job_id", None)

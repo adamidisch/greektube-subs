@@ -3,6 +3,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 from .config import Settings
 
@@ -38,13 +40,54 @@ class WhisperXEngine:
         if not candidates:
             raise RuntimeError("yt-dlp did not produce an audio file")
         source_path = max(candidates, key=lambda path: path.stat().st_size)
+        wav_path, converted_duration_ms = self.prepare_media(source_path, temp_dir)
+        duration_ms = max(0, round(float(info.get("duration") or 0) * 1000))
+        return wav_path, duration_ms or converted_duration_ms
+
+    def prepare_media(self, source_path: Path, temp_dir: Path) -> tuple[Path, int]:
+        if not source_path.is_file() or source_path.stat().st_size < 1:
+            raise ValueError("Uploaded media file is empty or missing")
         wav_path = temp_dir / "audio-16khz-mono.wav"
         subprocess.run(
             ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", str(source_path), "-vn", "-ac", "1", "-ar", "16000", str(wav_path)],
             check=True,
         )
-        duration_ms = max(0, round(float(info.get("duration") or 0) * 1000))
+        probe = subprocess.run(
+            [
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1", str(wav_path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        duration_ms = max(0, round(float(probe.stdout.strip() or 0) * 1000))
         return wav_path, duration_ms
+
+    def download_uploaded_media(self, url: str, declared_size: int, temp_dir: Path) -> tuple[Path, int]:
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or not (parsed.hostname or "").endswith(".blob.vercel-storage.com"):
+            raise ValueError("Uploaded media URL is not an allowed Vercel Blob URL")
+        if declared_size < 1 or declared_size > self.settings.max_media_bytes:
+            raise ValueError("Uploaded media size is outside the allowed range")
+        request = Request(url, headers={"User-Agent": "GreekTube-Audio-Timing-Worker/1"})
+        source_path = temp_dir / "uploaded-media"
+        downloaded = 0
+        with urlopen(request, timeout=60) as response, source_path.open("wb") as output:
+            content_length = response.headers.get("Content-Length")
+            if content_length and int(content_length) > self.settings.max_media_bytes:
+                raise ValueError("Uploaded media exceeds the worker size limit")
+            while True:
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                downloaded += len(chunk)
+                if downloaded > self.settings.max_media_bytes:
+                    raise ValueError("Uploaded media exceeds the worker size limit")
+                output.write(chunk)
+        if downloaded != declared_size:
+            raise ValueError(f"Uploaded media size mismatch: expected {declared_size}, received {downloaded}")
+        return self.prepare_media(source_path, temp_dir)
 
     def _load_model(self):
         if self._model is None:

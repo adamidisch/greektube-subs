@@ -13,6 +13,7 @@ from greektube_worker.config import Settings
 from greektube_worker.engine import WhisperXEngine
 from greektube_worker.models import SourceCue
 from greektube_worker.prosody import build_prosody_map
+from greektube_worker.proof import render_proof
 from greektube_worker.validation import validate_artifact
 
 
@@ -71,6 +72,8 @@ def settings_from_environment() -> Settings:
         language="en",
         hf_token=os.getenv("HF_TOKEN") or None,
         yt_dlp_cookies_file=os.getenv("YTDLP_COOKIES_FILE") or None,
+        cleanup_url=None,
+        max_media_bytes=250 * 1024 * 1024,
         min_direct_alignment_ratio=0.70,
         max_unaligned_ratio=0.02,
     )
@@ -163,6 +166,7 @@ def write_srt(path: Path, units: list[dict]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--video-id", default="D2RjneeG_xA")
+    parser.add_argument("--media", type=Path)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--alignment", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -174,7 +178,10 @@ def main() -> None:
     settings = settings_from_environment()
     engine = WhisperXEngine(settings)
     with TemporaryDirectory(prefix="gts-proof-") as temporary:
-        audio_path, duration_ms = engine.download_audio(args.video_id, Path(temporary))
+        if args.media:
+            audio_path, duration_ms = engine.prepare_media(args.media.resolve(), Path(temporary))
+        else:
+            audio_path, duration_ms = engine.download_audio(args.video_id, Path(temporary))
         aligned_result = engine.transcribe_and_align(audio_path)
 
     timeline_words, asr_words = build_word_timeline(cues, aligned_result)
@@ -185,7 +192,8 @@ def main() -> None:
     validation = validate_artifact(timeline_words, prosody, duration_ms)
     validation["asr_word_count"] = len(asr_words)
     validation["source_cue_count"] = len(cues)
-    retimed = retime_units(alignment["units"], timeline, duration_ms)
+    retimed_alignment, proof_audit = render_proof(alignment, timeline, prosody, duration_ms)
+    retimed = retimed_alignment["units"]
 
     timing_artifact = {
         "video_id": args.video_id,
@@ -200,22 +208,24 @@ def main() -> None:
         "prosody_map": prosody,
         "validation": validation,
     }
-    retimed_alignment = {**alignment, "timing_source": "whisperx_audio", "units": retimed}
     audit = {
         "video_id": args.video_id,
         "timing_validation": validation,
-        "unit_count": len(retimed),
-        "pass_count": sum(unit["status"] == "pass" for unit in retimed),
-        "review_count": sum(unit["status"] != "pass" for unit in retimed),
-        "hard_cps_failures": [unit["alignment_id"] for unit in retimed if "HARD_CPS_EXCEEDED" in unit["issues"]],
-        "target_cps_warnings": [unit["alignment_id"] for unit in retimed if "TARGET_CPS_EXCEEDED" in unit["issues"]],
-        "fallback_timing_units": [unit["alignment_id"] for unit in retimed if unit["timing_precision"] != "whisperx_source_word_anchors"],
+        **proof_audit,
     }
+    audit["final_output_allowed"] = bool(audit["final_output_allowed"] and validation["ok"])
     (args.output / "word-timeline.json").write_text(json.dumps(timing_artifact, ensure_ascii=False, indent=2), encoding="utf-8")
     (args.output / "v81-alignment.json").write_text(json.dumps(retimed_alignment, ensure_ascii=False, indent=2), encoding="utf-8")
     (args.output / "v81-audit.json").write_text(json.dumps(audit, ensure_ascii=False, indent=2), encoding="utf-8")
-    write_srt(args.output / "v81-output.srt", retimed)
+    write_srt(args.output / "v81-candidate.srt", retimed)
+    final_path = args.output / "v81-output.srt"
+    if audit["final_output_allowed"]:
+        write_srt(final_path, retimed)
+    elif final_path.exists():
+        final_path.unlink()
     print(json.dumps(audit, ensure_ascii=False))
+    if not audit["final_output_allowed"]:
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

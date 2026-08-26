@@ -16,6 +16,7 @@ RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements.txt
 
 COPY greektube_worker ./greektube_worker
+COPY fixtures ./fixtures
 
 ENV PORT=8080 \
     WHISPER_DEVICE=cpu \
