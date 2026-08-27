@@ -166,8 +166,14 @@ def _fill_local_fallbacks(timeline: list[TimelineWord], tokens: list[SourceToken
             index += 1
         group_end = index
         token = tokens[group_start]
-        previous = timeline[group_start - 1] if group_start > 0 and timeline[group_start - 1].end_ms is not None else None
-        following = timeline[group_end] if group_end < len(timeline) and timeline[group_end].start_ms is not None else None
+        previous = next(
+            (word for word in reversed(timeline[:group_start]) if word.end_ms is not None),
+            None,
+        )
+        following = next(
+            (word for word in timeline[group_end:] if word.start_ms is not None),
+            None,
+        )
         lower = max(token.cue_start_ms, previous.end_ms if previous and previous.end_ms is not None else token.cue_start_ms)
         upper = min(token.cue_end_ms, following.start_ms if following and following.start_ms is not None else token.cue_end_ms)
         count = group_end - group_start

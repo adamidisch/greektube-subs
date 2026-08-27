@@ -13,12 +13,14 @@ COPY requirements.txt ./
 RUN python -m pip install --upgrade pip \
     && python -m pip install --index-url https://download.pytorch.org/whl/cpu \
       torch==2.8.0+cpu torchaudio==2.8.0+cpu torchvision==0.23.0+cpu \
-    && python -m pip install -r requirements.txt
+    && python -m pip install -r requirements.txt \
+    && python -m nltk.downloader -d /usr/local/share/nltk_data punkt_tab
 
 COPY greektube_worker ./greektube_worker
 COPY fixtures ./fixtures
 
 ENV PORT=8080 \
+    NLTK_DATA=/usr/local/share/nltk_data \
     WHISPER_DEVICE=cpu \
     WHISPER_COMPUTE_TYPE=int8 \
     WHISPER_MODEL=large-v3 \

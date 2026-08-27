@@ -1,6 +1,6 @@
 import unittest
 
-from greektube_worker.proof import apply_prosody_punctuation, render_proof, retime_units
+from greektube_worker.proof import apply_prosody_punctuation, merge_short_units, render_proof, retime_units
 
 
 class ProofRenderingTests(unittest.TestCase):
@@ -68,6 +68,77 @@ class ProofRenderingTests(unittest.TestCase):
         alignment, audit = render_proof({"units": units}, timeline, [], 500)
         self.assertIn("HARD_CPS_EXCEEDED", alignment["units"][0]["issues"])
         self.assertFalse(audit["final_output_allowed"])
+
+    def test_sentence_rebalancing_repairs_bad_internal_time_allocation(self):
+        units = [
+            {
+                "alignment_id": "A001",
+                "greek_text": " ".join(["λέξη"] * 12),
+                "source_refs": [{"cue_id": 1, "token_start": 0, "token_end": 1}],
+                "speaker": "guest",
+                "start_ms": 0,
+                "end_ms": 2400,
+            },
+            {
+                "alignment_id": "A002",
+                "greek_text": "μικρό τέλος.",
+                "source_refs": [{"cue_id": 1, "token_start": 1, "token_end": 2}],
+                "speaker": "guest",
+                "start_ms": 2520,
+                "end_ms": 5000,
+            },
+        ]
+        timeline = [
+            {"word_id": "w1", "source_index": 0, "cue_id": 1, "cue_word_index": 0, "start_ms": 80, "end_ms": 2280, "confidence": 1.0, "speaker_id": "S1"},
+            {"word_id": "w2", "source_index": 1, "cue_id": 1, "cue_word_index": 1, "start_ms": 2520, "end_ms": 4880, "confidence": 1.0, "speaker_id": "S1"},
+        ]
+
+        alignment, audit = render_proof({"units": units}, timeline, [], 5000)
+
+        repaired = alignment["units"]
+        self.assertNotIn("HARD_CPS_EXCEEDED", repaired[0]["issues"])
+        self.assertGreaterEqual(repaired[1]["start_ms"] - repaired[0]["end_ms"], 120)
+        self.assertEqual(repaired[0]["start_ms"], 0)
+        self.assertEqual(repaired[-1]["end_ms"], 5000)
+        self.assertEqual(audit["rebalanced_sentence_groups"], 0)
+        self.assertEqual(audit["text_rebalanced_groups"], 1)
+        self.assertTrue(any(unit.get("text_rebalanced") for unit in repaired))
+
+    def test_short_unit_can_merge_with_same_speaker_neighbor(self):
+        units = [
+            {
+                "alignment_id": "A001",
+                "greek_text": "πολύ μικρό",
+                "punctuated_text": "πολύ μικρό",
+                "source_refs": [{"cue_id": 1, "token_start": 0, "token_end": 1}],
+                "speaker": "guest",
+                "start_ms": 0,
+                "end_ms": 700,
+                "audio_anchor_end_ms": 650,
+                "source_word_count": 1,
+                "audio_word_count": 1,
+                "audio_speaker_ids": ["S1"],
+            },
+            {
+                "alignment_id": "A002",
+                "greek_text": "και η συνέχεια.",
+                "punctuated_text": "και η συνέχεια.",
+                "source_refs": [{"cue_id": 1, "token_start": 1, "token_end": 3}],
+                "speaker": "guest",
+                "start_ms": 820,
+                "end_ms": 2600,
+                "audio_anchor_end_ms": 2500,
+                "source_word_count": 2,
+                "audio_word_count": 2,
+                "audio_speaker_ids": ["S1"],
+            },
+        ]
+
+        merged = merge_short_units(units)
+
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["merged_alignment_ids"], ["A001", "A002"])
+        self.assertEqual(merged[0]["source_word_count"], 3)
 
 
 if __name__ == "__main__":

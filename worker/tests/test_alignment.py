@@ -1,7 +1,7 @@
 import unittest
 
-from greektube_worker.alignment import build_word_timeline, normalize_token, tokenize_source
-from greektube_worker.models import SourceCue, source_cues_hash
+from greektube_worker.alignment import _fill_local_fallbacks, build_word_timeline, normalize_token, tokenize_source
+from greektube_worker.models import SourceCue, TimelineWord, source_cues_hash
 
 
 class AlignmentTests(unittest.TestCase):
@@ -57,6 +57,26 @@ class AlignmentTests(unittest.TestCase):
         self.assertGreaterEqual(fallback.start_ms, timeline[0].end_ms)
         self.assertLessEqual(fallback.end_ms, timeline[2].start_ms)
         self.assertEqual(fallback.text, "ketogenic")
+
+    def test_fallback_uses_nearest_timed_anchor_across_unaligned_cue_tail(self):
+        cues = [
+            SourceCue(69, 1000, 2000, "end of"),
+            SourceCue(70, 2000, 3000, "of this"),
+        ]
+        tokens = tokenize_source(cues)
+        timeline = [
+            TimelineWord("W000001", 0, 69, 0, 0, "end", "end", "", 1100, 1300, 0.99, None, "exact", 0),
+            TimelineWord("W000002", 1, 69, 1, 0, "of", "of", "", None, None, 0.0, None, "unaligned", None),
+            TimelineWord("W000003", 2, 70, 0, 0, "of", "of", "", None, None, 0.0, None, "unaligned", None),
+            TimelineWord("W000004", 3, 70, 1, 0, "this", "this", "", 2600, 2800, 0.99, None, "exact", 1),
+        ]
+
+        _fill_local_fallbacks(timeline, tokens)
+
+        self.assertEqual(timeline[1].alignment_status, "local_fallback")
+        self.assertEqual(timeline[2].alignment_status, "local_fallback")
+        self.assertGreaterEqual(timeline[2].start_ms, timeline[1].end_ms)
+        self.assertLessEqual(timeline[2].end_ms, timeline[3].start_ms)
 
 
 if __name__ == "__main__":
