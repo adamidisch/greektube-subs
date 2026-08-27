@@ -362,7 +362,7 @@ export default function NavigationAwareGreekTubePlayer() {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.code !== "ArrowLeft" && event.code !== "ArrowRight") return;
       if (blocksFullscreenShortcutBridge(event.target)) return;
-      const frame = fullscreenVideoFrame();
+      const frame = fullscreenVideoFrame() || document.querySelector<HTMLElement>(".video-frame");
       if (!frame) return;
 
       event.preventDefault();
