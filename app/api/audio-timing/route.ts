@@ -12,7 +12,7 @@ import {
   type AudioMediaInput,
   type AudioSourceCue,
 } from "./store";
-import { ALIGNMENT_PROOF_VIDEO_ID, ALIGNMENT_V81_PROOF_QUERY_VALUE } from "@/app/alignment-proof";
+import { ALIGNMENT_PROOF_VIDEO_ID } from "@/app/alignment-proof";
 import { lockedProofArtifact } from "./locked-proof";
 
 export const runtime = "nodejs";
@@ -107,14 +107,12 @@ export async function GET(request: NextRequest) {
   const videoId = request.nextUrl.searchParams.get("video") || undefined;
   const includePayload = request.nextUrl.searchParams.get("include") === "artifact";
   const downloadSrt = request.nextUrl.searchParams.get("download") === "srt";
-  const proof = request.nextUrl.searchParams.get("proof");
   if (!jobId && (!videoId || !validVideoId(videoId))) {
     return NextResponse.json({ error: "Provide a valid job or video id" }, { status: 400 });
   }
   try {
     const isPublicLockedProof = !jobId
       && videoId === ALIGNMENT_PROOF_VIDEO_ID
-      && proof === ALIGNMENT_V81_PROOF_QUERY_VALUE
       && (includePayload || downloadSrt);
     if (isPublicLockedProof) {
       const artifact = await lockedProofArtifact(videoId);
