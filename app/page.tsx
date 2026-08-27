@@ -19,6 +19,7 @@ import GtsFooter from "./GtsFooter";
 import {
   ALIGNMENT_PROOF_QUERY_VALUE,
   ALIGNMENT_PROOF_VIDEO_ID,
+  ALIGNMENT_V81_PROOF_QUERY_VALUE,
 } from "./alignment-proof";
 
 const SITE_URL = "https://greektubesubs.com";
@@ -55,10 +56,12 @@ export async function generateMetadata({
   const videoId = String(rawVideo || "").trim();
   const rawProof = Array.isArray(params.proof) ? params.proof[0] : params.proof;
 
-  if (videoId === ALIGNMENT_PROOF_VIDEO_ID && rawProof === ALIGNMENT_PROOF_QUERY_VALUE) {
+  if (videoId === ALIGNMENT_PROOF_VIDEO_ID
+    && [ALIGNMENT_PROOF_QUERY_VALUE, ALIGNMENT_V81_PROOF_QUERY_VALUE].includes(String(rawProof || ""))) {
+    const proofVersion = rawProof === ALIGNMENT_V81_PROOF_QUERY_VALUE ? "v8.1" : "v8";
     return {
-      title: "Δοκιμή νέου συγχρονισμού · GreekTube Subs",
-      description: "Πραγματικό video με το νέο semantic alignment των ελληνικών υποτίτλων.",
+      title: `Δοκιμή συγχρονισμού ${proofVersion} · GreekTube Subs`,
+      description: `Πραγματικό video με το semantic alignment ${proofVersion} των ελληνικών υποτίτλων.`,
       robots: { index: false, follow: false },
     };
   }
@@ -119,7 +122,7 @@ export default async function Home({
   const rawVideo = Array.isArray(params.video) ? params.video[0] : params.video;
   const rawProof = Array.isArray(params.proof) ? params.proof[0] : params.proof;
   const proofMode = rawVideo === ALIGNMENT_PROOF_VIDEO_ID
-    && rawProof === ALIGNMENT_PROOF_QUERY_VALUE;
+    && [ALIGNMENT_PROOF_QUERY_VALUE, ALIGNMENT_V81_PROOF_QUERY_VALUE].includes(String(rawProof || ""));
 
   if (proofMode) {
     return (

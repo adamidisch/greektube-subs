@@ -12,6 +12,8 @@ import {
   type AudioMediaInput,
   type AudioSourceCue,
 } from "./store";
+import { ALIGNMENT_PROOF_VIDEO_ID, ALIGNMENT_V81_PROOF_QUERY_VALUE } from "@/app/alignment-proof";
+import { lockedProofArtifact } from "./locked-proof";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,15 +103,36 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!await verifyAdminSession(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const jobId = request.nextUrl.searchParams.get("job") || undefined;
   const videoId = request.nextUrl.searchParams.get("video") || undefined;
   const includePayload = request.nextUrl.searchParams.get("include") === "artifact";
   const downloadSrt = request.nextUrl.searchParams.get("download") === "srt";
+  const proof = request.nextUrl.searchParams.get("proof");
   if (!jobId && (!videoId || !validVideoId(videoId))) {
     return NextResponse.json({ error: "Provide a valid job or video id" }, { status: 400 });
   }
   try {
+    const isPublicLockedProof = !jobId
+      && videoId === ALIGNMENT_PROOF_VIDEO_ID
+      && proof === ALIGNMENT_V81_PROOF_QUERY_VALUE
+      && (includePayload || downloadSrt);
+    if (isPublicLockedProof) {
+      const artifact = await lockedProofArtifact(videoId);
+      if (!artifact) return NextResponse.json({ error: "Locked proof not found" }, { status: 404 });
+      if (downloadSrt) {
+        return new NextResponse(artifact.proofSrt, {
+          headers: {
+            "Content-Type": "application/x-subrip; charset=utf-8",
+            "Content-Disposition": `attachment; filename="${videoId}-v8.1.srt"`,
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+      return NextResponse.json({ job: null, artifact }, { headers: { "Cache-Control": "no-store" } });
+    }
+    if (!await verifyAdminSession(request)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const state = await getAudioTimingState({ jobId, videoId, includePayload: includePayload || downloadSrt });
     if (downloadSrt) {
       const proofSrt = (state.artifact as { proofSrt?: unknown } | null)?.proofSrt;
