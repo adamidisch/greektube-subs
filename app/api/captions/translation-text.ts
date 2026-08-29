@@ -5,11 +5,10 @@ export function hasTranslatableWordTokens(tokens: string[], protectedTokens: str
 
 export function stripEnglishSpeechFillers(text: string) {
   return text
-    // Supadata/YouTube can occasionally expose SSML-style silence markers as
-    // transcript text. They are timing metadata, not spoken content, and must
-    // never enter translation or semantic-review cues.
+    // Timed-text feeds can expose SSML-style silence markers. They are timing
+    // metadata, not audible speech, so they must not enter translation context.
+    // Spoken fillers (um, uh, erm, hmm, ah) are intentionally preserved.
     .replace(/<break\b[^>]*\/?\s*>/giu, " ")
-    .replace(/(^|[^\p{L}\p{N}])(?:u+m+|u+h+|e+r+m+|h+m+|a+h+)(?=$|[^\p{L}\p{N}])/giu, "$1")
     .replace(/^[,;:]+\s*/, "")
     .replace(/\s+([,.;:!?…])/g, "$1")
     .replace(/([,;:])\s*\1+/g, "$1")
@@ -35,11 +34,7 @@ export function groupEnglishCuesForContext(
     const first = block[0];
     const last = block[block.length - 1];
     const end = Math.max(first.start + first.duration, last.start + last.duration);
-    result.push({
-      start: first.start,
-      duration: Math.max(0.1, end - first.start),
-      text: block.map(cue => cue.text).join(" ").replace(/\s+/g, " ").trim(),
-    });
+    result.push({ start: first.start, duration: Math.max(0.1, end - first.start), text: block.map(cue => cue.text).join(" ").replace(/\s+/g, " ").trim() });
     block = [];
   };
 
