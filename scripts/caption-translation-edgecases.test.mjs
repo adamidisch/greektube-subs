@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { splitSubtitleSentences } from "../app/api/captions/sentence-split.ts";
-import { hasTranslatableWordTokens } from "../app/api/captions/translation-text.ts";
+import { hasTranslatableWordTokens, stripEnglishSpeechFillers } from "../app/api/captions/translation-text.ts";
 
 assert.deepEqual(
   splitSubtitleSentences("but it's SIBO 2.0."),
@@ -28,5 +28,16 @@ assert.equal(hasTranslatableWordTokens(["SIBO", "2"], ["sibo"]), false, "protect
 assert.equal(hasTranslatableWordTokens(["B3"], ["b3"]), false, "protected technical token is passthrough-safe");
 assert.equal(hasTranslatableWordTokens(["Fungi"], []), true, "ordinary English word still requires translation");
 assert.equal(hasTranslatableWordTokens(["MSM", "and", "B3"], ["msm", "b3"]), true, "mixed protected tokens and English prose still require translation");
+
+assert.equal(
+  stripEnglishSpeechFillers("Um, I mean, this matters."),
+  "Um, I mean, this matters.",
+  "audible fillers must remain available to translation",
+);
+assert.equal(
+  stripEnglishSpeechFillers("Wait <break time=\"500ms\"/> uh, okay."),
+  "Wait uh, okay.",
+  "SSML silence metadata is removed without deleting spoken filler",
+);
 
 console.log("caption translation edge-case regression checks passed");
