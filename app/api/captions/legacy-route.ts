@@ -1421,7 +1421,7 @@ export async function GET(request: Request) {
       validateCompleteGreekTranscript(publishedCues, publishedDuration);
       return NextResponse.json({ ...published, speaker: normalizedPublishedSpeaker(videoId, published) }, {
         headers: {
-          "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+          "Cache-Control": "no-cache, must-revalidate",
           "X-GreekTube-Transcript-Source": "blob",
           "X-GreekTube-Blob-Configured": "1",
         },
