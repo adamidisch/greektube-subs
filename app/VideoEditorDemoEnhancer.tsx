@@ -13,10 +13,36 @@ type MetadataDraft={title:string;originalTitle:string;speakerName:string;speaker
 type Cue={start:number;duration:number;text:string};
 type EditorCaptions={videoId:string;cues:Cue[];duration?:number;transcriptVersion?:number};
 type PlayerLike={destroy:()=>void;playVideo:()=>void;pauseVideo:()=>void;getPlayerState:()=>number;getCurrentTime:()=>number;getDuration:()=>number;seekTo:(seconds:number,allow:boolean)=>void;unloadModule?:(module:string)=>void};
+type InlineMetadataFieldProps={label:string;value:string;onCommit:(value:string)=>void;wide?:boolean;multiline?:boolean;options?:readonly (readonly [string,string])[]};
 
 const CATEGORIES=[
   ["Medical","Ιατρικά"],["Tech","Τεχνολογία"],["Podcasts","Συζητήσεις"],["Comedy","Κωμωδία"],["Education","Εκπαίδευση"],["Documentaries","Ντοκιμαντέρ"],["Other","Άλλα"],
 ] as const;
+
+function InlineMetadataField({label,value,onCommit,wide=false,multiline=false,options}:InlineMetadataFieldProps){
+  const [editing,setEditing]=useState(false);
+  const [draft,setDraft]=useState(value);
+  useEffect(()=>{if(!editing)setDraft(value);},[value,editing]);
+  useEffect(()=>{
+    if(!editing)return;
+    const close=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();setDraft(value);setEditing(false);}};
+    window.addEventListener("keydown",close,true);
+    return()=>window.removeEventListener("keydown",close,true);
+  },[editing,value]);
+  const cancel=()=>{setDraft(value);setEditing(false);};
+  const commit=()=>{onCommit(draft);setEditing(false);};
+  const displayValue=options?.find(([option])=>option===value)?.[1]||value||"—";
+  const useTextarea=multiline||(!options&&Math.max(value.length,draft.length)>72);
+  return <div className={`gts-inline-field ${wide?"wide":""} ${multiline?"multiline":""} ${editing?"editing":""}`}>
+    <span className="gts-inline-label">{label}</span>
+    <button type="button" className="gts-inline-view" onClick={()=>{setDraft(value);setEditing(true);}} title={`${label}: ${displayValue}`}><span>{displayValue}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+    {editing&&createPortal(<div className="gts-field-modal" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)cancel();}}><section className="gts-field-dialog" role="dialog" aria-modal="true" aria-labelledby="gts-field-dialog-title">
+      <div className="gts-field-dialog-head"><div><span className="gts-editor-kicker">ΕΠΕΞΕΡΓΑΣΙΑ ΠΕΔΙΟΥ</span><h3 id="gts-field-dialog-title">{label}</h3></div><button type="button" className="gts-field-dialog-close" onClick={cancel} aria-label="Κλείσιμο"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+      <label className="gts-field-dialog-control"><span>{label}</span>{options?<select autoFocus value={draft} onChange={event=>setDraft(event.target.value)}>{options.map(([option,optionLabel])=><option key={option} value={option}>{optionLabel}</option>)}</select>:useTextarea?<textarea autoFocus value={draft} onChange={event=>setDraft(event.target.value)}/>:<input autoFocus value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();commit();}}}/>}</label>
+      <div className="gts-field-dialog-actions"><button type="button" className="secondary" onClick={cancel}>Ακύρωση</button><button type="button" className="confirm" onClick={commit}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Αποθήκευση</button></div>
+    </section></div>,document.body)}
+  </div>;
+}
 
 function clock(seconds:number,precise=false){
   const safe=Math.max(0,Number(seconds)||0),whole=Math.floor(safe),h=Math.floor(whole/3600),m=Math.floor((whole%3600)/60),s=whole%60;
@@ -112,6 +138,7 @@ export default function VideoEditorDemoEnhancer(){
   const [timecodeDrafts,setTimecodeDrafts]=useState<Record<string,string>>({});
   const [status,setStatus]=useState("");
   const [saveBusy,setSaveBusy]=useState(false);
+  const [seekStep,setSeekStep]=useState(5);
   const host=useRef<HTMLDivElement|null>(null);
   const keyboardTarget=useRef<HTMLDivElement|null>(null);
   const player=useRef<PlayerLike|null>(null);
@@ -120,6 +147,7 @@ export default function VideoEditorDemoEnhancer(){
   const captionsAbortController=useRef<AbortController|null>(null);
   const currentEditorVideoId=useRef("");
   const origin=useRef<{videoId:string;time:number}>({videoId:"",time:0});
+  const editorImportInput=useRef<HTMLInputElement|null>(null);
 
   const validationErrors=useMemo(()=>{
     const errors:string[]=[];
@@ -231,14 +259,14 @@ export default function VideoEditorDemoEnhancer(){
       }
       if(event.code!=="ArrowLeft"&&event.code!=="ArrowRight")return;
       event.preventDefault();
-      const direction=event.code==="ArrowLeft"?-5:5;
+      const direction=event.code==="ArrowLeft"?-seekStep:seekStep;
       const playerDuration=target.getDuration()||duration||Number.MAX_SAFE_INTEGER;
       const next=Math.max(0,Math.min(playerDuration,target.getCurrentTime()+direction));
       target.seekTo(next,true);setCurrent(next);
     };
     window.addEventListener("keydown",key,true);
     return()=>window.removeEventListener("keydown",key,true);
-  },[open,video?.id,authRequired,duration]);
+  },[open,video?.id,authRequired,duration,seekStep]);
 
   useEffect(()=>{
     if(!open||!video||!host.current||authRequired)return;
@@ -287,6 +315,9 @@ export default function VideoEditorDemoEnhancer(){
     setOpen(false);setAuthRequired(false);setLoading(false);setPlayerVisualReady(false);setVideo(null);setCaptions(null);setMetadata(null);setRanges([]);setTimecodeDrafts({});setInitialSnapshot("");setPreviewIndex(null);setTimelinePreview(null);setStatus("");
   }
   function seek(next:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));target.seekTo(safe,true);setCurrent(safe);}
+  const scrubbing=useRef(false);const scrubRaf=useRef(0);
+  function scrubTo(value:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,value));setCurrent(safe);if(scrubRaf.current)cancelAnimationFrame(scrubRaf.current);scrubRaf.current=requestAnimationFrame(()=>{try{target.seekTo(safe,false);}catch{}});}
+  function commitScrub(value:number){scrubbing.current=false;if(scrubRaf.current){cancelAnimationFrame(scrubRaf.current);scrubRaf.current=0;}seek(value);}
   function updateTimelinePreview(event:React.PointerEvent<HTMLInputElement>){if(duration<=0)return;const rect=event.currentTarget.getBoundingClientRect();const ratio=Math.max(0,Math.min(1,(event.clientX-rect.left)/Math.max(1,rect.width)));setTimelinePreview(ratio*duration);}
   function toggle(){const target=player.current;if(!target)return;if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();}
   function markStart(){setDraftStart(current);setStatus(`Αρχή range: ${clock(current,true)}`);}
@@ -307,6 +338,29 @@ export default function VideoEditorDemoEnhancer(){
     setTimecodeDrafts({});
   }
   function deleteRange(index:number){setRanges(value=>value.filter((_,itemIndex)=>itemIndex!==index));setTimecodeDrafts({});setPreviewIndex(null);}
+  function exportEditorBackup(){
+    if(!video||!metadata)return;
+    const payload={format:"greektube-editor-backup",version:1,exportedAt:new Date().toISOString(),videoId:video.id,metadataVersion:Number(video.metadataVersion||0),metadata,skipRanges:ranges};
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),link=document.createElement("a");
+    link.href=url;link.download=`greektube-${video.id}-editor-backup.json`;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),0);
+    setStatus("Το backup του editor κατέβηκε σε αρχείο JSON.");
+  }
+  async function importEditorBackup(file:File){
+    if(!video||!metadata)return;
+    try{
+      const parsed=JSON.parse(await file.text()) as Record<string,unknown>;
+      if(parsed.format!=="greektube-editor-backup"||parsed.version!==1)throw new Error("Το αρχείο δεν είναι έγκυρο GreekTube editor backup.");
+      if(parsed.videoId!==video.id)throw new Error("Το backup ανήκει σε διαφορετικό βίντεο.");
+      if(!parsed.metadata||typeof parsed.metadata!=="object"||!Array.isArray(parsed.skipRanges))throw new Error("Το backup δεν περιέχει έγκυρα metadata και skip ranges.");
+      const source=parsed.metadata as Record<string,unknown>,stringValue=(key:keyof MetadataDraft)=>typeof source[key]==="string"?String(source[key]):String(metadata[key]??"");
+      const importedMetadata:MetadataDraft={title:stringValue("title"),originalTitle:stringValue("originalTitle"),speakerName:stringValue("speakerName"),speakerRole:stringValue("speakerRole"),channel:stringValue("channel"),channelUrl:stringValue("channelUrl"),originalVideoUrl:stringValue("originalVideoUrl"),category:stringValue("category"),tags:Array.isArray(source.tags)?source.tags.filter((item):item is string=>typeof item==="string").map(item=>item.trim()).filter(Boolean):metadata.tags,description:stringValue("description")};
+      const importedRanges=normalizeSkipRanges(parsed.skipRanges as SkipRange[]),importErrors=validateSkipRanges(importedRanges,duration).errors;
+      if(!importedMetadata.title.trim())throw new Error("Το backup δεν περιέχει ελληνικό τίτλο.");
+      if(importErrors.length)throw new Error(`Το backup έχει προβληματικά ranges: ${importErrors[0]}`);
+      setMetadata(importedMetadata);setRanges(importedRanges);setTimecodeDrafts({});setDraftStart(null);setPreviewIndex(null);setStatus("Το backup εισήχθη ως μη αποθηκευμένες αλλαγές. Έλεγξέ το και πάτησε Αποθήκευση.");
+    }catch(problem){setStatus(problem instanceof Error?problem.message:"Η εισαγωγή του backup απέτυχε.");}
+    finally{if(editorImportInput.current)editorImportInput.current.value="";}
+  }
   async function save(){
     if(!video||!metadata||validationErrors.length||saveBusy)return;
     setSaveBusy(true);setStatus("Αποθήκευση metadata και markers…");
@@ -322,31 +376,54 @@ export default function VideoEditorDemoEnhancer(){
   }
 
   if(!open)return null;
+  const progress=duration>0?Math.max(0,Math.min(100,current/duration*100)):0;
+  const rulerTicks=duration>0?Array.from({length:9},(_,index)=>index/8*duration):[];
   return createPortal(<>
     <div className="gts-editor-screen" ref={keyboardTarget} tabIndex={-1}>
       {authRequired?<section className="gts-editor-auth"><div className="gts-editor-auth-card"><span className="gts-editor-kicker">VIDEO EDITOR</span><h1>Προστατευμένη επεξεργασία</h1><p>Βάλε τον κωδικό διαχειριστή για να ανοίξει ο νέος editor.</p><form onSubmit={authorize}><input type="password" autoFocus value={password} onChange={event=>setPassword(event.target.value)} placeholder="Κωδικός πρόσβασης"/><button className="primary">Συνέχεια</button></form>{authError&&<small className="gts-editor-error">{authError}</small>}<button className="gts-editor-auth-cancel" onClick={closeEditor}>Ακύρωση</button></div></section>:<>
-        <header className="gts-editor-header"><button className="gts-editor-back" onClick={closeEditor}>← <span>Πίσω στο βίντεο</span></button><div className="gts-editor-title"><span className="gts-editor-kicker">VIDEO EDITOR</span><h1 title={metadata?.title||video?.title||"Επεξεργασία βίντεο"}><strong>{metadata?.title||video?.title||"Επεξεργασία βίντεο"}</strong></h1>{(metadata?.originalTitle||video?.originalTitle)&&<p title={metadata?.originalTitle||video?.originalTitle}>{metadata?.originalTitle||video?.originalTitle}</p>}</div><div className="gts-editor-save-state">{dirty?<span>ΜΗ ΑΠΟΘΗΚΕΥΜΕΝΕΣ ΑΛΛΑΓΕΣ</span>:<span className="saved">ΑΠΟΘΗΚΕΥΜΕΝΟ</span>}<button className="primary" disabled={!dirty||validationErrors.length>0||saveBusy||loading} onClick={()=>void save()}>{saveBusy?"Αποθήκευση…":"Αποθήκευση"}</button></div></header>
-        {loading?<div className="gts-editor-loading">Φόρτωση editor…</div>:video&&metadata?<main className="gts-editor-layout">
+        <header className="gts-editor-header">
+          <button className="gts-editor-back" onClick={closeEditor}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span>Πίσω</span></button>
+          <div className="gts-editor-title"><div className="gts-editor-title-row"><span className="gts-editor-kicker">EDITOR</span><h1 title={metadata?.title||video?.title||"Επεξεργασία βίντεο"}>{metadata?.title||video?.title||"Επεξεργασία βίντεο"}</h1></div>{(metadata?.originalTitle||video?.originalTitle)&&<p title={metadata?.originalTitle||video?.originalTitle}>{metadata?.originalTitle||video?.originalTitle}</p>}</div>
+          <div className="gts-editor-save-state"><span className={dirty?"dot dirty":"dot saved"} title={dirty?"Μη αποθηκευμένες αλλαγές":"Αποθηκευμένο"} aria-label={dirty?"Μη αποθηκευμένες αλλαγές":"Αποθηκευμένο"}><i/></span><button className="primary" disabled={!dirty||validationErrors.length>0||saveBusy||loading} onClick={()=>void save()}>{saveBusy?"Αποθήκευση…":"Αποθήκευση"}</button></div>
+        </header>
+        {loading?<div className="gts-editor-loading"><span className="gts-editor-player-spinner"/>Φόρτωση editor…</div>:video&&metadata?<main className="gts-editor-layout">
           <section className="gts-editor-stage">
-            <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ</strong></div>{captions&&activeCaption>=0&&<div className="gts-editor-subtitles" aria-live="off">{subtitleWindow(captions.cues[activeCaption],current,captions.cues[activeCaption+1]).split("\n").map((line,index)=><span key={`${activeCaption}-${index}`}>{line}</span>)}</div>}<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div></div>
-            <div className="gts-editor-transport"><button onClick={()=>seek(current-5)} aria-label="Πίσω 5 δευτερόλεπτα">−5</button><button className="gts-editor-play" onClick={toggle} aria-label={playing?"Παύση":"Αναπαραγωγή"}>{playing?"❚❚":"▶"}</button><button onClick={()=>seek(current+5)} aria-label="Μπροστά 5 δευτερόλεπτα">+5</button></div>
-            <div className="gts-editor-timeline-wrap">
-              <div className="gts-editor-timeline" style={{"--editor-seek-progress":`${duration>0?Math.max(0,Math.min(100,current/duration*100)):0}%`} as CSSProperties}>
-                {duration>0&&ranges.map((range,index)=><i key={`${range.start}-${range.end}-${index}`} className={previewIndex===index?"previewing":""} style={{left:`${Math.max(0,Math.min(100,range.start/duration*100))}%`,width:`${Math.max(.35,Math.min(100,(range.end-range.start)/duration*100))}%`} as CSSProperties}/>) }
-                {duration>0&&draftStart!==null&&<b style={{left:`${Math.max(0,Math.min(100,draftStart/duration*100))}%`} as CSSProperties}/>} 
-                {timelinePreview!==null&&duration>0&&<output className="gts-editor-timeline-preview" style={{"--editor-preview-position":`${Math.max(0,Math.min(100,timelinePreview/duration*100))}%`} as CSSProperties}>{clock(timelinePreview,true)}</output>}
-                <input type="range" min={0} max={Math.max(1,duration)} step="0.1" value={Math.min(current,Math.max(1,duration))} onPointerDown={updateTimelinePreview} onPointerMove={updateTimelinePreview} onPointerUp={()=>setTimelinePreview(null)} onPointerCancel={()=>setTimelinePreview(null)} onPointerLeave={()=>setTimelinePreview(null)} onChange={event=>seek(Number(event.target.value))} aria-label="Γραμμή χρόνου editor"/>
+
+            <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ</strong></div>{captions&&activeCaption>=0&&<div className="gts-editor-subtitles" aria-live="off">{subtitleWindow(captions.cues[activeCaption],current,captions.cues[activeCaption+1]).split("\n").map((line,index)=><span key={`${activeCaption}-${index}`}>{line}</span>)}</div>}{!playing&&<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div>}</div>
+
+            <div className="gts-editor-console">
+              <div className="gts-editor-timeline-wrap">
+                <div className="gts-editor-timeline" style={{"--editor-seek-progress":`${progress}%`} as CSSProperties}>
+                  {duration>0&&ranges.map((range,index)=><i key={`${range.start}-${range.end}-${index}`} className={previewIndex===index?"previewing":""} style={{left:`${Math.max(0,Math.min(100,range.start/duration*100))}%`,width:`${Math.max(.35,Math.min(100,(range.end-range.start)/duration*100))}%`} as CSSProperties}/>)}
+                  {duration>0&&draftStart!==null&&<b style={{left:`${Math.max(0,Math.min(100,draftStart/duration*100))}%`} as CSSProperties}/>}
+                  {duration>0&&<output className={`gts-editor-timeline-preview ${timelinePreview!==null?"hovering":""}`} style={{"--editor-preview-position":`${Math.max(0,Math.min(100,(timelinePreview??current)/duration*100))}%`} as CSSProperties}>{clock(timelinePreview??current,true)}</output>}
+                  <input type="range" min={0} max={Math.max(1,duration)} step="0.05" value={Math.min(current,Math.max(1,duration))} onPointerDown={event=>{scrubbing.current=true;updateTimelinePreview(event);}} onPointerMove={updateTimelinePreview} onPointerUp={event=>{setTimelinePreview(null);commitScrub(Number((event.currentTarget as HTMLInputElement).value));}} onPointerCancel={()=>{setTimelinePreview(null);scrubbing.current=false;}} onPointerLeave={()=>setTimelinePreview(null)} onChange={event=>{const v=Number(event.target.value);if(scrubbing.current)scrubTo(v);else seek(v);}} aria-label="Γραμμή χρόνου editor"/>
+                </div>
+                <div className="gts-editor-ruler" aria-hidden="true">{rulerTicks.map((tick,index)=><span key={index}>{clock(tick)}</span>)}</div>
               </div>
-              <div className="gts-editor-timeline-labels"><span>{clock(current,true)} / {clock(duration)}</span><strong>{ranges.length} SKIP RANGES · {clock(totalSkipped)} ΣΥΝΟΛΟ</strong></div>
+
+              <div className="gts-editor-console-top">
+                <div className="gts-editor-transport"><button className="gts-editor-skip" onClick={()=>seek(current-seekStep)} aria-label={`Πίσω ${seekStep} δευτερόλεπτα`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.5 8V3.5M4.5 3.5H9"/><path d="M5 4.2A9 9 0 1 1 3.4 14"/></svg><em>{seekStep}</em></button><button className="gts-editor-play" onClick={toggle} aria-label={playing?"Παύση":"Αναπαραγωγή"}>{playing?<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>:<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.53.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>}</button><button className="gts-editor-skip" onClick={()=>seek(current+seekStep)} aria-label={`Μπροστά ${seekStep} δευτερόλεπτα`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19.5 8V3.5M19.5 3.5H15"/><path d="M19 4.2A9 9 0 1 0 20.6 14"/></svg><em>{seekStep}</em></button><label className="gts-editor-step"><span>Βήμα</span><select value={seekStep} onChange={event=>setSeekStep(Number(event.target.value))} aria-label="Χρόνος μετακίνησης"><option value={1}>1 sec</option><option value={2}>2 sec</option><option value={5}>5 sec</option><option value={10}>10 sec</option><option value={15}>15 sec</option><option value={30}>30 sec</option></select></label></div>
+                <div className="gts-editor-readout"><strong>{clock(current,true)}</strong><span>/ {clock(duration)}</span></div>
+                <div className="gts-editor-summary"><span><b>{ranges.length}</b>SKIP RANGES</span><span><b>{clock(totalSkipped)}</b>ΣΥΝΟΛΟ</span></div>
+              </div>
+
+              <div className="gts-editor-mark-actions" data-armed={draftStart!==null?"1":"0"}>
+                <button className={`gts-mark gts-mark-a ${draftStart!==null?"done":"live"}`} onClick={markStart}><span className="gts-mark-bracket" aria-hidden="true">[</span><span className="gts-mark-body"><b>Σημείο Α · έναρξη</b><em>{draftStart!==null?clock(draftStart,true):`τώρα · ${clock(current,true)}`}</em></span><span className="gts-mark-key" aria-hidden="true">Α</span></button>
+                <button className={`gts-mark gts-mark-b ${draftStart!==null?"live":"idle"}`} onClick={markEnd}><span className="gts-mark-key" aria-hidden="true">Β</span><span className="gts-mark-body"><b>Σημείο Β · λήξη</b><em>{draftStart!==null?`κόψε ως εδώ · ${clock(current,true)}`:"όρισε πρώτα το Α"}</em></span><span className="gts-mark-bracket" aria-hidden="true">]</span></button>
+              </div>
             </div>
-            <div className="gts-editor-mark-actions"><button className={draftStart!==null?"active":""} onClick={markStart}><small>01</small><span><b>Ορισμός αρχής</b>{draftStart!==null?clock(draftStart,true):"Στο τρέχον σημείο"}</span></button><button onClick={markEnd}><small>02</small><span><b>Ορισμός τέλους</b>Δημιουργία skip range</span></button></div>
-            <section className="gts-editor-ranges"><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">SKIP RANGES</span><h2>Περιοχές παράλειψης</h2></div><strong>{ranges.length}</strong></div>
-              {ranges.length===0?<div className="gts-editor-empty">Δεν υπάρχουν ακόμη ranges. Παίξε το βίντεο και όρισε αρχή και τέλος.</div>:<div className="gts-editor-range-list">{ranges.map((range,index)=>{const startKey=`${index}-start`,endKey=`${index}-end`;const startDraft=timecodeDrafts[startKey]??formatSkipTimecode(range.start),endDraft=timecodeDrafts[endKey]??formatSkipTimecode(range.end);return <article key={index} className={validationErrors.some(error=>error.startsWith(`Range ${index+1}:`))?"invalid":""}><div className="gts-editor-range-index">{String(index+1).padStart(2,"0")}</div><div className="gts-editor-range-main"><strong className="gts-editor-range-timecode">{formatSkipTimecode(range.start)} <span>→</span> {formatSkipTimecode(range.end)}</strong><div className="gts-editor-range-times"><label>ΑΠΟ<input type="text" inputMode="decimal" value={startDraft} aria-invalid={parseSkipTimecode(startDraft)===null} onChange={event=>updateTimecode(index,"start",event.target.value)} onBlur={()=>commitTimecode(index,"start",range.start)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label><span>→</span><label>ΜΕΧΡΙ<input type="text" inputMode="decimal" value={endDraft} aria-invalid={parseSkipTimecode(endDraft)===null} onChange={event=>updateTimecode(index,"end",event.target.value)} onBlur={()=>commitTimecode(index,"end",range.end)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label><em>{formatSkipTimecode(Math.max(0,range.end-range.start))}</em></div><div className="gts-editor-range-actions"><button onClick={()=>preview(index)}>{previewIndex===index?"Previewing…":"Preview"}</button><button onClick={()=>seek(range.start)}>Μετάβαση</button><button className="danger" onClick={()=>deleteRange(index)}>Διαγραφή</button></div></div></article>;})}</div>}
+
+            <section className="gts-editor-ranges">
+              <div className="gts-editor-section-head"><div><span className="gts-editor-kicker">SKIP RANGES</span><h2>Περιοχές παράλειψης</h2></div><div className="gts-editor-section-tools"><button type="button" onClick={exportEditorBackup}>Export</button><button type="button" onClick={()=>editorImportInput.current?.click()}>Import</button><input ref={editorImportInput} hidden type="file" accept=".json,application/json" onChange={event=>{const file=event.target.files?.[0];if(file)void importEditorBackup(file);}}/><strong>{ranges.length}</strong></div></div>
+              {ranges.length===0?<div className="gts-editor-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><p>Δεν υπάρχουν ακόμη ranges. Παίξε το βίντεο και όρισε αρχή και τέλος.</p></div>:<div className="gts-editor-range-list">{ranges.map((range,index)=>{const startKey=`${index}-start`,endKey=`${index}-end`;const startDraft=timecodeDrafts[startKey]??formatSkipTimecode(range.start),endDraft=timecodeDrafts[endKey]??formatSkipTimecode(range.end);return <article key={index} className={`${validationErrors.some(error=>error.startsWith(`Range ${index+1}:`))?"invalid":""} ${previewIndex===index?"is-previewing":""}`}><div className="gts-editor-range-index">{String(index+1).padStart(2,"0")}</div><div className="gts-editor-range-main"><strong className="gts-editor-range-timecode">{formatSkipTimecode(range.start)} <span>→</span> {formatSkipTimecode(range.end)}<em>{formatSkipTimecode(Math.max(0,range.end-range.start))}</em></strong><div className="gts-editor-range-times"><label>ΑΠΟ<input type="text" inputMode="decimal" value={startDraft} aria-invalid={parseSkipTimecode(startDraft)===null} onChange={event=>updateTimecode(index,"start",event.target.value)} onBlur={()=>commitTimecode(index,"start",range.start)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label><span>→</span><label>ΜΕΧΡΙ<input type="text" inputMode="decimal" value={endDraft} aria-invalid={parseSkipTimecode(endDraft)===null} onChange={event=>updateTimecode(index,"end",event.target.value)} onBlur={()=>commitTimecode(index,"end",range.end)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label></div><div className="gts-editor-range-actions"><button onClick={()=>preview(index)}>{previewIndex===index?"Previewing…":"Preview"}</button><button onClick={()=>seek(range.start)}>Μετάβαση</button><button className="danger" onClick={()=>deleteRange(index)}>Διαγραφή</button></div></div></article>;})}</div>}
             </section>
+
           </section>
+
           <aside className="gts-editor-sidebar">
-            <section className="gts-editor-card"><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VIDEO INFORMATION</span><h2>Πληροφορίες βίντεο</h2></div></div>
-              <div className="gts-editor-form"><label>Ελληνικός τίτλος<input value={metadata.title} onChange={event=>setMetadata({...metadata,title:event.target.value})}/></label><label>Αγγλικός τίτλος<input value={metadata.originalTitle} onChange={event=>setMetadata({...metadata,originalTitle:event.target.value})}/></label><div className="gts-editor-grid"><label>Γιατρός ή ομιλητής<input value={metadata.speakerName} onChange={event=>setMetadata({...metadata,speakerName:event.target.value})}/></label><label>Ιδιότητα<input value={metadata.speakerRole} onChange={event=>setMetadata({...metadata,speakerRole:event.target.value})}/></label></div><div className="gts-editor-grid"><label>Κανάλι<input value={metadata.channel} onChange={event=>setMetadata({...metadata,channel:event.target.value})}/></label><label>Link καναλιού<input value={metadata.channelUrl} onChange={event=>setMetadata({...metadata,channelUrl:event.target.value})}/></label></div><label>Original video link<input value={metadata.originalVideoUrl} onChange={event=>setMetadata({...metadata,originalVideoUrl:event.target.value})}/></label><div className="gts-editor-grid"><label>Κατηγορία<select value={metadata.category} onChange={event=>setMetadata({...metadata,category:event.target.value})}>{CATEGORIES.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label>Ετικέτες<input value={metadata.tags.join(", ")} onChange={event=>setMetadata({...metadata,tags:event.target.value.split(",").map(item=>item.trim()).filter(Boolean)})}/></label></div><label>Περιγραφή<textarea value={metadata.description} onChange={event=>setMetadata({...metadata,description:event.target.value})}/></label></div>
+            <section className="gts-editor-card gts-editor-card--metadata"><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VIDEO INFORMATION</span><h2>Πληροφορίες βίντεο</h2></div><span className="gts-editor-edit-hint">Πάτησε μια τιμή για αλλαγή</span></div>
+              <div className="gts-editor-form"><InlineMetadataField wide label="Ελληνικός τίτλος" value={metadata.title} onCommit={value=>setMetadata({...metadata,title:value})}/><InlineMetadataField wide label="Αγγλικός τίτλος" value={metadata.originalTitle} onCommit={value=>setMetadata({...metadata,originalTitle:value})}/><InlineMetadataField label="Γιατρός ή ομιλητής" value={metadata.speakerName} onCommit={value=>setMetadata({...metadata,speakerName:value})}/><InlineMetadataField label="Ιδιότητα" value={metadata.speakerRole} onCommit={value=>setMetadata({...metadata,speakerRole:value})}/><InlineMetadataField label="Κανάλι" value={metadata.channel} onCommit={value=>setMetadata({...metadata,channel:value})}/><InlineMetadataField label="Link καναλιού" value={metadata.channelUrl} onCommit={value=>setMetadata({...metadata,channelUrl:value})}/><InlineMetadataField wide label="Original video link" value={metadata.originalVideoUrl} onCommit={value=>setMetadata({...metadata,originalVideoUrl:value})}/><InlineMetadataField label="Κατηγορία" value={metadata.category} options={CATEGORIES} onCommit={value=>setMetadata({...metadata,category:value})}/><InlineMetadataField label="Ετικέτες" value={metadata.tags.join(", ")} onCommit={value=>setMetadata({...metadata,tags:value.split(",").map(item=>item.trim()).filter(Boolean)})}/><InlineMetadataField wide multiline label="Περιγραφή" value={metadata.description} onCommit={value=>setMetadata({...metadata,description:value})}/></div>
             </section>
             <OwnerTranslationPanel videoId={video.id}/>
             <section className={`gts-editor-card gts-editor-validation ${validationErrors.length?"has-errors":"ok"}`}><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VALIDATION</span><h2>{validationErrors.length?"Χρειάζεται διόρθωση":"Όλα έτοιμα"}</h2></div><strong>{validationErrors.length?"!":"✓"}</strong></div>{validationErrors.length?<ul>{validationErrors.map((error,index)=><li key={`${error}-${index}`}>{error}</li>)}</ul>:<p>Δεν υπάρχουν επικαλύψεις ή λανθασμένα timestamps. Metadata και markers μπορούν να αποθηκευτούν μαζί.</p>}</section>
@@ -360,15 +437,302 @@ export default function VideoEditorDemoEnhancer(){
   </>,document.body);
 }
 
+
 const styles=`
-.gts-editor-screen:focus{outline:none}.gts-editor-timeline-preview{position:absolute;left:clamp(30px,var(--editor-preview-position),calc(100% - 30px));bottom:23px;z-index:5;min-width:54px;padding:5px 7px;transform:translateX(-50%);border:1px solid rgba(255,255,255,.15);border-radius:7px;background:rgba(7,9,13,.94);color:#f4f1ff;font:650 10px/1 var(--font-geist-mono),monospace;font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.34)}
-.gts-editor-screen{position:fixed;inset:0;z-index:2147483200;overflow:auto;background:#090b0f;color:#f5f5f2;font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}.gts-editor-header{position:sticky;top:0;z-index:20;height:72px;display:grid;grid-template-columns:1fr minmax(0,1.5fr) 1fr;align-items:center;gap:18px;padding:0 clamp(16px,3vw,38px);border-bottom:1px solid rgba(255,255,255,.08);background:rgba(9,11,15,.91);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}.gts-editor-back{justify-self:start;border:0;background:transparent;color:#aeb3bc;font-size:12px}.gts-editor-back:hover{color:#fff}.gts-editor-title{display:grid;gap:2px;text-align:center;min-width:0}.gts-editor-title h1,.gts-editor-title p{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gts-editor-title h1{margin:0;font-size:14px;font-weight:650;line-height:1.15;letter-spacing:-.015em}.gts-editor-title h1 strong{display:block;font:inherit}.gts-editor-title p{margin:0;color:#737985;font-size:9.5px;font-weight:500;line-height:1.15}.gts-editor-title .gts-editor-kicker{font-size:8px!important}.gts-editor-title .gts-editor-kicker::after{content:none!important}.gts-editor-kicker{display:block;color:#9084ee;font-size:8px;font-weight:760;letter-spacing:.13em}.gts-editor-save-state{justify-self:end;display:flex;align-items:center;gap:12px}.gts-editor-save-state>span{color:#d6a25b;font-size:8px;font-weight:760;letter-spacing:.08em}.gts-editor-save-state>span.saved{color:#6fbb91}.gts-editor-save-state .primary,.gts-editor-mobile-save .primary,.gts-editor-auth .primary{min-height:38px;padding:0 15px;border:0;border-radius:10px;background:#7569d9;color:#fff;font-size:11px;font-weight:680}.gts-editor-save-state .primary:disabled,.gts-editor-mobile-save .primary:disabled{opacity:.38;cursor:not-allowed}.gts-editor-layout{width:min(1480px,100%);margin:0 auto;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(340px,.68fr);gap:22px;padding:24px clamp(16px,3vw,38px) 80px}.gts-editor-stage{min-width:0}.gts-editor-video{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#000;box-shadow:0 24px 70px rgba(0,0,0,.34)}.gts-editor-video>div:first-child,.gts-editor-video iframe{width:100%!important;height:100%!important;border:0}.gts-editor-timecode{position:absolute;right:14px;bottom:12px;padding:6px 9px;border:1px solid rgba(255,255,255,.13);border-radius:8px;background:rgba(5,6,8,.76);font:600 11px var(--font-geist-mono),monospace;backdrop-filter:blur(8px)}.gts-editor-timecode span{color:#777d87}.gts-editor-transport{display:flex;align-items:center;justify-content:center;gap:10px;padding:15px 0 10px}.gts-editor-transport button{width:46px;height:42px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:#141820;color:#d7dae0;font-size:12px;font-weight:650}.gts-editor-transport .gts-editor-play{width:58px;height:48px;border-color:rgba(143,127,240,.42);background:linear-gradient(145deg,#8275e6,#685dc4);color:#fff;font-size:17px;box-shadow:0 9px 25px rgba(105,93,196,.24)}.gts-editor-timeline-wrap{padding:4px 2px 16px}.gts-editor-timeline{position:relative;height:26px;display:flex;align-items:center}.gts-editor-timeline:before{content:"";position:absolute;left:0;right:0;height:6px;border-radius:99px;background:#252a33}.gts-editor-timeline>i{position:absolute;z-index:2;height:9px;border-radius:99px;background:#c58a42;box-shadow:0 0 0 1px rgba(255,214,150,.16),0 0 13px rgba(197,138,66,.22);pointer-events:none}.gts-editor-timeline>i.previewing{background:#9b8ef8;box-shadow:0 0 16px rgba(155,142,248,.5)}.gts-editor-timeline>b{position:absolute;z-index:3;top:2px;width:2px;height:22px;background:#f0c67e;pointer-events:none}.gts-editor-timeline input{position:absolute;z-index:4;width:100%;height:26px;margin:0;opacity:.01;cursor:pointer}.gts-editor-timeline-labels{display:flex;justify-content:space-between;align-items:center;color:#666d78;font:500 9px var(--font-geist-mono),monospace}.gts-editor-timeline-labels strong{color:#8b9099;font-size:8px;letter-spacing:.05em}.gts-editor-mark-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 24px}.gts-editor-mark-actions button{display:grid;grid-template-columns:34px 1fr;align-items:center;gap:9px;min-height:64px;padding:10px 12px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:#12151b;color:#eef0f3;text-align:left}.gts-editor-mark-actions button.active{border-color:rgba(197,138,66,.5);background:rgba(197,138,66,.09)}.gts-editor-mark-actions small{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#1d212a;color:#b8bdc6;font-size:9px}.gts-editor-mark-actions span{display:block;color:#8d939d;font-size:10px}.gts-editor-mark-actions b{display:block;margin-bottom:3px;color:#eef0f3;font-size:12px}.gts-editor-ranges{padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:#101319}.gts-editor-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.gts-editor-section-head h2{margin:4px 0 0;font-size:16px;font-weight:650;letter-spacing:-.025em}.gts-editor-section-head>strong{min-width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:#181c23;color:#aaa1ef;font-size:11px}.gts-editor-empty{margin-top:14px;padding:22px;border:1px dashed rgba(255,255,255,.12);border-radius:13px;color:#777e88;font-size:11px;text-align:center}.gts-editor-range-list{display:grid;gap:8px;margin-top:14px}.gts-editor-range-list article{display:grid;grid-template-columns:38px 1fr;gap:10px;padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:#151920}.gts-editor-range-list article.invalid{border-color:rgba(226,96,86,.45);background:rgba(226,96,86,.055)}.gts-editor-range-index{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:#20252e;color:#b5bac3;font:650 10px var(--font-geist-mono),monospace}.gts-editor-range-times{display:grid;grid-template-columns:minmax(105px,1fr) auto minmax(105px,1fr) auto;gap:8px;align-items:end}.gts-editor-range-times label{color:#707781;font-size:7px;font-weight:750;letter-spacing:.08em}.gts-editor-range-times input{width:100%;height:34px;margin-top:4px;padding:0 8px;border:1px solid rgba(255,255,255,.09);border-radius:9px;background:#0f1217;color:#e9ebee;font:600 11px var(--font-geist-mono),monospace;outline:none}.gts-editor-range-times span{padding-bottom:9px;color:#565d67}.gts-editor-range-times em{padding-bottom:9px;color:#ba8a4f;font:600 9px var(--font-geist-mono),monospace;font-style:normal}.gts-editor-range-actions{display:flex;gap:7px;margin-top:8px}.gts-editor-range-actions button{min-height:29px;padding:0 9px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:transparent;color:#aeb3bc;font-size:9px}.gts-editor-range-actions button:hover{background:rgba(255,255,255,.05);color:#fff}.gts-editor-range-actions button.danger{margin-left:auto;color:#d97f79}.gts-editor-sidebar{display:grid;align-content:start;gap:13px}.gts-editor-card{padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:#101319}.gts-editor-form{display:grid;gap:12px;margin-top:16px}.gts-editor-form label{display:grid;gap:5px;color:#858b94;font-size:8.5px;font-weight:580}.gts-editor-form input,.gts-editor-form select,.gts-editor-form textarea{width:100%;border:1px solid rgba(255,255,255,.085);border-radius:10px;background:#171b22;color:#f0f1f3;outline:none;font-size:10.5px}.gts-editor-form input,.gts-editor-form select{height:39px;padding:0 10px}.gts-editor-form textarea{min-height:100px;padding:10px;resize:vertical;line-height:1.5}.gts-editor-form input:focus,.gts-editor-form select:focus,.gts-editor-form textarea:focus{border-color:rgba(143,127,240,.48);box-shadow:0 0 0 3px rgba(143,127,240,.07)}.gts-editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.gts-editor-validation p,.gts-editor-validation ul{margin:12px 0 0;color:#858b94;font-size:10px;line-height:1.55}.gts-editor-validation ul{padding-left:18px;color:#e28a83}.gts-editor-validation.ok{border-color:rgba(84,171,124,.18)}.gts-editor-validation.ok .gts-editor-section-head>strong{color:#6fc394;background:rgba(84,171,124,.08)}.gts-editor-validation.has-errors{border-color:rgba(226,96,86,.24)}.gts-editor-validation.has-errors .gts-editor-section-head>strong{color:#e28a83;background:rgba(226,96,86,.07)}.gts-editor-status{padding:12px 14px;border:1px solid rgba(143,127,240,.17);border-radius:12px;background:rgba(143,127,240,.07);color:#b8b0ef;font-size:10px;line-height:1.45}.gts-editor-loading{min-height:55vh;display:grid;place-items:center;color:#868c96;font-size:12px}.gts-editor-mobile-save{display:none}.gts-editor-auth{min-height:100dvh;display:grid;place-items:center;padding:20px}.gts-editor-auth-card{width:min(390px,100%);padding:24px;border:1px solid rgba(255,255,255,.1);border-radius:20px;background:#11151b;box-shadow:0 30px 90px rgba(0,0,0,.4)}.gts-editor-auth-card h1{margin:7px 0 8px;font-size:21px}.gts-editor-auth-card p{margin:0 0 16px;color:#8d939d;font-size:11px;line-height:1.55}.gts-editor-auth-card form{display:grid;gap:9px}.gts-editor-auth-card input{height:43px;padding:0 12px;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:#191d24;color:#fff;outline:none}.gts-editor-error{display:block;margin-top:10px;color:#e28a83;font-size:10px}.gts-editor-auth-cancel{width:100%;margin-top:8px;padding:8px;border:0;background:transparent;color:#777e88;font-size:10px}
-@media(max-width:900px){.gts-editor-header{grid-template-columns:auto minmax(0,1fr) auto;height:68px;padding:0 13px}.gts-editor-back span,.gts-editor-save-state>span{display:none}.gts-editor-title{text-align:left}.gts-editor-title .gts-editor-kicker{display:block}.gts-editor-title h1{font-size:11px}.gts-editor-title p{font-size:8.5px}.gts-editor-save-state .primary{display:none}.gts-editor-layout{display:block;padding:12px 12px 92px}.gts-editor-video{border-radius:14px}.gts-editor-transport{padding:12px 0 8px}.gts-editor-timeline-wrap{padding:2px 2px 13px}.gts-editor-timeline-labels strong{font-size:7px}.gts-editor-mark-actions{gap:8px;margin-bottom:14px}.gts-editor-mark-actions button{min-height:58px;padding:8px}.gts-editor-ranges{padding:14px;border-radius:15px}.gts-editor-sidebar{margin-top:12px;gap:10px}.gts-editor-card{padding:14px;border-radius:15px}.gts-editor-grid{grid-template-columns:1fr}.gts-editor-range-times{grid-template-columns:1fr auto 1fr}.gts-editor-range-times em{display:none}.gts-editor-range-list article{grid-template-columns:30px 1fr;padding:9px}.gts-editor-range-index{width:28px;height:28px}.gts-editor-mobile-save{position:fixed;left:0;right:0;bottom:0;z-index:25;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.09);background:rgba(9,11,15,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}.gts-editor-mobile-save div{color:#858b94;font-size:9px}.gts-editor-mobile-save .primary{min-width:124px}.gts-editor-section-head h2{font-size:14px}.gts-editor-form input,.gts-editor-form select,.gts-editor-form textarea{font-size:12px}.gts-editor-range-times input{font-size:12px}.gts-editor-range-actions button{font-size:10px;min-height:32px}.gts-editor-timeline input{touch-action:pan-x}}
-@media(max-width:420px){.gts-editor-mark-actions button{grid-template-columns:28px 1fr}.gts-editor-mark-actions small{width:26px;height:26px}.gts-editor-mark-actions b{font-size:11px}.gts-editor-range-times{gap:5px}.gts-editor-range-times input{padding:0 6px}.gts-editor-range-actions{gap:5px}.gts-editor-range-actions button{padding:0 7px}.gts-editor-range-actions button.danger{margin-left:0}.gts-editor-title h1,.gts-editor-title p{max-width:46vw}}
-.gts-editor-subtitles{box-sizing:border-box;position:absolute;z-index:4;left:50%;bottom:8%;width:min(88%,760px);transform:translateX(-50%);padding:7px 12px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(0,0,0,.8);color:#fff;font-size:clamp(13px,1.65vw,24px);font-weight:650;line-height:1.35;text-align:center;pointer-events:none}.gts-editor-subtitles span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gts-editor-timecode{z-index:5}
-.gts-editor-player-loading{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;background:radial-gradient(circle at 50% 45%,rgba(38,34,66,.34),rgba(0,0,0,.9) 72%);color:#d8d4ff;opacity:1;visibility:visible;pointer-events:none;transition:opacity .28s ease,visibility 0s linear 0s}.gts-editor-player-loading.ready{opacity:0;visibility:hidden;transition:opacity .28s ease,visibility 0s linear .28s}.gts-editor-player-spinner{width:34px;height:34px;border:2px solid rgba(157,145,244,.2);border-top-color:#9d91f4;border-radius:50%;animation:gts-editor-spin .8s linear infinite}.gts-editor-player-loading strong{font-size:9px;font-weight:760;letter-spacing:.15em}.gts-editor-range-timecode{display:block;margin:0 0 8px;color:#f2f0ff;font:650 13px var(--font-geist-mono),monospace;letter-spacing:-.02em}.gts-editor-range-timecode span{padding:0 5px;color:#867ae0}.gts-editor-range-times input[aria-invalid=true]{border-color:rgba(226,96,86,.7);box-shadow:0 0 0 3px rgba(226,96,86,.08)}
+.gts-editor-screen{position:fixed;inset:0;z-index:2147483200;overflow:auto;background:#161B23;color:#EDF0F5;--e-sans:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--e-display:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--e-mono:var(--font-geist-mono),ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-family:var(--e-sans);font-size:16px;-webkit-font-smoothing:antialiased;--e-panel:#1E242E;--e-sunk:#191E27;--e-raised:#252C38;--e-hair:rgba(255,255,255,.12);--e-hair-strong:rgba(255,255,255,.22);--e-text:#EDF0F5;--e-muted:#A6AEBC;--e-dim:#828B9A;--e-indigo:#8E82F2;--e-indigo-soft:rgba(142,130,242,.16);--e-amber:#E0A863;--e-amber-soft:rgba(224,168,99,.16);--e-green:#89CFA6;--e-red:#EB8C82}
+.gts-editor-screen:focus{outline:none}
+.gts-editor-screen *:focus-visible{outline:2px solid var(--e-indigo);outline-offset:2px;border-radius:8px}
+.gts-editor-screen button{cursor:pointer;font-family:inherit}
+
+.gts-editor-header{position:sticky;top:0;z-index:20;height:72px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:24px;padding:0 clamp(18px,3vw,40px);border-bottom:1px solid var(--e-hair);background:rgba(22,27,35,.9);backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4)}
+.gts-editor-back{justify-self:start;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 15px 0 11px;border:1px solid var(--e-hair);border-radius:11px;background:var(--e-raised);color:var(--e-muted);font-family:var(--e-display);font-size:14px;font-weight:550;transition:color .15s,background .15s,border-color .15s}
+.gts-editor-back svg{width:17px;height:17px;flex:none}
+.gts-editor-back:hover{color:#fff;background:#2B333F;border-color:var(--e-hair-strong)}
+.gts-editor-title{display:grid;gap:2px;text-align:left;min-width:0}
+.gts-editor-title h1,.gts-editor-title p{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gts-editor-title-row{display:flex;align-items:center;gap:11px;min-width:0}
+.gts-editor-title h1{margin:0;font-family:var(--e-display);font-size:16.5px;font-weight:600;line-height:1.25;letter-spacing:-.015em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gts-editor-title-row .gts-editor-kicker{flex:none;padding:4px 9px;border-radius:7px;background:var(--e-indigo-soft);color:#ABA2F7;font-size:10px;letter-spacing:.13em}
+.gts-editor-title p{margin:0;color:#7A8393;font-size:12px;font-weight:500;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gts-editor-title p{max-width:100%}
+.gts-editor-title .gts-editor-kicker::after{content:none!important}
+.gts-editor-kicker{display:block;color:#ABA2F7;font-size:11px;font-weight:700;letter-spacing:.16em;font-family:var(--e-display)}
+.gts-editor-save-state{justify-self:end;display:flex;align-items:center;gap:13px}
+.gts-editor-save-state .dot{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;border:1px solid var(--e-hair);background:var(--e-raised)}
+.gts-editor-save-state .dot i{width:9px;height:9px;border-radius:50%;background:var(--e-dim);transition:background .2s,box-shadow .2s}
+.gts-editor-save-state .dot.dirty i{background:var(--e-amber);box-shadow:0 0 0 4px var(--e-amber-soft)}
+.gts-editor-save-state .dot.saved i{background:var(--e-green);box-shadow:0 0 0 4px rgba(137,207,166,.16)}
+
+
+
+.gts-editor-save-state .primary,.gts-editor-mobile-save .primary,.gts-editor-auth .primary{min-height:46px;padding:0 22px;border:0;border-radius:12px;background:var(--e-indigo);color:#fff;font-family:var(--e-display);font-size:15px;font-weight:600;letter-spacing:-.01em;transition:filter .15s,transform .1s,box-shadow .15s;box-shadow:0 8px 22px -6px rgba(142,130,242,.65)}
+.gts-editor-save-state .primary:hover:not(:disabled),.gts-editor-mobile-save .primary:hover:not(:disabled),.gts-editor-auth .primary:hover{filter:brightness(1.1)}
+.gts-editor-save-state .primary:active:not(:disabled){transform:translateY(1px)}
+.gts-editor-save-state .primary:disabled,.gts-editor-mobile-save .primary:disabled{opacity:.38;cursor:not-allowed;filter:none;box-shadow:none}
+
+.gts-editor-layout{width:min(1500px,100%);margin:0 auto;display:grid;grid-template-columns:minmax(0,1.72fr) minmax(360px,.66fr);gap:28px;padding:28px clamp(18px,3vw,44px) 92px;align-items:start}
+.gts-editor-stage{min-width:0;display:grid;gap:20px}
+
+.gts-editor-video{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border:1px solid var(--e-hair);border-radius:20px;background:#000;box-shadow:0 30px 72px -24px rgba(0,0,0,.78)}
+.gts-editor-video>div:first-child,.gts-editor-video iframe{width:100%!important;height:100%!important;border:0}
+.gts-editor-timecode{position:absolute;right:16px;bottom:14px;z-index:5;padding:8px 12px;border:1px solid rgba(171,159,248,.28);border-radius:10px;background:rgba(31,37,48,.94);color:#F6F4FF;font:700 16.5px var(--e-mono);font-variant-numeric:tabular-nums;box-shadow:0 10px 28px -14px rgba(0,0,0,.8),inset 0 1px rgba(255,255,255,.05);backdrop-filter:blur(12px)}
+.gts-editor-timecode span{margin-left:3px;color:#9CA5B4;font-size:13.5px;font-weight:650}
+
+.gts-editor-console{padding:20px 22px 22px;border:1px solid var(--e-hair);border-radius:20px;background:var(--e-panel)}
+.gts-editor-console-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.gts-editor-transport{display:flex;align-items:center;gap:8px}
+.gts-editor-transport button>*{pointer-events:none}
+.gts-editor-transport button{position:relative;width:40px;height:36px;display:grid;place-items:center;border:1px solid var(--e-hair);border-radius:11px;background:var(--e-raised);color:#E3E7EE;transition:border-color .15s,background .15s,transform .1s}
+.gts-editor-transport button svg{width:18px;height:18px}
+.gts-editor-transport button em{position:absolute;inset:0;display:grid;place-items:center;padding-top:1px;font:700 8px var(--e-mono);font-style:normal;color:var(--e-muted)}
+.gts-editor-transport button:hover{border-color:var(--e-hair-strong);background:#2B333F}
+.gts-editor-transport button:active{transform:translateY(1px)}
+.gts-editor-transport .gts-editor-play{width:46px;height:40px;border-color:rgba(155,143,248,.5);background:linear-gradient(150deg,#9C90F5,#7C6FE0);color:#fff;box-shadow:0 10px 22px -8px rgba(122,110,215,.72)}
+.gts-editor-transport .gts-editor-play svg{width:18px;height:18px}
+.gts-editor-transport .gts-editor-play:hover{border-color:rgba(179,169,249,.72);background:linear-gradient(150deg,#A79CF7,#877BE3)}
+.gts-editor-step{height:36px;display:flex;align-items:center;gap:6px;padding:0 7px 0 9px;border:1px solid var(--e-hair);border-radius:10px;background:var(--e-sunk);color:var(--e-dim)}
+.gts-editor-step span{font-size:9.5px;font-weight:650}
+.gts-editor-step select{height:26px;min-width:58px;padding:0 5px;border:0;border-radius:7px;background:var(--e-raised);color:var(--e-text);font-family:var(--e-sans);font-size:11px;font-weight:600;outline:none}
+.gts-editor-readout{display:flex;align-items:baseline;gap:6px;font-family:var(--e-mono);font-variant-numeric:tabular-nums}
+.gts-editor-readout strong{font-size:21px;font-weight:700;letter-spacing:-.03em;color:var(--e-text)}
+.gts-editor-readout span{font-size:12px;color:var(--e-dim)}
+.gts-editor-summary{margin-left:auto;display:flex;gap:8px}
+.gts-editor-summary span{display:grid;gap:2px;min-width:74px;padding:6px 10px;border:1px solid var(--e-hair);border-radius:11px;background:var(--e-sunk);color:var(--e-muted);font-size:10px;font-weight:700;letter-spacing:.07em;font-family:var(--e-display)}
+.gts-editor-summary b{font:700 14px var(--e-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--e-amber)}
+
+.gts-editor-timeline-wrap{margin-top:0;margin-bottom:20px}
+.gts-editor-timeline{position:relative;isolation:isolate;height:46px;display:flex;align-items:center}
+.gts-editor-timeline:before{content:"";position:absolute;top:50%;left:0;right:0;z-index:0;height:8px;transform:translateY(-50%);border-radius:99px;background:#313947;box-shadow:inset 0 1px 3px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.05)}
+.gts-editor-timeline:after{content:"";position:absolute;top:50%;left:0;z-index:1;width:var(--editor-seek-progress);height:8px;transform:translateY(-50%);border-radius:99px;background:linear-gradient(90deg,#7B6FE4,#AB9FF8);box-shadow:0 0 14px -2px rgba(146,133,236,.5);pointer-events:none}
+.gts-editor-timeline>i{position:absolute;top:50%;z-index:2;height:14px;transform:translateY(-50%);border-radius:5px;border:1px solid rgba(255,220,164,.42);background:repeating-linear-gradient(115deg,#E0A863 0 6px,#CC9550 6px 12px);box-shadow:0 0 0 1px rgba(0,0,0,.3),0 3px 11px -4px rgba(224,168,99,.7);pointer-events:none}
+.gts-editor-timeline>i.previewing{border-color:rgba(179,169,249,.62);background:repeating-linear-gradient(115deg,#AB9FF8 0 7px,#9C90F5 7px 14px);box-shadow:0 0 18px -2px rgba(171,159,248,.82)}
+.gts-editor-timeline>b{position:absolute;z-index:3;top:11px;width:2px;height:24px;border-radius:2px;background:#F5D390;box-shadow:0 0 10px rgba(245,211,144,.6);pointer-events:none}
+.gts-editor-timeline>b:before{content:"";position:absolute;top:-4px;left:-2.5px;width:8px;height:8px;border-radius:50%;background:#F5D390;box-shadow:0 0 8px rgba(245,211,144,.6)}
+.gts-editor-timeline input{position:absolute;inset:0;z-index:4;width:100%;height:46px;margin:0;opacity:1;appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer;touch-action:pan-y}
+.gts-editor-timeline input::-webkit-slider-runnable-track{height:15px;border:0;background:transparent}
+.gts-editor-timeline input::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-.5px;border:3px solid #fff;border-radius:50%;background:var(--e-indigo);box-shadow:0 2px 8px rgba(0,0,0,.55),0 0 0 3px rgba(142,130,242,.28);transition:transform .12s ease}
+.gts-editor-timeline input:active::-webkit-slider-thumb{transform:scale(1.18)}
+.gts-editor-timeline input::-moz-range-track{height:15px;border:0;background:transparent}
+.gts-editor-timeline input::-moz-range-progress{height:15px;background:transparent}
+.gts-editor-timeline input::-moz-range-thumb{width:14px;height:14px;border:3px solid #fff;border-radius:50%;background:var(--e-indigo);box-shadow:0 2px 8px rgba(0,0,0,.55),0 0 0 3px rgba(142,130,242,.28)}
+.gts-editor-timeline input:focus-visible{outline:none}
+.gts-editor-timeline input:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 5px rgba(171,159,248,.42),0 3px 10px rgba(0,0,0,.6)}
+.gts-editor-timeline input:focus-visible::-moz-range-thumb{box-shadow:0 0 0 5px rgba(171,159,248,.42),0 3px 10px rgba(0,0,0,.6)}
+.gts-editor-timeline-preview{position:absolute;left:clamp(34px,var(--editor-preview-position),calc(100% - 34px));bottom:46px;z-index:6;min-width:64px;padding:8px 10px;transform:translateX(-50%);border:1px solid var(--e-hair-strong);border-radius:10px;background:#2B333F;color:#fff;font:700 13px/1 var(--e-mono);font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap;pointer-events:none;box-shadow:0 10px 26px rgba(0,0,0,.5)}
+.gts-editor-ruler{display:flex;justify-content:space-between;margin-top:10px;padding:0 2px;color:var(--e-dim);font:600 11.5px var(--e-mono);font-variant-numeric:tabular-nums}
+.gts-editor-ruler span{position:relative;padding-top:9px}
+.gts-editor-ruler span:before{content:"";position:absolute;top:0;left:50%;width:1px;height:5px;background:rgba(255,255,255,.18)}
+.gts-editor-ruler span:first-child:before{left:0}
+.gts-editor-ruler span:last-child:before{left:auto;right:0}
+
+/* ---- marker buttons: an A—[ ]—B bracket the user "closes" ---- */
+.gts-editor-mark-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px;position:relative}
+.gts-editor-mark-actions:before{content:"";position:absolute;left:50%;top:50%;width:34px;height:2px;transform:translate(-50%,-50%);background:var(--e-hair);border-radius:2px;z-index:1}
+.gts-editor-mark-actions[data-armed="1"]:before{background:linear-gradient(90deg,var(--e-amber),var(--e-indigo));box-shadow:0 0 12px rgba(171,159,248,.5)}
+.gts-mark>*{pointer-events:none}
+.gts-mark{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:13px;min-height:82px;padding:16px 18px;border:1px solid var(--e-hair);border-radius:17px;background:var(--e-raised);color:var(--e-text);text-align:left;transition:border-color .15s,background .15s,box-shadow .15s,transform .1s}
+.gts-mark:hover{border-color:var(--e-hair-strong);background:#2B333F}
+.gts-mark:active{transform:translateY(1px)}
+.gts-mark-bracket{font:700 40px/1 var(--e-display);color:var(--e-dim);transition:color .15s}
+.gts-mark-key{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:10px;background:var(--e-sunk);border:1px solid var(--e-hair);color:var(--e-muted);font:700 16px var(--e-display);transition:background .15s,color .15s,border-color .15s}
+.gts-mark-body{min-width:0}
+.gts-mark-body b{display:block;margin-bottom:4px;font-family:var(--e-display);font-size:15.5px;font-weight:600;letter-spacing:-.01em;color:var(--e-text)}
+.gts-mark-body em{display:block;font:600 13px var(--e-mono);font-variant-numeric:tabular-nums;font-style:normal;color:var(--e-muted)}
+.gts-mark-a.live{border-color:rgba(224,168,99,.6);background:var(--e-amber-soft)}
+.gts-mark-a.live .gts-mark-bracket,.gts-mark-a.done .gts-mark-bracket{color:var(--e-amber)}
+.gts-mark-a.live .gts-mark-key,.gts-mark-a.done .gts-mark-key{background:var(--e-amber);border-color:var(--e-amber);color:#241804}
+.gts-mark-a.done{border-color:rgba(224,168,99,.32)}
+.gts-mark-b.idle{opacity:.62}
+.gts-mark-b.idle .gts-mark-bracket{color:#4E5665}
+.gts-mark-b.live{border-color:rgba(155,143,248,.62);background:var(--e-indigo-soft);box-shadow:0 0 0 1px rgba(142,130,242,.22)}
+.gts-mark-b.live .gts-mark-bracket{color:var(--e-indigo)}
+.gts-mark-b.live .gts-mark-key{background:var(--e-indigo);border-color:var(--e-indigo);color:#fff}
+
+.gts-editor-ranges{padding:24px;border:1px solid var(--e-hair);border-radius:20px;background:var(--e-panel)}
+.gts-editor-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.gts-editor-section-head h2{margin:6px 0 0;font-family:var(--e-display);font-size:21px;font-weight:600;letter-spacing:-.025em}
+.gts-editor-section-head>strong{min-width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--e-hair);border-radius:12px;background:var(--e-sunk);color:#BAB1F9;font:700 15px var(--e-mono)}
+.gts-editor-section-tools{display:flex;align-items:center;gap:8px}
+.gts-editor-section-tools button{height:36px;padding:0 12px;border:1px solid var(--e-hair);border-radius:10px;background:var(--e-sunk);color:var(--e-muted);font-size:12px;font-weight:600;transition:background .15s,border-color .15s,color .15s}
+.gts-editor-section-tools button:hover{background:var(--e-raised);border-color:var(--e-hair-strong);color:#fff}
+.gts-editor-section-tools>strong{min-width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--e-hair);border-radius:12px;background:var(--e-sunk);color:#BAB1F9;font:700 15px var(--e-mono)}
+.gts-editor-empty{display:grid;justify-items:center;gap:14px;margin-top:18px;padding:38px 22px;border:1px dashed rgba(255,255,255,.16);border-radius:16px;color:var(--e-muted);text-align:center}
+.gts-editor-empty svg{width:34px;height:34px;color:#525A69}
+.gts-editor-empty p{margin:0;font-size:15px;line-height:1.6;max-width:34ch}
+.gts-editor-range-list{display:grid;gap:11px;margin-top:20px}
+.gts-editor-range-list article{display:grid;grid-template-columns:46px 1fr;gap:15px;padding:16px;border:1px solid var(--e-hair);border-radius:16px;background:var(--e-raised);transition:border-color .15s,background .15s}
+.gts-editor-range-list article:hover{border-color:var(--e-hair-strong)}
+.gts-editor-range-list article.is-previewing{border-color:rgba(155,143,248,.62);background:var(--e-indigo-soft)}
+.gts-editor-range-list article.invalid{border-color:rgba(235,140,130,.55);background:rgba(235,140,130,.08)}
+.gts-editor-range-index{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#2B3341;color:#C7CDD8;font:700 15px var(--e-mono)}
+.gts-editor-range-timecode{display:flex;align-items:center;gap:2px;margin:0 0 13px;color:#F5F3FF;font:700 18px var(--e-mono);font-variant-numeric:tabular-nums;letter-spacing:-.025em}
+.gts-editor-range-timecode span{padding:0 8px;color:#A197EC}
+.gts-editor-range-timecode em{margin-left:auto;padding:5px 11px;border-radius:8px;background:var(--e-amber-soft);color:var(--e-amber);font-size:13px;font-weight:700;font-style:normal;letter-spacing:0}
+.gts-editor-range-times{display:grid;grid-template-columns:minmax(112px,1fr) auto minmax(112px,1fr);gap:11px;align-items:end}
+.gts-editor-range-times label{display:grid;color:var(--e-muted);font-size:11px;font-weight:700;letter-spacing:.1em;font-family:var(--e-display)}
+.gts-editor-range-times input{width:100%;height:44px;margin-top:7px;padding:0 12px;border:1px solid var(--e-hair);border-radius:11px;background:var(--e-sunk);color:var(--e-text);font:700 16px var(--e-mono);font-variant-numeric:tabular-nums;outline:none;transition:border-color .15s,box-shadow .15s}
+.gts-editor-range-times input:hover{border-color:var(--e-hair-strong)}
+.gts-editor-range-times input:focus{border-color:rgba(155,143,248,.65);box-shadow:0 0 0 3px rgba(155,143,248,.14)}
+.gts-editor-range-times input[aria-invalid=true]{border-color:rgba(235,140,130,.75);box-shadow:0 0 0 3px rgba(235,140,130,.14)}
+.gts-editor-range-times>span{padding-bottom:12px;color:#727B8A}
+.gts-editor-range-actions{display:flex;gap:9px;margin-top:14px}
+.gts-editor-range-actions button{min-height:38px;padding:0 16px;border:1px solid var(--e-hair);border-radius:11px;background:transparent;color:var(--e-muted);font-family:var(--e-display);font-size:13px;font-weight:550;transition:background .15s,color .15s,border-color .15s}
+.gts-editor-range-actions button:hover{background:rgba(255,255,255,.07);border-color:var(--e-hair-strong);color:#fff}
+.gts-editor-range-actions button.danger{margin-left:auto;color:var(--e-red)}
+.gts-editor-range-actions button.danger:hover{background:rgba(235,140,130,.14);border-color:rgba(235,140,130,.45);color:#F4A79E}
+
+.gts-editor-sidebar{display:grid;align-content:start;gap:16px;position:sticky;top:100px}
+.gts-editor-card{padding:24px;border:1px solid var(--e-hair);border-radius:20px;background:var(--e-panel)}
+.gts-editor-card--metadata{padding:20px}
+.gts-editor-edit-hint{align-self:center;color:var(--e-dim);font-size:11px;white-space:nowrap}
+.gts-editor-form{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-top:16px}
+.gts-inline-field{min-width:0;display:grid;align-content:start;gap:5px}
+.gts-inline-field.wide{grid-column:1/-1}
+.gts-inline-label{color:var(--e-muted);font-size:11.5px;font-weight:600;line-height:1.25}
+.gts-inline-view{min-width:0;width:100%;height:40px;display:flex;align-items:center;gap:9px;padding:0 10px 0 12px;border:1px solid rgba(255,255,255,.075);border-radius:10px;background:rgba(255,255,255,.025);color:var(--e-text);text-align:left;transition:background .15s,border-color .15s}
+.gts-inline-view:hover{background:var(--e-raised);border-color:var(--e-hair-strong)}
+.gts-inline-view span{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:550}
+.gts-inline-view svg{width:15px;height:15px;flex:none;color:var(--e-dim);opacity:.7}
+.gts-inline-field.multiline .gts-inline-view{height:auto;min-height:52px;align-items:flex-start;padding-top:10px;padding-bottom:10px}
+.gts-inline-field.multiline .gts-inline-view span{display:-webkit-box;overflow:hidden;white-space:normal;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.45}
+.gts-inline-edit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:start}
+.gts-inline-edit input,.gts-inline-edit select,.gts-inline-edit textarea{width:100%;border:1px solid rgba(155,143,248,.65);border-radius:10px;background:var(--e-sunk);color:var(--e-text);outline:none;font-family:var(--e-sans);font-size:14px;box-shadow:0 0 0 3px rgba(155,143,248,.12)}
+.gts-inline-edit input,.gts-inline-edit select{height:40px;padding:0 11px}
+.gts-inline-edit textarea{min-height:78px;padding:10px 11px;resize:vertical;line-height:1.5}
+.gts-inline-actions{display:flex;gap:5px}
+.gts-inline-actions button{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--e-hair);border-radius:10px;background:var(--e-raised);transition:background .15s,border-color .15s,color .15s}
+.gts-inline-actions button svg{width:17px;height:17px}
+.gts-inline-actions .confirm{color:var(--e-green)}
+.gts-inline-actions .confirm:hover{background:rgba(137,207,166,.14);border-color:rgba(137,207,166,.42)}
+.gts-inline-actions .cancel{color:var(--e-red)}
+.gts-inline-actions .cancel:hover{background:rgba(235,140,130,.14);border-color:rgba(235,140,130,.42)}
+.gts-inline-field.multiline .gts-inline-actions{align-self:start}
+.gts-field-modal{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;padding:22px;background:rgba(7,9,13,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.gts-field-dialog{width:min(580px,100%);max-height:min(760px,calc(100dvh - 44px));overflow:auto;padding:24px;border:1px solid var(--e-hair-strong);border-radius:20px;background:var(--e-panel);box-shadow:0 34px 100px -28px rgba(0,0,0,.9)}
+.gts-field-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px}
+.gts-field-dialog-head h3{margin:5px 0 0;font-family:var(--e-display);font-size:22px;font-weight:620;line-height:1.25;letter-spacing:-.025em}
+.gts-field-dialog-close{width:38px;height:38px;flex:none;display:grid;place-items:center;border:1px solid var(--e-hair);border-radius:11px;background:var(--e-raised);color:var(--e-muted);transition:background .15s,border-color .15s,color .15s}
+.gts-field-dialog-close:hover{border-color:var(--e-hair-strong);background:#2B333F;color:#fff}
+.gts-field-dialog-close svg{width:17px;height:17px}
+.gts-field-dialog-control{display:grid;gap:8px;color:var(--e-muted);font-size:12px;font-weight:650}
+.gts-field-dialog-control input,.gts-field-dialog-control select,.gts-field-dialog-control textarea{width:100%;border:1px solid var(--e-hair-strong);border-radius:13px;background:var(--e-sunk);color:var(--e-text);outline:none;font-family:var(--e-sans);font-size:16px;transition:border-color .15s,box-shadow .15s}
+.gts-field-dialog-control input,.gts-field-dialog-control select{height:50px;padding:0 14px}
+.gts-field-dialog-control textarea{min-height:210px;max-height:48dvh;padding:14px;resize:vertical;line-height:1.55}
+.gts-field-dialog-control input:focus,.gts-field-dialog-control select:focus,.gts-field-dialog-control textarea:focus{border-color:rgba(155,143,248,.72);box-shadow:0 0 0 4px rgba(155,143,248,.13)}
+.gts-field-dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+.gts-field-dialog-actions button{min-height:42px;padding:0 16px;border-radius:11px;font-size:14px;font-weight:620;transition:background .15s,border-color .15s,transform .1s}
+.gts-field-dialog-actions button:active{transform:translateY(1px)}
+.gts-field-dialog-actions .secondary{border:1px solid var(--e-hair);background:transparent;color:var(--e-muted)}
+.gts-field-dialog-actions .secondary:hover{border-color:var(--e-hair-strong);background:var(--e-raised);color:#fff}
+.gts-field-dialog-actions .confirm{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid rgba(155,143,248,.55);background:var(--e-indigo);color:#fff;box-shadow:0 10px 24px -10px rgba(142,130,242,.7)}
+.gts-field-dialog-actions .confirm:hover{background:#9C90F5}
+.gts-field-dialog-actions .confirm svg{width:17px;height:17px}
+.gts-editor-validation p,.gts-editor-validation ul{margin:15px 0 0;color:var(--e-muted);font-size:14px;line-height:1.65}
+.gts-editor-validation ul{padding-left:21px;color:var(--e-red)}
+.gts-editor-validation.ok{border-color:rgba(105,190,141,.28)}
+.gts-editor-validation.ok .gts-editor-section-head>strong{color:var(--e-green);background:rgba(105,190,141,.13);border-color:rgba(105,190,141,.3)}
+.gts-editor-validation.has-errors{border-color:rgba(235,140,130,.34)}
+.gts-editor-validation.has-errors .gts-editor-section-head>strong{color:var(--e-red);background:rgba(235,140,130,.12);border-color:rgba(235,140,130,.34)}
+.gts-editor-status{padding:16px 18px;border:1px solid rgba(155,143,248,.28);border-radius:14px;background:var(--e-indigo-soft);color:#CEC7FA;font-size:14px;line-height:1.55}
+
+.gts-editor-loading{min-height:55vh;display:grid;place-items:center;align-content:center;gap:17px;color:var(--e-muted);font-size:16px}
+.gts-editor-mobile-save{display:none}
+
+.gts-editor-auth{min-height:100dvh;display:grid;place-items:center;padding:20px}
+.gts-editor-auth-card{width:min(420px,100%);padding:32px;border:1px solid var(--e-hair);border-radius:22px;background:var(--e-panel);box-shadow:0 36px 90px -30px rgba(0,0,0,.85)}
+.gts-editor-auth-card h1{margin:10px 0 11px;font-family:var(--e-display);font-size:26px;font-weight:600;letter-spacing:-.025em}
+.gts-editor-auth-card p{margin:0 0 22px;color:var(--e-muted);font-size:15px;line-height:1.6}
+.gts-editor-auth-card form{display:grid;gap:12px}
+.gts-editor-auth-card input{height:52px;padding:0 15px;border:1px solid var(--e-hair);border-radius:13px;background:var(--e-raised);color:#fff;font-family:var(--e-sans);font-size:15px;outline:none;transition:border-color .15s,box-shadow .15s}
+.gts-editor-auth-card input:focus{border-color:rgba(155,143,248,.65);box-shadow:0 0 0 3px rgba(155,143,248,.14)}
+.gts-editor-auth .primary{width:100%}
+.gts-editor-error{display:block;margin-top:13px;color:var(--e-red);font-size:13.5px}
+.gts-editor-auth-cancel{width:100%;margin-top:11px;padding:11px;border:0;background:transparent;color:var(--e-dim);font-size:13.5px;transition:color .15s}
+.gts-editor-auth-cancel:hover{color:#C7CDD8}
+
+.gts-editor-subtitles{box-sizing:border-box;position:absolute;z-index:4;left:50%;bottom:8%;width:min(88%,760px);transform:translateX(-50%);padding:10px 15px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(0,0,0,.84);color:#fff;font-family:var(--e-sans);font-size:clamp(15px,1.75vw,26px);font-weight:650;line-height:1.35;text-align:center;pointer-events:none}
+.gts-editor-subtitles span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gts-editor-player-loading{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(circle at 50% 45%,rgba(52,47,86,.44),rgba(10,12,16,.94) 72%);color:#DFDAFF;opacity:1;visibility:visible;pointer-events:none;transition:opacity .28s ease,visibility 0s linear 0s}
+.gts-editor-player-loading.ready{opacity:0;visibility:hidden;transition:opacity .28s ease,visibility 0s linear .28s}
+.gts-editor-player-spinner{width:38px;height:38px;border:2px solid rgba(171,159,248,.26);border-top-color:#AB9FF8;border-radius:50%;animation:gts-editor-spin .8s linear infinite}
+.gts-editor-player-loading strong{font-family:var(--e-display);font-size:12px;font-weight:700;letter-spacing:.16em}
 @keyframes gts-editor-spin{to{transform:rotate(360deg)}}
-@media(max-width:900px){.gts-editor-player-spinner{width:30px;height:30px}.gts-editor-player-loading{gap:10px}.gts-editor-range-timecode{font-size:12px}.gts-editor-range-times input{min-width:0}}
-.gts-editor-timeline{isolation:isolate;height:30px}.gts-editor-timeline:before{top:50%;z-index:0;height:7px;transform:translateY(-50%);background:#303642;box-shadow:inset 0 1px 2px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.035)}.gts-editor-timeline:after{content:"";position:absolute;top:50%;left:0;z-index:1;width:var(--editor-seek-progress);height:7px;transform:translateY(-50%);border-radius:99px;background:linear-gradient(90deg,#7569d9,#9b8ef8);box-shadow:0 0 12px rgba(132,119,225,.28);pointer-events:none}.gts-editor-timeline>i{top:50%;z-index:2;height:10px;transform:translateY(-50%);border:1px solid rgba(255,220,164,.32);background:#c58a42;box-shadow:0 0 0 1px rgba(0,0,0,.22),0 0 13px rgba(197,138,66,.3)}.gts-editor-timeline>b{z-index:3;top:3px;height:24px}.gts-editor-timeline input{inset:0;z-index:4;width:100%;height:30px;margin:0;opacity:1;appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer;touch-action:pan-y}.gts-editor-timeline input::-webkit-slider-runnable-track{height:7px;border:0;background:transparent}.gts-editor-timeline input::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;margin-top:-4px;border:2px solid #a99df7;border-radius:50%;background:#11141a;box-shadow:0 2px 8px rgba(0,0,0,.55),0 0 0 2px rgba(117,105,217,.2)}.gts-editor-timeline input::-moz-range-track{height:7px;border:0;background:transparent}.gts-editor-timeline input::-moz-range-progress{height:7px;background:transparent}.gts-editor-timeline input::-moz-range-thumb{width:13px;height:13px;border:2px solid #a99df7;border-radius:50%;background:#11141a;box-shadow:0 2px 8px rgba(0,0,0,.55),0 0 0 2px rgba(117,105,217,.2)}.gts-editor-timeline input:focus-visible{outline:none}.gts-editor-timeline input:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(155,142,248,.28),0 2px 8px rgba(0,0,0,.55)}.gts-editor-timeline input:focus-visible::-moz-range-thumb{box-shadow:0 0 0 4px rgba(155,142,248,.28),0 2px 8px rgba(0,0,0,.55)}
-@media(max-width:900px){.gts-editor-timeline{height:34px}.gts-editor-timeline input{height:34px}.gts-editor-timeline input::-webkit-slider-thumb{width:17px;height:17px;margin-top:-5px}.gts-editor-timeline input::-moz-range-thumb{width:15px;height:15px}}
+
+@media(max-width:1100px){
+.gts-editor-layout{grid-template-columns:minmax(0,1fr);gap:22px}
+.gts-editor-sidebar{position:static}
+}
+@media(max-width:900px){
+.gts-editor-header{grid-template-columns:auto minmax(0,1fr) auto;height:70px;padding:0 13px;gap:12px}
+.gts-editor-back{height:40px;padding:0 10px}
+.gts-editor-back span,.gts-editor-save-state>span{display:none}
+.gts-editor-title{text-align:left}
+.gts-editor-title-row .gts-editor-kicker{display:none}
+.gts-editor-title h1{font-size:15px}
+.gts-editor-title p{font-size:11.5px}
+.gts-editor-save-state .primary{display:none}
+.gts-editor-layout{padding:16px 13px 100px;gap:18px}
+.gts-editor-stage{gap:16px}
+.gts-editor-video{border-radius:15px}
+.gts-editor-console{padding:16px;border-radius:16px}
+.gts-editor-console-top{gap:12px}
+.gts-editor-transport{order:2;width:100%;justify-content:center}
+.gts-editor-readout{order:1;width:100%;justify-content:center}
+.gts-editor-readout strong{font-size:27px}
+.gts-editor-readout span{font-size:13px}
+.gts-editor-transport button{width:42px;height:40px}
+.gts-editor-transport .gts-editor-play{width:48px;height:42px}
+.gts-editor-step{height:40px}
+.gts-editor-summary{order:3;margin-left:0;width:100%}
+.gts-editor-summary span{flex:1;min-width:0;text-align:center;justify-items:center}
+.gts-editor-timeline-wrap{margin-top:18px}
+.gts-editor-timeline{height:52px}
+.gts-editor-timeline input{height:52px;touch-action:pan-x}
+.gts-editor-timeline input::-webkit-slider-thumb{width:26px;height:26px;margin-top:-5.5px}
+.gts-editor-timeline input::-moz-range-thumb{width:23px;height:23px}
+.gts-editor-ruler span:nth-child(even){display:none}
+.gts-editor-mark-actions{gap:11px;margin-top:18px}
+.gts-mark{min-height:74px;padding:13px 14px;gap:11px}
+.gts-mark-bracket{font-size:34px}
+.gts-mark-key{width:32px;height:32px}
+.gts-editor-ranges,.gts-editor-card{padding:17px;border-radius:16px}
+.gts-editor-section-head h2{font-size:18px}
+.gts-editor-sidebar{gap:13px}
+.gts-editor-grid{grid-template-columns:1fr}
+.gts-inline-edit input,.gts-inline-edit select,.gts-inline-edit textarea{font-size:16px}
+.gts-editor-range-list article{grid-template-columns:36px 1fr;gap:12px;padding:13px}
+.gts-editor-range-index{width:36px;height:36px;font-size:13px}
+.gts-editor-range-timecode{font-size:16px;flex-wrap:wrap}
+.gts-editor-range-times{grid-template-columns:1fr auto 1fr;gap:8px}
+.gts-editor-range-actions button{font-size:13.5px;min-height:40px}
+.gts-editor-mobile-save{position:fixed;left:0;right:0;bottom:0;z-index:25;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px calc(13px + env(safe-area-inset-bottom));border-top:1px solid var(--e-hair);background:rgba(22,27,35,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.gts-editor-mobile-save div{color:var(--e-muted);font-size:13px;font-weight:550}
+.gts-editor-mobile-save .primary{min-width:142px}
+}
+@media(max-width:430px){
+.gts-field-modal{align-items:end;padding:10px 10px calc(10px + env(safe-area-inset-bottom))}
+.gts-field-dialog{max-height:calc(100dvh - 20px);padding:20px 17px;border-radius:20px}
+.gts-field-dialog-head{margin-bottom:17px}
+.gts-field-dialog-head h3{font-size:20px}
+.gts-field-dialog-control textarea{min-height:190px;max-height:44dvh}
+.gts-field-dialog-actions{display:grid;grid-template-columns:1fr 1fr}
+.gts-field-dialog-actions button{min-height:46px}
+.gts-editor-form{grid-template-columns:1fr}
+.gts-inline-field.wide{grid-column:auto}
+.gts-editor-section-head{flex-wrap:wrap}
+.gts-editor-section-tools{width:100%;justify-content:flex-end}
+.gts-editor-edit-hint{display:none}
+.gts-editor-mark-actions{grid-template-columns:1fr}
+.gts-editor-mark-actions:before{display:none}
+.gts-mark{min-height:66px}
+.gts-editor-range-times{grid-template-columns:1fr;gap:10px}
+.gts-editor-range-times>span{display:none}
+.gts-editor-range-actions{flex-wrap:wrap}
+.gts-editor-range-actions button.danger{margin-left:0;width:100%}
+.gts-editor-title h1,.gts-editor-title p{max-width:52vw}
+.gts-editor-readout strong{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){
+.gts-editor-screen *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
 `;
