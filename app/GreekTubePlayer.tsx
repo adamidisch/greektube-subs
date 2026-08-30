@@ -133,6 +133,10 @@ const GREEK_TITLES:Record<string,string>={
 function greekTitle(video:Video){return isGreekTitle(video.title)?video.title:GREEK_TITLES[video.id]||video.title;}
 function isGreekTitle(value:string){const letters=value.match(/\p{L}/gu)?.length||0;const greek=value.match(/[\u0370-\u03ff\u1f00-\u1fff]/g)?.length||0;return letters>0&&greek/letters>.22;}
 function mobileSummary(video:Video,captions:Captions){
+  const description=video.description?.trim()||"";
+  const normalizedDescription=description.toLocaleLowerCase("el-GR").normalize("NFD").replace(/\p{Diacritic}/gu,"");
+  const placeholder=normalizedDescription.includes("μιλησαμε τελευταια φορα")||normalizedDescription.includes("νεο βιντεο στη βιβλιοθηκη");
+  if(description.length>=40&&!placeholder)return description;
   const point=captions.keyPoints?.find(isGreekTitle)||captions.cues.find(cue=>isGreekTitle(cue.text))?.text;
   return point|| (isGreekTitle(video.description)?video.description:"Δες τα βασικά σημεία και τη μεταγραφή του βίντεο στα ελληνικά.");
 }
