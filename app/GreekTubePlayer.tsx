@@ -5,6 +5,7 @@ import AudioTimingCapturePanel from "./AudioTimingCapturePanel";
 import { APP_VERSION } from "./version";
 import { canonicalSpeakerForVideo, type CanonicalSpeakerProfile } from "./speaker-catalog";
 import {activeSkipTarget,normalizeSkipRanges,SKIP_RANGES_UPDATED_EVENT,type SkipRange} from "./skip-ranges";
+import {packSubtitles,packAlongside,packAt,packAfter,subtitleLines,type PackedSubtitles} from "./subtitle-display";
 import {
   ALIGNMENT_PROOF_CAPTIONS,
   ALIGNMENT_PROOF_QUERY_VALUE,
@@ -263,30 +264,7 @@ function extractId(value:string) {
 function clock(n:number) { const t=Math.max(0,Math.floor(n)); const h=Math.floor(t/3600); const m=Math.floor((t%3600)/60); const s=t%60; return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`; }
 function activeIndex(cues:Cue[], time:number) { let result=-1; for(let i=0;i<cues.length;i++){if(cues[i].start<=time) result=i; else break;} return result; }
 function subtitleFrames(text:string,maxLineCharacters=42){
-  const clean=text.replace(/\s+/g," ").trim();
-  if(!clean)return [];
-  const words=clean.split(" ");
-  const lines:string[]=[];
-  let line="";
-  for(const word of words){
-    const next=line?`${line} ${word}`:word;
-    if(line&&next.length>maxLineCharacters){lines.push(line);line=word;}else line=next;
-  }
-  if(line)lines.push(line);
-
-  // Avoid a tiny orphan line at the end when the previous line has room to share.
-  if(lines.length>=3&&lines.length%2===1&&lines[lines.length-1].length<24){
-    const previous=lines[lines.length-2].split(" ");
-    let last=lines[lines.length-1];
-    while(previous.length>2&&last.length<28){
-      const moved=previous.pop();
-      if(!moved)break;
-      last=`${moved} ${last}`;
-    }
-    lines[lines.length-2]=previous.join(" ");
-    lines[lines.length-1]=last;
-  }
-
+  const lines=subtitleLines(text,maxLineCharacters);
   const frames:string[]=[];
   for(let index=0;index<lines.length;index+=2){
     frames.push(lines.slice(index,index+2).join("\n"));
@@ -404,6 +382,15 @@ export default function GreekTubePlayer() {
   const [view,setView]=useState<"library"|"settings">("library");
   const [selectedId,setSelectedId]=useState<string|null>(null);
   const [captions,setCaptions]=useState<Captions|null>(null);
+  // Display-layer subtitle packing. Overlay only: `captions.cues` itself, the
+  // transcript sidebar, the SRT export and the database keep every original cue.
+  const greekPacks=useMemo<PackedSubtitles>(()=>packSubtitles(captions?.cues),[captions?.cues]);
+  const englishPacks=useMemo<PackedSubtitles>(()=>{
+    const english=captions?.englishCues;
+    if(!english?.length)return {packs:[],packOfCue:[]};
+    // Index-aligned tracks reuse the Greek grouping so dual mode switches in step.
+    return english.length===(captions?.cues?.length??0)?packAlongside(english,greekPacks):packSubtitles(english);
+  },[captions?.englishCues,captions?.cues?.length,greekPacks]);
   const [loading,setLoading]=useState(false);
   const [checkingReady,setCheckingReady]=useState(false);
   const [progress,setProgress]=useState(0);
@@ -1375,7 +1362,7 @@ export default function GreekTubePlayer() {
                   {seekPreview!==null&&seekDuration>0&&<output className="seek-preview" style={{"--seek-preview-position":`${Math.min(100,Math.max(0,(seekPreview/seekDuration)*100))}%`} as CSSProperties}>{clock(seekPreview)}</output>}
                   <input className="player-seek-bar" type="range" min={0} max={Math.max(1,seekDuration)} step="0.1" value={Math.min(playhead,Math.max(1,seekDuration))} disabled={seekDuration<=0} aria-label="Μετακίνηση στο βίντεο" style={{"--seek-progress":`${seekDuration>0?Math.min(100,(playhead/seekDuration)*100):0}%`} as CSSProperties} onPointerDown={event=>{event.stopPropagation();updateSeekPreview(event,seekDuration);}} onPointerMove={event=>updateSeekPreview(event,seekDuration)} onPointerUp={()=>{setSeekPreview(null);revealPlayerUi();}} onPointerCancel={()=>setSeekPreview(null)} onPointerLeave={()=>setSeekPreview(null)} onClick={event=>event.stopPropagation()} onChange={event=>{const nextTime=Number(event.currentTarget.value);setPlayhead(nextTime);currentPlayer()?.seekTo(nextTime,true);revealPlayerUi();}}/>
                 </div>
-                {state.settings.subtitles&&active>=0&&<div className={`subtitles ${state.settings.subtitlePosition}`} style={{"--subtitle-size":`${state.settings.subtitleSize}px`,background:`rgba(0,0,0,${state.settings.opacity})`} as CSSProperties}>{state.settings.subtitleMode==="en"?subtitleWindow(captions.englishCues?.[active]||captions.cues[active],playhead,captions.englishCues?.[active+1]||captions.cues[active+1]):state.settings.subtitleMode==="dual"?<><span>{subtitleWindow(captions.cues[active],playhead,captions.cues[active+1])}</span>{captions.englishCues?.[active]?.text&&<small>{subtitleWindow(captions.englishCues[active],playhead,captions.englishCues?.[active+1]||captions.cues[active+1])}</small>}</>:subtitleWindow(captions.cues[active],playhead,captions.cues[active+1])}</div>}
+                {state.settings.subtitles&&active>=0&&(()=>{const el=packAt(greekPacks,active)||captions.cues[active];const elNext=packAfter(greekPacks,active)||captions.cues[active+1];const en=packAt(englishPacks,active)||captions.englishCues?.[active];const enNext=packAfter(englishPacks,active)||captions.englishCues?.[active+1];return <div className={`subtitles ${state.settings.subtitlePosition}`} style={{"--subtitle-size":`${state.settings.subtitleSize}px`,background:`rgba(0,0,0,${state.settings.opacity})`} as CSSProperties}>{state.settings.subtitleMode==="en"?subtitleWindow(en||el,playhead,enNext||elNext):state.settings.subtitleMode==="dual"?<><span>{subtitleWindow(el,playhead,elNext)}</span>{en?.text&&<small>{subtitleWindow(en,playhead,enNext||elNext)}</small>}</>:subtitleWindow(el,playhead,elNext)}</div>;})()}
                 <button className="video-tap-toggle" aria-label={isPlaying?"Παύση βίντεο":"Αναπαραγωγή βίντεο"} onClick={handleVideoTap}/>
                 {(isFullscreen||isPseudoFullscreen)&&showFsExit&&<button className="custom-fullscreen" title="Έξοδος από πλήρη οθόνη" aria-label="Έξοδος από πλήρη οθόνη" onClick={e=>{e.preventDefault();e.stopPropagation();e.currentTarget.blur();void toggleFullscreen();}}><FullscreenExitIcon/></button>}
               </div>
