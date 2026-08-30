@@ -495,9 +495,9 @@ const styles=`
 .gts-editor-readout{display:flex;align-items:baseline;gap:8px;font-family:var(--e-mono);font-variant-numeric:tabular-nums}
 .gts-editor-readout strong{font-size:21px;font-weight:700;letter-spacing:-.03em;color:var(--e-text)}
 .gts-editor-readout span{font-size:13px;color:var(--e-dim)}
-.gts-editor-summary{margin-left:auto;display:flex;gap:11px}
-.gts-editor-summary span{display:grid;gap:2px;min-width:78px;padding:7px 11px;border:1px solid var(--e-hair);border-radius:13px;background:var(--e-sunk);color:var(--e-muted);font-size:11px;font-weight:700;letter-spacing:.09em;font-family:var(--e-display)}
-.gts-editor-summary b{font:700 15px var(--e-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--e-amber)}
+.gts-editor-summary{margin-left:auto;display:flex;align-items:center;gap:7px}
+.gts-editor-summary span{display:grid;gap:1px;min-width:58px;padding:5px 8px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(255,255,255,.025);color:var(--e-dim);font-size:9px;font-weight:650;letter-spacing:.07em;line-height:1.05;font-family:var(--e-display)}
+.gts-editor-summary b{font:700 13px var(--e-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:#BDB5F3}
 
 .gts-editor-timeline-wrap{margin-top:0;margin-bottom:18px;padding-top:26px}
 .gts-editor-timeline{position:relative;isolation:isolate;height:34px;display:flex;align-items:center}
@@ -638,8 +638,8 @@ const styles=`
 .gts-editor-transport{order:2;width:100%;justify-content:center}
 .gts-editor-readout{order:1;width:100%;justify-content:center}
 .gts-editor-readout strong{font-size:34px}
-.gts-editor-summary{order:3;margin-left:0;width:100%}
-.gts-editor-summary span{flex:1;min-width:0;text-align:center;justify-items:center}
+.gts-editor-summary{order:3;margin-left:0;width:auto;justify-content:center}
+.gts-editor-summary span{flex:0 0 auto;min-width:62px;text-align:center;justify-items:center}
 .gts-editor-timeline-wrap{margin-top:18px}
 .gts-editor-timeline{height:52px}
 .gts-editor-timeline input{height:52px;touch-action:pan-x}
