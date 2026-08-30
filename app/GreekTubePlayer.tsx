@@ -87,7 +87,7 @@ async function saveStateToServer(state:AppState,keepalive=false,requireShared=fa
 }
 function mergeAppStates(base:AppState,incoming:AppState):AppState{
   const videos=new Map(base.videos.map(video=>[video.id,video]));
-  incoming.videos.forEach(video=>videos.set(video.id,{...(videos.get(video.id)||{}),...video}));
+  incoming.videos.forEach(video=>videos.set(video.id,canonicalVideoMetadata({...(videos.get(video.id)||{}),...video})));
   return {
     settings:normalizedSettings(incoming.settings||base.settings),
     moments:[...(incoming.moments||[]),...base.moments.filter(moment=>!(incoming.moments||[]).some(item=>item.id===moment.id))],
@@ -120,6 +120,17 @@ function speakerForVideo(id:string,channel:string):SpeakerProfile{
     currentWork:"",
     highlights:[],
   };
+}
+const CURATED_VIDEO_METADATA:Partial<Record<string,Pick<Video,"title"|"description"|"category">>>={
+  h2Pf6xO_NVM:{
+    title:"Γλυκόζη, ζάχαρη και η βιοχημεία της ανάπτυξης του οργανισμού",
+    description:"Η Jessie Inchauspé εξηγεί πώς η γλυκόζη και η ζάχαρη επηρεάζουν τον εγκέφαλο, τη ντοπαμίνη, τη διάθεση και τις λιγούρες. Συζητά τον ρόλο της διατροφής στη λειτουργία του οργανισμού και κατά την εγκυμοσύνη. Αναλύει πώς θρεπτικά συστατικά όπως η χολίνη συνδέονται με την ανάπτυξη του εγκεφάλου και του μωρού.",
+    category:"Medical",
+  },
+};
+function canonicalVideoMetadata(video:Video):Video{
+  const metadata=CURATED_VIDEO_METADATA[video.id];
+  return metadata?{...video,...metadata}:video;
 }
 const GREEK_TITLES:Record<string,string>={
   ATKu1Cxs2Pc:"Καρδιοχειρουργός: Ο μεγαλύτερος παράγοντας κινδύνου για καρδιακή νόσο",
@@ -1357,6 +1368,7 @@ export default function GreekTubePlayer() {
               <div className={`video-frame ${isPseudoFullscreen?"pseudo-fullscreen":""} ${controlsVisible||!isPlaying?"player-ui-visible":"player-ui-hidden"}`} ref={fullscreenHost} onPointerMove={()=>revealPlayerUi()} onPointerDown={()=>revealPlayerUi()} onMouseLeave={()=>{if(isPlaying&&controlsTimer.current)controlsTimer.current=setTimeout(()=>setControlsVisible(false),900);}}>
                 <div ref={playerHost}/>
                 <button className={`player-cover ${playerReady?"":"is-loading"} ${showPlayerCover?"is-visible":"is-hidden"}`} tabIndex={showPlayerCover?0:-1} aria-hidden={!showPlayerCover} aria-label={playerReady?"Αναπαραγωγή βίντεο":playerLoadFailed?"Επανάληψη φόρτωσης βίντεο":"Φόρτωση βίντεο"} onClick={event=>playerLoadFailed?initPlayer(selected.id,playhead||selected.lastPosition):handleVideoTap(event)}><img src={`https://i.ytimg.com/vi/${selected.id}/maxresdefault.jpg`} onError={e=>{e.currentTarget.src=`https://i.ytimg.com/vi/${selected.id}/hqdefault.jpg`}} alt=""/>{playerReady?<span className="cover-play"><PlayIcon/></span>:<span className="cover-loading" aria-hidden="true"><i/><small>{playerLoadFailed?"ΠΑΤΗΣΤΕ ΓΙΑ ΕΠΑΝΑΛΗΨΗ":"ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ"}</small></span>}<span className="cover-caption"><small>{displaySpeakerLabel}</small><strong>{greekTitle(selected)}</strong></span></button>
+                {!isPlaying&&playerReady&&!showPlayerCover&&<div className="paused-video-title" aria-hidden="true"><small>ΤΙΤΛΟΣ ΒΙΝΤΕΟ</small><strong>{greekTitle(selected)}</strong></div>}
                 <div className="player-cover-badges" aria-hidden="true"><span>{upperGreekLabel(CATEGORY_LABELS[selected.category])}</span>{selected.duration>0&&<time>{clock(selected.duration)}</time>}</div>
                 <div className={`player-seek-ui ${controlsVisible||!isPlaying?"visible":"hidden"}`} onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()}>
                   <span className="player-time-label">{clock(Math.max(0,playhead))} / {clock(Math.max(0,seekDuration))}</span>
@@ -1398,7 +1410,7 @@ export default function GreekTubePlayer() {
                 </div>
               </div>
             </div>
-            <div className="video-heading player-info-card"><div><small className="video-meta-kicker"><span className="video-category-label" data-category={selected.category}>{upperGreekLabel(CATEGORY_LABELS[selected.category])}</span></small><h1 className="player-greek-title">{isGreekTitle(selected.title)?selected.title:isGreekTitle(captions.title)?captions.title:"Βίντεο με ελληνικούς υπότιτλους"}</h1>{(selected.originalTitle||captions.originalTitle||englishTitle(selected))&&<a className="player-original-title" href={sourceVideoUrl} target="_blank" rel="noreferrer" title="Άνοιγμα αρχικού βίντεο στο YouTube">{selected.originalTitle||captions.originalTitle||englishTitle(selected)} ↗</a>}<div className="video-source-row"><span>ΠΗΓΗ</span>{sourceChannelUrl?<a href={sourceChannelUrl} target="_blank" rel="noreferrer" title="Άνοιγμα καναλιού στο YouTube">{selected.channel} ↗</a>:<strong>{selected.channel}</strong>}</div><p className="mobile-video-description">{mobileSummary(selected,captions)}</p></div></div>
+            <div className="video-heading player-info-card"><div><small className="video-meta-kicker"><span className="video-category-label" data-category={selected.category}>{upperGreekLabel(CATEGORY_LABELS[selected.category])}</span></small><h1 className="player-greek-title">{greekTitle(selected)}</h1>{(selected.originalTitle||captions.originalTitle||englishTitle(selected))&&<a className="player-original-title" href={sourceVideoUrl} target="_blank" rel="noreferrer" title="Άνοιγμα αρχικού βίντεο στο YouTube">{selected.originalTitle||captions.originalTitle||englishTitle(selected)} ↗</a>}<div className="video-source-row"><span>ΠΗΓΗ</span>{sourceChannelUrl?<a href={sourceChannelUrl} target="_blank" rel="noreferrer" title="Άνοιγμα καναλιού στο YouTube">{selected.channel} ↗</a>:<strong>{selected.channel}</strong>}</div><p className="mobile-video-description">{mobileSummary(selected,captions)}</p></div></div>
             {proofModeRef.current&&selected.id===ALIGNMENT_PROOF_VIDEO_ID&&<AudioTimingCapturePanel videoId={selected.id} playerReady={playerReady} getPlayer={currentPlayer}/>}
             <div className="mobile-watch-summary"><p>{selected.channel} · {CATEGORY_LABELS[selected.category]} · {selected.views||0} προβολές</p><section><span>{(speaker.name||selected.speakerName||selected.channel).slice(0,1)}</span><div><strong>{displaySpeakerName}</strong><small>{displaySpeakerRole}</small></div><button type="button" aria-label="Διαχείριση υποτίτλων" onClick={()=>setTranslationChoiceVideo(selected)}>CC</button><button type="button" aria-label="Επεξεργασία βίντεο" onClick={()=>void requestEdit(selected)}>✎</button><button type="button" aria-label="Αγαπημένο" className={selected.favorite?"active":""} onClick={()=>patchVideo(selected.id,{favorite:!selected.favorite})}>♡</button></section></div>
             <section className="moments"><div className="section-title"><h2>Αποθηκευμένες στιγμές</h2><small>{moments.length}</small></div>{moments.length===0?<p className="muted">Πάτησε M ή το κουμπί πάνω για να κρατήσεις ένα σημείο.</p>:moments.map(m=><article className="moment" key={m.id} onClick={()=>seek(m.time)}><time>{clock(m.time)}</time><div><strong>{m.note}</strong><p>{m.excerpt}</p></div><div className="moment-actions"><button onClick={e=>{e.stopPropagation();seek(m.time)}}>Αναπαραγωγή</button><button onClick={e=>{e.stopPropagation();void copyMoment(m)}}>Αντιγραφή συνδέσμου</button><button onClick={e=>{e.stopPropagation();void shareMoment(m)}}>Κοινοποίηση</button><button onClick={e=>{e.stopPropagation();setState(s=>({...s,moments:s.moments.filter(x=>x.id!==m.id)}))}}>Διαγραφή</button></div></article>)}</section>

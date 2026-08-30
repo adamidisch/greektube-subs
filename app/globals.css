@@ -5714,3 +5714,44 @@ body{background:
   .viewer .watch-layout.transcript-open .transcript-toggle,
   .viewer .watch-layout.transcript-open .cc-toggle{height:46px!important;min-height:46px!important;padding:0 8px!important}
 }
+/* Paused player title: compact context without competing with subtitles. */
+.paused-video-title{
+  position:absolute;
+  z-index:6;
+  top:16px;
+  left:50%;
+  transform:translateX(-50%);
+  width:max-content;
+  max-width:calc(100% - 32px);
+  padding:8px 14px 9px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:10px;
+  background:rgba(10,11,18,.78);
+  box-shadow:0 8px 24px rgba(0,0,0,.2);
+  color:#fff;
+  text-align:center;
+  pointer-events:none;
+  backdrop-filter:blur(10px);
+}
+.paused-video-title small{
+  display:block;
+  margin-bottom:3px;
+  color:rgba(221,216,255,.78);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.12em;
+}
+.paused-video-title strong{
+  display:block;
+  overflow:hidden;
+  color:rgba(255,255,255,.95);
+  font-size:14px;
+  font-weight:600;
+  line-height:1.25;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+@media (max-width:760px){
+  .paused-video-title{top:10px;max-width:calc(100% - 20px);padding:7px 10px 8px}
+  .paused-video-title strong{font-size:12px}
+}
