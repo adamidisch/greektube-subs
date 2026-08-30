@@ -3615,7 +3615,8 @@ body{background:
   display:block!important;
   margin-top:10px!important;
   color:#d4d7de!important;
-  font-size:12.5px!important;
+  font-size:14px!important;
+  font-weight:600!important;
 }
 .featured-details{
   display:grid!important;

@@ -223,9 +223,12 @@ function speakerRoleFromMetadata(description: string, speakerName: string) {
   return "";
 }
 
-function categoryFor(title: string, description: string, speakerName: string) {
-  const text = `${title} ${description}`.toLowerCase();
-  if (speakerName || /\b(health|doctor|medical|medicine|heart|gut|digestion|nutrition|diet|food|insulin|metabolic|disease|vitamin|cancer|brain|blood)\b/.test(text)) return "Medical";
+function categoryFor(title: string, description: string, speakerName: string, channel: string) {
+  const text = `${title} ${description} ${speakerName} ${channel}`.toLowerCase();
+  if (
+    speakerName
+    || /\b(health|doctor|medical|medicine|heart|gut|digestion|nutrition|diet|food|insulin|metabolic|metabolism|disease|vitamin|cancer|brain|blood|sugar|glucose|carbohydrate|carbs|microbiome|inflammation|cholesterol|thyroid|iodine|hormone|supplement|obesity|weight loss|fat loss)\b/.test(text)
+  ) return "Medical";
   if (/\b(ai|artificial intelligence|software|technology|tech|computer|coding|programming)\b/.test(text)) return "Tech";
   if (/\b(podcast|interview|conversation)\b/.test(text)) return "Podcasts";
   if (/\b(comedy|comedian|funny|stand-up)\b/.test(text)) return "Comedy";
@@ -266,7 +269,7 @@ export async function POST(request: Request) {
     const canonicalSpeaker = canonicalSpeakerForVideo(id, detectedSpeakerName, metadata.author, details.author);
     const speakerName = canonicalSpeaker?.name || detectedSpeakerName;
     const speakerRole = canonicalSpeaker?.role || speakerRoleFromMetadata(details.description, speakerName);
-    const category = categoryFor(originalTitle, details.description, speakerName);
+    const category = categoryFor(originalTitle, details.description, speakerName, metadata.author || details.author || "");
     const creatorChapterSource = creatorChaptersFromDescription(details.description, details.duration);
     const creatorChapters = await Promise.all(creatorChapterSource.map(async chapter => ({
       ...chapter,
