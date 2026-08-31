@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   packSubtitles,
+  packTextAt,
+  ORPHAN_MAX_PACK_DURATION,
   packAlongside,
   packAt,
   packAfter,
@@ -117,5 +119,54 @@ assert.ok(/\.$/.test(atPeriod[0]),"break should land on the full stop");
 // --- Short text stays on one line. ---
 assert.deepEqual(subtitleLines("μικρό κείμενο"),["μικρό κείμενο"],"short text needs no wrapping");
 assert.deepEqual(subtitleLines("   "),[],"blank text yields no lines");
+
+
+// --- No cue's words may appear before that cue's own start. ---
+// Real cues from h2Pf6xO_NVM at 5:46. "ζάχαρη;" is a single word finishing the
+// question, so it joins the previous cue, but only reveals at its own 350.64.
+const sugar=[
+  cue(346.72,3.92,"ίντερνετ αν έχω φάει πολλή"),
+  cue(350.64,0.56,"ζάχαρη;"),
+];
+const sugarPack=packSubtitles(sugar).packs[0];
+assert.deepEqual(sugarPack.sourceIndices,[0,1],"a one-word tail must be rescued");
+assert.ok(sugarPack.duration<=ORPHAN_MAX_PACK_DURATION,"rescue stays inside its own ceiling");
+assert.equal(sugarPack.start,346.72,"rescue must not move the start");
+
+for(const t of [346.72,348,350,350.63]){
+  assert.ok(!packTextAt(sugarPack,t).includes("ζάχαρη"),`«ζάχαρη» must not show at ${t}`);
+  assert.ok(packTextAt(sugarPack,t).includes("ίντερνετ"),`the spoken text must show at ${t}`);
+}
+for(const t of [350.64,351,351.19]){
+  assert.ok(packTextAt(sugarPack,t).includes("ζάχαρη"),`«ζάχαρη» must show from ${t}`);
+}
+
+// --- The same holds for an ordinary two-cue pack (the 6:24 case). ---
+const dopamine=packSubtitles([
+  cue(384.0,1.2,"παίρνεις κάτι νέο και ενδιαφέρον,"),
+  cue(385.2,2.4,"μπαμ, ένα σήμα ντοπαμίνης επίσης στον"),
+]).packs[0];
+assert.equal(dopamine.sourceIndices.length,2,"expected a merge");
+assert.ok(!packTextAt(dopamine,384.9).includes("μπαμ"),"second cue must not leak in early");
+assert.ok(packTextAt(dopamine,385.2).includes("μπαμ"),"second cue shows at its own start");
+
+// --- Geometry never changes: every stage keeps the final line count. ---
+for(const pack of [sugarPack,dopamine,...packSubtitles(glucose).packs]){
+  const finalLines=pack.stages.at(-1).text.split("\n").length;
+  for(const stage of pack.stages){
+    assert.equal(stage.text.split("\n").length,finalLines,"stages must keep the final line count");
+  }
+  assert.ok(finalLines<=2,"a pack never exceeds two lines");
+  // Stage text is a prefix of the final text, ignoring the blank line filler.
+  const strip=t=>t.replace(/\u00A0/g,"").replace(/\s+/g," ").trim();
+  assert.ok(strip(pack.stages.at(-1).text)===strip(pack.text),"last stage shows the whole pack");
+  for(const stage of pack.stages){
+    assert.ok(strip(pack.text).startsWith(strip(stage.text)),"a stage only ever adds words at the end");
+  }
+}
+
+// --- A tail that would blow the ceiling is still refused. ---
+const tooLong=packSubtitles([cue(0,5.2,"κάτι πολύ μακρύ που κρατάει ώρα"),cue(5.2,0.6,"ναι;")]);
+assert.equal(tooLong.packs.length,2,"the 5.5s ceiling still applies to rescues");
 
 console.log("subtitle-packing tests passed");

@@ -118,6 +118,9 @@ export function subtitleLines(text: string, maxLineCharacters = MAX_LINE_CHARACT
 
 export type PackableCue = { start: number; duration: number; text: string };
 
+/** One reveal step of a pack: the text visible from `at` onwards. */
+export type PackStage = { at: number; text: string };
+
 export type SubtitlePack = {
   start: number;
   duration: number;
@@ -128,6 +131,13 @@ export type SubtitlePack = {
   cps: number;
   /** True when cps exceeds DIAGNOSTIC_CPS_LIMIT. Diagnostic only. */
   dense: boolean;
+  /**
+   * Progressive reveal, one stage per source cue. No cue's words are ever on
+   * screen before that cue's own start. Line breaks are computed once for the
+   * final text and every stage is padded to the final line count, so the block
+   * never reflows or shifts: words only fill in at the end.
+   */
+  stages: PackStage[];
 };
 
 export type PackedSubtitles = {
@@ -137,6 +147,15 @@ export type PackedSubtitles = {
 };
 
 export const MAX_PACK_DURATION = 4;
+/**
+ * A one- or two-word tail that completes the previous phrase may push a pack
+ * this far. It applies only to that case: such a tail adds a handful of
+ * characters, so the extra time lowers the reading density rather than raising
+ * it, and the character and line limits below still apply unchanged.
+ */
+export const ORPHAN_MAX_PACK_DURATION = 5.5;
+export const ORPHAN_MAX_WORDS = 2;
+export const ORPHAN_MAX_DURATION = 1.2;
 export const MAX_PACK_CHARACTERS = 84;
 export const MAX_PACK_LINES = 2;
 export const MAX_PACK_GAP = 1;
@@ -163,6 +182,42 @@ function cueEnd(cue: PackableCue) {
   return cue.start + Math.max(0, cue.duration);
 }
 
+function wordCount(text: string) {
+  const clean = normalise(text);
+  return clean ? clean.split(" ").length : 0;
+}
+
+/** A short tail that cannot stand on its own as a subtitle. */
+function isSmallTail(cue: PackableCue) {
+  return wordCount(cue.text) <= ORPHAN_MAX_WORDS || cue.duration < ORPHAN_MAX_DURATION;
+}
+
+/**
+ * Wraps the final text once, then hides the words that have not been spoken
+ * yet. Every stage keeps the same number of lines, blank ones held open with a
+ * non-breaking space, so the overlay box keeps its final size throughout.
+ */
+function buildStages(cues: PackableCue[], indices: number[]): PackStage[] {
+  const texts = indices.map((index) => normalise(cues[index].text)).filter(Boolean);
+  const lines = subtitleLines(texts.join(" "));
+  const counts = texts.map((text) => text.split(" ").length);
+
+  const stages: PackStage[] = [];
+  let visible = 0;
+  for (let step = 0; step < indices.length; step++) {
+    visible += counts[step] ?? 0;
+    let consumed = 0;
+    const shown = lines.map((line) => {
+      const words = line.split(" ");
+      const take = Math.max(0, Math.min(words.length, visible - consumed));
+      consumed += words.length;
+      return words.slice(0, take).join(" ") || "\u00A0";
+    });
+    stages.push({ at: cues[indices[step]].start, text: shown.join("\n") });
+  }
+  return stages;
+}
+
 function makePack(cues: PackableCue[], indices: number[]): SubtitlePack {
   const first = cues[indices[0]];
   const last = cues[indices[indices.length - 1]];
@@ -170,7 +225,11 @@ function makePack(cues: PackableCue[], indices: number[]): SubtitlePack {
   const duration = Math.max(0.001, cueEnd(last) - start);
   const text = indices.map((index) => normalise(cues[index].text)).filter(Boolean).join(" ");
   const cps = characterCount(text) / duration;
-  return { start, duration, text, sourceIndices: [...indices], cps, dense: cps > DIAGNOSTIC_CPS_LIMIT };
+  return {
+    start, duration, text, sourceIndices: [...indices], cps,
+    dense: cps > DIAGNOSTIC_CPS_LIMIT,
+    stages: buildStages(cues, indices),
+  };
 }
 
 /**
@@ -196,14 +255,19 @@ export function packSubtitles(cues: PackableCue[] | undefined | null): PackedSub
         const candidate = source[next];
         const candidateText = normalise(candidate.text);
         const packDuration = end - source[index].start;
+        // A short tail completing the current phrase is worth taking even when
+        // the pack is already long enough to read on its own; leaving it behind
+        // strands a word or two on screen for a fraction of a second.
+        const tail = isSmallTail(candidate);
 
-        if (packDuration >= PACK_MERGE_THRESHOLD) break;
+        if (packDuration >= PACK_MERGE_THRESHOLD && !tail) break;
         if (endsSentence(text)) break;
         if (isStandalone(candidateText)) break;
         if (candidate.start - end > MAX_PACK_GAP) break;
 
         const mergedEnd = Math.max(end, cueEnd(candidate));
-        if (mergedEnd - source[index].start > MAX_PACK_DURATION) break;
+        const cap = tail ? ORPHAN_MAX_PACK_DURATION : MAX_PACK_DURATION;
+        if (mergedEnd - source[index].start > cap) break;
 
         const mergedText = candidateText ? `${text} ${candidateText}` : text;
         if (characterCount(mergedText) > MAX_PACK_CHARACTERS) break;
@@ -251,6 +315,19 @@ export function packAlongside(
   }
 
   return { packs, packOfCue };
+}
+
+/**
+ * Text to show at `currentTime`. Falls back to the first stage before the pack
+ * has started, so nothing from a later cue can leak in early.
+ */
+export function packTextAt(pack: SubtitlePack, currentTime: number) {
+  let text = pack.stages[0]?.text ?? pack.text;
+  for (const stage of pack.stages) {
+    if (currentTime + 1e-6 < stage.at) break;
+    text = stage.text;
+  }
+  return text;
 }
 
 /** Pack containing the given original cue index. */
