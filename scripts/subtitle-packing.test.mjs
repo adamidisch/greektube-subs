@@ -10,6 +10,7 @@ import {
   balanceLines,
   MAX_PACK_DURATION,
   MAX_PACK_CHARACTERS,
+  MIN_DISPLAY_SECONDS,
 } from "../app/subtitle-display.ts";
 
 const cue=(start,duration,text)=>({start,duration,text});
@@ -26,7 +27,7 @@ const packedGlucose=packSubtitles(glucose);
 assert.equal(packedGlucose.packs.length,3,"five fragments must collapse to three displays");
 assert.deepEqual(packedGlucose.packs[1].sourceIndices,[2],"a 63 character cue has no room for a partner");
 
-// --- Timing is never altered. ---
+// --- Timing is never altered outside the chosen source grouping. ---
 for(const source of [glucose,[cue(0,1,"ένα"),cue(5,3,"δύο τρία τέσσερα")]]){
   const {packs}=packSubtitles(source);
   for(const pack of packs){
@@ -36,7 +37,7 @@ for(const source of [glucose,[cue(0,1,"ένα"),cue(5,3,"δύο τρία τέσ�
     assert.equal(
       Number((pack.start+pack.duration).toFixed(6)),
       Number((last.start+last.duration).toFixed(6)),
-      "pack must keep the end of its last cue",
+      "pack must keep the end of its last grouped cue",
     );
   }
 }
@@ -45,30 +46,30 @@ for(const source of [glucose,[cue(0,1,"ένα"),cue(5,3,"δύο τρία τέσ�
 const covered=packedGlucose.packs.flatMap(pack=>pack.sourceIndices);
 assert.deepEqual(covered,glucose.map((_,index)=>index),"packing must cover every cue exactly once");
 
-// --- Budgets hold. ---
+// --- Ordinary-pack budgets hold. ---
 for(const pack of packedGlucose.packs){
   assert.ok(pack.duration<=MAX_PACK_DURATION+1e-9,"pack duration budget");
   assert.ok(Array.from(pack.text).length<=MAX_PACK_CHARACTERS,"pack character budget");
-  assert.ok(subtitleLines(pack.text).length<=2,"pack must wrap into at most two lines");
+  assert.ok(subtitleLines(pack.text).length<=2,"ordinary pack must wrap into at most two lines");
 }
 
-// --- Fillers and standalone acknowledgements stay on their own. ---
+// --- Fillers and standalone acknowledgements stay on their own when readable. ---
 const fillers=packSubtitles([
   cue(0,1,"Εεε"),
   cue(1,1,"Ναι."),
   cue(2,1,"και μετά πήγαμε"),
   cue(3,1,"στο σπίτι μας"),
 ]);
-assert.deepEqual(fillers.packs[0].sourceIndices,[0],"filler must not absorb a neighbour");
-assert.deepEqual(fillers.packs[1].sourceIndices,[1],"standalone «Ναι» must stay alone");
+assert.deepEqual(fillers.packs[0].sourceIndices,[0],"readable filler need not absorb a neighbour");
+assert.deepEqual(fillers.packs[1].sourceIndices,[1],"readable standalone «Ναι» may stay alone");
 assert.deepEqual(fillers.packs[2].sourceIndices,[2,3],"ordinary fragments still merge");
 
-// --- A completed sentence is not glued to the next thought. ---
+// --- A completed sentence is not glued to the next thought when already readable. ---
 const sentences=packSubtitles([
   cue(0,1,"Αυτό ήταν όλο."),
   cue(1,1,"Πάμε στο επόμενο"),
 ]);
-assert.deepEqual(sentences.packs[0].sourceIndices,[0],"terminal punctuation ends a pack");
+assert.deepEqual(sentences.packs[0].sourceIndices,[0],"terminal punctuation ends a readable pack");
 
 // --- A gap wider than a second breaks the run. ---
 const gapped=packSubtitles([cue(0,1,"και μετά"),cue(4,1,"πήγαμε σπίτι")]);
@@ -121,7 +122,7 @@ assert.deepEqual(subtitleLines("μικρό κείμενο"),["μικρό κεί�
 assert.deepEqual(subtitleLines("   "),[],"blank text yields no lines");
 
 
-// --- No cue's words may appear before that cue's own start. ---
+// --- No cue's words may appear before that cue's own start in ordinary packs. ---
 // Real cues from h2Pf6xO_NVM at 5:46. "ζάχαρη;" is a single word finishing the
 // question, so it joins the previous cue, but only reveals at its own 350.64.
 const sugar=[
@@ -150,13 +151,13 @@ assert.equal(dopamine.sourceIndices.length,2,"expected a merge");
 assert.ok(!packTextAt(dopamine,384.9).includes("μπαμ"),"second cue must not leak in early");
 assert.ok(packTextAt(dopamine,385.2).includes("μπαμ"),"second cue shows at its own start");
 
-// --- Geometry never changes: every stage keeps the final line count. ---
+// --- Geometry never changes for ordinary one/two-line packs. ---
 for(const pack of [sugarPack,dopamine,...packSubtitles(glucose).packs]){
   const finalLines=pack.stages.at(-1).text.split("\n").length;
   for(const stage of pack.stages){
     assert.equal(stage.text.split("\n").length,finalLines,"stages must keep the final line count");
   }
-  assert.ok(finalLines<=2,"a pack never exceeds two lines");
+  assert.ok(finalLines<=2,"an ordinary pack never exceeds two lines");
   // Stage text is a prefix of the final text, ignoring the blank line filler.
   const strip=t=>t.replace(/\u00A0/g,"").replace(/\s+/g," ").trim();
   assert.ok(strip(pack.stages.at(-1).text)===strip(pack.text),"last stage shows the whole pack");
@@ -167,6 +168,45 @@ for(const pack of [sugarPack,dopamine,...packSubtitles(glucose).packs]){
 
 // --- A tail that would blow the ceiling is still refused. ---
 const tooLong=packSubtitles([cue(0,5.2,"κάτι πολύ μακρύ που κρατάει ώρα"),cue(5.2,0.6,"ναι;")]);
-assert.equal(tooLong.packs.length,2,"the 5.5s ceiling still applies to rescues");
+assert.equal(tooLong.packs.length,2,"the 5.5s ceiling still applies to ordinary tail rescues");
+
+// --- 11:39-style flash: a sub-second cue is grouped into a readable display. ---
+const eleven39=[
+  cue(699.35,0.65,"ε, επειδή οι άνθρωποι είναι τόσο γοητευμένοι από"),
+  cue(700.0,1.40,"εσένα και τη δουλειά που κάνεις. Γιατί από όλα"),
+  cue(701.40,1.20,"τα πράγματα που θα μπορούσες να κάνεις"),
+];
+const eleven39Packed=packSubtitles(eleven39);
+const eleven39Pack=packAt(eleven39Packed,0);
+assert.ok(eleven39Pack,"11:39 cue must have a display pack");
+assert.ok(eleven39Pack.sourceIndices.includes(1),"sub-second 11:39 cue must share a display pack with following speech");
+assert.ok(eleven39Pack.duration>=MIN_DISPLAY_SECONDS,"display pack must last at least one second");
+assert.ok(!eleven39Pack.text.startsWith("ε,"),"leading hesitation «ε,» must not consume overlay space");
+
+if(eleven39Pack.pages.length>1){
+  for(let index=1;index<eleven39Pack.pages.length;index++){
+    assert.ok(
+      eleven39Pack.pages[index].at-eleven39Pack.pages[index-1].at>=MIN_DISPLAY_SECONDS-1e-9,
+      "stable subtitle pages must be at least one second apart",
+    );
+  }
+  const last=eleven39Pack.pages.at(-1);
+  assert.ok(
+    eleven39Pack.start+eleven39Pack.duration-last.at>=MIN_DISPLAY_SECONDS-1e-9,
+    "last page must also receive the minimum reading window",
+  );
+}
+
+// --- Legacy oversized cue: never render a 4-6 line subtitle wall on mobile. ---
+const legacyText="Κετογονική διατροφή και μετά βιταμίνη C και ιώδιο για να αντιμετωπιστεί η ζύμωση στο ανώτερο έντερο, γιατί είναι τόσο σημαντικό να διατηρείται σωστή η λειτουργία του πεπτικού συστήματος.";
+const legacyPack=packSubtitles([cue(0,3.4,legacyText)]).packs[0];
+assert.ok(legacyPack.pages.length>=2,"oversized legacy cue must become multiple stable pages");
+for(const page of legacyPack.pages){
+  assert.ok(page.text.split("\n").length<=2,"every legacy display page is at most two lines");
+  assert.ok(packTextAt(legacyPack,page.at).split("\n").length<=2,"rendered legacy page is at most two lines");
+}
+for(let index=1;index<legacyPack.pages.length;index++){
+  assert.ok(legacyPack.pages[index].at-legacyPack.pages[index-1].at>=MIN_DISPLAY_SECONDS-1e-9,"legacy pages never flash faster than one second");
+}
 
 console.log("subtitle-packing tests passed");
