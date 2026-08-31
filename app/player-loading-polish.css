@@ -1,0 +1,72 @@
+/* v7.8.53 — compact premium player loading overlay.
+   Presentation only: no player, timing or caption logic changes. */
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading{
+  min-width:0!important;
+  width:auto!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+  padding:12px 15px 11px!important;
+  border:1px solid rgba(255,255,255,.13)!important;
+  border-radius:18px!important;
+  background:linear-gradient(180deg,rgba(17,20,27,.76),rgba(10,12,17,.68))!important;
+  -webkit-backdrop-filter:blur(16px) saturate(125%)!important;
+  backdrop-filter:blur(16px) saturate(125%)!important;
+  box-shadow:0 18px 44px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading i{
+  width:28px!important;
+  height:28px!important;
+  flex:0 0 28px!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:conic-gradient(from 20deg,rgba(255,255,255,.12),#8f86ed 42%,#70c6dc 72%,rgba(255,255,255,.12) 100%)!important;
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 0)!important;
+  mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 0)!important;
+  animation:gtsPremiumLoaderSpin .82s linear infinite!important;
+  box-shadow:none!important;
+}
+
+html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading small{
+  color:rgba(248,249,255,.9)!important;
+  font-family:var(--font-ui),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  font-size:8.5px!important;
+  font-weight:680!important;
+  line-height:1!important;
+  letter-spacing:.105em!important;
+  text-shadow:0 2px 12px rgba(0,0,0,.42)!important;
+  white-space:nowrap!important;
+}
+
+@keyframes gtsPremiumLoaderSpin{
+  to{transform:rotate(360deg)}
+}
+
+@media(max-width:700px){
+  html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading{
+    gap:7px!important;
+    padding:10px 13px 9px!important;
+    border-radius:16px!important;
+    background:linear-gradient(180deg,rgba(17,20,27,.72),rgba(10,12,17,.64))!important;
+    box-shadow:0 14px 34px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.075)!important;
+  }
+  html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading i{
+    width:24px!important;
+    height:24px!important;
+    flex-basis:24px!important;
+  }
+  html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading small{
+    font-size:8px!important;
+    letter-spacing:.1em!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading i{
+    animation:none!important;
+  }
+}
