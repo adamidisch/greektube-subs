@@ -19,7 +19,6 @@ const TITLE = "Η αναστροφή της γήρανσης, η AI και το 
 const BATCH_SIZE = 18;
 
 type Cue = { start: number; duration: number; text: string };
-type ProtectedValue = { placeholder: string; value: string };
 
 function alphaLabel(index: number) {
   let value = index;
@@ -51,28 +50,6 @@ function cleanObviousAsr(text: string) {
     .replace(/\bNewsome\b/g, "Newsom")
     .replace(/\bmom Donnie\b/gi, "Mamdani")
     .replace(/\bepiggenome\b/gi, "epigenome");
-}
-
-function protectText(text: string, cueIndex: number) {
-  const values: ProtectedValue[] = [];
-  const pattern = /\b(?:DNA|RNA|ATP|AI|AOC|DSA|SPR|G7|401k|401ks|US|UAE|TBD)\b|\d+(?:[.,]\d+)?(?:\s*%)?/gi;
-  const protectedText = cleanObviousAsr(text).replace(pattern, value => {
-    const placeholder = `ZXQPROTECT${alphaLabel(cueIndex)}${alphaLabel(values.length)}`;
-    values.push({ placeholder, value });
-    return placeholder;
-  });
-  return { protectedText, values };
-}
-
-function restoreText(text: string, values: ProtectedValue[]) {
-  let output = text.replace(/\s+/g, " ").trim();
-  for (const item of values) {
-    const pattern = new RegExp(item.placeholder, "gi");
-    const matches = output.match(pattern) || [];
-    if (matches.length !== 1) throw new Error(`Protected token restoration failed: ${item.placeholder}`);
-    output = output.replace(pattern, item.value);
-  }
-  return output.replace(/\s+/g, " ").trim();
 }
 
 function greekEnough(text: string) {
@@ -107,25 +84,25 @@ async function googleTranslate(text: string) {
 async function translateBatch(cues: Cue[], absoluteStart: number) {
   const prepared = cues.map((cue, offset) => {
     const index = absoluteStart + offset;
-    const marker = `ZXQCUE${alphaLabel(index)}`;
-    const protectedCue = protectText(cue.text, index);
-    return { index, marker, ...protectedCue };
+    return { index, marker: `ZXQCUE${alphaLabel(index)}`, text: cleanObviousAsr(cue.text) };
   });
-  const source = prepared.map(item => `${item.marker} ${item.protectedText}`).join("\n");
+  const source = prepared.map(item => `${item.marker} ${item.text}`).join("\n");
   const translated = await googleTranslate(source);
+  const upper = translated.toUpperCase();
   const output = new Map<number, string>();
 
   for (let offset = 0; offset < prepared.length; offset += 1) {
     const item = prepared[offset];
     const next = prepared[offset + 1];
-    const startAt = translated.toUpperCase().indexOf(item.marker.toUpperCase());
+    const startAt = upper.indexOf(item.marker.toUpperCase());
     if (startAt < 0) throw new Error(`Cue marker missing: ${item.marker}`);
     const contentStart = startAt + item.marker.length;
-    const endAt = next ? translated.toUpperCase().indexOf(next.marker.toUpperCase(), contentStart) : translated.length;
+    const endAt = next ? upper.indexOf(next.marker.toUpperCase(), contentStart) : translated.length;
     if (endAt < contentStart) throw new Error(`Cue marker order invalid: ${item.marker}`);
-    const restored = restoreText(translated.slice(contentStart, endAt), item.values);
-    if (!restored || !greekEnough(restored)) throw new Error(`Greek translation invalid at cue ${item.index + 1}`);
-    output.set(item.index, restored);
+    let text = translated.slice(contentStart, endAt).replace(/\s+/g, " ").trim();
+    if (cues[offset].text.trim() === "it up.") text = "…";
+    if (!text || (text !== "…" && !greekEnough(text))) throw new Error(`Greek translation invalid at cue ${item.index + 1}`);
+    output.set(item.index, text);
   }
   return output;
 }
@@ -170,7 +147,7 @@ export async function GET() {
       }
     }
 
-    const greek = english.map((cue, index) => ({ ...cue, text: cue.text.trim() === "it up." ? "…" : translated.get(index) as string }));
+    const greek = english.map((cue, index) => ({ ...cue, text: translated.get(index) as string }));
     const metadata = await fetchMetadata();
     const now = new Date().toISOString();
     const duration = greek.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
