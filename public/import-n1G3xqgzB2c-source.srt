@@ -1,0 +1,695 @@
+1
+00:00:00,000 --> 00:00:06,000
+So, I wanted to ask you, do you think we're going to be able to live forever soon or at least extend life significantly within the next couple of decades?
+
+2
+00:00:06,000 --> 00:00:14,000
+I do. And I think the reason is we've discovered the mechanism of aging, which is the most fundamental of human diseases. We have 10 trillion cells in
+
+3
+00:00:14,000 --> 00:00:22,000
+our body. Every one of those cells has our a copy of our DNA in the nucleus of the cell. That DNA, segments of it are
+
+4
+00:00:22,000 --> 00:00:31,000
+called a gene. A, C, T, and G make up the little nucleotides. And you put a bunch of them together, and that's a gene. What is a gene? Well, a copy of
+
+5
+00:00:31,000 --> 00:00:39,000
+that comes over to a protein printer in the cell called the ribosome. And the act is the programming for which of 20
+
+6
+00:00:39,000 --> 00:00:48,000
+amino acids, three letters, is one amino acid. That ribosome takes a segment of the DNA copied as RNA and it prints out
+
+7
+00:00:48,000 --> 00:00:55,000
+amino acids and a sequence of amino acids from that gene which is defined by that gene makes a protein. So all a
+
+8
+00:00:55,000 --> 00:01:02,000
+protein is is a is a chain of amino acids. As soon as it's done printing, those amino acids collapse into a
+
+9
+00:01:02,000 --> 00:01:05,000
+threedimensional machine called a protein.
+
+10
+00:01:05,000 --> 00:01:13,000
+So proteins are three-dimensional machines and they do crazy Like there is a protein in your mitochondria that spins 6,000 times a second as
+
+11
+00:01:13,000 --> 00:01:17,000
+hydrogen protons go through it and that's what makes energy in your cells.
+
+12
+00:01:17,000 --> 00:01:23,000
+That's what makes ATP. It's literally like a propeller, like a turbine in your mitochondria in your cell. It's an incredible machine. There's machines
+
+13
+00:01:23,000 --> 00:01:32,000
+that carry oxygen from your lungs into your cells in your body to give them oxygen that they need to work. I mean, there are proteins that do all sorts of
+
+14
+00:01:32,000 --> 00:01:39,000
+crazy stuff. So, all that genes are are the programming for making proteins in your cell. Now, your DNA is not a strand
+
+15
+00:01:39,000 --> 00:01:46,000
+like this. It's actually kind of a small clustered thing. And there are little molecules that sit on top of the DNA
+
+16
+00:01:46,000 --> 00:01:54,000
+that turn a gene on or off. So if the molecule is sitting on top of a certain gene that gene is off like a little switch like a switch.
+
+17
+00:01:54,000 --> 00:01:57,000
+What's it called? Someone used the name before. Histones. Histones. Okay.
+
+18
+00:01:57,000 --> 00:02:01,000
+Or acetal markers. And I thought it's epigenetics but maybe. So this is all epigenetics. Okay.
+
+19
+00:02:01,000 --> 00:02:09,000
+So for a given cell there are genes that are on or off. The genes that are on those proteins are being made in that cell. And the genes that are off those
+
+20
+00:02:09,000 --> 00:02:17,000
+proteins are not being made in that cell. And that's what makes all of our cells in our body different. Every one of our cells has the same DNA, but our
+
+21
+00:02:17,000 --> 00:02:22,000
+eye cell and our brain cell and our heart cell and our skin cell just have different genes that are on or off.
+
+22
+00:02:22,000 --> 00:02:31,000
+Okay? So, those markers that sit on the genes, those little switches, every time you drink a glass of alcohol or you go in the sun and get hit by the sunlight
+
+23
+00:02:31,000 --> 00:02:39,000
+or smoke a cigarette or eat some bad food that's burnt, all of these things can cut DNA. And when DNA gets cut, your
+
+24
+00:02:39,000 --> 00:02:43,000
+cell is really good at fixing it. Puts it right back together.
+
+25
+00:02:43,000 --> 00:02:51,000
+happening millions of times a second in your body, literally all over your body and your DNA is breaking and your cell's fixing it. But every time your cell
+
+26
+00:02:51,000 --> 00:02:57,000
+fixes it, there's a chance that that switch moves a little bit. And if the switch moves to the wrong place,
+
+27
+00:02:57,000 --> 00:03:06,000
+suddenly that cell starts making the wrong protein or stops making the right protein. So statistically over time when
+
+28
+00:03:06,000 --> 00:03:13,000
+you're a baby, everything is tuned great, working right, all the right proteins are being made in every cell. You're young. Your skin is not wrinkly.
+
+29
+00:03:13,000 --> 00:03:21,000
+You can run. You can breathe. You can see perfectly. As you're a young person, suddenly you turn 30 and you're like, "Wait, my vision's kind of fading a little bit. I can't run as fast. I can't
+
+30
+00:03:21,000 --> 00:03:29,000
+breathe as deep. Oh my god, I'm getting wrinkles around my eyes." 40, 50. What happens as we get older is those switches kind of move around to the
+
+31
+00:03:29,000 --> 00:03:37,000
+wrong places. And as those switches move around, that cell stops making the right protein and starts making the wrong protein and
+
+32
+00:03:37,000 --> 00:03:46,000
+it becomes dysfunctional. And if that happens in enough cells, then that tissue starts to misbehave. You get wrinkles. Your heart can't beat quite
+
+33
+00:03:46,000 --> 00:03:55,000
+right. Your retina doesn't pick up light as well and transmit the signal of the light and things get blurry. Your hearing starts to lose. You can't think as quickly. You can't respond as
+
+34
+00:03:55,000 --> 00:04:02,000
+quickly. That's what aging is. Aging is the core human disease. And as epigenetics, which is where the switches
+
+35
+00:04:02,000 --> 00:04:12,000
+are on a cell, start to get moved around to the wrong place and that tissue starts to misbehave, we get all these diseases that could be one of the core drivers of cancer.
+
+36
+00:04:12,000 --> 00:04:15,000
+Why is aging so even across my body?
+
+37
+00:04:15,000 --> 00:04:23,000
+Then because all these cells are suffering the same statistical effect of time as DNA breaks happen in every cell in your body. And as those DNA breaks happen,
+
+38
+00:04:23,000 --> 00:04:31,000
+those switches are moving around the same rate in all parts of your body. And that's why parts of your body start to suffer kind of a it's like, "Oh my god,
+
+39
+00:04:31,000 --> 00:04:39,000
+my hip hurts, my eye, my brain." Your young viewers may not appreciate this, but being 46, I'm starting to appreciate it. And it's becoming more of an issue
+
+40
+00:04:39,000 --> 00:04:47,000
+now. In 2006, a guy named Shinya Yamanaka discovered four proteins that you could
+
+41
+00:04:47,000 --> 00:04:54,000
+put into a cell or apply to a cell and it would basically take all the switches in that cell and move them to the place
+
+42
+00:04:54,000 --> 00:05:03,000
+that a stem cell has, which is basically an embryo in a human. And now that cell operates like an embryionic cell. And
+
+43
+00:05:03,000 --> 00:05:12,000
+you can take that embryo cell and you can put other proteins on to move the switches around even more to turn that stem cell into an eye cell, into a skin
+
+44
+00:05:12,000 --> 00:05:19,000
+cell, into a heart cell, into a lung cell, into a brain cell. So we suddenly developed this technology in the mid
+
+45
+00:05:19,000 --> 00:05:28,000
+2000s to take any cell and turn it into a stem cell, redifferiated, it's called differentiation, from one cell type to
+
+46
+00:05:28,000 --> 00:05:35,000
+another. But then years later, another guy said, "Well, what if instead of putting a lot of that protein on the cell, we just put a little bit?" So they
+
+47
+00:05:35,000 --> 00:05:44,000
+took the Yamanaka factors, which are just four proteins, and they put a micro dose of them on a couple cells. And the switches started to move around, but
+
+48
+00:05:44,000 --> 00:05:53,000
+they didn't move back to being a stem cell. What happened is they moved back to being a young version of that cell type. So the eye cell basically became a
+
+49
+00:05:53,000 --> 00:06:02,000
+young eye cell. The skin cell became a young skin cell. the heart cell became a young heart cell by putting a small dose of these proteins. So it turns out that
+
+50
+00:06:02,000 --> 00:06:10,000
+these proteins kind of move the switches around. And if you put just a small amount of them on, you can move the switches just back to their right position. That's now called epigenetic
+
+51
+00:06:10,000 --> 00:06:17,000
+reprogramming. That's this new area of science that seems to indicate and they've now done it in mice where the mice can live to the equivalent of 100
+
+52
+00:06:17,000 --> 00:06:25,000
+plus years old. They've put it on the tissue of monkeys and gotten rid of the the wrinkles. We now have just David Sinclair just his one of his companies
+
+53
+00:06:25,000 --> 00:06:32,000
+did the dosing in the retina to reverse blindness in people uh with a retinopathy. So this epigenetic
+
+54
+00:06:32,000 --> 00:06:40,000
+reprogramming is an entirely new lane of medicine that says not just can we address all of the downstream effects of
+
+55
+00:06:40,000 --> 00:06:47,000
+aging but can we go to the core? Can we reset aging in all these cells in the body? And the answer so far is yes. The
+
+56
+00:06:47,000 --> 00:06:54,000
+risk is if you reset it too much it becomes an embryo and it turns into cancer. So that's what everyone's been working against in the last couple years
+
+57
+00:06:54,000 --> 00:07:03,000
+is how do you put the right dose of the right proteins in the right cells to get them to reverse their age and become young again. And the path it's really
+
+58
+00:07:03,000 --> 00:07:14,000
+just an engineering exercise at this point as opposed to a biological proof of concept. The science is there, the foundation is there. We're just doing the engineering. So I am extremely excited and optimistic about this work.
+
+59
+00:07:14,000 --> 00:07:22,000
+It seems very likely that in the next couple of years, we're going to have more human therapy trials that are going to not just address the core of aging,
+
+60
+00:07:22,000 --> 00:07:29,000
+but they'll start to put in like, you know, like they did with the ISEL, maybe reverse wrinkles, maybe improve uh cardiammyio, improve the uh heart
+
+61
+00:07:29,000 --> 00:07:35,000
+tissue. So, I think there'll be a lot more of this sort of thing coming to market over the next few years.
+
+62
+00:07:35,000 --> 00:07:42,000
+And AI is going to play a role, I assume, in accelerating this because you can perform I mean, you can theoretically make new discoveries, but you can run the tests faster, right?
+
+63
+00:07:42,000 --> 00:07:49,000
+You know, just to help uh provide some context on like what goes on in a cell. You can kind of think
+
+64
+00:07:49,000 --> 00:07:57,000
+about a cell uh has about 10 billion proteins interacting with each other, building things, breaking things, creating new molecules, creating new
+
+65
+00:07:57,000 --> 00:08:05,000
+proteins, interacting, interacting. So the proteins are these machines, 10 billion of them in a cell. So if you assume each protein is the size of a
+
+66
+00:08:05,000 --> 00:08:12,000
+human, the cell would be the size of Manhattan. So now imagine a city the size of Manhattan with 500tory tall
+
+67
+00:08:12,000 --> 00:08:20,000
+skyscrapers in the Manhattan skyline and 10 billion people living in these buildings going back and forth building
+
+68
+00:08:20,000 --> 00:08:27,000
+stuff together talking making babies and assume they just do this for 80 years all these humans interacting 10 billion humans in Manhattan for 80 years
+
+69
+00:08:27,000 --> 00:08:34,000
+non-stop they don't sleep and they just keep working that entire set of interactions is 1 second in one cell
+
+70
+00:08:34,000 --> 00:08:42,000
+that's how complicated biology is and we have 10 trillion cells in our body and those cells are all shooting out proteins and messages to each other all
+
+71
+00:08:42,000 --> 00:08:50,000
+the time. To answer the question, AI allows us to build models to better understand what the heck is going on and
+
+72
+00:08:50,000 --> 00:08:59,000
+to make predictions about proteins we could put into the cells that can affect the outcome of changing the epiggenome on that DNA without us having a
+
+73
+00:08:59,000 --> 00:09:07,000
+deterministic understanding of what's going on. So with AI, I can come up with a million different ideas for a new protein. I can test it in silicone, how it would interact with other stuff,
+
+74
+00:09:07,000 --> 00:09:14,000
+meaning on computers. I could see what happens. I could see if it actually has the same sort of effect as the other protein. Would it be more efficacious?
+
+75
+00:09:14,000 --> 00:09:22,000
+And then I reduce my candidate list down. And I take that candidate list and I put it in a lab. And now the labs are being automated. And I can test it on cells and see if it's actually reversing
+
+76
+00:09:22,000 --> 00:09:28,000
+aging. I can test it in models. And then I take that candidate and now I've got a probability of success in 10 years that
+
+77
+00:09:28,000 --> 00:09:37,000
+instead of being 1% is now like 75%. And so that's the way AI plays a role in life sciences discovery and it's transforming not just epigenetic
+
+78
+00:09:37,000 --> 00:09:45,000
+reprogramming which is this whole big avenue of medicine now but it's transforming every aspect of biology and our understanding of life sciences where
+
+79
+00:09:45,000 --> 00:09:53,000
+we can use AI to make these simulations and have a better understanding of what these complicated incredibly immense interaction sets look like or drive at
+
+80
+00:09:53,000 --> 00:10:01,000
+the end state versus me needing to kind of be a scientist being like oh I got a good idea let's try that okay 5 weeks later okay another good idea let's try that and that all gets reduced to
+
+81
+00:10:01,000 --> 00:10:06,000
+silicon and are you using your own model? Are you training your own AI or are you using some of the publicly available frontier models?
+
+82
+00:10:06,000 --> 00:10:15,000
+In my world we use both. So we take our own data and then we build our own predictive models from it and then separately we use offtheshelf life sciences models and then we also use
+
+83
+00:10:15,000 --> 00:10:23,000
+some of the general models. So it's a great combination and to your questions and talking about AI earlier, oh my god, the stuff we can do is unbelievable and
+
+84
+00:10:23,000 --> 00:10:31,000
+it's mind-blowing and we're hiring more people because of it. So like it's not like AI got me to get rid of jobs. It's like the frontier has gotten so much
+
+85
+00:10:31,000 --> 00:10:39,000
+wider. That's why I'm so optimistic about AI not destroying jobs because all I see is opportunity with uh new companies, new ideas, new pathways, new
+
+86
+00:10:39,000 --> 00:10:49,000
+things, new breakthroughs in in sciences, in materials, in engineering, things that we could have never ever tackled, we can now tackle with AI.
+
+87
+00:10:49,000 --> 00:10:54,000
+It is a persuasive argument. Okay. So, what are the great lies in America in your view?
+
+88
+00:10:54,000 --> 00:10:58,000
+If you go to any college with any degree, you're going to have a great job waiting for you at the end.
+
+89
+00:10:58,000 --> 00:11:07,000
+Okay? Number one, if you buy a home, you've achieved the American dream, and all of your assets should uh be in that home.
+
+90
+00:11:07,000 --> 00:11:13,000
+Okay? Social security will take care of you when you get old and it's a fair system.
+
+91
+00:11:13,000 --> 00:11:21,000
+Everyone should have ownership in stocks is the truth about that lie. M uh because all the money that went into social security went out to the
+
+92
+00:11:21,000 --> 00:11:29,000
+government to pay bills and it wasn't actually kept in the trust and so as a result social security is going to go bankrupt. So social security was one of
+
+93
+00:11:29,000 --> 00:11:34,000
+the great lies on you know you'll be safe and protected when you retire.
+
+94
+00:11:34,000 --> 00:11:37,000
+Mhm. Those are three great lies. Is there any more that come to mind?
+
+95
+00:11:37,000 --> 00:11:44,000
+I don't know about public pensions and the it's the same as the social security lie. When you put money into a pension
+
+96
+00:11:44,000 --> 00:11:53,000
+plan and you're that's called a defined benefit plan. when you retire, you're going to get $1,000 a week or whatever it is and every every paycheck some
+
+97
+00:11:53,000 --> 00:12:01,000
+money is taken out. And the idea is that the accountants and the investors will do a good job investing that money for you and you'll get your benefit at the end. If they don't do a good job, then
+
+98
+00:12:01,000 --> 00:12:08,000
+the pension plan is bankrupt and you don't get your retirement check. And if they do too good a job or you put too much money in, then the pension plan is
+
+99
+00:12:08,000 --> 00:12:12,000
+overfunded and you should be getting more money out than you're actually getting.
+
+100
+00:12:12,000 --> 00:12:21,000
+So what companies realized was that pension plans are unfair. they either go bankrupt or they're overfunded. So that's when everyone moved to 401ks. And
+
+101
+00:12:21,000 --> 00:12:29,000
+that middle class that we talked about earlier, those people that have $160 trillion of assets, the reason they have $160 trillion of assets, it's because a
+
+102
+00:12:29,000 --> 00:12:37,000
+lot of them had 401ks. Meanwhile, the bottom 50% of people that are just relying on social security, they were making less than 3.5% a year on their
+
+103
+00:12:37,000 --> 00:12:45,000
+money. So that's the great lie is that these defi these public retirement funds would take care of their people. Is
+
+104
+00:12:45,000 --> 00:12:48,000
+there a fifth great lie that comes to mind?
+
+105
+00:12:48,000 --> 00:12:54,000
+I actually don't have a great answer for you on healthare. I think that there's a moral obligation on healthare.
+
+106
+00:12:54,000 --> 00:13:02,000
+So I do buy into this. In a in a civil society, I could make the libertarian argument, but I won't cuz I do think it's probably the right thing to say in
+
+107
+00:13:02,000 --> 00:13:07,000
+a civil society, no one should be without healthcare.
+
+108
+00:13:07,000 --> 00:13:15,000
+How do you make that work where the government's paying bills and the costs don't just go through the roof? That's a long probably six hour conversation and
+
+109
+00:13:15,000 --> 00:13:23,000
+it's very technical I think on what you have to do uh to make healthcare accessible and it's definitely got to be a multi-tiered system.
+
+110
+00:13:23,000 --> 00:13:32,000
+Mhm. I guess one of the things that I was curious to get your take on because I've not really heard you talk about this a lot on the all-in podcast is your view on everything that's going on with this bloody war and the situation there.
+
+111
+00:13:32,000 --> 00:13:36,000
+I'm not sure if this is within your area of expertise but it appears that the US is now stuck.
+
+112
+00:13:36,000 --> 00:13:43,000
+It's a quandry. I read the Ralio's piece a few weeks ago which I thought was exactly right. The Chinese make their
+
+113
+00:13:43,000 --> 00:13:51,000
+influence known in the same way that you would kind of read about it in Sunsu's Art of War. If you have to go to war, you've already
+
+114
+00:13:51,000 --> 00:13:59,000
+lost. And that's a big difference between how the US behaves and how China behaves. If you look back on the track
+
+115
+00:13:59,000 --> 00:14:06,000
+record of president's decisions as it relates to foreign policy in the United States over the last couple decades, there have not been a lot of good
+
+116
+00:14:06,000 --> 00:14:15,000
+actions that have ended up in a good place. I think China has this capacity for influence without action which is a
+
+117
+00:14:15,000 --> 00:14:23,000
+really interesting model to observe and the US has this kind of I don't want to say incentive but when
+
+118
+00:14:23,000 --> 00:14:31,000
+you go to a general and say hey should we go attack these guys the general spends the whole time training to attack the guys so you know and then you have a
+
+119
+00:14:31,000 --> 00:14:38,000
+national security council and you have advisers and all this sort of stuff but there's a there's a priming uh in the US that I think maybe plays out in a way
+
+120
+00:14:38,000 --> 00:14:41,000
+that maybe we take action when we shouldn't always be taking action.
+
+121
+00:14:41,000 --> 00:14:51,000
+China's position there only possible because there is a dominant force that is running around trying to police everything. So they can kind of chill and let the US go police all the the problems and wars.
+
+122
+00:14:51,000 --> 00:14:58,000
+Their military capacity is pretty impressive but it's untested at scale I guess is one argument you can make against that point. I mean China's got a
+
+123
+00:14:58,000 --> 00:15:06,000
+lot of economic gamesmanship that they do. You know we'll give you cheap stuff if we can get these things from you. uh
+
+124
+00:15:06,000 --> 00:15:15,000
+you know, we'll keep an eye on you if you need help. I mean, there's like a lot of stuff that doesn't require direct kinetic action that they can kind of get things done.
+
+125
+00:15:15,000 --> 00:15:24,000
+In terms of the US's position in Iran right now, there is um it appears an a threat to oil in terms of like the price at the pump and the I think it's the US
+
+126
+00:15:24,000 --> 00:15:26,000
+oil reserve is down to a couple of weeks.
+
+127
+00:15:26,000 --> 00:15:35,000
+I want to say there on the order of 24 million barrels in the SPR. So at the G7 summit in France, President Donald Trump addressed the precocious state of global
+
+128
+00:15:35,000 --> 00:15:42,000
+oil inventories following supply disruption, he said, "We run out of reserves at about 4 weeks. You know,
+
+129
+00:15:42,000 --> 00:15:49,000
+there are reserves all over the world and we would really run out and there'll be a time when you wouldn't be able to
+
+130
+00:15:49,000 --> 00:15:59,000
+get it. It would be bedelum." Mhm. And this was just as I think this was the explanation as to why he signed that with Iran.
+
+131
+00:15:59,000 --> 00:16:06,000
+Uhhuh. So, I mean, if this is true, then something needs to happen. But again, it doesn't appear that Iran have much of of
+
+132
+00:16:06,000 --> 00:16:10,000
+an incentive now. You've decapitated the leader for to do really anything. They can kind of wait out.
+
+133
+00:16:10,000 --> 00:16:13,000
+The game theory is Iran knows that the US can't do much more.
+
+134
+00:16:13,000 --> 00:16:21,000
+Yeah. What are we going to do? Drop more bombs, right? And well, I mean, Iran's now threatened uh Arab neighbors with
+
+135
+00:16:21,000 --> 00:16:29,000
+retaliation against their energy infrastructure, which would be devastating to Saudi, Qatar, UAE. So at this point it seems like a bit of a
+
+136
+00:16:29,000 --> 00:16:36,000
+stalemate that the US can't act for fear of the retaliation and the impact it would have on America's actual allies in the region.
+
+137
+00:16:36,000 --> 00:16:41,000
+What do you think happens here? Trump straightforward news Iran now have this sort of choke hold on the world it seems.
+
+138
+00:16:41,000 --> 00:16:45,000
+I mean the biggest driver also is the election cycle we're in the midterms.
+
+139
+00:16:45,000 --> 00:16:57,000
+The midterms. So going into November this war is deeply unpopular both sides and so trying to get rid of the war is the incentive at the moment.
+
+140
+00:16:57,000 --> 00:17:01,000
+It's tough situation. You seem um hesitant. Yeah.
+
+141
+00:17:01,000 --> 00:17:06,000
+No, I just I'm not a I'm not a great guy to appine on this. I just I don't know what to do.
+
+142
+00:17:06,000 --> 00:17:14,000
+But just when you look at it from the outside, you see a president that says he's going to bomb. He's not going to bomb. He's calling it off. He's bombing. He's not bombing. He's calling it off. We've got a deal. There's no deal.
+
+143
+00:17:14,000 --> 00:17:24,000
+And you you're flopping around. And I think even that as a behavior to observe from the outside, you go, "Oh, okay." Um well, let me ask you one question. It kind of makes them unpredictable, right?
+
+144
+00:17:24,000 --> 00:17:32,000
+And that unpredictability can can in some cases be an advantage. I do think people have made this case that the president's unpredictability makes it
+
+145
+00:17:32,000 --> 00:17:40,000
+hard for people to have a clear path on how to attack. Like my poker player buddies, their whole poker strategy, the guys who are the best in the world, who I'm friends with, their whole strategy
+
+146
+00:17:40,000 --> 00:17:48,000
+is like create randomness in your gamesmanship. So that it's very hard for someone to exploit your gameplay. And um you know, I just don't know if you know
+
+147
+00:17:48,000 --> 00:17:56,000
+what you're going to get with President Trump. You can meet with him and hear him say one thing and then he'll do something different later. I understand the merit of that argument.
+
+148
+00:17:56,000 --> 00:18:00,000
+I in this situation what I'm observing now is he's become predictable.
+
+149
+00:18:00,000 --> 00:18:06,000
+Yeah. In in terms of in terms of not being able to do any like not not not taking action.
+
+150
+00:18:06,000 --> 00:18:12,000
+Not taking action. Threat post strike coming since World War II. Call it off. What would you do if you were him?
+
+151
+00:18:12,000 --> 00:18:15,000
+it up.
+
+152
+00:18:15,000 --> 00:18:23,000
+What would I do? Uh there's only bad outcomes. So it's which bad out honestly I think which bad outcome am I willing to accept the most
+
+153
+00:18:23,000 --> 00:18:29,000
+and I guess for someone like Trump I don't know him but I I guess he's probably thinking which one would save the most face.
+
+154
+00:18:29,000 --> 00:18:33,000
+That's probably the right kind of you know objective function for him.
+
+155
+00:18:33,000 --> 00:18:42,000
+I think the worst thing is all outcomes in my view lead to the straight of hormones being now basically a a tool of Iranian negotiation and it wasn't before.
+
+156
+00:18:42,000 --> 00:18:43,000
+New point of leverage.
+
+157
+00:18:43,000 --> 00:18:46,000
+Yeah. New point of leverage in that region which is a powerful point of leverage.
+
+158
+00:18:46,000 --> 00:18:53,000
+Yeah. Yeah. But it may create um alternatives. There's conversation about creating other pipelines out to Israel. Oh yeah.
+
+159
+00:18:53,000 --> 00:18:58,000
+And so on. So maybe at the end of the day it creates incentive for other channels to be opened.
+
+160
+00:18:58,000 --> 00:19:07,000
+Uh TBD. I do think the um it's not just about the Iranian program, but it's like where's all the enriched uranium? That's probably if
+
+161
+00:19:07,000 --> 00:19:14,000
+you're kind of asking a military adviser, I would say that's probably what they're thinking about as the the core because it takes a long time to enrich uranium to use for nuclear fuel
+
+162
+00:19:14,000 --> 00:19:19,000
+like this. So getting the enriched uranium is probably a key objective.
+
+163
+00:19:19,000 --> 00:19:26,000
+The next election 2028 for the president presidential office. Do you think a Republican's going to win on in the course of how things are going for 28? Yeah.
+
+164
+00:19:26,000 --> 00:19:30,000
+No, I think it's going to be AOC. You think it's going to be AOC? Yeah. Really?
+
+165
+00:19:30,000 --> 00:19:33,000
+At this point, why?
+
+166
+00:19:33,000 --> 00:19:41,000
+It's all the stuff we've talked about. I just think that that's the the state of the nation. I think that's where people are at. They they want help. People feel desperate and they want a candidate that
+
+167
+00:19:41,000 --> 00:19:50,000
+can promise to help make their life better. I think they're less concerned about, you know, freedom of movement, the kind of stuff we talked about. I
+
+168
+00:19:50,000 --> 00:19:56,000
+think they're much more concerned about paying their bills and getting healthcare and getting child care. And you think she's going to run?
+
+169
+00:19:56,000 --> 00:20:04,000
+I think she'll run. I think she'll beat Buddhajed and uh Kamla Kamla Newsome Newsome. I don't think Newsome's going
+
+170
+00:20:04,000 --> 00:20:11,000
+to have like a great presence on a national stage. I think he he he he he he looks and acts the part,
+
+171
+00:20:11,000 --> 00:20:18,000
+but it's going to be hard for him to sell the rest of America. And I think Kamla is just like it's just no one
+
+172
+00:20:18,000 --> 00:20:25,000
+wants to take the risk. AOC is just like mom Donnie in the sense that she brings a very different voice, you know, and I
+
+173
+00:20:25,000 --> 00:20:33,000
+think this DSA movement has real legs to it cuz I don't see a lot of young people speaking out against the DSA movement. I see a lot of old Democrats speaking out
+
+174
+00:20:33,000 --> 00:20:38,000
+against the DSA movement. If you love the D CEO brand and you watch this channel, please do me a huge favor.
