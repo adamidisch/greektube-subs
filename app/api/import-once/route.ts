@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { parseManualSubtitleText } from "../manual-captions/parser";
+import { publishTranscript } from "../transcript-blob";
 import {
   TRANSCRIPT_VERSION,
   acquireProcessingLock,
@@ -104,6 +105,25 @@ async function fetchMetadata() {
   }
 }
 
+function blobPayload(record: NonNullable<Awaited<ReturnType<typeof getTranscript>>>) {
+  return {
+    status: "ready",
+    progress: 100,
+    videoId: record.videoId,
+    title: record.title,
+    originalTitle: "",
+    channel: record.channel,
+    duration: record.duration,
+    sourceLanguage: record.originalLanguage || "en",
+    cues: record.greekTranscript,
+    englishCues: record.englishTranscript,
+    topics: record.topics,
+    keyPoints: record.keyPoints,
+    transcriptVersion: record.transcriptVersion,
+    cached: true,
+  };
+}
+
 export async function GET() {
   let lockToken: string | null = null;
   try {
@@ -114,8 +134,10 @@ export async function GET() {
     const existing = await getTranscript(VIDEO_ID);
     const existingClean = existing?.status === "ready" && existing.greekTranscript?.length === english.length &&
       !existing.greekTranscript.some(cue => /ZXQ/i.test(cue.text));
-    if (existingClean) {
-      return NextResponse.json({ status: "ready", progress: 100, videoId: VIDEO_ID, title: existing.title, cueCount: existing.greekTranscript.length, cached: true });
+    if (existingClean && existing) {
+      const published = await publishTranscript(VIDEO_ID, TRANSCRIPT_VERSION, blobPayload(existing));
+      if (!published) throw new Error("Clean transcript Blob republish failed.");
+      return NextResponse.json({ status: "ready", progress: 100, videoId: VIDEO_ID, title: existing.title, cueCount: existing.greekTranscript.length, republished: true });
     }
 
     lockToken = crypto.randomUUID();
@@ -159,6 +181,9 @@ export async function GET() {
     };
     if (!await completeTranscript(record, lockToken)) throw new Error("Transcript save failed.");
     lockToken = null;
+    const saved = await getTranscript(VIDEO_ID);
+    if (!saved || saved.status !== "ready") throw new Error("Saved transcript verification failed.");
+    if (!await publishTranscript(VIDEO_ID, TRANSCRIPT_VERSION, blobPayload(saved))) throw new Error("Transcript Blob publish failed.");
 
     return NextResponse.json({
       status: "ready",
@@ -170,6 +195,7 @@ export async function GET() {
       duration,
       cueCount: greek.length,
       translationMode: "manual-source-google-per-cue",
+      published: true,
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (lockToken) await releaseProcessingLock(VIDEO_ID, lockToken).catch(() => undefined);
