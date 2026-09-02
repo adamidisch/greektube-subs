@@ -16,22 +16,15 @@ export const maxDuration = 300;
 const VIDEO_ID = "n1G3xqgzB2c";
 const VIDEO_URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
 const TITLE = "Η αναστροφή της γήρανσης, η AI και το μέλλον της Αμερικής";
-const BATCH_SIZE = 18;
+const CONCURRENCY = 8;
 
 type Cue = { start: number; duration: number; text: string };
 
-function alphaLabel(index: number) {
-  let value = index;
-  let output = "";
-  do {
-    output = String.fromCharCode(65 + (value % 26)) + output;
-    value = Math.floor(value / 26) - 1;
-  } while (value >= 0);
-  return output;
-}
-
 function cleanObviousAsr(text: string) {
   return text
+    .replace(/^\s*I do\.\s*$/i, "Yes.")
+    .replace(/^\s*Mhm\.\s*$/i, "Yes.")
+    .replace(/^\s*Uhhuh\.\s*$/i, "Yes.")
     .replace(/\bthreedimensional\b/gi, "three-dimensional")
     .replace(/\bembryionic\b/gi, "embryonic")
     .replace(/\bredifferiated\b/gi, "redifferentiated")
@@ -39,6 +32,9 @@ function cleanObviousAsr(text: string) {
     .replace(/\bin silicone\b/gi, "in silico")
     .replace(/\bofftheshelf\b/gi, "off-the-shelf")
     .replace(/\bhealthare\b/gi, "healthcare")
+    .replace(/\bacetal markers\b/gi, "acetyl markers")
+    .replace(/\bISEL\b/g, "eye cell")
+    .replace(/\bcardiammyio\b/gi, "cardiac muscle")
     .replace(/\bRalio's\b/g, "Ray Dalio's")
     .replace(/\bSunsu's\b/g, "Sun Tzu's")
     .replace(/\bprecocious state\b/gi, "precarious state")
@@ -49,13 +45,22 @@ function cleanObviousAsr(text: string) {
     .replace(/\bKamla\b/g, "Kamala")
     .replace(/\bNewsome\b/g, "Newsom")
     .replace(/\bmom Donnie\b/gi, "Mamdani")
-    .replace(/\bepiggenome\b/gi, "epigenome");
+    .replace(/\bepiggenome\b/gi, "epigenome")
+    .replace(/\bD CEO brand\b/gi, "Diary of a CEO brand");
 }
 
 function greekEnough(text: string) {
   const letters = text.match(/\p{L}/gu)?.length || 0;
   const greek = text.match(/[\u0370-\u03ff\u1f00-\u1fff]/g)?.length || 0;
   return letters > 0 && greek / letters > 0.18;
+}
+
+function cleanGreek(text: string) {
+  return text
+    .replace(/\bZXQ[A-Z0-9]*\b/gi, "")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function googleTranslate(text: string) {
@@ -72,39 +77,20 @@ async function googleTranslate(text: string) {
     if (!response.ok) throw new Error(`Google translation ${response.status}`);
     const payload = await response.json() as unknown;
     if (!Array.isArray(payload) || !Array.isArray(payload[0])) throw new Error("Google translation response invalid");
-    return (payload[0] as unknown[])
+    return cleanGreek((payload[0] as unknown[])
       .map(part => Array.isArray(part) && typeof part[0] === "string" ? part[0] : "")
-      .join("")
-      .trim();
+      .join(""));
   } finally {
     clearTimeout(timeout);
   }
 }
 
-async function translateBatch(cues: Cue[], absoluteStart: number) {
-  const prepared = cues.map((cue, offset) => {
-    const index = absoluteStart + offset;
-    return { index, marker: `ZXQCUE${alphaLabel(index)}`, text: cleanObviousAsr(cue.text) };
-  });
-  const source = prepared.map(item => `${item.marker} ${item.text}`).join("\n");
+async function translateCue(cue: Cue, index: number) {
+  if (cue.text.trim() === "it up.") return "…";
+  const source = cleanObviousAsr(cue.text);
   const translated = await googleTranslate(source);
-  const upper = translated.toUpperCase();
-  const output = new Map<number, string>();
-
-  for (let offset = 0; offset < prepared.length; offset += 1) {
-    const item = prepared[offset];
-    const next = prepared[offset + 1];
-    const startAt = upper.indexOf(item.marker.toUpperCase());
-    if (startAt < 0) throw new Error(`Cue marker missing: ${item.marker}`);
-    const contentStart = startAt + item.marker.length;
-    const endAt = next ? upper.indexOf(next.marker.toUpperCase(), contentStart) : translated.length;
-    if (endAt < contentStart) throw new Error(`Cue marker order invalid: ${item.marker}`);
-    let text = translated.slice(contentStart, endAt).replace(/\s+/g, " ").trim();
-    if (cues[offset].text.trim() === "it up.") text = "…";
-    if (!text || (text !== "…" && !greekEnough(text))) throw new Error(`Greek translation invalid at cue ${item.index + 1}`);
-    output.set(item.index, text);
-  }
-  return output;
+  if (!translated || !greekEnough(translated)) throw new Error(`Greek translation invalid at cue ${index + 1}`);
+  return translated;
 }
 
 async function fetchMetadata() {
@@ -126,7 +112,9 @@ export async function GET() {
     if (english.length < 3) return NextResponse.json({ error: "Supplied source transcript did not parse." }, { status: 500 });
 
     const existing = await getTranscript(VIDEO_ID);
-    if (existing?.status === "ready" && existing.greekTranscript?.length === english.length) {
+    const existingClean = existing?.status === "ready" && existing.greekTranscript?.length === english.length &&
+      !existing.greekTranscript.some(cue => /ZXQ/i.test(cue.text));
+    if (existingClean) {
       return NextResponse.json({ status: "ready", progress: 100, videoId: VIDEO_ID, title: existing.title, cueCount: existing.greekTranscript.length, cached: true });
     }
 
@@ -135,19 +123,16 @@ export async function GET() {
       return NextResponse.json({ error: "Import lock unavailable." }, { status: 409 });
     }
 
-    const translated = new Map<number, string>();
-    for (let start = 0; start < english.length; start += BATCH_SIZE) {
-      const batchCues = english.slice(start, start + BATCH_SIZE);
-      const batch = await translateBatch(batchCues, start);
-      for (let offset = 0; offset < batchCues.length; offset += 1) {
-        const index = start + offset;
-        const text = batch.get(index);
-        if (!text) throw new Error(`Translation missing at cue ${index + 1}`);
-        translated.set(index, text);
-      }
+    const greekText = new Array<string>(english.length);
+    for (let start = 0; start < english.length; start += CONCURRENCY) {
+      const indexes = english.slice(start, start + CONCURRENCY).map((_, offset) => start + offset);
+      const values = await Promise.all(indexes.map(index => translateCue(english[index], index)));
+      values.forEach((text, offset) => { greekText[indexes[offset]] = text; });
     }
 
-    const greek = english.map((cue, index) => ({ ...cue, text: translated.get(index) as string }));
+    const greek = english.map((cue, index) => ({ ...cue, text: greekText[index] }));
+    const leaked = greek.filter(cue => /ZXQ/i.test(cue.text));
+    if (leaked.length) throw new Error(`Technical marker leak remained in ${leaked.length} cues`);
     const metadata = await fetchMetadata();
     const now = new Date().toISOString();
     const duration = greek.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0);
@@ -184,7 +169,7 @@ export async function GET() {
       channel: metadata.channel,
       duration,
       cueCount: greek.length,
-      translationMode: "manual-source-google-contextual",
+      translationMode: "manual-source-google-per-cue",
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (lockToken) await releaseProcessingLock(VIDEO_ID, lockToken).catch(() => undefined);
