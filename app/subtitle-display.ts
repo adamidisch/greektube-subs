@@ -1,31 +1,19 @@
 // Subtitle display layer.
 //
-// Two concerns, both presentation only. `packSubtitles` groups consecutive
-// over-fragmented cues into readable overlay packs; `subtitleLines` decides
-// where that text wraps. Neither touches the underlying cue array, its ids, its
-// timestamps, the SRT export, the database or the transcript sidebar.
-//
-// Normal packs preserve source cue timing exactly. Readability rescues may group
-// extra consecutive cues into the same display pack so a visible frame never
-// flashes for less than the minimum reading window. The source cues themselves
-// remain unchanged.
+// Presentation only. Source cues, database timing and SRT exports are never
+// rewritten here. The overlay may group adjacent cues for readability, but it
+// must preserve source chronology and must never invent an arbitrary page pace.
 
 export const MAX_LINE_CHARACTERS = 42;
 
-/** Words that must not be left at the end of a line — they bind to what follows. */
 const TRAILING_PENALTY = new Set([
-  // Greek articles
   "ο", "η", "το", "οι", "τα", "του", "της", "των", "τον", "την", "τους", "τις",
   "ένας", "μια", "μία", "ένα", "έναν", "μιας", "ενός",
-  // Greek conjunctions and particles
   "και", "κι", "ή", "αλλά", "όμως", "ενώ", "αν", "όταν", "γιατί", "ότι", "πως",
   "που", "να", "θα", "δεν", "μη", "μην", "ας", "για",
-  // Greek prepositions
   "σε", "με", "από", "προς", "ως", "κατά", "μετά", "πριν", "χωρίς", "μέχρι",
   "στο", "στη", "στην", "στον", "στα", "στις", "στους",
-  // Greek clitic pronouns — they lean on the verb that follows
-  "μου", "σου", "μας", "σας", "τoυ",
-  // English equivalents, for the English and dual tracks
+  "μου", "σου", "μας", "σας", "του",
   "the", "a", "an", "and", "or", "but", "to", "of", "in", "on", "at", "for",
   "with", "from", "by", "as", "that", "this", "is", "was", "are", "were",
 ]);
@@ -38,11 +26,6 @@ function normalise(text: string) {
   return text.replace(/\s+/g, " ").trim();
 }
 
-/**
- * Overlay-only cleanup. A leading hesitation such as «ε,» is speech noise rather
- * than useful subtitle content. It stays in the source transcript and exports
- * but does not consume reading space in the video overlay.
- */
 function displayText(text: string) {
   return normalise(text).replace(LEADING_HESITATION, "").trim();
 }
@@ -59,17 +42,14 @@ function greedyLines(words: string[], maxLineCharacters: number) {
     if (line && next.length > maxLineCharacters) {
       lines.push(line);
       line = word;
-    } else line = next;
+    } else {
+      line = next;
+    }
   }
   if (line) lines.push(line);
   return lines;
 }
 
-/**
- * Best two-line split, or a single line when the text already fits.
- * Falls back to greedy wrapping when no split keeps both halves inside the
- * character limit.
- */
 export function balanceLines(text: string, maxLineCharacters = MAX_LINE_CHARACTERS): string[] {
   const clean = normalise(text);
   if (!clean) return [];
@@ -79,8 +59,7 @@ export function balanceLines(text: string, maxLineCharacters = MAX_LINE_CHARACTE
   if (words.length < 2) return [clean];
 
   let best: { lines: string[]; score: number } | null = null;
-
-  for (let split = 1; split < words.length; split++) {
+  for (let split = 1; split < words.length; split += 1) {
     const head = words.slice(0, split).join(" ");
     const tail = words.slice(split).join(" ");
     if (head.length > maxLineCharacters || tail.length > maxLineCharacters) continue;
@@ -96,11 +75,6 @@ export function balanceLines(text: string, maxLineCharacters = MAX_LINE_CHARACTE
   return best ? best.lines : greedyLines(words, maxLineCharacters);
 }
 
-/**
- * Full line list for a subtitle of any length. Texts that fit in two lines are
- * balanced; longer ones keep the established greedy behaviour and are paged by
- * the overlay into two-line frames.
- */
 export function subtitleLines(text: string, maxLineCharacters = MAX_LINE_CHARACTERS): string[] {
   const clean = normalise(text);
   if (!clean) return [];
@@ -108,7 +82,7 @@ export function subtitleLines(text: string, maxLineCharacters = MAX_LINE_CHARACT
 
   const lines = greedyLines(clean.split(" "), maxLineCharacters);
 
-  // Avoid a tiny orphan line at the end when the previous line has room to share.
+  // First-pass protection against a tiny final line.
   if (lines.length >= 3 && lines.length % 2 === 1 && lines[lines.length - 1].length < 24) {
     const previous = lines[lines.length - 2].split(" ");
     let last = lines[lines.length - 1];
@@ -124,72 +98,102 @@ export function subtitleLines(text: string, maxLineCharacters = MAX_LINE_CHARACT
   return lines;
 }
 
+function framePlainText(frame: string) {
+  return normalise(frame.replace(/\n/g, " "));
+}
+
+function frameWords(frame: string) {
+  const text = framePlainText(frame);
+  return text ? text.split(" ") : [];
+}
+
+function fitsOnePage(text: string) {
+  const lines = subtitleLines(text);
+  return lines.length > 0
+    && lines.length <= 2
+    && lines.every(line => line.length <= MAX_LINE_CHARACTERS);
+}
+
+/**
+ * Rebalances the final two pages so a long cue never ends with a single word or
+ * a two-word fragment when the same words can be distributed across two valid
+ * two-line pages. Wording and order stay immutable.
+ */
+function rebalanceFinalOrphan(frames: string[]) {
+  if (frames.length < 2) return frames;
+  const last = frames.at(-1) as string;
+  const lastWords = frameWords(last);
+  if (lastWords.length >= 3 && framePlainText(last).length >= 18) return frames;
+
+  const previous = frames.at(-2) as string;
+  const words = [...frameWords(previous), ...lastWords];
+  if (words.length < 6) return frames;
+
+  let best: { left: string; right: string; score: number } | null = null;
+  for (let split = 2; split <= words.length - 3; split += 1) {
+    const left = words.slice(0, split).join(" ");
+    const right = words.slice(split).join(" ");
+    if (!fitsOnePage(left) || !fitsOnePage(right)) continue;
+    const rightCount = words.length - split;
+    if (rightCount < 3) continue;
+    const score = Math.abs(left.length - right.length)
+      + (SENTENCE_END.test(left) ? -12 : 0)
+      + (SOFT_BREAK.test(left) ? -5 : 0);
+    if (!best || score < best.score) best = { left, right, score };
+  }
+
+  if (!best) return frames;
+  const output = frames.slice(0, -2);
+  output.push(subtitleLines(best.left).join("\n"));
+  output.push(subtitleLines(best.right).join("\n"));
+  return output;
+}
+
 function twoLineFrames(text: string) {
   const lines = subtitleLines(text);
   const frames: string[] = [];
   for (let index = 0; index < lines.length; index += 2) {
     frames.push(lines.slice(index, index + 2).join("\n"));
   }
-  return frames;
+  return rebalanceFinalOrphan(frames);
 }
 
-// ---------------------------------------------------------------------------
-
 export type PackableCue = { start: number; duration: number; text: string };
-
-/** One reveal or page step of a pack. */
 export type PackStage = { at: number; text: string };
 
 export type SubtitlePack = {
   start: number;
   duration: number;
   text: string;
-  /** Indices of the original cues that make up this pack, in order. */
   sourceIndices: number[];
-  /** Characters per second. Diagnostic only — never gates packing. */
   cps: number;
-  /** True when cps exceeds DIAGNOSTIC_CPS_LIMIT. Diagnostic only. */
   dense: boolean;
-  /** Progressive reveal for ordinary one/two-line packs. */
   stages: PackStage[];
-  /**
-   * Stable two-line pages for oversized or readability-rescue packs. When this
-   * list has more than one item it takes precedence over progressive reveal.
-   */
   pages: PackStage[];
 };
 
 export type PackedSubtitles = {
   packs: SubtitlePack[];
-  /** Original cue index -> pack index. */
   packOfCue: number[];
 };
 
 export const MAX_PACK_DURATION = 4;
-/**
- * A one- or two-word tail that completes the previous phrase may push a pack
- * this far. It applies only to that case: such a tail adds a handful of
- * characters, so the extra time lowers the reading density rather than raising
- * it, and the character and line limits below still apply unchanged.
- */
 export const ORPHAN_MAX_PACK_DURATION = 5.5;
 export const ORPHAN_MAX_WORDS = 2;
 export const ORPHAN_MAX_DURATION = 1.2;
 export const MAX_PACK_CHARACTERS = 84;
 export const MAX_PACK_LINES = 2;
 export const MAX_PACK_GAP = 1;
-/** A pack shorter than this looks for a partner; at or above it stands alone. */
 export const PACK_MERGE_THRESHOLD = 3;
 export const DIAGNOSTIC_CPS_LIMIT = 25;
-
-/** No distinct visible subtitle frame should flash for less than this. */
 export const MIN_DISPLAY_SECONDS = 1;
-/** Readability rescue is display-only and deliberately bounded. */
 export const MAX_READABILITY_RESCUE_DURATION = 8;
 export const MAX_READABILITY_RESCUE_CHARACTERS = 252;
 export const MAX_READABILITY_RESCUE_LINES = 6;
 
-/** Fillers and standalone acknowledgements are not normally absorbed. */
+/** Small visual lead; enough to avoid feeling late without displaying a phrase early. */
+export const PAGE_SPEECH_LEAD_SECONDS = 0.08;
+
 const STANDALONE = /^[«"'(\[]*(?:ε{2,}|α{2,}|χμ+|μμ+|ω{2,}|ναι|όχι|οκ|εντάξει|ναι ναι|uh+|um+|hmm+|yeah|yes|no|ok|okay)[.,!;?…»"')\]]*$/i;
 
 function characterCount(text: string) {
@@ -213,27 +217,21 @@ function wordCount(text: string) {
   return clean ? clean.split(" ").length : 0;
 }
 
-/** A short tail that cannot stand on its own as a subtitle. */
 function isSmallTail(cue: PackableCue) {
   return wordCount(cue.text) <= ORPHAN_MAX_WORDS || cue.duration < ORPHAN_MAX_DURATION;
 }
 
-/**
- * Wraps the final text once, then hides the words that have not been spoken
- * yet. Every stage keeps the same number of lines, blank ones held open with a
- * non-breaking space, so the overlay box keeps its final size throughout.
- */
 function buildStages(cues: PackableCue[], indices: number[]): PackStage[] {
-  const texts = indices.map((index) => displayText(cues[index].text)).filter(Boolean);
+  const texts = indices.map(index => displayText(cues[index].text)).filter(Boolean);
   const lines = subtitleLines(texts.join(" "));
-  const counts = texts.map((text) => text.split(" ").length);
+  const counts = texts.map(text => text.split(" ").length);
 
   const stages: PackStage[] = [];
   let visible = 0;
-  for (let step = 0; step < indices.length; step++) {
+  for (let step = 0; step < indices.length; step += 1) {
     visible += counts[step] ?? 0;
     let consumed = 0;
-    const shown = lines.map((line) => {
+    const shown = lines.map(line => {
       const words = line.split(" ");
       const take = Math.max(0, Math.min(words.length, visible - consumed));
       consumed += words.length;
@@ -245,49 +243,73 @@ function buildStages(cues: PackableCue[], indices: number[]): PackStage[] {
 }
 
 /**
- * Builds stable one/two-line pages for text that is too large for one overlay.
- * A page never starts before the first source word it contains and consecutive
- * pages are at least MIN_DISPLAY_SECONDS apart.
+ * Approximate each word's spoken onset inside its own source cue. YouTube often
+ * gives one 4–8 second cue containing several display pages; assigning every
+ * word the cue's start makes those pages race ahead of speech. Linear position
+ * inside the immutable source time window is a conservative fallback until
+ * true word-level alignment is available.
  */
+function estimatedWordStarts(cues: PackableCue[], indices: number[]) {
+  const starts: number[] = [];
+  for (const index of indices) {
+    const text = displayText(cues[index].text);
+    const words = text ? text.split(" ") : [];
+    if (!words.length) continue;
+    const cue = cues[index];
+    const duration = Math.max(0, cue.duration);
+    words.forEach((_, wordIndex) => {
+      const fraction = wordIndex / words.length;
+      starts.push(cue.start + duration * fraction);
+    });
+  }
+  return starts;
+}
+
 function buildPages(cues: PackableCue[], indices: number[]): PackStage[] {
-  const texts = indices.map((index) => displayText(cues[index].text));
+  const texts = indices.map(index => displayText(cues[index].text));
   const merged = texts.filter(Boolean).join(" ");
   const frames = twoLineFrames(merged);
-  if (frames.length <= 1) return frames.length ? [{ at: cues[indices[0]].start, text: frames[0] }] : [];
-
-  const wordStarts: number[] = [];
-  for (let sourceIndex = 0; sourceIndex < indices.length; sourceIndex += 1) {
-    const text = texts[sourceIndex];
-    if (!text) continue;
-    const start = cues[indices[sourceIndex]].start;
-    for (const _word of text.split(" ")) wordStarts.push(start);
+  if (frames.length <= 1) {
+    return frames.length ? [{ at: cues[indices[0]].start, text: frames[0] }] : [];
   }
 
+  const wordStarts = estimatedWordStarts(cues, indices);
+  const sourceEnd = cueEnd(cues[indices[indices.length - 1]]);
   const pages: PackStage[] = [];
   let wordOffset = 0;
   let previousAt = Number.NEGATIVE_INFINITY;
+
   frames.forEach((frame, pageIndex) => {
-    const words = frame.replace(/\n/g, " ").split(/\s+/).filter(Boolean);
-    const sourceAt = wordStarts[wordOffset] ?? cues[indices[0]].start;
-    const at = pageIndex === 0
+    const words = framePlainText(frame).split(/\s+/).filter(Boolean);
+    const estimated = wordStarts[wordOffset] ?? cues[indices[0]].start;
+    const speechAligned = Math.max(cues[indices[0]].start, estimated - PAGE_SPEECH_LEAD_SECONDS);
+    let at = pageIndex === 0
       ? cues[indices[0]].start
-      : Math.max(sourceAt, previousAt + MIN_DISPLAY_SECONDS);
+      : Math.max(speechAligned, previousAt + MIN_DISPLAY_SECONDS);
+
+    // Protect the final page's minimum display window. Readability rescue may
+    // later absorb another source cue if this clamping still cannot make it fit.
+    if (pageIndex === frames.length - 1) {
+      at = Math.min(at, Math.max(cues[indices[0]].start, sourceEnd - MIN_DISPLAY_SECONDS));
+      if (pages.length) at = Math.max(at, pages[pages.length - 1].at + MIN_DISPLAY_SECONDS);
+    }
+
     pages.push({ at, text: frame });
     previousAt = at;
     wordOffset += words.length;
   });
+
   return pages;
 }
 
 function displayTextForIndices(cues: PackableCue[], indices: number[]) {
-  return indices.map((index) => displayText(cues[index].text)).filter(Boolean).join(" ");
+  return indices.map(index => displayText(cues[index].text)).filter(Boolean).join(" ");
 }
 
 function sourceEndForIndices(cues: PackableCue[], indices: number[]) {
   return cueEnd(cues[indices[indices.length - 1]]);
 }
 
-/** Whether every resulting visible page gets its full minimum reading window. */
 function hasReadableWindow(cues: PackableCue[], indices: number[]) {
   const start = cues[indices[0]].start;
   const sourceEnd = sourceEndForIndices(cues, indices);
@@ -304,20 +326,18 @@ function makePack(cues: PackableCue[], indices: number[]): SubtitlePack {
   const duration = Math.max(0.001, cueEnd(last) - start);
   const text = displayTextForIndices(cues, indices);
   const cps = characterCount(text) / duration;
-  const pages = buildPages(cues, indices);
   return {
-    start, duration, text, sourceIndices: [...indices], cps,
+    start,
+    duration,
+    text,
+    sourceIndices: [...indices],
+    cps,
     dense: cps > DIAGNOSTIC_CPS_LIMIT,
     stages: buildStages(cues, indices),
-    pages,
+    pages: buildPages(cues, indices),
   };
 }
 
-/**
- * Conservative packing for ordinary cues plus a bounded readability rescue.
- * The rescue is used only when the current display would otherwise be shorter
- * than one second or an oversized cue needs multiple two-line pages.
- */
 export function packSubtitles(cues: PackableCue[] | undefined | null): PackedSubtitles {
   const source = cues ?? [];
   const packs: SubtitlePack[] = [];
@@ -335,9 +355,6 @@ export function packSubtitles(cues: PackableCue[] | undefined | null): PackedSub
         const candidate = source[next];
         const candidateText = displayText(candidate.text);
         const packDuration = end - source[index].start;
-        // A short tail completing the current phrase is worth taking even when
-        // the pack is already long enough to read on its own; leaving it behind
-        // strands a word or two on screen for a fraction of a second.
         const tail = isSmallTail(candidate);
 
         if (packDuration >= PACK_MERGE_THRESHOLD && !tail) break;
@@ -351,9 +368,6 @@ export function packSubtitles(cues: PackableCue[] | undefined | null): PackedSub
 
         const mergedText = candidateText ? `${text} ${candidateText}`.trim() : text;
         if (characterCount(mergedText) > MAX_PACK_CHARACTERS) break;
-        // The character budget is necessary but not sufficient: word boundaries
-        // decide whether the text actually wraps into two lines. A pack that
-        // would spill onto a third line is handled by the readability rescue.
         if (subtitleLines(mergedText).length > MAX_PACK_LINES) break;
 
         indices.push(next);
@@ -363,9 +377,6 @@ export function packSubtitles(cues: PackableCue[] | undefined | null): PackedSub
       }
     }
 
-    // A short display or a legacy cue that spans >2 lines must not flash or fill
-    // half the phone. Pull in consecutive source cues only as far as necessary
-    // to provide stable two-line pages with at least one second per page.
     while (!hasReadableWindow(source, indices) && next < source.length) {
       const candidate = source[next];
       if (candidate.start - end > MAX_PACK_GAP) break;
@@ -392,11 +403,6 @@ export function packSubtitles(cues: PackableCue[] | undefined | null): PackedSub
   return { packs, packOfCue };
 }
 
-/**
- * Applies an existing pack grouping to a parallel, index-aligned cue track
- * (the English cues). Keeps both tracks switching at the same moments in dual
- * mode instead of drifting apart.
- */
 export function packAlongside(
   cues: PackableCue[] | undefined | null,
   grouping: PackedSubtitles,
@@ -406,21 +412,15 @@ export function packAlongside(
 
   const packs: SubtitlePack[] = [];
   const packOfCue: number[] = new Array(source.length).fill(0);
-
   for (const pack of grouping.packs) {
-    const indices = pack.sourceIndices.filter((cueIndex) => cueIndex < source.length);
+    const indices = pack.sourceIndices.filter(cueIndex => cueIndex < source.length);
     if (!indices.length) continue;
     for (const cueIndex of indices) packOfCue[cueIndex] = packs.length;
     packs.push(makePack(source, indices));
   }
-
   return { packs, packOfCue };
 }
 
-/**
- * Text to show at `currentTime`. Oversized/readability-rescue packs use stable
- * two-line pages. Ordinary packs retain the established cue-safe reveal.
- */
 export function packTextAt(pack: SubtitlePack, currentTime: number) {
   if (pack.pages.length > 1) {
     let text = pack.pages[0].text;
@@ -439,13 +439,11 @@ export function packTextAt(pack: SubtitlePack, currentTime: number) {
   return text;
 }
 
-/** Pack containing the given original cue index. */
 export function packAt(packed: PackedSubtitles, cueIndex: number): SubtitlePack | undefined {
   if (cueIndex < 0 || cueIndex >= packed.packOfCue.length) return undefined;
   return packed.packs[packed.packOfCue[cueIndex]];
 }
 
-/** Pack that follows the one containing the given original cue index. */
 export function packAfter(packed: PackedSubtitles, cueIndex: number): SubtitlePack | undefined {
   if (cueIndex < 0 || cueIndex >= packed.packOfCue.length) return undefined;
   return packed.packs[packed.packOfCue[cueIndex] + 1];
