@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { canonicalNumberTokens, numberTokensMatch } from "./numeric-integrity";
 import { GET as legacyGET, POST as legacyPOST } from "./legacy-route";
 import {
   compactUnderstandingForPrompt,
@@ -7,9 +6,20 @@ import {
   type TranslationUnderstanding,
 } from "./translation-understanding";
 import {
+  authorApprovedSpans,
+  buildSemanticSpans,
+  reconstructSourceUnits,
+  spanIndexForCursor,
+  unitTranslationFailure,
+  validateProfessionalSubtitleFile,
+  type ReconstructedUnit,
+  type SemanticSpan,
+} from "./professional-pipeline";
+import {
   TRANSCRIPT_VERSION,
   MAX_TRANSIENT_RETRIES,
   acquireProcessingLock,
+  completeTranscript,
   failTranscript,
   getTranscript,
   getTranscriptStatus,
@@ -22,11 +32,11 @@ import {
   updateProcessingProgress,
   type CachedCue,
 } from "../shared-cache";
+import { publishTranscript } from "../transcript-blob";
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
-const TRANSLATION_BATCH = 12;
-const LOCAL_CONTEXT = 8;
-const AUTO_TRANSLATION_MODE = "auto-groq-contextual";
+const SPAN_BATCH = 8;
+const AUTO_TRANSLATION_MODE = "professional-semantic-v1";
 
 type TranslationRequestBody = {
   url?: unknown;
@@ -34,12 +44,25 @@ type TranslationRequestBody = {
   translationMode?: unknown;
 };
 
-type TranslationItem = { index: number; text: string };
+type UnitTranslationRow = { unitId: string; text: string };
+
+type QaPayload = {
+  status?: unknown;
+  translations?: unknown;
+  issues?: unknown;
+};
 
 class GroqTranslationError extends Error {
   constructor(message: string, readonly retryAfterSeconds = 8) {
     super(message);
     this.name = "GroqTranslationError";
+  }
+}
+
+class ManualReviewError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ManualReviewError";
   }
 }
 
@@ -63,7 +86,9 @@ function extractVideoId(value: string) {
 
 function baseStage(stage: string | null | undefined) {
   const value = stage || "source";
-  return value.endsWith("_google") ? value.slice(0, -7) : value;
+  if (value.endsWith("_google")) return value.slice(0, -7);
+  if (value.endsWith("_pro")) return value.slice(0, -4);
+  return value;
 }
 
 function clonePostRequest(request: Request, rawBody: string) {
@@ -77,7 +102,7 @@ function clonePostRequest(request: Request, rawBody: string) {
 function autoHeaders(retryAfter: number | string) {
   return {
     "Retry-After": String(retryAfter),
-    "X-GreekTube-Translation": "understanding-first",
+    "X-GreekTube-Translation": "professional-semantic-spans",
     "X-GreekTube-Translation-Mode": AUTO_TRANSLATION_MODE,
   };
 }
@@ -106,66 +131,39 @@ function processingStatusPayload(record: Awaited<ReturnType<typeof getTranscript
   };
 }
 
-function protectedTokens(text: string) {
-  return [...new Set(text.match(/\b(?:[A-Z]{2,}[A-Z0-9-]*|[A-Za-z]+\d+[A-Za-z0-9-]*|\d+(?:[.,]\d+)?\s*(?:mg|mcg|g|ml|IU|iu|%))\b/g) || [])];
+function parseJsonObject(content: string) {
+  const cleaned = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const first = cleaned.indexOf("{");
+  const last = cleaned.lastIndexOf("}");
+  if (first < 0 || last <= first) throw new GroqTranslationError("Professional translator returned invalid JSON");
+  return JSON.parse(cleaned.slice(first, last + 1)) as Record<string, unknown>;
 }
 
-function translationIntegrityFailure(source: string, target: string) {
-  const clean = target.replace(/\s+/g, " ").trim();
-  if (!clean) return "empty-output";
-  if (/\[\s*\d+\s*\]/.test(clean)) return "marker-artifact";
-  if (!numberTokensMatch(source, clean)) {
-    return `number-mismatch:${JSON.stringify(canonicalNumberTokens(source))}:${JSON.stringify(canonicalNumberTokens(clean))}`;
-  }
-  const compact = clean.toLowerCase().replace(/\s+/g, "");
-  for (const token of protectedTokens(source)) {
-    if (!compact.includes(token.toLowerCase().replace(/\s+/g, ""))) return `missing-protected-token:${token}`;
-  }
-  if (/[A-Za-z]/.test(source) && !/[\u0370-\u03ff\u1f00-\u1fff]/.test(clean)) return "non-greek-output";
-  return null;
+function expectedUnitIds(spans: SemanticSpan[]) {
+  return new Set(spans.flatMap(span => span.units.map(unit => unit.id)));
 }
 
-function localContext(english: CachedCue[], greek: CachedCue[], start: number, count: number) {
-  const beforeStart = Math.max(0, start - LOCAL_CONTEXT);
-  const end = Math.min(english.length, start + count);
-  const afterEnd = Math.min(english.length, end + LOCAL_CONTEXT);
-  return {
-    precedingEnglish: english.slice(beforeStart, start).map((cue, offset) => ({ index: beforeStart + offset, text: cue.text })),
-    precedingGreek: greek.slice(Math.max(0, greek.length - LOCAL_CONTEXT)).map((cue, offset) => ({
-      index: Math.max(0, greek.length - LOCAL_CONTEXT) + offset,
-      text: cue.text,
-    })),
-    followingEnglish: english.slice(end, afterEnd).map((cue, offset) => ({ index: end + offset, text: cue.text })),
-  };
-}
-
-function parseTranslationResponse(value: unknown, expected: Set<number>) {
-  if (!value || typeof value !== "object") return new Map<number, string>();
+function parseTranslations(value: unknown, expected: Set<string>) {
+  if (!value || typeof value !== "object") return new Map<string, string>();
   const rows = (value as { translations?: unknown }).translations;
-  if (!Array.isArray(rows)) return new Map<number, string>();
-  const result = new Map<number, string>();
+  if (!Array.isArray(rows)) return new Map<string, string>();
+  const result = new Map<string, string>();
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
-    const item = row as { index?: unknown; text?: unknown };
-    const index = Number(item.index);
+    const item = row as { unitId?: unknown; text?: unknown };
+    const unitId = typeof item.unitId === "string" ? item.unitId : "";
     const text = typeof item.text === "string" ? item.text.replace(/\s+/g, " ").trim() : "";
-    if (!Number.isInteger(index) || !expected.has(index) || result.has(index) || !text) continue;
-    result.set(index, text);
+    if (!unitId || !expected.has(unitId) || result.has(unitId) || !text) continue;
+    result.set(unitId, text);
   }
   return result;
 }
 
-async function groqTranslate(
-  items: TranslationItem[],
-  understanding: TranslationUnderstanding,
-  context: ReturnType<typeof localContext>,
-  strict = false,
-) {
+async function groqJson(system: string, user: unknown, maxTokens: number) {
   const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new GroqTranslationError("GROQ_API_KEY is required for understanding-first translation", 30);
-  const expected = new Set(items.map(item => item.index));
+  if (!apiKey) throw new GroqTranslationError("GROQ_API_KEY is required for professional subtitle translation", 30);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 28_000);
+  const timeout = setTimeout(() => controller.abort(), 34_000);
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -174,86 +172,137 @@ async function groqTranslate(
       body: JSON.stringify({
         model: GROQ_MODEL,
         temperature: 0,
-        max_tokens: strict ? 900 : 3200,
+        max_tokens: maxTokens,
         response_format: { type: "json_object" },
         messages: [
-          {
-            role: "system",
-            content:
-              "You are a senior professional English-to-Greek audiovisual translator. First use the global brief and nearby source context to understand what the speaker means, then translate the requested cues into natural, precise Greek. " +
-              "Context is for disambiguation only: NEVER import a fact, word, negation, claim or certainty from a neighbouring cue into the current cue. Preserve who says or attributes a claim, uncertainty/hedging, negation, causality, chronology, technical meaning, irony and stance. " +
-              "Never turn may/might/could into certainty, association into causation or a reported claim into the speaker's own conclusion. Preserve numbers, doses, units, acronyms, names and technical tokens exactly in meaning. " +
-              "Translate the current cues as parts of one coherent discussion, not as isolated dictionary sentences, while keeping each output mapped to its original cue index for timing. " +
-              "Return JSON only: {\"translations\":[{\"index\":N,\"text\":\"Greek translation\"}]}. Return every requested index exactly once and no other indexes.",
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              globalTranslationBrief: JSON.parse(compactUnderstandingForPrompt(understanding)),
-              nearbyContext: context,
-              requestedCues: items,
-              strictRetry: strict,
-            }),
-          },
+          { role: "system", content: system },
+          { role: "user", content: JSON.stringify(user) },
         ],
       }),
     });
     if (response.status === 429) {
       const retry = Number(response.headers.get("retry-after"));
-      throw new GroqTranslationError("Groq 429 contextual translation rate limit", Number.isFinite(retry) && retry > 0 ? retry : 30);
+      throw new GroqTranslationError("Groq 429 professional subtitle rate limit", Number.isFinite(retry) && retry > 0 ? retry : 30);
     }
-    if (!response.ok) throw new GroqTranslationError(`Groq contextual translation ${response.status}`, response.status >= 500 ? 8 : 20);
+    if (!response.ok) throw new GroqTranslationError(`Groq professional subtitle ${response.status}`, response.status >= 500 ? 8 : 20);
     const payload = await response.json() as { choices?: { message?: { content?: string } }[] };
-    const content = payload.choices?.[0]?.message?.content || "";
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
-    } catch {
-      throw new GroqTranslationError("Groq contextual translation returned invalid JSON");
-    }
-    return parseTranslationResponse(parsed, expected);
+    return parseJsonObject(payload.choices?.[0]?.message?.content || "");
   } catch (error) {
     if (error instanceof GroqTranslationError) throw error;
-    throw new GroqTranslationError(error instanceof Error ? error.message : "Contextual translation failed");
+    throw new GroqTranslationError(error instanceof Error ? error.message : "Professional subtitle provider failed");
   } finally {
     clearTimeout(timeout);
   }
 }
 
-async function translateContextualBatch(
-  english: CachedCue[],
-  greek: CachedCue[],
-  start: number,
+function sourceContext(spans: SemanticSpan[], start: number, count: number) {
+  const before = spans[Math.max(0, start - 1)] || null;
+  const after = spans[Math.min(spans.length - 1, start + count)] || null;
+  return {
+    precedingSpan: before && start > 0 ? before : null,
+    followingSpan: after && start + count < spans.length ? after : null,
+  };
+}
+
+async function translateSpans(
+  spans: SemanticSpan[],
+  allSpans: SemanticSpan[],
+  batchStart: number,
   understanding: TranslationUnderstanding,
 ) {
-  const source = english.slice(start, start + TRANSLATION_BATCH);
-  const items = source.map((cue, offset) => ({ index: start + offset, text: cue.text }));
-  const context = localContext(english, greek, start, source.length);
-  let result = await groqTranslate(items, understanding, context, false);
+  const expected = expectedUnitIds(spans);
+  const context = sourceContext(allSpans, batchStart, spans.length);
+  const result = await groqJson(
+    "You are the GreekTube Professional Subtitle Translator. Translate reconstructed English discourse into concise, natural, professional Greek subtitles. " +
+      "The source units are NOT isolated dictionary cues: resolve short answers, pronouns and elliptical speech from the semantic span and read-only neighbouring context. " +
+      "Preserve meaning, questions and answers, negation, uncertainty, attribution, causality, chronology, numbers, units, names, acronyms and technical meaning. " +
+      "Never invent facts and never turn hedging into certainty. Avoid English-shaped Greek. Keep each output mapped to the supplied reconstructed unitId so timing can be rebuilt later. " +
+      "For a question such as 'Do you think ...?' followed by 'I do.', translate the answer by meaning, e.g. 'Ναι, το πιστεύω.', never literally as 'Το κάνω.'. " +
+      "Return JSON only: {\"translations\":[{\"unitId\":\"u...\",\"text\":\"...\"}]}. Return every requested unit exactly once.",
+    {
+      globalTranslationBrief: JSON.parse(compactUnderstandingForPrompt(understanding)),
+      lockedGlossary: understanding.glossary,
+      readOnlyContext: context,
+      semanticSpans: spans,
+    },
+    4200,
+  );
+  const translations = parseTranslations(result, expected);
+  if (translations.size !== expected.size) throw new GroqTranslationError(`Professional translator returned ${translations.size}/${expected.size} reconstructed units`);
+  return translations;
+}
 
-  const invalid = items.filter(item => {
-    const candidate = result.get(item.index) || "";
-    return translationIntegrityFailure(item.text, candidate) !== null;
-  });
+function precedingUnitFor(units: ReconstructedUnit[], unit: ReconstructedUnit) {
+  const index = units.findIndex(candidate => candidate.id === unit.id);
+  return index > 0 ? units[index - 1] : null;
+}
 
-  // Retry only objectively invalid/missing cues. The same whole-video brief and
-  // local passage are supplied so the retry remains semantic rather than literal.
-  for (const item of invalid) {
-    const single = await groqTranslate([item], understanding, context, true);
-    const candidate = single.get(item.index) || "";
-    const failure = translationIntegrityFailure(item.text, candidate);
-    if (failure) throw new GroqTranslationError(`Contextual translation integrity failed at cue ${item.index}: ${failure}`);
-    result.set(item.index, candidate);
+function validateUnitTranslations(units: ReconstructedUnit[], spans: SemanticSpan[], translations: Map<string, string>) {
+  for (const span of spans) {
+    for (const unit of span.units) {
+      const failure = unitTranslationFailure(unit, translations.get(unit.id) || "", precedingUnitFor(units, unit));
+      if (failure) throw new GroqTranslationError(`Professional translation integrity failed at ${unit.id}: ${failure}`);
+    }
   }
+}
 
-  const translated = items.map((item, offset) => {
-    const text = result.get(item.index) || "";
-    const failure = translationIntegrityFailure(item.text, text);
-    if (failure) throw new GroqTranslationError(`Contextual translation integrity failed at cue ${item.index}: ${failure}`);
-    const cue = source[offset];
-    return { ...cue, text };
-  });
-  return translated;
+async function bilingualQa(
+  spans: SemanticSpan[],
+  allUnits: ReconstructedUnit[],
+  translations: Map<string, string>,
+  understanding: TranslationUnderstanding,
+) {
+  const expected = expectedUnitIds(spans);
+  const proposed: UnitTranslationRow[] = [...translations].map(([unitId, text]) => ({ unitId, text }));
+  const result = await groqJson(
+    "You are the independent bilingual EN↔EL quality reviewer for professional audiovisual subtitles. Review the proposed Greek against the reconstructed English and its semantic dependencies. " +
+      "Check meaning, question/answer logic, elliptical short answers, negation, hedging, attribution, pronouns, causality, chronology, numbers, units, names, acronyms, terminology and natural Greek. " +
+      "Repair any fixable problem directly. If all issues are resolved set status='approved'. Use status='manual_review_required' only when the source itself is genuinely ambiguous and cannot be resolved safely from context. " +
+      "Never approve literal machine Greek. Return JSON only: {\"status\":\"approved\",\"translations\":[{\"unitId\":\"...\",\"text\":\"...\"}],\"issues\":[]}.",
+    {
+      globalTranslationBrief: JSON.parse(compactUnderstandingForPrompt(understanding)),
+      semanticSpans: spans,
+      proposedGreek: proposed,
+    },
+    4200,
+  ) as QaPayload;
+  const status = typeof result.status === "string" ? result.status : "";
+  const repaired = parseTranslations(result, expected);
+  const issues = Array.isArray(result.issues) ? result.issues.map(value => String(value)).slice(0, 8) : [];
+  if (status !== "approved") throw new ManualReviewError(`professional-qa:${status || "invalid"}${issues.length ? `:${issues.join(" | ")}` : ""}`);
+  if (repaired.size !== expected.size) throw new GroqTranslationError(`Professional QA returned ${repaired.size}/${expected.size} units`);
+  validateUnitTranslations(allUnits, spans, repaired);
+  return repaired;
+}
+
+function keyPoints(cues: CachedCue[]) {
+  if (!cues.length) return [] as string[];
+  const step = Math.max(1, Math.floor(cues.length / 8));
+  return cues.filter((_, index) => index % step === 0)
+    .map(cue => cue.text.replace(/\s+/g, " ").trim())
+    .filter((text, index, all) => text.length > 18 && all.indexOf(text) === index)
+    .slice(0, 8);
+}
+
+function readyPayload(record: Awaited<ReturnType<typeof getTranscript>>, cached: boolean) {
+  if (!record) return null;
+  return {
+    status: "ready",
+    progress: 100,
+    videoId: record.videoId,
+    title: record.title,
+    channel: record.channel,
+    duration: record.duration,
+    sourceLanguage: record.originalLanguage,
+    cues: record.greekTranscript,
+    englishCues: record.englishTranscript,
+    topics: record.topics,
+    keyPoints: record.keyPoints,
+    transcriptVersion: record.transcriptVersion,
+    translationMode: AUTO_TRANSLATION_MODE,
+    translationMethod: "greektube_professional_semantic_v1",
+    cached,
+  };
 }
 
 export async function GET(request: Request) {
@@ -269,9 +318,6 @@ export async function POST(request: Request) {
     return legacyPOST(clonePostRequest(request, rawBody));
   }
 
-  // Source fetching, repair, Google-fast mode, forced resets and finalization
-  // stay on the proven legacy state machine. We intercept only the semantic
-  // translation stage after the complete repaired English transcript exists.
   if (body.force === true || body.translationMode === "google" || body.translationMode === "manual-pro" || typeof body.url !== "string") {
     return legacyPOST(clonePostRequest(request, rawBody));
   }
@@ -279,7 +325,8 @@ export async function POST(request: Request) {
   if (!videoId) return legacyPOST(clonePostRequest(request, rawBody));
 
   let current = await getTranscript(videoId);
-  if (!current || current.status !== "processing" || current.transcriptVersion !== TRANSCRIPT_VERSION || baseStage(current.processingStage) !== "translate") {
+  const initialStage = baseStage(current?.processingStage);
+  if (!current || current.status !== "processing" || current.transcriptVersion !== TRANSCRIPT_VERSION || !["translate", "finalize"].includes(initialStage)) {
     return legacyPOST(clonePostRequest(request, rawBody));
   }
 
@@ -302,15 +349,19 @@ export async function POST(request: Request) {
   let ownsLock = true;
   try {
     current = await getTranscript(videoId);
-    if (!current || current.status !== "processing" || baseStage(current.processingStage) !== "translate") {
+    if (!current || current.status !== "processing") throw new GroqTranslationError("Professional processing checkpoint missing", 5);
+    const stage = baseStage(current.processingStage);
+    if (!["translate", "finalize"].includes(stage)) {
       await releaseProcessingLock(videoId, token);
       ownsLock = false;
       return legacyPOST(clonePostRequest(request, rawBody));
     }
+
     const english = current.englishTranscript as CachedCue[];
-    const greek = current.greekTranscript as CachedCue[];
-    const cursor = Math.max(0, Math.min(current.processingCursor || 0, english.length));
     if (!english.length) throw new GroqTranslationError("Repaired English transcript is empty", 15);
+    const units = reconstructSourceUnits(english);
+    const spans = buildSemanticSpans(units);
+    if (!units.length || !spans.length) throw new GroqTranslationError("Source reconstruction produced no semantic spans", 15);
 
     const understanding = await ensureTranslationUnderstanding(
       videoId,
@@ -318,28 +369,66 @@ export async function POST(request: Request) {
       english,
       async () => {
         if (!await updateProcessingProgress(videoId, token, Math.max(48, current?.progress || 48))) {
-          throw new GroqTranslationError("Processing lock was lost during global understanding", 5);
+          throw new GroqTranslationError("Processing lock was lost during whole-video understanding", 5);
         }
       },
     );
 
+    if (stage === "finalize") {
+      const greek = current.greekTranscript as CachedCue[];
+      const issues = validateProfessionalSubtitleFile(greek);
+      if (issues.length) throw new ManualReviewError(`professional-final-qc:${issues.slice(0, 12).join(",")}`);
+      if (!greek.length) throw new ManualReviewError("professional-final-qc:empty-greek-transcript");
+      const points = keyPoints(greek);
+      const updatedAt = new Date().toISOString();
+      if (!await completeTranscript({
+        ...current,
+        greekTranscript: greek,
+        timestamps: greek.map(cue => ({ start: cue.start, duration: cue.duration })),
+        keyPoints: points,
+        topics: current.topics.length ? current.topics : [understanding.mainTopic].filter(Boolean),
+        status: "ready",
+        progress: 100,
+        transcriptVersion: TRANSCRIPT_VERSION,
+        updatedAt,
+      }, token)) throw new GroqTranslationError("Processing lock was lost before professional final publish", 5);
+      ownsLock = false;
+      const ready = await getTranscript(videoId);
+      const payload = readyPayload(ready, false);
+      if (!payload) throw new GroqTranslationError("Professional ready transcript unavailable", 5);
+      await publishTranscript(videoId, TRANSCRIPT_VERSION, payload);
+      return NextResponse.json(payload, { headers: { ...autoHeaders(1), "Cache-Control": "no-store" } });
+    }
+
+    const cursor = Math.max(0, Math.min(current.processingCursor || 0, english.length));
     if (cursor >= english.length) {
-      if (!await saveProcessingCheckpoint(videoId, token, { stage: "finalize", cursor: english.length, progress: 90 })) {
-        throw new GroqTranslationError("Processing lock was lost before finalization transition", 5);
+      if (!await saveProcessingCheckpoint(videoId, token, { stage: "finalize_pro", cursor: english.length, progress: 90 })) {
+        throw new GroqTranslationError("Processing lock was lost before professional finalization transition", 5);
       }
     } else {
-      const translated = await translateContextualBatch(english, greek, cursor, understanding);
-      const nextGreek = [...greek, ...translated];
-      const nextCursor = cursor + translated.length;
+      const spanStart = spanIndexForCursor(spans, cursor);
+      const batch = spans.slice(spanStart, spanStart + SPAN_BATCH);
+      if (!batch.length) throw new GroqTranslationError(`No semantic span found for source cursor ${cursor}`, 5);
+      const proposed = await translateSpans(batch, spans, spanStart, understanding);
+      validateUnitTranslations(units, batch, proposed);
+      const approved = await bilingualQa(batch, units, proposed, understanding);
+      const previousGreek = current.greekTranscript as CachedCue[];
+      const previousEnd = previousGreek.length ? previousGreek[previousGreek.length - 1].start + previousGreek[previousGreek.length - 1].duration : 0;
+      const authored = authorApprovedSpans(batch, approved, previousEnd);
+      const candidateGreek = [...previousGreek, ...authored];
+      const fileIssues = validateProfessionalSubtitleFile(candidateGreek);
+      if (fileIssues.length) throw new ManualReviewError(`professional-subtitle-qc:${fileIssues.slice(0, 12).join(",")}`);
+
+      const nextCursor = batch[batch.length - 1].sourceEndIndex + 1;
       const done = nextCursor >= english.length;
       const progress = done ? 90 : Math.round(48 + 42 * (nextCursor / english.length));
       if (!await recordGroqProviderSuccess(videoId, token)) throw new GroqTranslationError("Processing lock was lost before provider success", 5);
       if (!await saveProcessingCheckpoint(videoId, token, {
-        stage: done ? "finalize" : "translate",
+        stage: done ? "finalize_pro" : "translate_pro",
         cursor: nextCursor,
         progress,
-        greekTranscript: nextGreek,
-      })) throw new GroqTranslationError("Processing lock was lost before contextual checkpoint persisted", 5);
+        greekTranscript: candidateGreek,
+      })) throw new GroqTranslationError("Processing lock was lost before professional semantic checkpoint persisted", 5);
     }
 
     if (!await releaseProcessingLock(videoId, token)) throw new GroqTranslationError("Processing lock was lost before release", 5);
@@ -350,10 +439,17 @@ export async function POST(request: Request) {
       headers: autoHeaders(1),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Understanding-first translation failed";
+    const message = error instanceof Error ? error.message : "Professional subtitle translation failed";
+    const manualReview = error instanceof ManualReviewError;
     const retryAfter = error instanceof GroqTranslationError ? error.retryAfterSeconds : /429/i.test(message) ? 30 : 8;
     const isRateLimit = /429/i.test(message);
-    console.error("[captions:understanding-first-failed]", JSON.stringify({ videoId, message }));
+    console.error("[captions:professional-v1-failed]", JSON.stringify({ videoId, message, manualReview }));
+
+    if (ownsLock && manualReview) {
+      await failTranscript(videoId, token, `manual_review_required:${message}`).catch(() => undefined);
+      ownsLock = false;
+      return NextResponse.json({ error: message, status: "manual_review_required" }, { status: 409, headers: autoHeaders(60) });
+    }
 
     if (ownsLock) {
       if (isRateLimit) {
