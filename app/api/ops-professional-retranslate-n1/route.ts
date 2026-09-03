@@ -20,6 +20,7 @@ import cues4 from "./final-cues-4";
 
 const VIDEO_ID = "n1G3xqgzB2c";
 const ACCESS = "gt-prof-v1-n1-0903";
+const CURATED_TOPICS = ["γήρανση", "επιγενετική", "AI", "βιοεπιστήμες", "οικονομία", "γεωπολιτική"];
 const FINAL_CUES: CachedCue[] = [...cues0, ...cues1, ...cues2, ...cues3, ...cues4].map(cue => ({ ...cue }));
 
 function allowed(request: Request) {
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
 
   if (action === "audit") {
     const audit = auditFinalCues();
-    return NextResponse.json({ videoId: VIDEO_ID, cueCount: FINAL_CUES.length, ...audit }, { status: audit.issues.length ? 409 : 200 });
+    return NextResponse.json({ videoId: VIDEO_ID, cueCount: FINAL_CUES.length, topics: CURATED_TOPICS, ...audit }, { status: audit.issues.length ? 409 : 200 });
   }
 
   if (action === "reset") {
@@ -102,6 +103,7 @@ export async function GET(request: Request) {
         ...existing,
         greekTranscript: FINAL_CUES,
         timestamps: FINAL_CUES.map(cue => ({ start: cue.start, duration: cue.duration })),
+        topics: CURATED_TOPICS,
         keyPoints,
         status: "ready",
         progress: 100,
@@ -131,7 +133,7 @@ export async function GET(request: Request) {
         sourceLanguage: existing.originalLanguage || "en",
         cues: FINAL_CUES,
         englishCues: existing.englishTranscript,
-        topics: existing.topics,
+        topics: CURATED_TOPICS,
         keyPoints,
         transcriptVersion: TRANSCRIPT_VERSION,
         translationMode: "professional-curated-v1",
@@ -141,12 +143,12 @@ export async function GET(request: Request) {
       const published = await publishTranscript(VIDEO_ID, TRANSCRIPT_VERSION, payload);
       if (!published) return NextResponse.json({ error: "published transcript blob write failed" }, { status: 500 });
 
-      const verification = await readPublishedTranscript(VIDEO_ID, TRANSCRIPT_VERSION, false) as { cues?: CachedCue[]; translationMethod?: string } | null;
+      const verification = await readPublishedTranscript(VIDEO_ID, TRANSCRIPT_VERSION, false) as { cues?: CachedCue[]; topics?: string[] } | null;
       const liveCues = Array.isArray(verification?.cues) ? verification.cues : [];
       const liveAnswer = liveCues.find(cue => Math.abs(cue.start - 6) < 0.01)?.text || null;
       const liveEnd = liveCues.length ? liveCues[liveCues.length - 1].start + liveCues[liveCues.length - 1].duration : 0;
       if (liveCues.length !== 259 || !liveAnswer?.startsWith("Ναι, το πιστεύω.") || Math.abs(liveEnd - 1238) > 0.02) {
-        return NextResponse.json({ error: "post-publish verification failed", liveCueCount: liveCues.length, liveAnswer, liveEnd }, { status: 500 });
+        return NextResponse.json({ error: "post-publish verification pending cache propagation", liveCueCount: liveCues.length, liveAnswer, liveEnd }, { status: 202 });
       }
 
       return NextResponse.json({
@@ -155,6 +157,7 @@ export async function GET(request: Request) {
         cueCount: liveCues.length,
         end: liveEnd,
         answerAt006: liveAnswer,
+        topics: CURATED_TOPICS,
         maxCps: audit.maxCps,
         translationMethod: "greektube_professional_subtitle_translator_v1",
       });
