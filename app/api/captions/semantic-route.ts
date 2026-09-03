@@ -37,6 +37,7 @@ import { publishTranscript } from "../transcript-blob";
 const GROQ_MODEL = "openai/gpt-oss-120b";
 const SPAN_BATCH = 8;
 const AUTO_TRANSLATION_MODE = "professional-semantic-v1";
+const SUBTITLE_TARGET_CPS = 15.75;
 
 type TranslationRequestBody = {
   url?: unknown;
@@ -204,6 +205,36 @@ function sourceContext(spans: SemanticSpan[], start: number, count: number) {
   };
 }
 
+function subtitleBudgets(spans: SemanticSpan[]) {
+  return spans.map(span => {
+    const availableSeconds = Math.max(1, span.end - span.start);
+    return {
+      spanId: span.id,
+      availableSeconds: Math.round(availableSeconds * 100) / 100,
+      targetMaximumGreekCharacters: Math.max(16, Math.floor(availableSeconds * SUBTITLE_TARGET_CPS)),
+      hardMaximumGreekCharactersAt17Cps: Math.max(17, Math.floor(availableSeconds * 17)),
+    };
+  });
+}
+
+function spanCharacterCount(span: SemanticSpan, translations: Map<string, string>) {
+  return span.units.reduce((sum, unit, index) => {
+    const text = translations.get(unit.id)?.replace(/\s+/g, " ").trim() || "";
+    return sum + text.length + (index ? 1 : 0);
+  }, 0);
+}
+
+function spansOverTargetBudget(spans: SemanticSpan[], translations: Map<string, string>) {
+  const budgets = new Map(subtitleBudgets(spans).map(row => [row.spanId, row]));
+  return spans.flatMap(span => {
+    const budget = budgets.get(span.id);
+    const characters = spanCharacterCount(span, translations);
+    return budget && characters > budget.targetMaximumGreekCharacters
+      ? [{ ...budget, characters }]
+      : [];
+  });
+}
+
 async function translateSpans(
   spans: SemanticSpan[],
   allSpans: SemanticSpan[],
@@ -217,12 +248,14 @@ async function translateSpans(
       "The source units are NOT isolated dictionary cues: resolve short answers, pronouns and elliptical speech from the semantic span and read-only neighbouring context. " +
       "Preserve meaning, questions and answers, negation, uncertainty, attribution, causality, chronology, numbers, units, names, acronyms and technical meaning. " +
       "Never invent facts and never turn hedging into certainty. Avoid English-shaped Greek. Keep each output mapped to the supplied reconstructed unitId so timing can be rebuilt later. " +
+      "Write for professional subtitles: prefer compact idiomatic Greek, remove verbal padding that carries no meaning and avoid unnecessary repetition. Each semantic span includes a strict subtitle character budget; aim to stay within the targetMaximumGreekCharacters without losing essential meaning. " +
       "For a question such as 'Do you think ...?' followed by 'I do.', translate the answer by meaning, e.g. 'Ναι, το πιστεύω.', never literally as 'Το κάνω.'. " +
       "Return JSON only: {\"translations\":[{\"unitId\":\"u...\",\"text\":\"...\"}]}. Return every requested unit exactly once.",
     {
       globalTranslationBrief: JSON.parse(compactUnderstandingForPrompt(understanding)),
       lockedGlossary: understanding.glossary,
       readOnlyContext: context,
+      subtitleBudgets: subtitleBudgets(spans),
       semanticSpans: spans,
     },
     4200,
@@ -257,10 +290,12 @@ async function bilingualQa(
   const result = await groqJson(
     "You are the independent bilingual EN↔EL quality reviewer for professional audiovisual subtitles. Review the proposed Greek against the reconstructed English and its semantic dependencies. " +
       "Check meaning, question/answer logic, elliptical short answers, negation, hedging, attribution, pronouns, causality, chronology, numbers, units, names, acronyms, terminology and natural Greek. " +
-      "Repair any fixable problem directly. If all issues are resolved set status='approved'. Use status='manual_review_required' only when the source itself is genuinely ambiguous and cannot be resolved safely from context. " +
+      "Also enforce the supplied subtitle reading budgets. Make the Greek concise enough to fit targetMaximumGreekCharacters whenever this is possible without losing essential meaning. Remove redundant discourse padding, repeated wording and English-style verbosity, but never remove a factual claim, qualification, negation, number, attribution or causal relationship merely to save space. " +
+      "Repair any fixable problem directly. If all issues are resolved set status='approved'. Use status='manual_review_required' only when the source itself is genuinely ambiguous or the text cannot fit the hard 17 CPS budget without semantic loss. " +
       "Never approve literal machine Greek. Return JSON only: {\"status\":\"approved\",\"translations\":[{\"unitId\":\"...\",\"text\":\"...\"}],\"issues\":[]}.",
     {
       globalTranslationBrief: JSON.parse(compactUnderstandingForPrompt(understanding)),
+      subtitleBudgets: subtitleBudgets(spans),
       semanticSpans: spans,
       proposedGreek: proposed,
     },
@@ -273,6 +308,49 @@ async function bilingualQa(
   if (repaired.size !== expected.size) throw new GroqTranslationError(`Professional QA returned ${repaired.size}/${expected.size} units`);
   validateUnitTranslations(allUnits, spans, repaired);
   return repaired;
+}
+
+async function compressForSubtitleTiming(
+  spans: SemanticSpan[],
+  allUnits: ReconstructedUnit[],
+  translations: Map<string, string>,
+  understanding: TranslationUnderstanding,
+) {
+  const overBudget = spansOverTargetBudget(spans, translations);
+  if (!overBudget.length) return translations;
+
+  const expected = expectedUnitIds(spans);
+  const result = await groqJson(
+    "You are the final subtitle condensation editor. The Greek translation is semantically approved but some semantic spans are too long for their spoken timing. Condense ONLY wording, never meaning. " +
+      "Use concise idiomatic modern Greek. Remove redundant discourse markers, repeated phrasing and explanatory padding already implicit in the same sentence. Preserve every essential claim, question/answer relationship, negation, uncertainty/hedging, attribution, causal relation, chronology, number, unit, name, acronym and technical term. " +
+      "Each span must fit targetMaximumGreekCharacters. The hardMaximumGreekCharactersAt17Cps may never be exceeded. If a span genuinely cannot fit without losing meaning return status='manual_review_required'. Otherwise return status='approved' and every unit exactly once. " +
+      "Return JSON only: {\"status\":\"approved\",\"translations\":[{\"unitId\":\"...\",\"text\":\"...\"}],\"issues\":[]}.",
+    {
+      globalTranslationBrief: JSON.parse(compactUnderstandingForPrompt(understanding)),
+      subtitleBudgets: subtitleBudgets(spans),
+      overBudget,
+      semanticSpans: spans,
+      approvedGreek: [...translations].map(([unitId, text]) => ({ unitId, text })),
+    },
+    3600,
+  ) as QaPayload;
+
+  const status = typeof result.status === "string" ? result.status : "";
+  const compressed = parseTranslations(result, expected);
+  const issues = Array.isArray(result.issues) ? result.issues.map(value => String(value)).slice(0, 8) : [];
+  if (status !== "approved") throw new ManualReviewError(`professional-timing-compression:${status || "invalid"}${issues.length ? `:${issues.join(" | ")}` : ""}`);
+  if (compressed.size !== expected.size) throw new GroqTranslationError(`Professional timing compression returned ${compressed.size}/${expected.size} units`);
+  validateUnitTranslations(allUnits, spans, compressed);
+
+  const hardOver = spans.flatMap(span => {
+    const budget = subtitleBudgets([span])[0];
+    const characters = spanCharacterCount(span, compressed);
+    return characters > budget.hardMaximumGreekCharactersAt17Cps
+      ? [`${span.id}:${characters}>${budget.hardMaximumGreekCharactersAt17Cps}`]
+      : [];
+  });
+  if (hardOver.length) throw new ManualReviewError(`professional-timing-compression:hard-budget:${hardOver.join(",")}`);
+  return compressed;
 }
 
 function keyPoints(cues: CachedCue[]) {
@@ -412,9 +490,10 @@ export async function POST(request: Request) {
       const proposed = await translateSpans(batch, spans, spanStart, understanding);
       validateUnitTranslations(units, batch, proposed);
       const approved = await bilingualQa(batch, units, proposed, understanding);
+      const timingReady = await compressForSubtitleTiming(batch, units, approved, understanding);
       const previousGreek = current.greekTranscript as CachedCue[];
       const previousEnd = previousGreek.length ? previousGreek[previousGreek.length - 1].start + previousGreek[previousGreek.length - 1].duration : 0;
-      const authored = authorApprovedSpans(batch, approved, previousEnd);
+      const authored = authorApprovedSpans(batch, timingReady, previousEnd);
       const candidateGreek = [...previousGreek, ...authored];
       const fileIssues = validateProfessionalSubtitleFile(candidateGreek);
       if (fileIssues.length) throw new ManualReviewError(`professional-subtitle-qc:${fileIssues.slice(0, 12).join(",")}`);
