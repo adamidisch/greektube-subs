@@ -52,7 +52,7 @@ const boundaryDuplicate = [
   { start: 2, duration: 2, text: "Χάσει. Αυτή είναι η διαφορά." },
 ];
 assert.ok(
-  validateProfessionalSubtitleFile(boundaryDuplicate).some(issue => issue.startsWith("boundary-repeat:0-1:xasei")),
+  validateProfessionalSubtitleFile(boundaryDuplicate).some(issue => issue.startsWith("boundary-repeat:0-1:χασει")),
   "accidental repeated terminal word across adjacent subtitle boundaries is rejected",
 );
 assert.deepEqual(
