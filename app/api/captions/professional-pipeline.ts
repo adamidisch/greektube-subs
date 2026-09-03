@@ -1,11 +1,20 @@
 import { canonicalNumberTokens, numberTokensMatch } from "./numeric-integrity.ts";
 import type { CachedCue } from "../shared-cache.ts";
 
+export type SourceTimingAnchor = {
+  sourceIndex: number;
+  start: number;
+  end: number;
+  text: string;
+  terminal: boolean;
+};
+
 export type ReconstructedUnit = {
   id: string;
   sourceCueIndexes: number[];
   sourceStartIndex: number;
   sourceEndIndex: number;
+  sourceAnchors: SourceTimingAnchor[];
   start: number;
   end: number;
   type: "statement" | "question" | "answer" | "continuation" | "other";
@@ -31,6 +40,10 @@ export type ProfessionalCue = CachedCue & {
 
 const TERMINAL = /[.!?…]["'”’)]?$/u;
 const GREEK = /[\u0370-\u03ff\u1f00-\u1fff]/u;
+const MIN_EVENT_SECONDS = 1;
+const MAX_EVENT_SECONDS = 7;
+const MAX_READING_CPS = 17;
+const MAX_ANCHOR_DRIFT_SECONDS = 0.12;
 
 function clean(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -77,11 +90,23 @@ export function reconstructSourceUnits(cues: CachedCue[]) {
     const previous = units.at(-1);
     const question = /\?["'”’)]?$/u.test(text);
     const answer = Boolean(previous?.type === "question" && (isContextDependentMicroUtterance(text) || startsWithDependentAnswer(text) || text.length <= 110));
+    const sourceAnchors = indexes.map(sourceIndex => {
+      const cue = cues[sourceIndex];
+      return {
+        sourceIndex,
+        start: cue.start,
+        end: cueEnd(cue),
+        text: clean(cue.text),
+        terminal: TERMINAL.test(clean(cue.text)),
+      } satisfies SourceTimingAnchor;
+    });
+
     units.push({
       id: `u${index}-${endIndex}`,
       sourceCueIndexes: indexes,
       sourceStartIndex: index,
       sourceEndIndex: endIndex,
+      sourceAnchors,
       start,
       end,
       type: question ? "question" : answer ? "answer" : TERMINAL.test(text) ? "statement" : "continuation",
@@ -155,6 +180,7 @@ function splitToSubtitleChunks(text: string, maxChars = 84) {
   if (!normalized) return [] as string[];
   const sentences = normalized.split(/(?<=[.!?…])\s+/u).filter(Boolean);
   const chunks: string[] = [];
+
   for (const sentence of sentences) {
     if (sentence.length <= maxChars) {
       chunks.push(sentence);
@@ -173,43 +199,71 @@ function splitToSubtitleChunks(text: string, maxChars = 84) {
     }
     if (current) chunks.push(current);
   }
-  return chunks;
+
+  // Subtitle-authoring equivalent of the display orphan rule: do not create a
+  // final event containing only one or two words when the previous event can
+  // share enough text without exceeding the 84-character envelope.
+  if (chunks.length >= 2) {
+    const finalWords = chunks.at(-1)?.split(/\s+/u).filter(Boolean) || [];
+    if (finalWords.length <= 2) {
+      const previousWords = chunks[chunks.length - 2].split(/\s+/u).filter(Boolean);
+      while (finalWords.length < 3 && previousWords.length > 3) {
+        const moved = previousWords.pop();
+        if (!moved) break;
+        finalWords.unshift(moved);
+        const previous = previousWords.join(" ");
+        const final = finalWords.join(" ");
+        if (previous.length > maxChars || final.length > maxChars) {
+          finalWords.shift();
+          previousWords.push(moved);
+          break;
+        }
+      }
+      chunks[chunks.length - 2] = previousWords.join(" ");
+      chunks[chunks.length - 1] = finalWords.join(" ");
+    }
+  }
+
+  return chunks.filter(Boolean);
 }
 
 function minimumReadingSeconds(text: string) {
-  return Math.max(1, clean(text).length / 17);
+  return Math.max(MIN_EVENT_SECONDS, clean(text).length / MAX_READING_CPS);
 }
 
 type DisplayUnit = {
   semanticSpanId: string;
   sourceStartIndex: number;
   sourceEndIndex: number;
+  sourceAnchors: SourceTimingAnchor[];
   start: number;
   end: number;
   text: string;
 };
 
 function coalesceTightUnits(rows: DisplayUnit[]) {
-  const work = rows.map(row => ({ ...row }));
+  const work = rows.map(row => ({ ...row, sourceAnchors: [...row.sourceAnchors] }));
   const result: DisplayUnit[] = [];
   for (let index = 0; index < work.length; index += 1) {
     const row = work[index];
     const available = row.end - row.start;
-    if ((available < 1 || minimumReadingSeconds(row.text) > available) && index + 1 < work.length) {
+    if ((available < MIN_EVENT_SECONDS || minimumReadingSeconds(row.text) > available) && index + 1 < work.length) {
       const next = work[index + 1];
       work[index + 1] = {
         ...next,
         semanticSpanId: row.semanticSpanId,
         sourceStartIndex: row.sourceStartIndex,
+        sourceAnchors: [...row.sourceAnchors, ...next.sourceAnchors],
         start: row.start,
         text: clean(`${row.text} ${next.text}`),
       };
       continue;
     }
-    if ((available < 1 || minimumReadingSeconds(row.text) > available) && result.length) {
+    if ((available < MIN_EVENT_SECONDS || minimumReadingSeconds(row.text) > available) && result.length) {
       const previous = result[result.length - 1];
       previous.end = Math.max(previous.end, row.end);
       previous.sourceEndIndex = row.sourceEndIndex;
+      previous.sourceAnchors.push(...row.sourceAnchors);
       previous.text = clean(`${previous.text} ${row.text}`);
       continue;
     }
@@ -218,11 +272,81 @@ function coalesceTightUnits(rows: DisplayUnit[]) {
   return result;
 }
 
+function desiredPartBoundaries(row: DisplayUnit, parts: string[]) {
+  if (parts.length <= 1) return [] as number[];
+  const weights = parts.map(part => Math.max(1, clean(part).length));
+  const total = weights.reduce((sum, value) => sum + value, 0) || 1;
+  let accumulated = 0;
+  return weights.slice(0, -1).map(weight => {
+    accumulated += weight;
+    return row.start + (row.end - row.start) * (accumulated / total);
+  });
+}
+
+/**
+ * Prefer immutable raw/source cue boundaries over character-proportional
+ * interpolation. If there are enough authored events to represent every raw
+ * boundary, every boundary is retained. Otherwise choose the source boundaries
+ * closest to the desired semantic split positions.
+ */
+function speechAnchoredBoundaries(row: DisplayUnit, parts: string[]) {
+  const count = Math.max(0, parts.length - 1);
+  if (!count) return [] as number[];
+  const desired = desiredPartBoundaries(row, parts);
+  const hard = [...new Set(row.sourceAnchors.slice(0, -1).map(anchor => anchor.end))]
+    .filter(value => value > row.start + 1e-6 && value < row.end - 1e-6)
+    .sort((a, b) => a - b);
+  if (!hard.length) return desired;
+
+  if (hard.length >= count) {
+    const selected: number[] = [];
+    let minimumIndex = 0;
+    desired.forEach((target, slot) => {
+      const maximumIndex = hard.length - (count - slot);
+      let bestIndex = minimumIndex;
+      let bestDistance = Number.POSITIVE_INFINITY;
+      for (let index = minimumIndex; index <= maximumIndex; index += 1) {
+        const distance = Math.abs(hard[index] - target);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestIndex = index;
+        }
+      }
+      selected.push(hard[bestIndex]);
+      minimumIndex = bestIndex + 1;
+    });
+    return selected;
+  }
+
+  const chosen = [...hard];
+  for (const target of desired) {
+    if (chosen.length >= count) break;
+    if (chosen.some(value => Math.abs(value - target) < 0.05)) continue;
+    chosen.push(target);
+  }
+  chosen.sort((a, b) => a - b);
+  return chosen.slice(0, count);
+}
+
+function authoredWindows(row: DisplayUnit, parts: string[]) {
+  const boundaries = speechAnchoredBoundaries(row, parts);
+  const points = [row.start, ...boundaries, row.end];
+  if (points.length !== parts.length + 1) {
+    throw new Error(`professional-anchor-allocation:${row.semanticSpanId}`);
+  }
+  return parts.map((text, index) => ({
+    text,
+    start: points[index],
+    end: points[index + 1],
+  }));
+}
+
 export function authorApprovedSpans(spans: SemanticSpan[], translations: Map<string, string>, floorStart = 0) {
   const display = coalesceTightUnits(spans.flatMap(span => span.units.map(unit => ({
     semanticSpanId: span.id,
     sourceStartIndex: unit.sourceStartIndex,
     sourceEndIndex: unit.sourceEndIndex,
+    sourceAnchors: unit.sourceAnchors,
     start: unit.start,
     end: unit.end,
     text: translations.get(unit.id) || "",
@@ -231,32 +355,41 @@ export function authorApprovedSpans(spans: SemanticSpan[], translations: Map<str
   const cues: ProfessionalCue[] = [];
   let timeline = Math.max(0, floorStart);
   for (const row of display) {
+    // v1 silently used max(row.start, timeline), which could move a subtitle
+    // later than the speech that owns it. v1.1 treats that as a hard alignment
+    // failure. The wording must be compressed/resegmented instead of delaying
+    // the next semantic phrase.
+    if (timeline > row.start + MAX_ANCHOR_DRIFT_SECONDS) {
+      throw new Error(`professional-anchor-drift:${row.semanticSpanId}:source=${row.start.toFixed(3)}:timeline=${timeline.toFixed(3)}`);
+    }
+
     const parts = splitToSubtitleChunks(row.text);
     if (!parts.length) throw new Error(`Professional subtitle authoring produced empty text for ${row.semanticSpanId}`);
-    const start = Math.max(row.start, timeline);
-    const window = row.end - start;
-    const minimums = parts.map(minimumReadingSeconds);
-    const required = minimums.reduce((sum, value) => sum + value, 0);
-    if (window + 0.02 < required) {
-      throw new Error(`professional-reading-speed:${row.semanticSpanId}:required=${required.toFixed(2)}:available=${window.toFixed(2)}`);
-    }
-    const targetTotal = Math.min(window, parts.length * 7);
-    const extra = Math.max(0, targetTotal - required);
-    const weight = minimums.reduce((sum, value) => sum + value, 0) || 1;
-    let position = start;
-    parts.forEach((text, index) => {
-      const duration = Math.min(7, minimums[index] + extra * (minimums[index] / weight));
+    const windows = authoredWindows(row, parts);
+
+    for (const window of windows) {
+      const duration = window.end - window.start;
+      const minimum = minimumReadingSeconds(window.text);
+      if (duration < MIN_EVENT_SECONDS - 0.001) {
+        throw new Error(`professional-anchor-duration:${row.semanticSpanId}:duration=${duration.toFixed(2)}`);
+      }
+      if (duration > MAX_EVENT_SECONDS + 0.001) {
+        throw new Error(`professional-anchor-duration-over:${row.semanticSpanId}:duration=${duration.toFixed(2)}`);
+      }
+      if (duration + 0.02 < minimum) {
+        throw new Error(`professional-anchor-reading-speed:${row.semanticSpanId}:required=${minimum.toFixed(2)}:available=${duration.toFixed(2)}`);
+      }
+
       cues.push({
-        start: position,
+        start: window.start,
         duration,
-        text: clean(text),
+        text: clean(window.text),
         semanticSpanId: row.semanticSpanId,
         sourceStartIndex: row.sourceStartIndex,
         sourceEndIndex: row.sourceEndIndex,
       });
-      position += duration;
-    });
-    timeline = Math.max(timeline, position);
+    }
+    timeline = row.end;
   }
   return cues;
 }
@@ -284,6 +417,11 @@ export function validateProfessionalSubtitleFile(cues: CachedCue[]) {
     if (text.length > 84) issues.push(`over-84-chars:${index}`);
     if (duration > 0 && text.length / duration > 17.05) issues.push(`reading-speed:${index}`);
     if (/ZXQ|\[\[|\]\]/i.test(text)) issues.push(`artifact:${index}`);
+
+    const words = text.split(/\s+/u).filter(Boolean);
+    if (index > 0 && words.length <= 2 && text.length < 18 && cue.start - previousEnd <= 0.05) {
+      issues.push(`orphan-event:${index}`);
+    }
 
     if (index > 0 && cue.start - previousEnd <= 0.05 && /[.!?…]["'”’)]?$/u.test(previousText)) {
       const previousWords = boundaryWords(previousText);
