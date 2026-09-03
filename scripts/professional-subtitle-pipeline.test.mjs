@@ -47,4 +47,21 @@ assert.deepEqual(validateProfessionalSubtitleFile(authored), [], "authored event
 assert.ok(authored.every(cue => cue.duration >= 1), "no authored subtitle is below one second");
 assert.ok(authored.every(cue => cue.text.length <= 84), "subtitle events fit the two-line character envelope");
 
+const boundaryDuplicate = [
+  { start: 0, duration: 2, text: "Έχεις ήδη χάσει." },
+  { start: 2, duration: 2, text: "Χάσει. Αυτή είναι η διαφορά." },
+];
+assert.ok(
+  validateProfessionalSubtitleFile(boundaryDuplicate).some(issue => issue.startsWith("boundary-repeat:0-1:xasei")),
+  "accidental repeated terminal word across adjacent subtitle boundaries is rejected",
+);
+assert.deepEqual(
+  validateProfessionalSubtitleFile([
+    { start: 0, duration: 2, text: "Έχεις ήδη χάσει." },
+    { start: 2, duration: 2, text: "Αυτή είναι η διαφορά." },
+  ]),
+  [],
+  "clean sentence continuation across subtitle boundaries is accepted",
+);
+
 console.log("professional subtitle pipeline regression checks passed");
