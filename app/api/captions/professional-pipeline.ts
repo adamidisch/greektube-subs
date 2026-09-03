@@ -143,7 +143,9 @@ export function unitTranslationFailure(unit: ReconstructedUnit, target: string, 
 
   const micro = normalizedMicro(unit.text);
   if (precedingUnit?.type === "question" && ["i do", "i don't", "i dont", "i did", "i didn't", "i didnt"].includes(micro)) {
-    if (/\b(?:το\s+)?κάν(?:ω|εις|ει|ουμε|ετε|ουν)|\bέκανα\b/iu.test(candidate)) return "literal-dependent-answer";
+    if (/(^|[^\p{L}\p{N}])(?:(?:το)\s+)?κάν(?:ω|εις|ει|ουμε|ετε|ουν)(?=$|[^\p{L}\p{N}])|(^|[^\p{L}\p{N}])έκανα(?=$|[^\p{L}\p{N}])/iu.test(candidate)) {
+      return "literal-dependent-answer";
+    }
   }
   return null;
 }
