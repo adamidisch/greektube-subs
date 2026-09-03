@@ -1,5 +1,5 @@
-import { canonicalNumberTokens, numberTokensMatch } from "./numeric-integrity";
-import type { CachedCue } from "../shared-cache";
+import { canonicalNumberTokens, numberTokensMatch } from "./numeric-integrity.ts";
+import type { CachedCue } from "../shared-cache.ts";
 
 export type ReconstructedUnit = {
   id: string;
