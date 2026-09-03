@@ -261,9 +261,18 @@ export function authorApprovedSpans(spans: SemanticSpan[], translations: Map<str
   return cues;
 }
 
+function normalizedBoundaryWord(value: string) {
+  return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
+function boundaryWords(value: string) {
+  return clean(value).match(/[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*/gu) || [];
+}
+
 export function validateProfessionalSubtitleFile(cues: CachedCue[]) {
   const issues: string[] = [];
   let previousEnd = -1;
+  let previousText = "";
   cues.forEach((cue, index) => {
     const text = clean(cue.text);
     const duration = Number(cue.duration);
@@ -275,7 +284,19 @@ export function validateProfessionalSubtitleFile(cues: CachedCue[]) {
     if (text.length > 84) issues.push(`over-84-chars:${index}`);
     if (duration > 0 && text.length / duration > 17.05) issues.push(`reading-speed:${index}`);
     if (/ZXQ|\[\[|\]\]/i.test(text)) issues.push(`artifact:${index}`);
+
+    if (index > 0 && cue.start - previousEnd <= 0.05 && /[.!?…]["'”’)]?$/u.test(previousText)) {
+      const previousWords = boundaryWords(previousText);
+      const currentWords = boundaryWords(text);
+      const previousWord = normalizedBoundaryWord(previousWords.at(-1) || "");
+      const currentWord = normalizedBoundaryWord(currentWords[0] || "");
+      if (previousWord.length >= 4 && previousWord === currentWord) {
+        issues.push(`boundary-repeat:${index - 1}-${index}:${previousWord}`);
+      }
+    }
+
     previousEnd = Math.max(previousEnd, cue.start + Math.max(0, duration));
+    previousText = text;
   });
   return issues;
 }
