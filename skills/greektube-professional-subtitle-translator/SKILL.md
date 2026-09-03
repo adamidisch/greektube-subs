@@ -1,67 +1,41 @@
-# GreekTube Professional Subtitle Translator v1
+# GreekTube Professional Subtitle Translator v1.1
 
 ## Purpose
 
-This skill defines the canonical translation and subtitle-authoring pipeline for GreekTube.
+This is the canonical translation, subtitle-authoring and timing specification for GreekTube.
 
-The goal is not literal cue-by-cue translation. The goal is professional Greek subtitles that preserve the speaker's meaning and read naturally while remaining faithful to the original timing.
+The objective is professional Greek audiovisual subtitles: semantically faithful, idiomatic, readable and synchronized to the speech. The system must never trade semantic accuracy for speed and must never hide timing problems by simply delaying later subtitles.
 
-The source subtitle file is treated as **timing evidence plus source words**. It is not assumed to contain valid sentence boundaries.
+**Correct or block publication. Never silently degrade.**
 
-The canonical pipeline is:
+Canonical production pipeline:
 
-**RAW SOURCE → SOURCE RECONSTRUCTION → WHOLE-VIDEO UNDERSTANDING → SEMANTIC SPANS → PROFESSIONAL GREEK TRANSLATION → BILINGUAL QA → SUBTITLE AUTHORING → TIMING ALIGNMENT → FINAL QC → PUBLISH**
+**RAW SOURCE → SOURCE NORMALIZATION → SOURCE RECONSTRUCTION → WHOLE-VIDEO UNDERSTANDING → SEMANTIC SPANS → PROFESSIONAL GREEK TRANSLATION → BILINGUAL QA → SPEECH-ANCHORED AUTHORING → DISPLAY PAGING → TIMING/READABILITY QC → FULL-VIDEO QC → PUBLISH**
 
-No stage may be skipped for production-quality subtitles.
+No production stage may be skipped.
 
 ---
 
 ## 1. Non-negotiable principles
 
-1. **Meaning comes before cue boundaries.**
-   Never assume that one YouTube/SRT cue equals one sentence or one translation unit.
-
-2. **Understand first. Translate second.**
-   The full reconstructed source transcript must be understood before final translation begins.
-
-3. **Translate semantic spans rather than isolated cues.**
-   Short dependent answers such as `I do`, `I don't`, `Exactly`, `It can`, `They did`, `That's why` or `Not necessarily` must be interpreted from their conversational context.
-
-4. **Original timestamps are immutable evidence.**
-   They may be reallocated for final subtitle events but their chronological source relationship must never be lost.
-
-5. **Natural Greek over English-shaped Greek.**
-   Translate the intended meaning into idiomatic modern Greek while preserving factual content and speaker intent.
-
-6. **No invention. No silent correction of claims.**
-   Context may disambiguate meaning but must never introduce information not supported by the source.
-
-7. **Preserve epistemic strength exactly.**
-   `may`, `might`, `could`, `probably`, `I think`, `it appears` and similar hedging must not become certainty.
-
-8. **Preserve negation exactly.**
-   A lost `not`, `never`, `no`, `without` or equivalent is a hard failure.
-
-9. **Preserve attribution exactly.**
-   `He claims`, `research suggests`, `they believe` and similar reported statements must not become the current speaker's own claim.
-
-10. **Quality failure blocks publication.**
-    If the semantic translator or QA stage is unavailable the video remains `translation_pending`. Do not publish a literal fallback as final production subtitles.
+1. **Meaning comes before cue boundaries.** Raw YouTube/SRT cues are not assumed to be sentences.
+2. **Understand first. Translate second.** The complete reconstructed discussion must be understood before final translation.
+3. **Translate semantic spans, not isolated cues.** Context-dependent micro-utterances require their question/answer context.
+4. **Source timings are immutable evidence.** Original cue starts/ends remain traceable throughout the pipeline.
+5. **Speech timing comes before reading-speed convenience.** If text cannot fit its speech window, compress wording or require review. Never push the next semantic phrase later just to make the previous subtitle easier to read.
+6. **Natural modern Greek over English-shaped Greek.** Preserve meaning while writing idiomatic subtitle Greek.
+7. **No invention. No silent factual correction.** Context may disambiguate but may not add unsupported information.
+8. **Preserve epistemic strength.** `may`, `might`, `could`, `probably`, `I think`, `it appears` and equivalents must retain their strength.
+9. **Preserve negation exactly.** Lost or invented negation is a hard failure.
+10. **Preserve attribution exactly.** Reported claims must remain attributed to the correct speaker/source.
+11. **No orphan subtitle events or display pages.** A single stranded word or tiny two-word tail is a hard readability defect when redistribution is possible.
+12. **Quality failure blocks publication.** If semantic translation, alignment or QA is uncertain, set `translation_pending` or `manual_review_required`.
 
 ---
 
-## 2. Inputs
+## 2. Source model
 
-Accepted source inputs may include:
-
-- YouTube timed captions
-- SRT
-- VTT
-- timestamped plain text
-- manually supplied transcript with timing anchors
-- ASR transcript with timestamps
-
-Every source cue must be normalized internally to:
+Normalize every source cue to:
 
 ```ts
 type RawCue = {
@@ -72,72 +46,63 @@ type RawCue = {
 };
 ```
 
-The original cue ID and original timing must remain traceable through the entire pipeline.
+For every reconstructed unit retain the original anchors:
+
+```ts
+type SourceTimingAnchor = {
+  sourceIndex: number;
+  start: number;
+  end: number;
+  text: string;
+  terminal: boolean;
+};
+```
+
+The original cue ID, words and start/end must remain recoverable through translation and final authoring.
 
 ---
 
 ## 3. Stage A — Source normalization
 
-Normalize the incoming source without translating it.
-
-Required operations:
+Normalize without translating:
 
 - decode entities
 - normalize whitespace
-- preserve meaningful punctuation when trustworthy
-- remove obvious technical artifacts
-- identify zero-duration or malformed cues
-- preserve non-verbal information only when relevant to the viewer
-- preserve numbers and units exactly
-- preserve names and acronyms
-- mark suspicious ASR tokens rather than guessing silently
+- preserve trustworthy punctuation
+- detect malformed/zero-duration cues
+- preserve numbers, units, names and acronyms
+- remove only obvious technical artifacts
+- mark suspicious ASR words instead of guessing silently
+- keep relevant non-verbal events
 
-Do not yet rewrite the transcript into Greek.
-
-### Fillers
-
-Speech fillers may be removed only when all of the following are true:
-
-- they carry no semantic meaning
-- they do not signal hesitation that matters to tone
-- removal does not change the speaker's stance
-- removal improves subtitle readability
-
-Examples that may often be omitted: isolated `um`, `uh`, repeated false starts.
-
-Examples that may matter and therefore require judgment: `well`, `actually`, `I mean`, `you know`, `so`.
+Fillers may be removed only if they carry no semantic or tonal value.
 
 ---
 
 ## 4. Stage B — Source reconstruction
 
-The raw timed cues must be reconstructed into coherent source-language discourse before translation.
+Rebuild raw timed fragments into coherent source-language discourse while retaining every source anchor.
 
-### Objective
+Merge when cues are fragments of:
 
-Produce a repaired English transcript containing real sentences and conversational turns while retaining a mapping to the original timing anchors.
+- one sentence
+- one question
+- one answer
+- a split clause
+- a phrasal verb
+- a noun phrase
+- quoted speech
+- a context-dependent speaker turn
 
-### Reconstruction rules
+Do not merge across a genuine semantic sentence/turn boundary merely to simplify timing.
 
-Merge adjacent cues when they are parts of the same semantic unit such as:
-
-- one sentence split by automatic captions
-- a question split across cues
-- an answer whose meaning depends on the previous question
-- a clause ending in the next cue
-- a phrasal verb split by a cue boundary
-- noun phrases split by a cue boundary
-- quoted speech split arbitrarily
-- a speaker turn whose first words depend on the previous turn
-
-Do not merge across a genuine topic transition or clear speaker transition unless needed for context.
-
-### Required output
+Required output:
 
 ```ts
 type ReconstructedUnit = {
   id: string;
   sourceCueIds: string[];
+  sourceAnchors: SourceTimingAnchor[];
   start: number;
   end: number;
   speaker?: string;
@@ -146,173 +111,132 @@ type ReconstructedUnit = {
 };
 ```
 
-### Example
-
-Raw cues:
+Example:
 
 ```text
 00:00 Do you think we'll be able to live forever soon
 00:04 or at least significantly extend life in the next two decades?
 00:06 I do.
-00:07 And I think the reason is that we've discovered the mechanism of aging.
+00:07 And I think the reason is that...
 ```
 
-Reconstructed discourse:
+Reconstructed:
 
 ```text
 Q: Do you think we'll be able to live forever soon or at least significantly extend life in the next two decades?
-A: I do. And I think the reason is that we've discovered the mechanism of aging.
+A: I do. And I think the reason is that...
 ```
 
-The raw cue boundaries must not force translation boundaries.
+The answer retains the 00:06 source speech anchor.
 
 ---
 
 ## 5. Stage C — Whole-video understanding
 
-Before final translation the complete reconstructed transcript must be analyzed as one discussion.
+Analyze the complete reconstructed transcript before translation.
 
-For long videos this may be built hierarchically from segments but the final translation brief must represent the whole video.
+The global brief must include:
 
-### Required understanding brief
-
-The brief must contain:
-
-- main topic
-- purpose of the discussion
-- speakers and roles when identifiable
-- major sections/topics
-- claims and positions by speaker
-- question/answer relationships
-- recurring terminology
-- technical glossary
-- proper names
-- acronyms
+- main topic and purpose
+- speakers and roles
+- section structure
+- claims/positions by speaker
+- question/answer dependencies
+- locked technical glossary
+- names and acronyms
 - pronoun/reference ambiguities
-- jokes and irony where relevant
+- irony/jokes when relevant
 - tone and stance
-- uncertainty/hedging patterns
-- known transcription ambiguities
+- uncertainty/hedging
+- suspicious ASR passages
 - important numerical facts and units
 
-### Translation glossary
-
-Create one locked glossary before translation when recurring terminology exists.
-
-Example:
-
-```text
-epigenetic reprogramming → επιγενετικός επαναπρογραμματισμός
-Yamanaka factors → παράγοντες Yamanaka
-ribosome → ριβόσωμα
-mitochondria → μιτοχόνδρια
-```
-
-A glossary may be revised only when later context proves an earlier interpretation wrong. Any revision must apply consistently across the complete subtitle file.
+Long videos may be analyzed hierarchically but the final brief must represent the entire discussion.
 
 ---
 
 ## 6. Stage D — Semantic span construction
 
-This is the core translation unit.
+A semantic span contains enough context to express one coherent meaning.
 
-A **semantic span** contains enough source context to express one coherent meaning.
-
-A semantic span may contain one reconstructed unit or several closely connected units.
-
-### Span boundaries should prefer
+Prefer boundaries at:
 
 - completed thoughts
 - sentence boundaries
+- speaker-turn boundaries
 - question + short dependent answer
 - closely linked clauses
-- one speaker's coherent turn
-- short back-and-forth exchanges where dependency is strong
 
-### Never isolate context-dependent micro-utterances
-
-Examples:
+Never translate these in isolation when context determines their meaning:
 
 ```text
-Do you think...? / I do.
-You don't agree? / I do.
-Did they finish? / They did.
-Could it work? / It could.
-Why? / Because...
+I do.
+I don't.
+I did.
+So do I.
+It does.
+It could.
+Exactly.
+Not necessarily.
+Because...
 ```
 
-The translator must receive the dependency that resolves the meaning.
-
-### Span context package
-
-For every translation request provide:
+Each translation request receives:
 
 - whole-video understanding brief
-- locked glossary
-- preceding semantic span in source
-- preceding approved Greek span when available
-- current semantic span
-- following semantic span in source
-- speaker information
+- glossary
+- previous source span
+- previous approved Greek span
+- current span
+- following source span
+- speaker context
 - source timing anchors
 
-The preceding and following context are **read-only disambiguation context**. They must never leak facts into the current span.
+Neighbouring spans are disambiguation context only and must not leak facts into the current span.
 
 ---
 
 ## 7. Stage E — Professional Greek translation
 
-Translate meaning into natural modern Greek.
-
-### Fidelity requirements
+Translate **meaning → concise natural Greek**, not word sequence → word sequence.
 
 Preserve:
 
 - factual meaning
-- who says what
-- questions and answers
+- question/answer logic
+- speaker attribution
 - negation
 - uncertainty
-- causal direction
+- causality
 - chronology
 - quantities
 - percentages
 - dates
-- doses
-- units
-- names
-- acronyms
+- units/doses
+- names/acronyms
 - technical meaning
-- emotional tone when relevant
-- humour and irony when translatable
+- relevant emotional tone and humour
 
-### Greek quality requirements
+Greek must:
 
-The Greek must:
-
-- sound written by a professional Greek audiovisual translator
-- avoid literal English syntax
-- avoid unnatural calques
-- use concise spoken Greek appropriate for subtitles
+- sound professionally authored
+- avoid literal English syntax/calques
+- use modern idiomatic Greek
 - preserve technical precision
-- be internally consistent
-- use correct accents and punctuation
-- avoid unnecessary verbosity
-- reduce wording only when required for reading speed without losing essential meaning
+- remain concise enough for subtitles
+- use correct accents/punctuation
 
-### Context-sensitive translation example
-
-Source:
+Example:
 
 ```text
-Q: Do you think we'll be able to significantly extend human life?
+Q: Do you think it will work?
 A: I do.
 ```
 
 Correct:
 
 ```text
-Πιστεύετε ότι θα μπορέσουμε να παρατείνουμε σημαντικά την ανθρώπινη ζωή;
+Πιστεύετε ότι θα λειτουργήσει;
 Ναι, το πιστεύω.
 ```
 
@@ -322,176 +246,171 @@ Hard failure:
 Το κάνω.
 ```
 
-### Another ambiguity example
-
-Source:
-
-```text
-Q: You don't think this will fail?
-A: I do.
-```
-
-The translator must resolve what `I do` refers to from the actual discourse. It must not apply a fixed dictionary replacement.
-
 ---
 
-## 8. Stage F — Bilingual QA pass
+## 8. Stage F — Independent bilingual QA
 
-Every translated span must pass a second EN↔EL semantic review before subtitle authoring.
+Every translated span receives a second EN↔EL review.
 
-The reviewer sees the reconstructed English and the proposed Greek plus the relevant context.
-
-### Hard QA checks
-
-Reject or repair when any of these occur:
+Reject/repair when:
 
 - meaning changed
-- negation lost or invented
-- uncertainty strengthened or weakened
-- question/answer relationship mistranslated
+- negation changed
+- uncertainty changed
+- Q/A dependency mistranslated
 - pronoun/reference resolved incorrectly
-- speaker attribution changed
-- association changed into causation
+- attribution changed
+- association became causation
 - chronology changed
-- number changed
-- unit changed
-- name changed incorrectly
-- acronym corrupted
-- technical term inconsistent
-- sentence is grammatically broken
-- Greek sounds like literal machine translation
-- content omitted without readability justification
-- unsupported content added
+- number/unit/name/acronym changed
+- technical terminology is inconsistent
+- Greek is machine-like or grammatically broken
+- meaningful content was omitted
+- unsupported content was added
 
-### Special ambiguity watch list
-
-Always inspect carefully:
-
-- do / does / did as short answers
-- can / could
-- will / would
-- may / might
-- should
-- neither / either
-- not / no / never
-- pronouns such as it / they / this / that
-- reported speech
-- rhetorical questions
-- irony and sarcasm
-- interrupted sentences
-- corrections and false starts
-
-### QA outcome
-
-Each span receives one of:
+Outcomes:
 
 - `approved`
 - `repair_required`
 - `manual_review_required`
 
-Only approved spans continue automatically.
+Only `approved` continues automatically.
 
 ---
 
-## 9. Stage G — Greek subtitle authoring
+## 9. Stage G — Speech-anchored Greek subtitle authoring
 
-Only after the Greek semantic translation is approved do we create final display subtitles.
+This is a separate stage from translation.
 
-The final subtitle boundaries are based on:
+Final subtitle events are based on:
 
-**meaning + speech timing + readability + Greek syntax**
-
-They are not copied blindly from YouTube cue boundaries.
-
-### GreekTube display rules
-
-Hard rules:
-
-- maximum 2 lines
-- target maximum 42 characters per line
-- minimum event duration 1.0 second
-- maximum event duration 7.0 seconds unless a documented exceptional case requires otherwise
-- adult reading speed target: maximum 17 characters per second
-- no overlapping subtitle events
-- no timing inversion
-- no zero-duration events
-- no flashing micro-subtitles
-
-GreekTube intentionally uses a 1.0-second minimum even though some professional delivery standards allow slightly shorter events.
-
-### Line breaking
-
-Prefer one line when possible.
-
-When two lines are needed break at natural grammatical boundaries.
-
-Prefer breaks:
-
-- after punctuation
-- before conjunctions when natural
-- before prepositional phrases when natural
-- between complete syntactic chunks
-
-Do not separate:
-
-- article from noun
-- adjective from noun when they form one phrase
-- first name from last name
-- subject pronoun from verb
-- auxiliary from main verb
-- negation from verb
-- preposition from its required complement when avoidable
-
-When multiple valid layouts exist prefer a balanced or slightly bottom-heavy subtitle rather than leaving one or two orphan words on a line.
-
----
-
-## 10. Stage H — Timing alignment
-
-The approved Greek semantic text must be aligned back to the source audio using the original timing anchors.
-
-### Alignment invariants
-
-- preserve chronological order
-- preserve source coverage
-- never swap semantic order to fit timings
-- never drop content silently
-- never duplicate content across adjacent events
-- keep question and answer timing attached to the correct speaker turn
-- use pauses and speech boundaries when available
-- avoid subtitle changes in the middle of a tightly connected phrase when a better boundary exists
+**semantic meaning + actual source speech anchors + Greek syntax + readability**
 
 ### Timing hierarchy
 
-Prefer alignment evidence in this order when available:
+Prefer evidence in this order:
 
 1. word-level audio alignment
-2. repaired source cue timings
-3. original raw cue timings
-4. interpolation inside an anchored semantic span
+2. reliable source word timestamps
+3. reconstructed-unit/raw-cue boundaries
+4. conservative interpolation inside one immutable source cue
 
-Never invent timings outside the source span merely to make text fit.
+### Hard anchor rule
 
-If reading-speed requirements cannot be satisfied within the available audio window then condense the Greek wording while preserving meaning. If this remains impossible flag the span for review.
+When a new semantic phrase begins at a known source cue/speaker boundary, the Greek phrase must begin at that boundary (or within a tiny presentation tolerance, normally ≤120 ms).
+
+Never do this:
+
+```text
+source phrase starts 65.000
+Greek phrase starts 67.500 because previous subtitle needed more reading time
+```
+
+Instead:
+
+- shorten/compress the previous Greek wording
+- resegment it
+- merge intelligently where semantics allow
+- or require manual review
+
+**Do not accumulate timing debt.**
+
+### Authoring constraints
+
+- max 2 lines
+- target max 42 characters/line
+- max 84 characters/event
+- minimum 1.0 s/event
+- maximum 7.0 s/event by default
+- target maximum 17 CPS
+- no overlaps/inversions
+- no zero-duration events
+- no accidental duplicated boundary words
+- no one/two-word orphan event when redistribution is possible
 
 ---
 
-## 11. Final full-video QC
+## 10. Stage H — Display paging inside a subtitle event
 
-Before publication run full-file validation across four layers.
+An authored event may still require more than one overlay page on small screens. Display paging is presentation-only and may not change source/SRT data.
 
-### A. Semantic integrity
+### Critical v1.1 rule
+
+**Never assign every word in a multi-second source cue the cue's start time.**
+
+If true word-level timing is unavailable, estimate each word's onset conservatively from its relative position inside the immutable cue window. Page changes must follow this estimated speech progression.
+
+Bad behavior:
+
+```text
+62.000 large 5.5-second cue begins
+62.000 page 1
+63.000 page 2
+64.000 page 3: "πρωτεΐνες"
+```
+
+This races ahead of the actual speech and creates a stranded final word.
+
+Required behavior:
+
+- page 1 begins with the source cue
+- later pages begin near the words they contain
+- consecutive pages still receive ≥1 s when possible
+- small visual lead may be used (roughly 0–150 ms)
+- no page may contain only one word or a tiny two-word tail if the final two pages can be rebalanced
+- word order and wording remain immutable in the display layer
+
+### Orphan-page rule
+
+If the final page contains <3 words or is visually tiny, rebalance the final two pages while preserving:
+
+- all words exactly once
+- original word order
+- max 2 lines/page
+- line-length rules
+
+The screenshot regression around `n1G3xqgzB2c` 1:02, where the overlay collapsed to only **«πρωτεΐνες»**, is a permanent regression fixture.
+
+---
+
+## 11. Timing alignment principles
+
+- preserve chronology
+- preserve source coverage
+- keep Q/A on the correct speaker turn
+- prefer pauses and semantic boundaries
+- do not switch mid-phrase when a better boundary exists
+- never duplicate/drop words to solve timing
+- never invent time outside the source span
+- never solve reading speed by shifting the next semantic phrase late
+
+If text does not fit the available window:
+
+```text
+compress meaning-preservingly → re-author → QA again
+```
+
+If it still does not fit:
+
+```text
+manual_review_required
+```
+
+---
+
+## 12. Full-video QC
+
+### Semantic integrity
 
 - all meaningful source content covered
-- no duplicated ideas from alignment
 - no unsupported additions
-- no obvious mistranslations
-- no context-dependent short answers translated literally
-- no contradictory terminology
+- no duplicated ideas
+- no literal dependent-answer errors
+- consistent terminology
 
-### B. Numerical integrity
+### Numerical integrity
 
-Validate source against Greek for:
+Compare source ↔ Greek for:
 
 - numbers
 - percentages
@@ -504,36 +423,34 @@ Validate source against Greek for:
 
 Any unexplained mismatch is a hard failure.
 
-### C. Subtitle timing integrity
+### Timing integrity
 
-Validate:
-
-- chronological monotonicity
+- monotonic chronology
 - no overlaps
-- no negative duration
-- no event below 1.0 second
-- no event above 7.0 seconds without explicit exemption
-- no malformed timestamps
-- complete coverage mapping back to source spans
+- no negative/zero duration
+- no event <1 s
+- no event >7 s without explicit exemption
+- no semantic phrase delayed beyond its source anchor tolerance
+- no accumulated timing debt
+- complete mapping to source anchors
 
-### D. Readability integrity
+### Readability/display integrity
 
-Validate:
-
-- maximum 2 lines
-- approximately 42 characters maximum per line
-- adult reading speed ≤17 CPS by default
-- syntactically sound line breaks
-- no orphan words when avoidable
-- no accidental all-caps text
-- no technical markers or placeholders
-- no translation-engine artifacts
+- max 2 lines
+- target 42 chars/line
+- ≤17 CPS by default
+- natural Greek line breaks
+- no orphan events
+- no orphan display pages
+- no one-word final page such as «πρωτεΐνες» when rebalancing is possible
+- no technical markers/placeholders
+- no accidental uppercase/accent artifacts
 
 ---
 
-## 12. Publication gate
+## 13. Publication gate
 
-A video may become `published` only if:
+Production publish requires:
 
 ```text
 source_normalized = true
@@ -542,236 +459,128 @@ whole_video_understanding = ready
 semantic_spans = complete
 translation = complete
 bilingual_qa = passed
-subtitle_authoring = complete
+speech_anchored_authoring = passed
+display_paging_qc = passed
 timing_qc = passed
 semantic_qc = passed
 readability_qc = passed
 artifact_scan = clean
 ```
 
-If any required stage fails:
+Otherwise:
 
 ```text
-publication_status = translation_pending | review_required | failed
+translation_pending | review_required | failed
 ```
 
-Do not silently downgrade to a literal translator.
+Never silently publish a lower-quality fallback.
 
 ---
 
-## 13. Provider fallback policy
-
-Provider availability must never determine subtitle quality.
+## 14. Provider fallback policy
 
 Allowed:
 
 ```text
-primary semantic model unavailable
-→ wait/cooldown
+semantic model unavailable
+→ cooldown/wait
 → approved equivalent semantic model
-→ resume from checkpoint
+→ resume checkpoint
 ```
 
-Forbidden for final publication:
+Forbidden for final production:
 
 ```text
 semantic model unavailable
-→ isolated Google/per-cue translation
+→ isolated literal/per-cue translator
 → publish
 ```
 
-Fast literal translation may exist only as an explicitly labelled preview mode and must never overwrite an approved professional translation.
+Literal translation may exist only as an explicitly labelled preview.
 
 ---
 
-## 14. Checkpoints and credit efficiency
+## 15. Checkpoints and efficiency
 
-Persist validated work at every expensive stage:
+Persist:
 
-- normalized source hash
-- reconstructed transcript
-- whole-video understanding brief
+- source hash
+- normalized source
+- reconstructed units + source anchors
+- whole-video understanding
 - glossary
 - semantic spans
-- approved translated spans
-- QA results
-- final subtitle events
+- approved translations
+- bilingual QA results
+- authored speech-aligned events
+- final QC result
 
-On retry resume from the latest valid checkpoint.
-
-Never retranslate already approved spans unless:
-
-- source changed
-- glossary changed in a way that affects the span
-- QA detected a semantic dependency requiring revision
-- the user explicitly requests a new translation
-
-Provider 429 or transient errors must respect cooldowns. Do not loop aggressively.
+Resume from the latest valid checkpoint. Do not retranslate approved spans unless source/glossary/context changed or QA requires it.
 
 ---
 
-## 15. Regression test suite
+## 16. Permanent regression suite
 
-The following classes of examples must always remain in automated or fixture-based regression tests.
-
-### Test 1 — Dependent affirmative answer
+### A. Context-dependent answer
 
 ```text
-EN Q: Do you think it will work?
-EN A: I do.
+Do you think it will work?
+I do.
 ```
 
-Expected meaning:
-
-```text
-EL: Πιστεύετε ότι θα λειτουργήσει;
-EL: Ναι, το πιστεύω.
-```
-
-Never:
-
-```text
-EL: Το κάνω.
-```
-
-### Test 2 — Dependent negative answer
-
-```text
-EN Q: Do you think it will work?
-EN A: I don't.
-```
-
-Expected:
-
-```text
-EL: Όχι, δεν το πιστεύω.
-```
-
-### Test 3 — Modal uncertainty
-
-```text
-EN: This could increase the risk.
-```
-
-Expected meaning:
-
-```text
-EL: Αυτό θα μπορούσε να αυξήσει τον κίνδυνο.
-```
-
-Never convert to certainty:
-
-```text
-EL: Αυτό αυξάνει τον κίνδυνο.
-```
-
-### Test 4 — Reported claim
-
-```text
-EN: He claims the treatment reverses aging.
-```
-
-Expected meaning:
-
-```text
-EL: Ισχυρίζεται ότι η θεραπεία αντιστρέφει τη γήρανση.
-```
-
-Never:
-
-```text
-EL: Η θεραπεία αντιστρέφει τη γήρανση.
-```
-
-### Test 5 — Split sentence
-
-```text
-Cue A: The reason this matters is
-Cue B: that the cells stop producing the right protein.
-```
-
-Must be reconstructed as one sentence before translation.
-
-### Test 6 — Numerical integrity
-
-```text
-EN: 10 mg twice a day for 14 days.
-```
-
-Greek must preserve `10 mg`, frequency and `14 days` exactly in meaning.
-
-### Test 7 — Subtitle duration
-
-Any authored event below `1.0s` must fail automatic QC unless merged or retimed.
-
-### Test 8 — Line count
-
-Any display subtitle exceeding 2 lines must fail automatic QC and be reauthored.
-
-### Test 9 — CPS
-
-Any normal adult subtitle above 17 CPS must be condensed or retimed before publication.
-
-### Test 10 — No technical artifacts
-
-Reject outputs containing placeholder markers such as:
-
-```text
-ZXQCUE
-[[12]]
-<TRANSLATE_ME>
-```
-
-unless they are literally present in quoted source content.
-
----
-
-## 16. Validation fixture for n1G3xqgzB2c
-
-The first 60–90 seconds of `n1G3xqgzB2c` are the initial GreekTube v1 regression fixture.
-
-The opening interaction must be reconstructed as a question followed by an affirmative answer.
-
-At approximately `0:06`, `I do` must resolve semantically to:
+Must produce contextual Greek such as:
 
 ```text
 Ναι, το πιστεύω.
 ```
 
-Any output equivalent to `Το κάνω` is an automatic semantic QA failure.
+Never `Το κάνω.`
 
-This fixture must be tested whenever reconstruction, semantic-span building, translation prompts, alignment logic or subtitle authoring changes.
+### B. Source-anchor fidelity
+
+If the answer starts at `06.000`, the Greek answer must start at `06.000` within the allowed presentation tolerance. Previous reading-time pressure may not move it to `07.000+`.
+
+### C. Boundary duplication
+
+```text
+Έχεις ήδη χάσει.
+Χάσει. Αυτή είναι η διαφορά.
+```
+
+Must fail QC.
+
+### D. Orphan authored event
+
+A continuous subtitle sequence ending in a standalone one/two-word event must fail when the words can be redistributed safely.
+
+### E. n1 protein display regression
+
+Source window around 1:02 contains a multi-second phrase ending with `...την πρωτεΐνη. Οι πρωτεΐνες...`.
+
+The overlay must never advance to a page containing only:
+
+```text
+πρωτεΐνες
+```
+
+Page changes must follow speech progress inside the cue and the final pages must be rebalanced.
+
+### F. Numbers and uncertainty
+
+`10`, `75%`, `might`, `could`, `I think`, `not` and equivalents must survive translation with the same meaning.
 
 ---
 
-## 17. Professional style reference
+## 17. Definition of professional-ready
 
-GreekTube uses its own product rules but should remain compatible with established professional subtitle practice where appropriate.
+A subtitle file is professional-ready only when a reviewer can watch normally without noticing the subtitle system.
 
-Reference principles incorporated into this skill include:
+The viewer should experience:
 
-- source subtitle templates should be edited and context-aware rather than assumed verbatim
-- maximum two display lines
-- approximately 42 characters per line for Greek
-- Greek adult reading speed up to 17 characters per second
-- syntactic line breaking
-- duration and audio synchronization discipline
+- the right meaning
+- at the right spoken moment
+- in natural Greek
+- in readable two-line units
+- without flashes, lag, racing pages, orphan words or machine-translation artifacts.
 
-Official reference material:
-
-- Netflix Greek Timed Text Style Guide: https://partnerhelp.netflixstudios.com/hc/en-us/articles/235511047-Greek-Timed-Text-Style-Guide
-- Netflix Timed Text Style Guide — General Requirements: https://partnerhelp.netflixstudios.com/hc/en-us/articles/215758617-Timed-Text-Style-Guide-General-Requirements
-- Netflix Subtitle Templates: https://partnerhelp.netflixstudios.com/hc/en-us/articles/219375728-Timed-Text-Style-Guide-Subtitle-Templates
-- Netflix Subtitle Timing Guidelines: https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394-Timed-Text-Style-Guide-Subtitle-Timing-Guidelines
-
-These references inform quality targets. GreekTube remains responsible for its own implementation and validation rules.
-
----
-
-## 18. Definition of done
-
-A GreekTube translation is done only when a viewer can watch the entire video without noticing the translation machinery.
-
-The subtitles should feel as if a skilled Greek subtitler understood the complete conversation and authored the Greek subtitles deliberately for the screen.
-
-**The final objective is not translated cues. It is a coherent Greek viewing experience.**
+If that standard is not met, the system is not finished.
