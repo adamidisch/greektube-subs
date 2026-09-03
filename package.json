@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/check-greek-uppercase.mjs app public && node scripts/brand-cleanup.mjs && node --experimental-strip-types scripts/navigation-history.test.mjs && node --experimental-strip-types scripts/subtitle-packing.test.mjs && next build",
+    "build": "node scripts/check-greek-uppercase.mjs app public && node scripts/brand-cleanup.mjs && node --experimental-strip-types scripts/navigation-history.test.mjs && node --experimental-strip-types scripts/subtitle-packing.test.mjs && node --experimental-strip-types scripts/professional-subtitle-pipeline.test.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "check:greek-uppercase": "node scripts/check-greek-uppercase.mjs app public",
@@ -19,7 +19,8 @@
     "test:skip-ranges": "node --experimental-strip-types scripts/skip-ranges.test.mjs",
     "test:profile-recovery": "node --experimental-strip-types scripts/profile-recovery.test.mjs",
     "test:navigation-history": "node --experimental-strip-types scripts/navigation-history.test.mjs",
-    "test:subtitle-packing": "node --experimental-strip-types scripts/subtitle-packing.test.mjs"
+    "test:subtitle-packing": "node --experimental-strip-types scripts/subtitle-packing.test.mjs",
+    "test:professional-subtitles": "node --experimental-strip-types scripts/professional-subtitle-pipeline.test.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",
@@ -32,7 +33,7 @@
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
+    "@types/react-dom": "19.2.6",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "4.2.1",
