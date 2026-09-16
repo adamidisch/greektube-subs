@@ -5160,3 +5160,15 @@ body{background:
   .paused-video-title{top:10px;max-width:calc(100% - 20px);padding:7px 10px 8px}
   .paused-video-title strong{font-size:12px}
 }
+
+
+/* Mobile full-screen player: keep long-press available for YouTube 2x
+   without allowing the overlay text to enter native text-selection mode. */
+@media (max-width:620px){
+  .viewer .video-frame,
+  .viewer .video-frame *{
+    -webkit-user-select:none!important;
+    user-select:none!important;
+    -webkit-touch-callout:none!important;
+  }
+}
