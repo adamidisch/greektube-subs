@@ -50,6 +50,13 @@ function browserFromUA(ua:string){
   if(/Safari/i.test(ua)&&!/Chrome|CriOS/i.test(ua))return "Safari";
   return "Other";
 }
+function countryFromEvent(event:AnalyticsEvent,request:Request){
+  const timezone=event.properties&&typeof event.properties==="object"&&!Array.isArray(event.properties)?String((event.properties as Record<string,unknown>).timezone||""):"";
+  const byTimezone:Record<string,string>={"Europe/Nicosia":"CY","Europe/Athens":"GR","Europe/London":"GB","Europe/Berlin":"DE","Europe/Paris":"FR"};
+  if(byTimezone[timezone])return byTimezone[timezone];
+  const header=text(request.headers.get("x-vercel-ip-country"),8).toUpperCase();
+  return header||"Unknown";
+}
 async function ensureTable(){
   const db=database();
   await db.query(`CREATE TABLE IF NOT EXISTS analytics_events (
@@ -80,7 +87,7 @@ export async function POST(request:Request){
     if(!incoming.length)return NextResponse.json({ok:true,accepted:0});
     await ensureTable();
     const ua=request.headers.get("user-agent")||"";
-    const country=text(request.headers.get("x-vercel-ip-country"),8);
+    const country=countryFromEvent(event,request);
     const city=text(request.headers.get("x-vercel-ip-city"),80);
     const device=deviceFromUA(ua);
     const browser=browserFromUA(ua);
