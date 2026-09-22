@@ -26,7 +26,7 @@ function kindFor(element:Element){
   return element.tagName.toLowerCase();
 }
 function getConsent():Consent{
-  try{return localStorage.getItem(CONSENT_KEY)==="yes"?"yes":"no";}catch{return "no";}
+  try{return localStorage.getItem(CONSENT_KEY)==="no"?"no":"yes";}catch{return "yes";}
 }
 
 export default function AnalyticsEnhancer(){
@@ -37,7 +37,7 @@ export default function AnalyticsEnhancer(){
   const lastTick=useRef(Date.now());
   const lastProgressBucket=useRef<Record<string,number>>({});
 
-  useEffect(()=>{consentRef.current=getConsent();},[]);
+  useEffect(()=>{const value=getConsent();consentRef.current=value;try{if(!localStorage.getItem(CONSENT_KEY))localStorage.setItem(CONSENT_KEY,"yes");}catch{}},[]);
 
   useEffect(()=>{
     const flush=()=>{
@@ -52,7 +52,7 @@ export default function AnalyticsEnhancer(){
     };
     const track=(event:EventPayload)=>{
       if(consentRef.current!=="yes")return;
-      queue.current.push({sessionId:sessionId(),name:event.name,path:currentPath(),videoId:currentVideoId(),referrer:document.referrer,properties:event.properties,ts:Date.now()});
+      queue.current.push({sessionId:sessionId(),name:event.name,path:currentPath(),videoId:currentVideoId(),referrer:document.referrer,properties:{timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"Unknown",locale:navigator.language||"Unknown",...event.properties},ts:Date.now()});
       if(queue.current.length>=10)flush();
     };
     const page=()=>{
