@@ -30,6 +30,7 @@ type Video = {
   favorite: boolean; lastPosition: number; progress: number; lastWatched?: string; captions?: Cue[];
   speakerName?:string; speakerRole?:string; channelUrl?:string; originalVideoUrl?:string; views?:number; metadataVersion?:number; creatorChapters?:GuideItem[]; skipRanges?:SkipRange[];
   translationMode?:TranslationMode;
+  libraryVisible?:boolean;
 };
 type Moment = { id: string; videoId: string; time: number; note: string; tags: string[]; excerpt: string };
 type Settings = {
@@ -710,10 +711,11 @@ export default function GreekTubePlayer() {
     };
   },[mobileMenu,subtitleMenuOpen,volumeSliderOpen]);
 
-  const newVideoIds=useMemo(()=>new Set([...state.videos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt)).slice(0,10).map(video=>video.id)),[state.videos]);
+  const libraryVideos=useMemo(()=>state.videos.filter(video=>video.libraryVisible!==false),[state.videos]);
+  const newVideoIds=useMemo(()=>new Set([...libraryVideos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt)).slice(0,10).map(video=>video.id)),[libraryVideos]);
   const filtered=useMemo(()=> {
     const terms=searchText(search).split(/\s+/).filter(Boolean);
-    let list=state.videos.filter(v=>(category==="Όλα"||v.category===category)&&terms.every(term=>searchHaystack(v).includes(term)));
+    let list=libraryVideos.filter(v=>(category==="Όλα"||v.category===category)&&terms.every(term=>searchHaystack(v).includes(term)));
     if(filter==="new") list=list.filter(v=>newVideoIds.has(v.id));
     if(filter==="favorites") list=list.filter(v=>v.favorite);
     if(filter==="recent") list=list.filter(v=>v.lastWatched);
@@ -724,19 +726,19 @@ export default function GreekTubePlayer() {
       }
       return sort==="title"?greekTitle(a).localeCompare(greekTitle(b),"el"):sort==="progress"?b.progress-a.progress:b.addedAt.localeCompare(a.addedAt);
     });
-  },[state.videos,category,search,sort,filter,newVideoIds]);
+  },[libraryVideos,category,search,sort,filter,newVideoIds]);
   const visibleVideos=filtered.slice(0,visibleCount);
-  const continueVideos=state.videos.filter(v=>v.lastPosition>=CONTINUE_MIN_SECONDS&&v.progress>=CONTINUE_MIN_PROGRESS&&v.progress<WATCHED_THRESHOLD).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||"")).slice(0,5);
+  const continueVideos=libraryVideos.filter(v=>v.lastPosition>=CONTINUE_MIN_SECONDS&&v.progress>=CONTINUE_MIN_PROGRESS&&v.progress<WATCHED_THRESHOLD).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||"")).slice(0,5);
   const featured=useMemo(()=>{
-    const unfinished=state.videos.filter(v=>v.lastPosition>=CONTINUE_MIN_SECONDS&&v.progress>=CONTINUE_MIN_PROGRESS&&v.progress<WATCHED_THRESHOLD&&v.lastWatched).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||""));
+    const unfinished=libraryVideos.filter(v=>v.lastPosition>=CONTINUE_MIN_SECONDS&&v.progress>=CONTINUE_MIN_PROGRESS&&v.progress<WATCHED_THRESHOLD&&v.lastWatched).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||""));
     if(unfinished[0])return unfinished[0];
-    const lastCompleted=[...state.videos].filter(v=>v.progress>=WATCHED_THRESHOLD&&v.lastWatched).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||""))[0];
+    const lastCompleted=[...libraryVideos].filter(v=>v.progress>=WATCHED_THRESHOLD&&v.lastWatched).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||""))[0];
     if(lastCompleted){
-      const index=state.videos.findIndex(v=>v.id===lastCompleted.id);
-      return state.videos[(index+1)%state.videos.length]||lastCompleted;
+      const index=libraryVideos.findIndex(v=>v.id===lastCompleted.id);
+      return libraryVideos[(index+1)%libraryVideos.length]||lastCompleted;
     }
-    return [...state.videos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt))[0]||null;
-  },[state.videos]);
+    return [...libraryVideos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt))[0]||null;
+  },[libraryVideos]);
   const featuredMoments=featured?state.moments.filter(m=>m.videoId===featured.id):[];
   useEffect(()=>{if(hydrated&&featured&&!proofModeRef.current)void getReadyCaptions(featured);},[hydrated,featured?.id]);
   useEffect(()=>{const reset=window.setTimeout(()=>setVisibleCount(INITIAL_LIBRARY_SIZE),0);return()=>window.clearTimeout(reset);},[search,category,sort,filter]);
@@ -1537,6 +1539,7 @@ function EditVideo({video,close,save,rebuild}:{video:Video;close:()=>void;save:(
       category:String(data.get("category")||video.category) as Category,
       tags:String(data.get("tags")||"").split(",").map(tag=>tag.trim()).filter(Boolean),
       description:String(data.get("description")||"").trim(),
+      libraryVisible:data.get("libraryVisible")==="on",
     });
   }
   return <Modal title="Επεξεργασία βίντεο" close={close}><form className="form edit-video-form" onSubmit={submit}>
@@ -1548,6 +1551,7 @@ function EditVideo({video,close,save,rebuild}:{video:Video;close:()=>void;save:(
     <label>Original video link<input name="originalVideoUrl" type="url" defaultValue={video.originalVideoUrl||video.url}/></label>
     <div className="form-grid"><label>Κατηγορία<select name="category" defaultValue={video.category}>{CATEGORIES.slice(1).map(category=><option key={category} value={category}>{CATEGORY_LABELS[category]}</option>)}</select></label><label>Ετικέτες<input name="tags" defaultValue={video.tags.join(", ")}/></label></div>
     <label>Περιγραφή<textarea name="description" defaultValue={video.description}/></label>
+    <label className="edit-video-visibility"><span>Εμφάνιση στη βιβλιοθήκη</span><input name="libraryVisible" type="checkbox" defaultChecked={video.libraryVisible!==false}/><small>{video.libraryVisible===false?"Κρυφό — το βίντεο παραμένει αποθηκευμένο αλλά δεν εμφανίζεται στη βιβλιοθήκη.":"Ορατό στη βιβλιοθήκη."}</small></label>
     {rebuild&&<button type="button" className="secondary rebuild-translation" onClick={rebuild}>↻ Νέα μετάφραση</button>}
     <div className="modal-actions"><button type="button" className="secondary" onClick={close}>Ακύρωση</button><button className="primary">Αποθήκευση αλλαγών</button></div>
   </form></Modal>;
