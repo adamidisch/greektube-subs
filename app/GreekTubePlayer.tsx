@@ -408,7 +408,7 @@ export default function GreekTubePlayer() {
   const [search,setSearch]=useState("");
   const [category,setCategory]=useState<(typeof CATEGORIES)[number]>("Όλα");
   const [sort,setSort]=useState("recent");
-  const [filter,setFilter]=useState<"all"|"new"|"favorites"|"recent">("all");
+  const [filter,setFilter]=useState<"all"|"new"|"favorites"|"recent"|"hidden">("all");
   const [speakerBioOpen,setSpeakerBioOpen]=useState(false);
   const closeSpeakerBio=useCallback(()=>setSpeakerBioOpen(false),[]);
   const [modal,setModal]=useState(false);
@@ -715,7 +715,7 @@ export default function GreekTubePlayer() {
   const newVideoIds=useMemo(()=>new Set([...libraryVideos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt)).slice(0,10).map(video=>video.id)),[libraryVideos]);
   const filtered=useMemo(()=> {
     const terms=searchText(search).split(/\s+/).filter(Boolean);
-    let list=libraryVideos.filter(v=>(category==="Όλα"||v.category===category)&&terms.every(term=>searchHaystack(v).includes(term)));
+    let list=(filter==="hidden"?state.videos.filter(video=>video.libraryVisible===false):libraryVideos).filter(v=>(category==="Όλα"||v.category===category)&&terms.every(term=>searchHaystack(v).includes(term)));
     if(filter==="new") list=list.filter(v=>newVideoIds.has(v.id));
     if(filter==="favorites") list=list.filter(v=>v.favorite);
     if(filter==="recent") list=list.filter(v=>v.lastWatched);
@@ -726,7 +726,7 @@ export default function GreekTubePlayer() {
       }
       return sort==="title"?greekTitle(a).localeCompare(greekTitle(b),"el"):sort==="progress"?b.progress-a.progress:b.addedAt.localeCompare(a.addedAt);
     });
-  },[libraryVideos,category,search,sort,filter,newVideoIds]);
+  },[state.videos,libraryVideos,category,search,sort,filter,newVideoIds]);
   const visibleVideos=filtered.slice(0,visibleCount);
   const continueVideos=libraryVideos.filter(v=>v.lastPosition>=CONTINUE_MIN_SECONDS&&v.progress>=CONTINUE_MIN_PROGRESS&&v.progress<WATCHED_THRESHOLD).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||"")).slice(0,5);
   const featured=useMemo(()=>{
@@ -1457,7 +1457,7 @@ export default function GreekTubePlayer() {
         </div>
       </section>}
       {state.settings.continueWatching&&continueVideos.length>0&&<section className="continue-section"><div className="continue-header"><div><span>ΣΥΝΕΧΙΣΗ ΠΡΟΒΟΛΗΣ</span><div className="continue-title-line"><h2>Συνέχισε την προβολή</h2><small>{continueVideos.length} {continueVideos.length===1?"βίντεο":"βίντεο"}</small></div><p>Συνέχισε από το σημείο που σταμάτησες.</p></div><button onClick={()=>document.querySelector(".library-tools")?.scrollIntoView({behavior:"smooth",block:"start"})}>Προβολή όλων</button></div><div className="continue-row">{continueVideos.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} edit={requestEdit} settings={state.settings} variant="continue" isNew={newVideoIds.has(v.id)}/>)}</div></section>}
-      <section className="library-tools clean-library-tools"><div className="search"><SearchIcon/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Αναζήτηση βίντεο"/>{search&&<button type="button" aria-label="Καθαρισμός αναζήτησης" onClick={()=>setSearch("")}>×</button>}</div><select className="library-sort" aria-label="Ταξινόμηση" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Πρόσφατα</option><option value="title">Τίτλος</option><option value="progress">Πρόοδος</option></select><div className="quick-filters"><button className={filter==="all"?"active":""} onClick={()=>setFilter("all")}>Όλα</button><button className={filter==="new"?"active":""} onClick={()=>setFilter("new")}>Νέα</button><button className={filter==="favorites"?"active":""} onClick={()=>setFilter("favorites")}>♥ Αγαπημένα</button><button className={filter==="recent"?"active":""} onClick={()=>setFilter("recent")}>Πρόσφατη προβολή</button></div></section>
+      <section className="library-tools clean-library-tools"><div className="search"><SearchIcon/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Αναζήτηση βίντεο"/>{search&&<button type="button" aria-label="Καθαρισμός αναζήτησης" onClick={()=>setSearch("")}>×</button>}</div><select className="library-sort" aria-label="Ταξινόμηση" value={sort} onChange={e=>setSort(e.target.value)}><option value="recent">Πρόσφατα</option><option value="title">Τίτλος</option><option value="progress">Πρόοδος</option></select><div className="quick-filters"><button className={filter==="all"?"active":""} onClick={()=>setFilter("all")}>Όλα</button><button className={filter==="new"?"active":""} onClick={()=>setFilter("new")}>Νέα</button><button className={filter==="favorites"?"active":""} onClick={()=>setFilter("favorites")}>♥ Αγαπημένα</button><button className={filter==="recent"?"active":""} onClick={()=>setFilter("recent")}>Πρόσφατη προβολή</button><button className={filter==="hidden"?"active":""} onClick={()=>setFilter("hidden")}>Κρυφά</button></div></section>
       <div className="library-result-line"><span>{filtered.length} {filtered.length===1?"βίντεο":"βίντεο"}</span>{search&&<b>Αναζήτηση: {search}</b>}{syncMessage&&<b>{syncMessage}</b>}<button type="button" className="sync-library" disabled={syncing} onClick={()=>void requestSync()}>{syncing?"Συγχρονισμός…":"Συγχρονισμός"}</button></div>
       <div className="category-row">{CATEGORIES.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{CATEGORY_LABELS[c]}</button>)}</div>
       {!hydrated?<section className="video-grid skeleton-grid" aria-label="Φόρτωση βιβλιοθήκης">{Array.from({length:6}).map((_,index)=><div className="video-card skeleton-card" key={index}><div className="thumb"/><div className="card-info"><i/><i/><i/></div></div>)}</section>:<section className={`video-grid ${state.settings.layout} ${state.settings.compact?"compact":""}`}>{visibleVideos.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} edit={requestEdit} settings={state.settings} isNew={newVideoIds.has(v.id)}/>)}</section>}
