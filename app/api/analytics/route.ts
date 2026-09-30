@@ -87,7 +87,6 @@ export async function POST(request:Request){
     if(!incoming.length)return NextResponse.json({ok:true,accepted:0});
     await ensureTable();
     const ua=request.headers.get("user-agent")||"";
-    const country=countryFromEvent(event,request);
     const city=text(request.headers.get("x-vercel-ip-city"),80);
     const device=deviceFromUA(ua);
     const browser=browserFromUA(ua);
@@ -101,6 +100,7 @@ export async function POST(request:Request){
       const path=text(event.path,220)||"/";
       const videoId=/^[A-Za-z0-9_-]{11}$/.test(text(event.videoId,32))?text(event.videoId,32):"";
       const clientTs=typeof event.ts==="number"&&Number.isFinite(event.ts)?new Date(event.ts).toISOString():null;
+      const country=countryFromEvent(event,request);
       await db.query(
         `INSERT INTO analytics_events (client_ts,session_id,event_name,path,video_id,referrer_host,country,city,device,browser,properties)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)`,
