@@ -16,6 +16,7 @@ import SkipRangeTransferEnhancer from "./SkipRangeTransferEnhancer";
 import NextVideosEnhancer from "./NextVideosEnhancer";
 import AnalyticsEnhancer from "./AnalyticsEnhancer";
 import EditorProductionPolishEnhancer from "./EditorProductionPolishEnhancer";
+import GreekUppercaseGuard from "./GreekUppercaseGuard";
 import GtsFooter from "./GtsFooter";
 import {
   ALIGNMENT_PROOF_QUERY_VALUE,
@@ -129,6 +130,7 @@ export default async function Home({
     return (
       <>
         <GreekTubePlayer />
+        <GreekUppercaseGuard />
         <GtsFooter />
       </>
     );
@@ -151,6 +153,7 @@ export default async function Home({
       <NextVideosEnhancer />
       <AnalyticsEnhancer />
       <EditorProductionPolishEnhancer />
+      <GreekUppercaseGuard />
       <GtsFooter />
     </>
   );
