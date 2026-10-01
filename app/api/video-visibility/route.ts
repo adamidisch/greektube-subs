@@ -6,6 +6,7 @@ const ADMIN_COOKIE="greektube-admin";
 const ADMIN_SESSION_MESSAGE="greektube-edit-authorized";
 
 type VideoRecord=Record<string,unknown>&{id?:unknown;libraryVisible?:unknown};
+type MomentRecord=Record<string,unknown>&{videoId?:unknown};
 
 async function ensureTable(){
   const db=database();
@@ -35,13 +36,17 @@ async function isAdminRequest(request:Request){
   const cookie=request.headers.get("cookie")?.split(";").map(value=>value.trim()).find(value=>value.startsWith(`${ADMIN_COOKIE}=`))?.slice(ADMIN_COOKIE.length+1)||"";
   return safeEqual(cookie,await adminSessionToken(password));
 }
+function validVideoId(value:unknown){
+  const videoId=typeof value==="string"?value.trim():"";
+  return /^[A-Za-z0-9_-]{11}$/.test(videoId)?videoId:"";
+}
 
 export async function PUT(request:Request){
   if(!await isAdminRequest(request))return NextResponse.json({error:"Απαιτείται κωδικός διαχειριστή."},{status:401});
   try{
     const payload=await request.json() as {videoId?:unknown;libraryVisible?:unknown};
-    const videoId=typeof payload.videoId==="string"?payload.videoId.trim():"";
-    if(!/^[A-Za-z0-9_-]{11}$/.test(videoId))return NextResponse.json({error:"Μη έγκυρο video id."},{status:400});
+    const videoId=validVideoId(payload.videoId);
+    if(!videoId)return NextResponse.json({error:"Μη έγκυρο video id."},{status:400});
     if(typeof payload.libraryVisible!=="boolean")return NextResponse.json({error:"Μη έγκυρη κατάσταση βιβλιοθήκης."},{status:400});
 
     await ensureTable();
@@ -61,5 +66,35 @@ export async function PUT(request:Request){
     return NextResponse.json({ok:true,videoId,libraryVisible:payload.libraryVisible});
   }catch{
     return NextResponse.json({error:"Δεν ήταν δυνατή η αλλαγή κατάστασης βιβλιοθήκης."},{status:500});
+  }
+}
+
+export async function DELETE(request:Request){
+  if(!await isAdminRequest(request))return NextResponse.json({error:"Απαιτείται κωδικός διαχειριστή."},{status:401});
+  try{
+    const payload=await request.json() as {videoId?:unknown};
+    const videoId=validVideoId(payload.videoId);
+    if(!videoId)return NextResponse.json({error:"Μη έγκυρο video id."},{status:400});
+
+    await ensureTable();
+    const db=database();
+    const rows=await db.query("SELECT value FROM app_state WHERE key = $1 LIMIT 1",[SHARED_LIBRARY_KEY]) as {value:string}[];
+    if(!rows[0])return NextResponse.json({error:"Η βιβλιοθήκη δεν βρέθηκε."},{status:404});
+    const parsed=JSON.parse(rows[0].value) as {videos?:VideoRecord[];moments?:MomentRecord[]};
+    const videos=Array.isArray(parsed.videos)?parsed.videos:[];
+    if(!videos.some(video=>String(video.id||"")===videoId))return NextResponse.json({error:"Το βίντεο δεν βρέθηκε."},{status:404});
+    const nextVideos=videos.filter(video=>String(video.id||"")!==videoId);
+    const nextMoments=Array.isArray(parsed.moments)?parsed.moments.filter(moment=>String(moment.videoId||"")!==videoId):parsed.moments;
+    const now=new Date().toISOString();
+    await db.query(`INSERT INTO app_state (key,value,created_at,updated_at) VALUES ($1,$2,$3,$4)
+      ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=EXCLUDED.updated_at`,[SHARED_LIBRARY_KEY,JSON.stringify({...parsed,videos:nextVideos,moments:nextMoments}),now,now]);
+
+    await db.query("DELETE FROM video_transcripts WHERE video_id = $1",[videoId]).catch(()=>undefined);
+    await db.query("DELETE FROM owner_translation_manifests WHERE video_id = $1",[videoId]).catch(()=>undefined);
+    await db.query("DELETE FROM translation_commands WHERE video_id = $1",[videoId]).catch(()=>undefined);
+
+    return NextResponse.json({ok:true,videoId,deleted:true});
+  }catch{
+    return NextResponse.json({error:"Δεν ήταν δυνατή η οριστική διαγραφή του βίντεο."},{status:500});
   }
 }
