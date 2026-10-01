@@ -11,6 +11,7 @@ import LogoPreferenceSystem from "./LogoPreferenceSystem";
 import PlayerUIAuditEnhancer from "./PlayerUIAuditEnhancer";
 import MobileUXFixesEnhancer from "./MobileUXFixesEnhancer";
 import VideoEditorDemoEnhancer from "./VideoEditorDemoEnhancer";
+import EditorLibraryVisibilityEnhancer from "./EditorLibraryVisibilityEnhancer";
 import SkipRangeTransferEnhancer from "./SkipRangeTransferEnhancer";
 import NextVideosEnhancer from "./NextVideosEnhancer";
 import AnalyticsEnhancer from "./AnalyticsEnhancer";
@@ -145,6 +146,7 @@ export default async function Home({
       <PlayerUIAuditEnhancer />
       <MobileUXFixesEnhancer />
       <VideoEditorDemoEnhancer />
+      <EditorLibraryVisibilityEnhancer />
       <SkipRangeTransferEnhancer />
       <NextVideosEnhancer />
       <AnalyticsEnhancer />
