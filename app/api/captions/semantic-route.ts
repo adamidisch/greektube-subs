@@ -164,36 +164,63 @@ async function groqJson(system: string, user: unknown, maxTokens: number) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new GroqTranslationError("GROQ_API_KEY is required for professional subtitle translation", 30);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 34_000);
+  const timeout = setTimeout(() => controller.abort(), 50_000);
+
+  const request = (jsonMode: boolean) => fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    signal: controller.signal,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      temperature: 0,
+      max_tokens: maxTokens,
+      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+      messages: [
+        {
+          role: "system",
+          content: jsonMode
+            ? system
+            : `${system} Return ONLY one syntactically valid JSON object. Do not use markdown fences or prose outside the JSON object.`,
+        },
+        { role: "user", content: JSON.stringify(user) },
+      ],
+    }),
+  });
+
+  const responseDetail = async (response: Response) => {
+    const raw = await response.text().catch(() => "");
+    let detail = raw.replace(/\s+/g, " ").trim();
+    try {
+      const parsed = JSON.parse(raw) as { error?: { message?: unknown } };
+      if (typeof parsed.error?.message === "string") detail = parsed.error.message.replace(/\s+/g, " ").trim();
+    } catch {
+      // Keep the raw provider detail when it is not JSON.
+    }
+    return detail;
+  };
+
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      signal: controller.signal,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        temperature: 0,
-        max_tokens: maxTokens,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: JSON.stringify(user) },
-        ],
-      }),
-    });
+    let response = await request(true);
+    if (response.status === 429) {
+      const retry = Number(response.headers.get("retry-after"));
+      throw new GroqTranslationError("Groq 429 professional subtitle rate limit", Number.isFinite(retry) && retry > 0 ? retry : 30);
+    }
+
+    if (response.status === 400) {
+      const detail = await responseDetail(response);
+      if (/failed to (?:validate|generate) json/i.test(detail)) {
+        response = await request(false);
+      } else {
+        throw new GroqTranslationError(`Groq professional subtitle 400${detail ? `: ${detail.slice(0, 320)}` : ""}`, 20);
+      }
+    }
+
     if (response.status === 429) {
       const retry = Number(response.headers.get("retry-after"));
       throw new GroqTranslationError("Groq 429 professional subtitle rate limit", Number.isFinite(retry) && retry > 0 ? retry : 30);
     }
     if (!response.ok) {
-      const raw = await response.text().catch(() => "");
-      let detail = raw.replace(/\s+/g, " ").trim();
-      try {
-        const parsed = JSON.parse(raw) as { error?: { message?: unknown } };
-        if (typeof parsed.error?.message === "string") detail = parsed.error.message.replace(/\s+/g, " ").trim();
-      } catch {
-        // Keep the raw provider detail when it is not JSON.
-      }
+      const detail = await responseDetail(response);
       throw new GroqTranslationError(
         `Groq professional subtitle ${response.status}${detail ? `: ${detail.slice(0, 320)}` : ""}`,
         response.status >= 500 ? 8 : 20,
