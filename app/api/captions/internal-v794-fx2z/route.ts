@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
   if (action === "reset") {
     const current = await getTranscript(VIDEO_ID);
-    if (!current || current.status !== "ready" || !current.englishTranscript.length) {
+    if (!current || !["ready", "processing"].includes(current.status) || !current.englishTranscript.length) {
       return NextResponse.json({ error: "Ready repaired English transcript unavailable." }, { status: 409 });
     }
 
