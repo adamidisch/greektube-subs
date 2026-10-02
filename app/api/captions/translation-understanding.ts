@@ -187,6 +187,8 @@ async function groqJson(system: string, user: string, maxTokens: number) {
       model: MODEL,
       temperature: 0,
       max_tokens: maxTokens,
+      reasoning_format: "hidden",
+      reasoning_effort: "low",
       ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
       messages: [
         {
