@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { POST as runCaptions } from "../semantic-route";
+import { seedTranslationUnderstanding } from "../translation-understanding";
 import {
   acquireProcessingLock,
   getTranscript,
@@ -66,6 +67,73 @@ export async function GET(request: Request) {
       restarted: true,
       keptEnglishCues: current.englishTranscript.length,
       status,
+    }, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  if (action === "seed-understanding") {
+    const current = await getTranscript(VIDEO_ID);
+    if (!current || current.status !== "processing" || !current.englishTranscript.length) {
+      return NextResponse.json({ error: "Processing repaired English transcript unavailable." }, { status: 409 });
+    }
+
+    const understanding = await seedTranslationUnderstanding(
+      VIDEO_ID,
+      current.transcriptVersion,
+      current.englishTranscript,
+      {
+        mainTopic: "The GAPS dietary approach, gut microbiome, digestion, food choices and recovery-oriented nutrition.",
+        purpose: "Long-form interview explaining Dr. Natasha Campbell-McBride's GAPS framework, dietary recommendations and views on gut health. Preserve clearly that medical and nutrition claims are the speaker's positions rather than independently established facts.",
+        discussion: [
+          "Gut microbiome and the role of food in the GAPS framework.",
+          "Animal foods, plant foods, digestion and nutrient absorption.",
+          "Testing, conventional medicine and the speaker's clinical approach.",
+          "Fermented foods, ketogenic and low-carbohydrate approaches.",
+          "Meat stock versus bone broth, collagen and glutamic acid.",
+          "Eggs, fats, vegetables and practical food preparation."
+        ],
+        claimsAndPositions: [
+          "Many health statements are presented as the interviewee's clinical views or claims and must remain attributed.",
+          "Do not strengthen contested nutrition or medical claims beyond the wording of the English source.",
+          "Preserve distinctions between recommendations, personal clinical opinion and factual description."
+        ],
+        glossary: [
+          { source: "GAPS", greek: "GAPS", note: "Keep acronym unchanged." },
+          { source: "gut microbiome", greek: "μικροβίωμα του εντέρου" },
+          { source: "meat stock", greek: "ζωμός κρέατος" },
+          { source: "bone broth", greek: "ζωμός οστών" },
+          { source: "collagen", greek: "κολλαγόνο" },
+          { source: "glutamic acid", greek: "γλουταμινικό οξύ" },
+          { source: "fermented foods", greek: "ζυμωμένα τρόφιμα" },
+          { source: "ketogenic diet", greek: "κετογονική διατροφή" },
+          { source: "low-carb diet", greek: "διατροφή χαμηλή σε υδατάνθρακες" },
+          { source: "upper fermenting gut", greek: "ζύμωση στο ανώτερο έντερο" },
+          { source: "mast cell activation disorder", greek: "διαταραχή ενεργοποίησης μαστοκυττάρων" },
+          { source: "hydrochloric acid", greek: "υδροχλωρικό οξύ" },
+          { source: "pepsin", greek: "πεψίνη" }
+        ],
+        ambiguities: [
+          "Keep unusual or controversial health assertions attributed to the speaker and do not silently normalize them into stronger medical facts."
+        ],
+        toneAndStance: [
+          "Long-form explanatory interview.",
+          "The interviewee is often confident and prescriptive.",
+          "The interviewer asks clarifying and practical follow-up questions."
+        ],
+        fidelityRules: [
+          "Preserve attribution, uncertainty and degree of confidence.",
+          "Preserve numbers, doses, units, names and technical terminology.",
+          "Do not turn a speaker opinion into an established fact.",
+          "Keep questions and short answers semantically connected."
+        ]
+      },
+    );
+
+    return NextResponse.json({
+      action,
+      seeded: true,
+      cueCount: understanding.cueCount,
+      sourceHash: understanding.sourceHash,
+      glossaryCount: understanding.glossary.length,
     }, { headers: { "Cache-Control": "no-store" } });
   }
 
