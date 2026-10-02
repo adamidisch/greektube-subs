@@ -114,7 +114,7 @@ export default function SkipRangeTransferEnhancer(){
 
   useEffect(()=>{
     let raf=0;
-    const locate=()=>{raf=0;const next=document.querySelector(".gts-editor-ranges .gts-editor-section-head");setTarget(current=>current===next?current:next);};
+    const locate=()=>{raf=0;const head=document.querySelector(".gts-editor-ranges .gts-editor-section-head");const next=head&&!head.querySelector(".gts-editor-io")?head:null;setTarget(current=>current===next?current:next);};
     const schedule=()=>{if(!raf)raf=requestAnimationFrame(locate);};
     schedule();const observer=new MutationObserver(schedule);observer.observe(document.body,{childList:true,subtree:true});
     return()=>{observer.disconnect();if(raf)cancelAnimationFrame(raf);};

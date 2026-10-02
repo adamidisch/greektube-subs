@@ -432,6 +432,117 @@ async function readDraft(manifest: OwnerTranslationManifest) {
   return normalized;
 }
 
+export async function correctPublishedOwnerCue(
+  videoId: string,
+  cueIndex: number,
+  expectedText: string,
+  replacementText: string,
+) {
+  assertOwnerMutationEnvironment();
+  const manifest = await getOwnerTranslationManifest(videoId);
+  if (!manifest) return null;
+  if (manifest.status !== "published") {
+    throw new Error("Η ενεργή owner revision δεν είναι δημοσιευμένη ακόμη.");
+  }
+
+  const token = crypto.randomUUID();
+  if (!await claimOwnerLease(videoId, token)) {
+    throw new Error("Το transcript επεξεργάζεται αυτή τη στιγμή. Δοκίμασε ξανά σε λίγο.");
+  }
+
+  const db = database();
+  const previousPublished = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION, true);
+  const previousCheckpoint = await readTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, true);
+  let manifestUpdated = false;
+
+  try {
+    if (!previousPublished || !Array.isArray(previousPublished.cues)) throw new Error("Δεν βρέθηκε η δημοσιευμένη μεταγραφή.");
+    const source = await readSource(manifest);
+    const greek = previousPublished.cues.map(normalizeCue);
+    if (greek.some(cue => !cue) || greek.length !== manifest.cueCount || source.length !== manifest.cueCount) {
+      throw new Error("Το owner transcript απέτυχε στο integrity check.");
+    }
+    const current = (greek as CachedCue[])[cueIndex];
+    if (!current) throw new Error("Δεν βρέθηκε το cue.");
+    if (current.text !== expectedText) throw new Error("Το cue άλλαξε στο μεταξύ. Φόρτωσε ξανά και προσπάθησε πάλι.");
+    if (!numberTokensMatch(source[cueIndex].text, replacementText)) {
+      throw new Error("Η διόρθωση αλλάζει αριθμό ή μονάδα του canonical source. Έλεγξέ την πριν αποθηκεύσεις.");
+    }
+
+    const nextGreek = (greek as CachedCue[]).slice();
+    nextGreek[cueIndex] = { ...current, text: replacementText };
+    const greekHash = ownerSourceHash(nextGreek);
+    const path = draftPath(videoId, manifest.revision, greekHash);
+    const now = new Date().toISOString();
+    const draft: DraftPayload = {
+      videoId,
+      revision: manifest.revision,
+      transcriptVersion: manifest.transcriptVersion,
+      sourceHash: manifest.sourceHash,
+      timestampHash: manifest.timestampHash,
+      greekHash,
+      cues: nextGreek,
+      validatedAt: now,
+    };
+    await writeJson(path, draft);
+
+    if (!await publishTranscript(videoId, TRANSCRIPT_VERSION, { ...previousPublished, cues: nextGreek })) {
+      throw new Error("Η εγγραφή του διορθωμένου subtitle απέτυχε.");
+    }
+
+    if (!previousCheckpoint || previousCheckpoint.status !== "ready" || previousCheckpoint.greekTranscript.length !== nextGreek.length) {
+      throw new Error("Το ready transcript checkpoint δεν είναι διαθέσιμο για ασφαλή διόρθωση.");
+    }
+    if (!await publishTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, {
+      ...previousCheckpoint,
+      greekTranscript: nextGreek,
+      timestamps: nextGreek.map(cue => ({ start: cue.start, duration: cue.duration })),
+      updatedAt: now,
+    })) {
+      throw new Error("Η ενημέρωση του transcript checkpoint απέτυχε.");
+    }
+
+    const rows = await db.query(
+      `UPDATE owner_translation_manifests
+       SET greek_draft_blob_path=$1,greek_draft_hash=$2,validated_at=$3,updated_at=$3
+       WHERE video_id=$4 AND revision=$5 AND source_hash=$6 AND status='published'
+       RETURNING video_id`,
+      [path, greekHash, now, videoId, manifest.revision, manifest.sourceHash],
+    ) as { video_id: string }[];
+    if (rows.length !== 1) throw new Error("Το owner manifest δεν ενημερώθηκε.");
+    manifestUpdated = true;
+
+    const updatedManifest = await getOwnerTranslationManifest(videoId);
+    if (!updatedManifest || updatedManifest.revision !== manifest.revision || !await transcriptMatchesOwnerManifest(updatedManifest)) {
+      throw new Error("Το production read-back δεν ταίριαξε μετά τη διόρθωση.");
+    }
+    return { cue: nextGreek[cueIndex], manifest: updatedManifest };
+  } catch (error) {
+    if (previousPublished) await publishTranscript(videoId, TRANSCRIPT_VERSION, previousPublished).catch(() => undefined);
+    if (previousCheckpoint) await publishTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, previousCheckpoint).catch(() => undefined);
+    if (manifestUpdated) {
+      await db.query(
+        `UPDATE owner_translation_manifests
+         SET greek_draft_blob_path=$1,greek_draft_hash=$2,validation_json=$3,validated_at=$4,updated_at=$5
+         WHERE video_id=$6 AND revision=$7 AND source_hash=$8 AND status='published'`,
+        [
+          manifest.greekDraftBlobPath,
+          manifest.greekDraftHash,
+          manifest.validation ? JSON.stringify(manifest.validation) : null,
+          manifest.validatedAt,
+          new Date().toISOString(),
+          videoId,
+          manifest.revision,
+          manifest.sourceHash,
+        ],
+      ).catch(() => undefined);
+    }
+    throw error;
+  } finally {
+    await releaseOwnerLease(videoId, token).catch(() => undefined);
+  }
+}
+
 async function transcriptMatchesOwnerManifest(manifest: OwnerTranslationManifest) {
   const readBack = await getTranscript(manifest.videoId);
   return Boolean(readBack &&

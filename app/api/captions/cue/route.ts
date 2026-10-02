@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/admin-auth";
-import { publishTranscript, readPublishedTranscript } from "../../transcript-blob";
+import { publishTranscript, publishTranscriptCheckpoint, readPublishedTranscript, readTranscriptCheckpoint } from "../../transcript-blob";
 import { TRANSCRIPT_VERSION } from "../../shared-cache";
-import { isOwnerChatgptVideo } from "../owner-mode";
+import { correctPublishedOwnerCue, getOwnerTranslationManifest } from "../../owner-translation/store";
 
 type CueEditRequest = {
   videoId?: unknown;
@@ -27,14 +27,27 @@ export async function PATCH(request: Request) {
   if (!videoId || transcriptVersion !== TRANSCRIPT_VERSION || !Number.isInteger(cueIndex) || cueIndex < 0 || expectedText === null) {
     return NextResponse.json({ error: "Μη έγκυρο αίτημα." }, { status: 400 });
   }
-  if (await isOwnerChatgptVideo(videoId)) {
-    return NextResponse.json({ error: "Το transcript είναι owner-locked. Ξεκίνα New Revision από το Video Editor για αλλαγές στους υπότιτλους." }, { status: 409 });
-  }
   if (!text) {
     return NextResponse.json({ error: "Το κείμενο δεν μπορεί να είναι κενό." }, { status: 400 });
   }
   if (text.length > 500) {
     return NextResponse.json({ error: "Το κείμενο είναι πολύ μεγάλο." }, { status: 400 });
+  }
+
+  // A published owner revision may receive a small Greek-only correction
+  // without creating a whole new revision. The canonical English source and
+  // timestamps remain immutable and the owner manifest is updated atomically.
+  const ownerManifest = await getOwnerTranslationManifest(videoId).catch(() => null);
+  if (ownerManifest) {
+    try {
+      const corrected = await correctPublishedOwnerCue(videoId, cueIndex, expectedText, text);
+      if (!corrected) return NextResponse.json({ error: "Δεν βρέθηκε owner transcript." }, { status: 404 });
+      return NextResponse.json({ ok: true, cue: corrected.cue, ownerRevision: corrected.manifest.revision });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Η αποθήκευση απέτυχε.";
+      const status = /άλλαξε|επεξεργάζεται|δεν είναι δημοσιευμένη|integrity|canonical source/i.test(message) ? 409 : 500;
+      return NextResponse.json({ error: message }, { status });
+    }
   }
 
   // English is intentionally not read/touched — this endpoint only ever
@@ -64,6 +77,25 @@ export async function PATCH(request: Request) {
   const published = await publishTranscript(videoId, transcriptVersion, updatedRecord);
   if (!published) {
     return NextResponse.json({ error: "Η αποθήκευση απέτυχε." }, { status: 500 });
+  }
+
+  // Keep the ready checkpoint aligned with the published Blob so future
+  // server-side reads cannot resurrect the old Greek wording.
+  const checkpoint = await readTranscriptCheckpoint(videoId, transcriptVersion, true).catch(() => null);
+  if (checkpoint?.status === "ready" && checkpoint.greekTranscript.length === updatedCues.length) {
+    const synced = await publishTranscriptCheckpoint(videoId, transcriptVersion, {
+      ...checkpoint,
+      greekTranscript: updatedCues,
+      timestamps: updatedCues.map(cue => {
+        const value = cue as { start?: unknown; duration?: unknown };
+        return { start: Number(value.start) || 0, duration: Number(value.duration) || 0 };
+      }),
+      updatedAt: new Date().toISOString(),
+    });
+    if (!synced) {
+      await publishTranscript(videoId, transcriptVersion, record).catch(() => undefined);
+      return NextResponse.json({ error: "Η διόρθωση δεν μπόρεσε να συγχρονιστεί με το transcript checkpoint." }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ ok: true, cue: updatedCue });
