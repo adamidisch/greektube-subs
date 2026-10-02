@@ -35,7 +35,7 @@ import {
 import { publishTranscript } from "../transcript-blob";
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
-const SPAN_BATCH = 8;
+const SPAN_BATCH = 4;
 const AUTO_TRANSLATION_MODE = "professional-semantic-v1";
 const SUBTITLE_TARGET_CPS = 15.75;
 
@@ -300,7 +300,7 @@ async function translateSpans(
       subtitleBudgets: subtitleBudgets(spans),
       semanticSpans: spans,
     },
-    4200,
+    2200,
   );
   const translations = parseTranslations(result, expected);
   if (translations.size !== expected.size) throw new GroqTranslationError(`Professional translator returned ${translations.size}/${expected.size} reconstructed units`);
@@ -341,7 +341,7 @@ async function bilingualQa(
       semanticSpans: spans,
       proposedGreek: proposed,
     },
-    4200,
+    2200,
   ) as QaPayload;
   const status = typeof result.status === "string" ? result.status : "";
   const repaired = parseTranslations(result, expected);
@@ -374,7 +374,7 @@ async function compressForSubtitleTiming(
       semanticSpans: spans,
       approvedGreek: [...translations].map(([unitId, text]) => ({ unitId, text })),
     },
-    3600,
+    1800,
   ) as QaPayload;
 
   const status = typeof result.status === "string" ? result.status : "";
