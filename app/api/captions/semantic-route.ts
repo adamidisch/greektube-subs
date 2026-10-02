@@ -185,7 +185,20 @@ async function groqJson(system: string, user: unknown, maxTokens: number) {
       const retry = Number(response.headers.get("retry-after"));
       throw new GroqTranslationError("Groq 429 professional subtitle rate limit", Number.isFinite(retry) && retry > 0 ? retry : 30);
     }
-    if (!response.ok) throw new GroqTranslationError(`Groq professional subtitle ${response.status}`, response.status >= 500 ? 8 : 20);
+    if (!response.ok) {
+      const raw = await response.text().catch(() => "");
+      let detail = raw.replace(/\s+/g, " ").trim();
+      try {
+        const parsed = JSON.parse(raw) as { error?: { message?: unknown } };
+        if (typeof parsed.error?.message === "string") detail = parsed.error.message.replace(/\s+/g, " ").trim();
+      } catch {
+        // Keep the raw provider detail when it is not JSON.
+      }
+      throw new GroqTranslationError(
+        `Groq professional subtitle ${response.status}${detail ? `: ${detail.slice(0, 320)}` : ""}`,
+        response.status >= 500 ? 8 : 20,
+      );
+    }
     const payload = await response.json() as { choices?: { message?: { content?: string } }[] };
     return parseJsonObject(payload.choices?.[0]?.message?.content || "");
   } catch (error) {
