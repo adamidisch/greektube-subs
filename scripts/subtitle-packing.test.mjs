@@ -215,8 +215,8 @@ for(let index=1;index<legacyPack.pages.length;index++){
 
 // --- Already-authored professional events must not be re-packed together. ---
 const authoredEvents=packSubtitles([
-  cue(800,2.5,"Αυτό είναι ένα ολοκληρωμένο τμήμα χωρίς τελεία"),
-  cue(802.5,2.5,"και αυτό είναι το επόμενο ολοκληρωμένο τμήμα"),
+  {...cue(800,2.5,"Αυτό είναι ένα ολοκληρωμένο τμήμα χωρίς τελεία"),semanticSpanId:"s0-0"},
+  {...cue(802.5,2.5,"και αυτό είναι το επόμενο ολοκληρωμένο τμήμα"),semanticSpanId:"s1-1"},
 ]);
 assert.equal(authoredEvents.packs.length,2,"professional authored events keep their own in/out timing");
 assert.deepEqual(authoredEvents.packs.map(pack=>pack.sourceIndices),[[0],[1]],"display layer must not merge healthy authored events");

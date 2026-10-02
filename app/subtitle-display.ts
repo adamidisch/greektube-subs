@@ -158,7 +158,7 @@ function twoLineFrames(text: string) {
   return rebalanceFinalOrphan(frames);
 }
 
-export type PackableCue = { start: number; duration: number; text: string };
+export type PackableCue = { start: number; duration: number; text: string; semanticSpanId?: string };
 export type PackStage = { at: number; text: string };
 
 export type SubtitlePack = {
@@ -222,6 +222,7 @@ function isSmallTail(cue: PackableCue) {
 }
 
 function isProfessionalDisplayReady(cue: PackableCue) {
+  if (!cue.semanticSpanId) return false;
   const text = displayText(cue.text);
   const duration = Math.max(0, cue.duration);
   if (!text || duration < MIN_DISPLAY_SECONDS || duration > 7) return false;
