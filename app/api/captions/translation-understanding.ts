@@ -653,21 +653,6 @@ export async function readTranslationUnderstanding(
   }
 }
 
-export async function seedTranslationUnderstanding(
-  videoId: string,
-  transcriptVersion: number,
-  cues: UnderstandingCue[],
-  seed: Record<string, unknown>,
-) {
-  if (!configured()) throw new Error("Vercel Blob is required for understanding seeding");
-  if (!cues.length) throw new Error("Cannot seed understanding for an empty transcript");
-  const sourceHash = transcriptHash(cues);
-  const understanding = buildUnderstanding(videoId, transcriptVersion, sourceHash, cues.length, seed);
-  await writeJson(pathname(videoId, transcriptVersion), understanding);
-  memory.set(key(videoId, transcriptVersion), understanding);
-  return understanding;
-}
-
 export async function ensureTranslationUnderstanding(
   videoId: string,
   transcriptVersion: number,
