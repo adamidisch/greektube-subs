@@ -1,6 +1,7 @@
 export type SkipRange = {start:number;end:number};
 
 export const SKIP_RANGES_UPDATED_EVENT="gts:skip-ranges-updated";
+export const VIDEO_EDITOR_SAVED_EVENT="gts:video-editor-saved";
 
 const MIN_RANGE_SECONDS=.15;
 const OVERLAP_TOLERANCE=.01;

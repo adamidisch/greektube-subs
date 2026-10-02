@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSP
 import AudioTimingCapturePanel from "./AudioTimingCapturePanel";
 import { APP_VERSION } from "./version";
 import { canonicalSpeakerForVideo, type CanonicalSpeakerProfile } from "./speaker-catalog";
-import {activeSkipTarget,normalizeSkipRanges,SKIP_RANGES_UPDATED_EVENT,type SkipRange} from "./skip-ranges";
+import {activeSkipTarget,normalizeSkipRanges,SKIP_RANGES_UPDATED_EVENT,VIDEO_EDITOR_SAVED_EVENT,type SkipRange} from "./skip-ranges";
 import {packSubtitles,packAlongside,packAt,packAfter,packTextAt,subtitleLines,type PackedSubtitles,type SubtitlePack} from "./subtitle-display";
 import {
   ALIGNMENT_PROOF_CAPTIONS,
@@ -559,8 +559,37 @@ export default function GreekTubePlayer() {
       const metadataVersion=Number(detail.metadataVersion||0);
       setState(current=>({...current,videos:current.videos.map(video=>video.id===detail.videoId?{...video,skipRanges,metadataVersion:Number.isFinite(metadataVersion)?Math.max(Number(video.metadataVersion||0),metadataVersion):video.metadataVersion}:video)}));
     };
+    const syncEditorSavedVideo=(event:Event)=>{
+      const detail=(event as CustomEvent<{video?:Partial<Video>&{id?:unknown}}>).detail;
+      const saved=detail?.video;
+      if(!saved||typeof saved.id!=="string"||!saved.id)return;
+      setState(current=>({...current,videos:current.videos.map(video=>{
+        if(video.id!==saved.id)return video;
+        const metadataVersion=Number(saved.metadataVersion||0);
+        return {
+          ...video,
+          title:typeof saved.title==="string"?saved.title:video.title,
+          originalTitle:typeof saved.originalTitle==="string"?saved.originalTitle:video.originalTitle,
+          speakerName:typeof saved.speakerName==="string"?saved.speakerName:video.speakerName,
+          speakerRole:typeof saved.speakerRole==="string"?saved.speakerRole:video.speakerRole,
+          channel:typeof saved.channel==="string"?saved.channel:video.channel,
+          channelUrl:typeof saved.channelUrl==="string"?saved.channelUrl:video.channelUrl,
+          originalVideoUrl:typeof saved.originalVideoUrl==="string"?saved.originalVideoUrl:video.originalVideoUrl,
+          category:typeof saved.category==="string"?saved.category as Category:video.category,
+          tags:Array.isArray(saved.tags)?saved.tags.filter((tag):tag is string=>typeof tag==="string"):video.tags,
+          description:typeof saved.description==="string"?saved.description:video.description,
+          skipRanges:normalizeSkipRanges(saved.skipRanges),
+          libraryVisible:typeof saved.libraryVisible==="boolean"?saved.libraryVisible:video.libraryVisible,
+          metadataVersion:Number.isFinite(metadataVersion)?Math.max(Number(video.metadataVersion||0),metadataVersion):video.metadataVersion,
+        };
+      })}));
+    };
     window.addEventListener(SKIP_RANGES_UPDATED_EVENT,syncSkipRanges);
-    return()=>window.removeEventListener(SKIP_RANGES_UPDATED_EVENT,syncSkipRanges);
+    window.addEventListener(VIDEO_EDITOR_SAVED_EVENT,syncEditorSavedVideo);
+    return()=>{
+      window.removeEventListener(SKIP_RANGES_UPDATED_EVENT,syncSkipRanges);
+      window.removeEventListener(VIDEO_EDITOR_SAVED_EVENT,syncEditorSavedVideo);
+    };
   },[]);
   useEffect(()=>{
     if(!hydrated||proofModeRef.current)return;

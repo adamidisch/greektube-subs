@@ -218,7 +218,7 @@ export async function PUT(request: Request) {
     if (incoming && typeof incoming === "object" && Array.isArray((incoming as PersonalState).videos) && wantsSharedWrite && !canWriteShared) {
       return NextResponse.json({ error: "Απαιτείται κωδικός για συγχρονισμό της κοινής βιβλιοθήκης." }, { status: 401 });
     }
-    if (incoming && typeof incoming === "object" && Array.isArray((incoming as PersonalState).videos) && canWriteShared) {
+    if (incoming && typeof incoming === "object" && Array.isArray((incoming as PersonalState).videos) && wantsSharedWrite && canWriteShared) {
       await ensureTable();
       await saveSharedVideos((incoming as PersonalState).videos!);
       sharedSaved = true;

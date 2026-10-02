@@ -3,7 +3,8 @@
 import {useEffect,useMemo,useRef,useState,type CSSProperties} from "react";
 import {createPortal} from "react-dom";
 import OwnerTranslationPanel from "./OwnerTranslationPanel";
-import {activeSkipTarget,formatSkipTimecode,normalizeSkipRanges,parseSkipTimecode,SKIP_RANGES_UPDATED_EVENT,validateSkipRanges,type SkipRange} from "./skip-ranges";
+import {activeSkipTarget,formatSkipTimecode,normalizeSkipRanges,parseSkipTimecode,SKIP_RANGES_UPDATED_EVENT,VIDEO_EDITOR_SAVED_EVENT,validateSkipRanges,type SkipRange} from "./skip-ranges";
+import {editorExportStem} from "./editor-export-filename";
 
 type EditorVideo={
   id:string;title:string;originalTitle?:string;speakerName?:string;speakerRole?:string;channel?:string;channelUrl?:string;
@@ -27,17 +28,6 @@ function metadataFrom(video:EditorVideo):MetadataDraft{
   return {title:video.title||"",originalTitle:video.originalTitle||"",speakerName:video.speakerName||"",speakerRole:video.speakerRole||"",channel:video.channel||"",channelUrl:video.channelUrl||"",originalVideoUrl:video.originalVideoUrl||video.url||`https://www.youtube.com/watch?v=${video.id}`,category:video.category||"Other",tags:Array.isArray(video.tags)?video.tags:[],description:video.description||""};
 }
 function snapshotOf(metadata:MetadataDraft,ranges:SkipRange[]){return JSON.stringify({metadata,ranges});}
-function safeExportStem(value:string,fallback:string){
-  const stem=(value||fallback)
-    .normalize("NFKC")
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g," ")
-    .replace(/\s+/g," ")
-    .trim()
-    .replace(/[. ]+$/g,"")
-    .slice(0,120)
-    .trim();
-  return stem||fallback;
-}
 function cueIsActive(cue:Cue|undefined,time:number){return Boolean(cue&&Number.isFinite(time)&&Number.isFinite(cue.start)&&Number.isFinite(cue.duration)&&cue.duration>0&&time>=cue.start&&time<cue.start+cue.duration);}
 function activeCueIndex(cues:Cue[],time:number){let result=-1;let latestStart=-Infinity;for(let index=0;index<cues.length;index+=1){const cue=cues[index];if(cueIsActive(cue,time)&&cue.start>=latestStart){result=index;latestStart=cue.start;}}return result;}
 function subtitleFrames(text:string,maxLineCharacters=42){
@@ -104,12 +94,15 @@ async function ensureYouTubeApi(){
 function EditableField({label,value,onCommit,multiline,type,options}:{label:string;value:string;onCommit:(next:string)=>void;multiline?:boolean;type?:string;options?:readonly (readonly [string,string])[];}){
   const [editing,setEditing]=useState(false);
   const [draft,setDraft]=useState(value);
+  const editOrigin=useRef(value);
   useEffect(()=>{if(!editing)setDraft(value);},[value,editing]);
+  function beginEdit(){editOrigin.current=value;setDraft(value);setEditing(true);}
+  function updateDraft(next:string){setDraft(next);onCommit(next);}
   function commit(){onCommit(draft);setEditing(false);}
-  function cancel(){setDraft(value);setEditing(false);}
+  function cancel(){const previous=editOrigin.current;setDraft(previous);onCommit(previous);setEditing(false);}
   const display=options?(options.find(([v])=>v===value)?.[1]||value||"—"):(value||"—");
   if(!editing)return(
-    <div className="gts-field" role="button" tabIndex={0} onClick={()=>setEditing(true)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();setEditing(true);}}}>
+    <div className="gts-field" role="button" tabIndex={0} onClick={beginEdit} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();beginEdit();}}}>
       <span className="gts-field-label">{label}</span>
       <span className={`gts-field-value${value?"":" empty"}`}>{display}</span>
       <svg className="gts-field-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
@@ -119,9 +112,9 @@ function EditableField({label,value,onCommit,multiline,type,options}:{label:stri
     <div className="gts-field editing">
       <span className="gts-field-label">{label}</span>
       <div className="gts-field-edit">
-        {options?<select autoFocus value={draft} onChange={event=>setDraft(event.target.value)}>{options.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>
-        :multiline?<textarea autoFocus value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={event=>{if(event.key==="Escape")cancel();}}/>
-        :<input autoFocus type={type||"text"} value={draft} onChange={event=>setDraft(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")commit();if(event.key==="Escape")cancel();}}/>}
+        {options?<select autoFocus value={draft} onChange={event=>updateDraft(event.target.value)}>{options.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>
+        :multiline?<textarea autoFocus value={draft} onChange={event=>updateDraft(event.target.value)} onKeyDown={event=>{if(event.key==="Escape")cancel();}}/>
+        :<input autoFocus type={type||"text"} value={draft} onChange={event=>updateDraft(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")commit();if(event.key==="Escape")cancel();}}/>}
         <div className="gts-field-acts">
           <button type="button" className="ok" onClick={commit} aria-label="Αποθήκευση αλλαγής"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5L20 6"/></svg></button>
           <button type="button" className="x" onClick={cancel} aria-label="Ακύρωση"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
@@ -356,7 +349,7 @@ export default function VideoEditorDemoEnhancer(){
     if(!metadata||!video)return;
     const payload={type:"greektube-editor",version:1,videoId:video.id,exportedAt:new Date().toISOString(),metadata,skipRanges:normalizeSkipRanges(ranges)};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${safeExportStem(metadata.title||video.title,video.id)}-editor.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${editorExportStem({originalTitle:metadata.originalTitle,speakerName:metadata.speakerName,fallback:video.id})}-editor.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
     setStatus("Έγινε export των metadata και skip ranges.");
   }
   function triggerImport(){importInput.current?.click();}
@@ -383,6 +376,7 @@ export default function VideoEditorDemoEnhancer(){
       if(!response.ok||!result.ok||!result.video)throw new Error(result.error||"Η αποθήκευση απέτυχε.");
       const nextMetadata=metadataFrom(result.video),nextRanges=normalizeSkipRanges(result.video.skipRanges);
       setVideo(result.video);setMetadata(nextMetadata);setRanges(nextRanges);setTimecodeDrafts({});setInitialSnapshot(snapshotOf(nextMetadata,nextRanges));setStatus("Όλες οι αλλαγές αποθηκεύτηκαν και συγχρονίστηκαν με τον player.");
+      window.dispatchEvent(new CustomEvent(VIDEO_EDITOR_SAVED_EVENT,{detail:{video:result.video}}));
       window.dispatchEvent(new CustomEvent(SKIP_RANGES_UPDATED_EVENT,{detail:{videoId:result.video.id,skipRanges:nextRanges,metadataVersion:Number(result.video.metadataVersion||0)}}));
     }catch(problem){setStatus(problem instanceof Error?problem.message:"Η αποθήκευση απέτυχε.");}
     finally{setSaveBusy(false);}
