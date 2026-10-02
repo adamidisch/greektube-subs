@@ -88,7 +88,7 @@ assert.ok(
 
 
 const longSource = [
-  { start: 20, duration: 8, text: "This is a deliberately long sentence used to verify professional subtitle event authoring with a small trailing phrase at the end." },
+  { start: 20, duration: 10, text: "This is a deliberately long sentence used to verify professional subtitle event authoring with a small trailing phrase at the end." },
 ];
 const longUnits = reconstructSourceUnits(longSource);
 const longSpans = buildSemanticSpans(longUnits);
