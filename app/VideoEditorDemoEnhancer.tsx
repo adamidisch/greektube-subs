@@ -27,6 +27,17 @@ function metadataFrom(video:EditorVideo):MetadataDraft{
   return {title:video.title||"",originalTitle:video.originalTitle||"",speakerName:video.speakerName||"",speakerRole:video.speakerRole||"",channel:video.channel||"",channelUrl:video.channelUrl||"",originalVideoUrl:video.originalVideoUrl||video.url||`https://www.youtube.com/watch?v=${video.id}`,category:video.category||"Other",tags:Array.isArray(video.tags)?video.tags:[],description:video.description||""};
 }
 function snapshotOf(metadata:MetadataDraft,ranges:SkipRange[]){return JSON.stringify({metadata,ranges});}
+function safeExportStem(value:string,fallback:string){
+  const stem=(value||fallback)
+    .normalize("NFKC")
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g," ")
+    .replace(/\s+/g," ")
+    .trim()
+    .replace(/[. ]+$/g,"")
+    .slice(0,120)
+    .trim();
+  return stem||fallback;
+}
 function cueIsActive(cue:Cue|undefined,time:number){return Boolean(cue&&Number.isFinite(time)&&Number.isFinite(cue.start)&&Number.isFinite(cue.duration)&&cue.duration>0&&time>=cue.start&&time<cue.start+cue.duration);}
 function activeCueIndex(cues:Cue[],time:number){let result=-1;let latestStart=-Infinity;for(let index=0;index<cues.length;index+=1){const cue=cues[index];if(cueIsActive(cue,time)&&cue.start>=latestStart){result=index;latestStart=cue.start;}}return result;}
 function subtitleFrames(text:string,maxLineCharacters=42){
@@ -345,7 +356,7 @@ export default function VideoEditorDemoEnhancer(){
     if(!metadata||!video)return;
     const payload={type:"greektube-editor",version:1,videoId:video.id,exportedAt:new Date().toISOString(),metadata,skipRanges:normalizeSkipRanges(ranges)};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${video.id}-editor.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${safeExportStem(metadata.title||video.title,video.id)}-editor.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
     setStatus("Έγινε export των metadata και skip ranges.");
   }
   function triggerImport(){importInput.current?.click();}

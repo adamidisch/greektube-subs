@@ -15,6 +15,17 @@ type ExportPayload={
 };
 
 function round1(value:number){return Math.round(value*10)/10;}
+function safeExportStem(value:string,fallback:string){
+  const stem=(value||fallback)
+    .normalize("NFKC")
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g," ")
+    .replace(/\s+/g," ")
+    .trim()
+    .replace(/[. ]+$/g,"")
+    .slice(0,120)
+    .trim();
+  return stem||fallback;
+}
 function parseVideoId(value:string){
   const clean=value.trim();
   const direct=clean.match(/^[A-Za-z0-9_-]{11}$/)?.[0];
@@ -81,7 +92,7 @@ function downloadExport(){
   const ranges=currentRanges();if(!ranges.length){window.alert("Δεν υπάρχουν skip ranges για export.");return;}
   const payload:ExportPayload={format:"greektube-skip-ranges",version:1,videoId,title:editorTitle(),exportedAt:new Date().toISOString(),skipRanges:ranges.map(range=>({start:round1(range.start),end:round1(range.end)})),totalSkippedSeconds:round1(ranges.reduce((sum,range)=>sum+Math.max(0,range.end-range.start),0))};
   const blob=new Blob([JSON.stringify(payload,null,2)+"\n"],{type:"application/json;charset=utf-8"});
-  const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`greektube-skip-ranges-${videoId}.json`;link.click();URL.revokeObjectURL(link.href);
+  const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`${safeExportStem(editorTitle(),videoId)}-skip-ranges.json`;link.click();URL.revokeObjectURL(link.href);
 }
 async function applyImportedRanges(ranges:SkipRange[]){
   const seek=timeline();const markButtons=document.querySelectorAll<HTMLButtonElement>(".gts-editor-mark-actions > button");
