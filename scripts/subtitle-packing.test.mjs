@@ -212,4 +212,14 @@ for(let index=1;index<legacyPack.pages.length;index++){
   assert.ok(legacyPack.pages[index].at-legacyPack.pages[index-1].at>=MIN_DISPLAY_SECONDS-1e-9,"legacy pages never flash faster than one second");
 }
 
+
+// --- Already-authored professional events must not be re-packed together. ---
+const authoredEvents=packSubtitles([
+  cue(800,2.5,"Αυτό είναι ένα ολοκληρωμένο τμήμα χωρίς τελεία"),
+  cue(802.5,2.5,"και αυτό είναι το επόμενο ολοκληρωμένο τμήμα"),
+]);
+assert.equal(authoredEvents.packs.length,2,"professional authored events keep their own in/out timing");
+assert.deepEqual(authoredEvents.packs.map(pack=>pack.sourceIndices),[[0],[1]],"display layer must not merge healthy authored events");
+assert.ok(!packTextAt(authoredEvents.packs[0],801).includes("επόμενο"),"future authored event text must never appear early");
+
 console.log("subtitle-packing tests passed");

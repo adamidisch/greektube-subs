@@ -43,7 +43,23 @@ const GREEK = /[\u0370-\u03ff\u1f00-\u1fff]/u;
 const MIN_EVENT_SECONDS = 1;
 const MAX_EVENT_SECONDS = 7;
 const MAX_READING_CPS = 17;
+const MAX_LINE_CHARACTERS = 42;
+const MAX_EVENT_CHARACTERS = 84;
+const TARGET_EVENT_CHARACTERS = 62;
 const MAX_ANCHOR_DRIFT_SECONDS = 0.12;
+
+const TRAILING_BREAK_PENALTY = new Set([
+  "ο", "η", "το", "οι", "τα", "του", "της", "των", "τον", "την", "τους", "τις",
+  "ένας", "μια", "μία", "ένα", "έναν", "μιας", "ενός",
+  "και", "κι", "ή", "αλλά", "όμως", "ενώ", "αν", "όταν", "γιατί", "ότι", "πως",
+  "που", "να", "θα", "δεν", "μη", "μην", "ας", "για",
+  "σε", "με", "από", "προς", "ως", "κατά", "μετά", "πριν", "χωρίς", "μέχρι",
+  "στο", "στη", "στην", "στον", "στα", "στις", "στους",
+  "μου", "σου", "μας", "σας",
+]);
+const SENTENCE_END = /[.!?…][»"'”’)\]]*$/u;
+const SOFT_BREAK = /[,·:;—–][»"'”’)\]]*$/u;
+const INTENTIONAL_SHORT = /^(?:ναι|όχι|οκ|εντάξει|σωστά|ακριβώς|βέβαια|φυσικά)[.!?…]*$/iu;
 
 function clean(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -175,52 +191,108 @@ export function unitTranslationFailure(unit: ReconstructedUnit, target: string, 
   return null;
 }
 
-function splitToSubtitleChunks(text: string, maxChars = 84) {
+function stripBreakPunctuation(word: string) {
+  return word.replace(/[«»"'()\[\].,!;?:…—–]/gu, "").toLocaleLowerCase("el-GR");
+}
+
+function professionalLineLayout(text: string) {
   const normalized = clean(text);
   if (!normalized) return [] as string[];
-  const sentences = normalized.split(/(?<=[.!?…])\s+/u).filter(Boolean);
-  const chunks: string[] = [];
+  if (normalized.length <= MAX_LINE_CHARACTERS) return [normalized];
 
-  for (const sentence of sentences) {
-    if (sentence.length <= maxChars) {
-      chunks.push(sentence);
+  const words = normalized.split(/\s+/u);
+  let best: { lines: string[]; score: number } | null = null;
+  for (let split = 1; split < words.length; split += 1) {
+    const first = words.slice(0, split).join(" ");
+    const second = words.slice(split).join(" ");
+    if (first.length > MAX_LINE_CHARACTERS || second.length > MAX_LINE_CHARACTERS) continue;
+
+    let score = Math.abs(first.length - second.length);
+    if (SENTENCE_END.test(first)) score -= 28;
+    else if (SOFT_BREAK.test(first)) score -= 12;
+    if (TRAILING_BREAK_PENALTY.has(stripBreakPunctuation(words[split - 1]))) score += 34;
+    if (!best || score < best.score) best = { lines: [first, second], score };
+  }
+  return best?.lines || [];
+}
+
+function fitsProfessionalEvent(text: string) {
+  const normalized = clean(text);
+  if (!normalized || normalized.length > MAX_EVENT_CHARACTERS) return false;
+  const lines = professionalLineLayout(normalized);
+  return lines.length > 0 && lines.length <= 2 && lines.every(line => line.length <= MAX_LINE_CHARACTERS);
+}
+
+function chunkBreakScore(segment: string, segmentWords: number, remainingWords: number) {
+  let score = -Math.abs(segment.length - TARGET_EVENT_CHARACTERS);
+  if (SENTENCE_END.test(segment)) score += 64;
+  else if (SOFT_BREAK.test(segment)) score += 26;
+  if (TRAILING_BREAK_PENALTY.has(stripBreakPunctuation(segment.split(/\s+/u).at(-1) || ""))) score -= 45;
+  if (segmentWords <= 2 && !INTENTIONAL_SHORT.test(segment)) score -= 80;
+  if (remainingWords > 0 && remainingWords <= 2) score -= 90;
+  return score;
+}
+
+function splitToSubtitleChunks(text: string, maxChars = MAX_EVENT_CHARACTERS) {
+  const normalized = clean(text);
+  if (!normalized) return [] as string[];
+  if (normalized.length <= maxChars && fitsProfessionalEvent(normalized)) return [normalized];
+
+  const words = normalized.split(/\s+/u);
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < words.length) {
+    const remaining = words.slice(start).join(" ");
+    if (remaining.length <= maxChars && fitsProfessionalEvent(remaining)) {
+      chunks.push(remaining);
+      break;
+    }
+
+    let best: { end: number; text: string; score: number } | null = null;
+    for (let end = start + 1; end <= words.length; end += 1) {
+      const candidate = words.slice(start, end).join(" ");
+      if (candidate.length > maxChars) break;
+      if (!fitsProfessionalEvent(candidate)) continue;
+      const segmentWords = end - start;
+      const remainingWords = words.length - end;
+      const score = chunkBreakScore(candidate, segmentWords, remainingWords);
+      if (!best || score > best.score || (score === best.score && candidate.length > best.text.length)) {
+        best = { end, text: candidate, score };
+      }
+    }
+
+    if (!best) {
+      // A pathological token wider than the professional line envelope should
+      // fail validation later rather than being silently dropped or rewritten.
+      const fallbackEnd = Math.min(words.length, start + Math.max(1, Math.floor(maxChars / 8)));
+      chunks.push(words.slice(start, fallbackEnd).join(" "));
+      start = fallbackEnd;
       continue;
     }
-    const words = sentence.split(/\s+/u);
-    let current = "";
-    for (const word of words) {
-      const next = current ? `${current} ${word}` : word;
-      if (current && next.length > maxChars) {
-        chunks.push(current);
-        current = word;
-      } else {
-        current = next;
-      }
-    }
-    if (current) chunks.push(current);
+
+    chunks.push(best.text);
+    start = best.end;
   }
 
-  // Subtitle-authoring equivalent of the display orphan rule: do not create a
-  // final event containing only one or two words when the previous event can
-  // share enough text without exceeding the 84-character envelope.
   if (chunks.length >= 2) {
     const finalWords = chunks.at(-1)?.split(/\s+/u).filter(Boolean) || [];
-    if (finalWords.length <= 2) {
+    if (finalWords.length <= 2 && !INTENTIONAL_SHORT.test(chunks.at(-1) || "")) {
       const previousWords = chunks[chunks.length - 2].split(/\s+/u).filter(Boolean);
-      while (finalWords.length < 3 && previousWords.length > 3) {
-        const moved = previousWords.pop();
-        if (!moved) break;
-        finalWords.unshift(moved);
-        const previous = previousWords.join(" ");
-        const final = finalWords.join(" ");
-        if (previous.length > maxChars || final.length > maxChars) {
-          finalWords.shift();
-          previousWords.push(moved);
-          break;
-        }
+      const combined = [...previousWords, ...finalWords];
+      let best: { left: string; right: string; score: number } | null = null;
+      for (let split = 3; split <= combined.length - 3; split += 1) {
+        const left = combined.slice(0, split).join(" ");
+        const right = combined.slice(split).join(" ");
+        if (!fitsProfessionalEvent(left) || !fitsProfessionalEvent(right)) continue;
+        const score = chunkBreakScore(left, split, combined.length - split)
+          + chunkBreakScore(right, combined.length - split, 0);
+        if (!best || score > best.score) best = { left, right, score };
       }
-      chunks[chunks.length - 2] = previousWords.join(" ");
-      chunks[chunks.length - 1] = finalWords.join(" ");
+      if (best) {
+        chunks[chunks.length - 2] = best.left;
+        chunks[chunks.length - 1] = best.right;
+      }
     }
   }
 
@@ -292,40 +364,37 @@ function desiredPartBoundaries(row: DisplayUnit, parts: string[]) {
 function speechAnchoredBoundaries(row: DisplayUnit, parts: string[]) {
   const count = Math.max(0, parts.length - 1);
   if (!count) return [] as number[];
+  if (row.end - row.start + 1e-6 < parts.length * MIN_EVENT_SECONDS) {
+    throw new Error(`professional-anchor-duration-budget:${row.semanticSpanId}:parts=${parts.length}:available=${(row.end-row.start).toFixed(2)}`);
+  }
+
   const desired = desiredPartBoundaries(row, parts);
   const hard = [...new Set(row.sourceAnchors.slice(0, -1).map(anchor => anchor.end))]
     .filter(value => value > row.start + 1e-6 && value < row.end - 1e-6)
     .sort((a, b) => a - b);
-  if (!hard.length) return desired;
 
-  if (hard.length >= count) {
-    const selected: number[] = [];
-    let minimumIndex = 0;
-    desired.forEach((target, slot) => {
-      const maximumIndex = hard.length - (count - slot);
-      let bestIndex = minimumIndex;
-      let bestDistance = Number.POSITIVE_INFINITY;
-      for (let index = minimumIndex; index <= maximumIndex; index += 1) {
-        const distance = Math.abs(hard[index] - target);
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          bestIndex = index;
-        }
-      }
-      selected.push(hard[bestIndex]);
-      minimumIndex = bestIndex + 1;
-    });
-    return selected;
-  }
+  const selected: number[] = [];
+  let previous = row.start;
+  for (let slot = 0; slot < count; slot += 1) {
+    const minimum = Math.max(previous + MIN_EVENT_SECONDS, row.start + MIN_EVENT_SECONDS * (slot + 1));
+    const remainingEvents = count - slot;
+    const maximum = row.end - MIN_EVENT_SECONDS * remainingEvents;
+    const target = Math.min(maximum, Math.max(minimum, desired[slot]));
 
-  const chosen = [...hard];
-  for (const target of desired) {
-    if (chosen.length >= count) break;
-    if (chosen.some(value => Math.abs(value - target) < 0.05)) continue;
-    chosen.push(target);
+    const candidates = hard.filter(value =>
+      value >= minimum - 1e-6 &&
+      value <= maximum + 1e-6 &&
+      value > previous + 1e-6 &&
+      !selected.includes(value)
+    );
+    const chosen = candidates.length
+      ? candidates.reduce((best, value) => Math.abs(value - target) < Math.abs(best - target) ? value : best, candidates[0])
+      : target;
+
+    selected.push(chosen);
+    previous = chosen;
   }
-  chosen.sort((a, b) => a - b);
-  return chosen.slice(0, count);
+  return selected;
 }
 
 function authoredWindows(row: DisplayUnit, parts: string[]) {
@@ -414,12 +483,19 @@ export function validateProfessionalSubtitleFile(cues: CachedCue[]) {
     if (duration > 7.001) issues.push(`duration-over-7s:${index}`);
     if (cue.start + 0.002 < previousEnd) issues.push(`overlap:${index}`);
     if (!text) issues.push(`empty:${index}`);
-    if (text.length > 84) issues.push(`over-84-chars:${index}`);
-    if (duration > 0 && text.length / duration > 17.05) issues.push(`reading-speed:${index}`);
+    if (text.length > MAX_EVENT_CHARACTERS) issues.push(`over-84-chars:${index}`);
+    const lines = professionalLineLayout(text);
+    if (text && (!lines.length || lines.length > 2 || lines.some(line => line.length > MAX_LINE_CHARACTERS))) {
+      issues.push(`line-layout:${index}`);
+    }
+    if (duration > 0 && text.length / duration > MAX_READING_CPS + 0.05) issues.push(`reading-speed:${index}`);
     if (/ZXQ|\[\[|\]\]/i.test(text)) issues.push(`artifact:${index}`);
 
     const words = text.split(/\s+/u).filter(Boolean);
-    if (index > 0 && words.length <= 2 && text.length < 18 && cue.start - previousEnd <= 0.05) {
+    const nextCue = cues[index + 1];
+    const touchesPrevious = index > 0 && cue.start - previousEnd <= 0.05;
+    const touchesNext = Boolean(nextCue && nextCue.start - (cue.start + duration) <= 0.05);
+    if (words.length <= 2 && text.length < 18 && !INTENTIONAL_SHORT.test(text) && (touchesPrevious || touchesNext)) {
       issues.push(`orphan-event:${index}`);
     }
 

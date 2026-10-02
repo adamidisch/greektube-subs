@@ -86,4 +86,19 @@ assert.ok(
   "one/two-word terminal subtitle events are rejected when attached to continuous speech",
 );
 
+
+const longSource = [
+  { start: 20, duration: 8, text: "This is a deliberately long sentence used to verify professional subtitle event authoring with a small trailing phrase at the end." },
+];
+const longUnits = reconstructSourceUnits(longSource);
+const longSpans = buildSemanticSpans(longUnits);
+const longTranslations = new Map([
+  [longUnits[0].id, "Αυτή είναι μια αρκετά μεγάλη πρόταση που ελέγχει τη σωστή δημιουργία επαγγελματικών υποτίτλων και αποφεύγει ένα πολύ μικρό τελευταίο κομμάτι της έννοιας."],
+]);
+const longAuthored = authorApprovedSpans(longSpans, longTranslations);
+assert.ok(longAuthored.length >= 2, "long translated discourse is authored into multiple stable subtitle events");
+assert.deepEqual(validateProfessionalSubtitleFile(longAuthored), [], "long authored sequence passes TV-style line, timing and reading-speed gates");
+assert.ok(longAuthored.every(cue => cue.text.split(/\s+/u).filter(Boolean).length >= 3), "authoring does not leave a one/two-word trailing fragment");
+assert.ok(longAuthored.every(cue => cue.text.length <= 84), "every authored event stays inside the two-line envelope");
+
 console.log("professional subtitle pipeline regression checks passed");

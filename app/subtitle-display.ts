@@ -221,6 +221,16 @@ function isSmallTail(cue: PackableCue) {
   return wordCount(cue.text) <= ORPHAN_MAX_WORDS || cue.duration < ORPHAN_MAX_DURATION;
 }
 
+function isProfessionalDisplayReady(cue: PackableCue) {
+  const text = displayText(cue.text);
+  const duration = Math.max(0, cue.duration);
+  if (!text || duration < MIN_DISPLAY_SECONDS || duration > 7) return false;
+  if (characterCount(text) > MAX_PACK_CHARACTERS) return false;
+  if (subtitleLines(text).length > MAX_PACK_LINES) return false;
+  if (characterCount(text) / duration > 17.05) return false;
+  return !isSmallTail(cue) || isStandalone(text);
+}
+
 function buildStages(cues: PackableCue[], indices: number[]): PackStage[] {
   const texts = indices.map(index => displayText(cues[index].text)).filter(Boolean);
   const lines = subtitleLines(texts.join(" "));
@@ -350,7 +360,8 @@ export function packSubtitles(cues: PackableCue[] | undefined | null): PackedSub
     let end = cueEnd(source[index]);
     let next = index + 1;
 
-    if (!isStandalone(source[index].text)) {
+    const preserveAuthoredEvent = isProfessionalDisplayReady(source[index]);
+    if (!isStandalone(source[index].text) && !preserveAuthoredEvent) {
       while (next < source.length) {
         const candidate = source[next];
         const candidateText = displayText(candidate.text);
