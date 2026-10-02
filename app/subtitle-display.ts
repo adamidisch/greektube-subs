@@ -455,7 +455,8 @@ export function packTextAt(pack: SubtitlePack, currentTime: number) {
 
 function splitLegacyCueText(text: string, maxCharacters = MAX_PACK_CHARACTERS) {
   const clean = normalise(text);
-  if (!clean || clean.length <= maxCharacters) return clean ? [clean] : [];
+  if (!clean) return [] as string[];
+  if (clean.length <= maxCharacters && fitsOnePage(clean)) return [clean];
 
   const words = clean.split(" ");
   const chunks: string[] = [];
@@ -463,29 +464,34 @@ function splitLegacyCueText(text: string, maxCharacters = MAX_PACK_CHARACTERS) {
   while (start < words.length) {
     let end = start;
     let candidate = "";
+    let lastFittingEnd = -1;
+
     while (end < words.length) {
       const next = candidate ? `${candidate} ${words[end]}` : words[end];
       if (next.length > maxCharacters) break;
       candidate = next;
       end += 1;
+      if (fitsOnePage(candidate)) lastFittingEnd = end;
     }
 
-    if (end === start) {
-      // Pathological very-long token: keep it intact. Validation will surface
-      // it rather than silently altering subtitle content.
+    if (lastFittingEnd <= start) {
+      // Pathological very-long token: keep it intact. Final validation will
+      // surface it rather than silently alter subtitle wording.
       chunks.push(words[start]);
       start += 1;
       continue;
     }
 
-    let preferred = end;
-    for (let split = end; split > start + 1; split -= 1) {
+    let preferred = lastFittingEnd;
+    for (let split = lastFittingEnd; split > start + 1; split -= 1) {
       const part = words.slice(start, split).join(" ");
-      if (/[.!?…,:;·—–][»"'”’)\]]*$/u.test(part) && part.length >= maxCharacters * 0.55) {
+      if (!fitsOnePage(part)) continue;
+      if (/[.!?…,:;·—–][»"'”’)\]]*$/u.test(part) && part.length >= maxCharacters * 0.5) {
         preferred = split;
         break;
       }
     }
+
     chunks.push(words.slice(start, preferred).join(" "));
     start = preferred;
   }
