@@ -453,6 +453,27 @@ export function packTextAt(pack: SubtitlePack, currentTime: number) {
   return text;
 }
 
+export function materializeStableSubtitleEvents(cues: PackableCue[] | undefined | null): PackableCue[] {
+  const packed = packSubtitles(cues);
+  return packed.packs.flatMap(pack => {
+    const packEnd = pack.start + pack.duration;
+    const pages = pack.pages.length
+      ? pack.pages
+      : [{ at: pack.start, text: pack.text }];
+
+    return pages.map((page, index) => {
+      const start = Math.max(pack.start, page.at);
+      const nextStart = pages[index + 1]?.at ?? packEnd;
+      const end = Math.min(packEnd, Math.max(start, nextStart));
+      return {
+        start,
+        duration: Math.max(0.001, end - start),
+        text: framePlainText(page.text),
+      };
+    });
+  });
+}
+
 export function packAt(packed: PackedSubtitles, cueIndex: number): SubtitlePack | undefined {
   if (cueIndex < 0 || cueIndex >= packed.packOfCue.length) return undefined;
   return packed.packs[packed.packOfCue[cueIndex]];

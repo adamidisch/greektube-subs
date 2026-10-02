@@ -11,6 +11,7 @@ import {
   MAX_PACK_DURATION,
   MAX_PACK_CHARACTERS,
   MIN_DISPLAY_SECONDS,
+  materializeStableSubtitleEvents,
 } from "../app/subtitle-display.ts";
 
 const cue=(start,duration,text)=>({start,duration,text});
@@ -221,5 +222,22 @@ const authoredEvents=packSubtitles([
 assert.equal(authoredEvents.packs.length,2,"professional authored events keep their own in/out timing");
 assert.deepEqual(authoredEvents.packs.map(pack=>pack.sourceIndices),[[0],[1]],"display layer must not merge healthy authored events");
 assert.ok(!packTextAt(authoredEvents.packs[0],801).includes("επόμενο"),"future authored event text must never appear early");
+
+
+// --- Legacy display packs can be materialized into stable source events for one-time migrations. ---
+const migrationSource=[
+  cue(900,0.45,"αυτό"),
+  cue(900.45,0.55,"είναι ένα"),
+  cue(901,2.4,"παλιό κατακερματισμένο subtitle event"),
+  cue(903.4,2.2,"και εδώ συνεχίζει η επόμενη πλήρης φράση."),
+];
+const materialized=materializeStableSubtitleEvents(migrationSource);
+assert.ok(materialized.length<migrationSource.length,"materialization reduces legacy cue fragmentation");
+assert.ok(materialized.every(cue=>cue.duration>=MIN_DISPLAY_SECONDS-1e-9),"materialized stable events keep a readable minimum window");
+assert.equal(
+  materialized.map(cue=>cue.text).join(" ").replace(/\s+/g," ").trim(),
+  packSubtitles(migrationSource).packs.flatMap(pack=>pack.pages.length?pack.pages.map(page=>page.text):[pack.text]).join(" ").replace(/\s+/g," ").trim(),
+  "materialization preserves the exact display wording and order",
+);
 
 console.log("subtitle-packing tests passed");
