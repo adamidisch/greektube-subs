@@ -11,10 +11,19 @@ type QueuedEvent={sessionId:string;name:string;path:string;videoId:string;referr
 
 function currentVideoId(){return new URLSearchParams(location.search).get("video")||"";}
 function currentPath(){return `${location.pathname}${location.search}`.slice(0,220);}
+let fallbackSessionId="";
 function sessionId(){
-  let value=sessionStorage.getItem(SESSION_KEY)||"";
-  if(!value){value=crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;sessionStorage.setItem(SESSION_KEY,value);}
-  return value;
+  try{
+    let value=sessionStorage.getItem(SESSION_KEY)||"";
+    if(!value){
+      value=crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem(SESSION_KEY,value);
+    }
+    return value;
+  }catch{
+    if(!fallbackSessionId)fallbackSessionId=crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return fallbackSessionId;
+  }
 }
 function labelFor(element:Element){
   return (element.getAttribute("aria-label")||element.getAttribute("title")||element.textContent||"").replace(/\s+/g," ").trim().slice(0,80);
@@ -40,20 +49,36 @@ export default function AnalyticsEnhancer(){
   useEffect(()=>{const value=getConsent();consentRef.current=value;try{if(!localStorage.getItem(CONSENT_KEY))localStorage.setItem(CONSENT_KEY,"yes");}catch{}},[]);
 
   useEffect(()=>{
+    let flushInFlight=false;
+    const requeue=(events:QueuedEvent[])=>{
+      queue.current=[...events,...queue.current].slice(0,120);
+    };
     const flush=()=>{
-      if(consentRef.current!=="yes"||!queue.current.length)return;
+      if(consentRef.current!=="yes"||!queue.current.length||flushInFlight)return;
       const events=queue.current.splice(0,30);
       const body=JSON.stringify({events});
+
       if(document.visibilityState==="hidden"&&navigator.sendBeacon){
-        navigator.sendBeacon("/api/analytics",new Blob([body],{type:"application/json"}));
-      }else{
-        void fetch("/api/analytics",{method:"POST",headers:{"Content-Type":"application/json"},body,keepalive:true,credentials:"same-origin"}).catch(()=>{queue.current.unshift(...events.slice(-10));});
+        const accepted=navigator.sendBeacon("/api/analytics",new Blob([body],{type:"application/json"}));
+        if(!accepted)requeue(events);
+        return;
       }
+
+      flushInFlight=true;
+      void fetch("/api/analytics",{method:"POST",headers:{"Content-Type":"application/json"},body,keepalive:true,credentials:"same-origin"})
+        .then(response=>{if(!response.ok)requeue(events);})
+        .catch(()=>requeue(events))
+        .finally(()=>{flushInFlight=false;if(queue.current.length>=10)queueMicrotask(flush);});
     };
     const track=(event:EventPayload)=>{
       if(consentRef.current!=="yes")return;
-      queue.current.push({sessionId:sessionId(),name:event.name,path:currentPath(),videoId:currentVideoId(),referrer:document.referrer,properties:{timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"Unknown",locale:navigator.language||"Unknown",...event.properties},ts:Date.now()});
-      if(queue.current.length>=10)flush();
+      try{
+        const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||"Unknown";
+        queue.current.push({sessionId:sessionId(),name:event.name,path:currentPath(),videoId:currentVideoId(),referrer:document.referrer,properties:{timezone,locale:navigator.language||"Unknown",...event.properties},ts:Date.now()});
+        if(queue.current.length>=10)flush();
+      }catch{
+        // Analytics must never break the app UI.
+      }
     };
     const page=()=>{
       const path=currentPath();
@@ -121,7 +146,7 @@ export default function AnalyticsEnhancer(){
     history.pushState=((...args:Parameters<History["pushState"]>)=>{originalPush(...args);queueMicrotask(page);}) as History["pushState"];
     history.replaceState=((...args:Parameters<History["replaceState"]>)=>{originalReplace(...args);queueMicrotask(page);}) as History["replaceState"];
     window.addEventListener("popstate",page);document.addEventListener("click",click,true);document.addEventListener("input",input,true);document.addEventListener("change",input,true);document.addEventListener("visibilitychange",visibility);window.addEventListener("pagehide",end);
-    const flushTimer=window.setInterval(flush,5000);page();
+    const flushTimer=window.setInterval(flush,4000);page();window.setTimeout(flush,300);
     return()=>{window.clearInterval(timer);window.clearInterval(flushTimer);window.clearTimeout(searchTimer);window.removeEventListener("popstate",page);document.removeEventListener("click",click,true);document.removeEventListener("input",input,true);document.removeEventListener("change",input,true);document.removeEventListener("visibilitychange",visibility);window.removeEventListener("pagehide",end);history.pushState=originalPush;history.replaceState=originalReplace;flush();};
   },[]);
 

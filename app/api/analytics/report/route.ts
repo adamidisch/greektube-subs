@@ -52,7 +52,9 @@ export async function GET(request:Request){
         COUNT(*) FILTER (WHERE event_name='page_view')::int AS page_views,
         COUNT(*) FILTER (WHERE event_name='video_open')::int AS video_opens,
         COUNT(DISTINCT NULLIF(video_id,''))::int AS unique_videos,
-        COALESCE(SUM((properties->>'seconds')::numeric) FILTER (WHERE event_name='video_watch'),0)::float AS watch_seconds
+        COALESCE(SUM((properties->>'seconds')::numeric) FILTER (WHERE event_name='video_watch'),0)::float AS watch_seconds,
+        MAX(created_at) AS latest_event,
+        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '15 minutes')::int AS recent_events
         FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval`,[days]),
       db.query(`SELECT video_id,COUNT(*) FILTER (WHERE event_name='video_open')::int AS opens,
         COUNT(DISTINCT session_id)::int AS sessions,
