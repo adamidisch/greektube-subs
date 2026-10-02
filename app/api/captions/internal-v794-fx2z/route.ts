@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { POST as runCaptions } from "../route";
+import { POST as runCaptions } from "../semantic-route";
 import {
   acquireProcessingLock,
   getTranscript,
