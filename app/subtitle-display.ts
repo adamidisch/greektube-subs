@@ -453,6 +453,53 @@ export function packTextAt(pack: SubtitlePack, currentTime: number) {
   return text;
 }
 
+export function materializeLegacyProfessionalEvents(cues: PackableCue[] | undefined | null): PackableCue[] {
+  const source = cues ?? [];
+  const packed = packSubtitles(source);
+  const events: PackableCue[] = [];
+
+  packed.packs.forEach((pack, packIndex) => {
+    const sourceText = pack.sourceIndices
+      .map(index => normalise(source[index]?.text || ""))
+      .filter(Boolean)
+      .join(" ");
+    const frames = twoLineFrames(sourceText).map(framePlainText).filter(Boolean);
+    const texts = frames.length ? frames : [sourceText];
+    const totalDuration = Math.max(0.001, pack.duration);
+    const readingNeeds = texts.map(text => Math.max(MIN_DISPLAY_SECONDS, characterCount(text) / 17));
+    const readingNeedTotal = readingNeeds.reduce((sum, value) => sum + value, 0);
+    const charWeights = texts.map(text => Math.max(1, characterCount(text)));
+    const charTotal = charWeights.reduce((sum, value) => sum + value, 0);
+
+    let durations: number[];
+    if (readingNeedTotal <= totalDuration + 1e-6) {
+      const extra = Math.max(0, totalDuration - readingNeedTotal);
+      durations = readingNeeds.map((need, index) => need + extra * (charWeights[index] / charTotal));
+    } else {
+      const floor = Math.min(MIN_DISPLAY_SECONDS, totalDuration / Math.max(1, texts.length));
+      const remainder = Math.max(0, totalDuration - floor * texts.length);
+      durations = texts.map((_, index) => floor + remainder * (charWeights[index] / charTotal));
+    }
+
+    let cursor = pack.start;
+    texts.forEach((text, frameIndex) => {
+      const isLast = frameIndex === texts.length - 1;
+      const duration = isLast
+        ? Math.max(0.001, pack.start + totalDuration - cursor)
+        : Math.max(0.001, durations[frameIndex]);
+      events.push({
+        start: cursor,
+        duration,
+        text,
+        semanticSpanId: `legacy-v797-${packIndex}-${frameIndex}`,
+      });
+      cursor += duration;
+    });
+  });
+
+  return events;
+}
+
 export function materializeStableSubtitleEvents(cues: PackableCue[] | undefined | null): PackableCue[] {
   const packed = packSubtitles(cues);
   return packed.packs.flatMap(pack => {

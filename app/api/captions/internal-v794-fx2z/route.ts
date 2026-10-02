@@ -7,7 +7,11 @@ import {
   getTranscriptStatus,
   releaseProcessingLock,
   saveProcessingCheckpoint,
+  completeTranscript,
+  TRANSCRIPT_VERSION,
 } from "../../shared-cache";
+import { readPublishedTranscript, publishTranscript } from "../../transcript-blob";
+import { materializeLegacyProfessionalEvents, subtitleLines } from "@/app/subtitle-display";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -135,6 +139,90 @@ export async function GET(request: Request) {
       sourceHash: understanding.sourceHash,
       glossaryCount: understanding.glossary.length,
     }, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  if (action === "migrate-existing") {
+    const published = await readPublishedTranscript(VIDEO_ID, TRANSCRIPT_VERSION, true);
+    if (!published || !Array.isArray(published.cues) || !published.cues.length) {
+      return NextResponse.json({ error: "Published Greek transcript unavailable." }, { status: 409 });
+    }
+
+    const sourceCues = published.cues as Array<{ start: number; duration: number; text: string; semanticSpanId?: string }>;
+    if (sourceCues.some(cue => typeof cue.semanticSpanId === "string" && cue.semanticSpanId.startsWith("legacy-v797-"))) {
+      return NextResponse.json({ action, alreadyMigrated: true, cueCount: sourceCues.length }, { headers: { "Cache-Control": "no-store" } });
+    }
+
+    const migrated = materializeLegacyProfessionalEvents(sourceCues);
+    const sourceText = sourceCues.map(cue => cue.text.replace(/\s+/g, " ").trim()).filter(Boolean).join(" ");
+    const migratedText = migrated.map(cue => cue.text.replace(/\s+/g, " ").trim()).filter(Boolean).join(" ");
+    const structuralIssues = migrated.flatMap((cue, index) => {
+      const lines = subtitleLines(cue.text);
+      const issues: string[] = [];
+      if (!cue.text.trim()) issues.push(`empty:${index}`);
+      if (cue.text.length > 84) issues.push(`chars:${index}:${cue.text.length}`);
+      if (lines.length > 2) issues.push(`lines:${index}:${lines.length}`);
+      if (!(cue.duration > 0)) issues.push(`duration:${index}`);
+      return issues;
+    });
+
+    const diagnostics = {
+      beforeCues: sourceCues.length,
+      afterCues: migrated.length,
+      textPreserved: sourceText === migratedText,
+      structuralIssues: structuralIssues.slice(0, 20),
+      subSecondEvents: migrated.filter(cue => cue.duration < 1 - 1e-6).length,
+      over17CpsEvents: migrated.filter(cue => cue.text.length / Math.max(0.001, cue.duration) > 17.05).length,
+      maxCps: migrated.length ? Math.max(...migrated.map(cue => cue.text.length / Math.max(0.001, cue.duration))) : 0,
+      sample: migrated.filter(cue => cue.start >= 610 && cue.start <= 630),
+    };
+
+    if (url.searchParams.get("apply") !== "1") {
+      return NextResponse.json({ action, mode: "dry-run", ...diagnostics }, { headers: { "Cache-Control": "no-store" } });
+    }
+    if (!diagnostics.textPreserved || structuralIssues.length) {
+      return NextResponse.json({ error: "Legacy professional migration failed structural validation.", ...diagnostics }, { status: 422, headers: { "Cache-Control": "no-store" } });
+    }
+
+    const current = await getTranscript(VIDEO_ID);
+    if (!current || !current.englishTranscript.length) {
+      return NextResponse.json({ error: "Repaired English checkpoint unavailable." }, { status: 409 });
+    }
+
+    const token = crypto.randomUUID();
+    if (!await acquireProcessingLock(VIDEO_ID, token, true)) {
+      return NextResponse.json({ error: "Could not acquire migration lock." }, { status: 409 });
+    }
+
+    const updatedAt = new Date().toISOString();
+    const complete = await completeTranscript({
+      ...current,
+      status: "ready",
+      progress: 100,
+      greekTranscript: migrated,
+      timestamps: migrated.map(cue => ({ start: cue.start, duration: cue.duration })),
+      transcriptVersion: TRANSCRIPT_VERSION,
+      updatedAt,
+    }, token);
+
+    if (!complete) {
+      await releaseProcessingLock(VIDEO_ID, token).catch(() => undefined);
+      return NextResponse.json({ error: "Could not persist migrated transcript.", ...diagnostics }, { status: 409, headers: { "Cache-Control": "no-store" } });
+    }
+
+    const republished = await publishTranscript(VIDEO_ID, TRANSCRIPT_VERSION, {
+      ...published,
+      status: "ready",
+      progress: 100,
+      transcriptVersion: TRANSCRIPT_VERSION,
+      cues: migrated,
+      englishCues: current.englishTranscript,
+      cached: false,
+    });
+    if (!republished) {
+      return NextResponse.json({ error: "Migration persisted but Blob publish failed.", ...diagnostics }, { status: 500, headers: { "Cache-Control": "no-store" } });
+    }
+
+    return NextResponse.json({ action, mode: "applied", updatedAt, ...diagnostics }, { headers: { "Cache-Control": "no-store" } });
   }
 
   if (action === "run") {

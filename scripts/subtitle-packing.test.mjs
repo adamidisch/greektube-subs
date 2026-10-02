@@ -12,6 +12,7 @@ import {
   MAX_PACK_CHARACTERS,
   MIN_DISPLAY_SECONDS,
   materializeStableSubtitleEvents,
+  materializeLegacyProfessionalEvents,
 } from "../app/subtitle-display.ts";
 
 const cue=(start,duration,text)=>({start,duration,text});
@@ -239,5 +240,21 @@ assert.equal(
   packSubtitles(migrationSource).packs.flatMap(pack=>pack.pages.length?pack.pages.map(page=>page.text):[pack.text]).join(" ").replace(/\s+/g," ").trim(),
   "materialization preserves the exact display wording and order",
 );
+
+
+const legacyProfessional=materializeLegacyProfessionalEvents([
+  cue(1000,1.77,"Επειδή το GAPS, κατά την άποψή μου,"),
+  cue(1001.972,2.202,"και φυσικά είμαι η δημιουργός αυτής"),
+  cue(1004.376,.83,"της έννοιας,"),
+  cue(1005.59,.83,"οπότε"),
+  cue(1006.634,1.78,"η άποψή μου δεν θα μπορούσε να είναι διαφορετική."),
+]);
+assert.ok(legacyProfessional.length<5,"legacy professional authoring reduces fragmented cues");
+assert.equal(
+  legacyProfessional.map(c=>c.text).join(" ").replace(/\s+/g," ").trim(),
+  "Επειδή το GAPS, κατά την άποψή μου, και φυσικά είμαι η δημιουργός αυτής της έννοιας, οπότε η άποψή μου δεν θα μπορούσε να είναι διαφορετική.",
+  "legacy professional authoring preserves wording",
+);
+assert.ok(legacyProfessional.every(c=>c.text.length<=84),"legacy professional events stay inside two-line text envelope");
 
 console.log("subtitle-packing tests passed");
