@@ -422,19 +422,21 @@ export function packAlongside(
 }
 
 export function packTextAt(pack: SubtitlePack, currentTime: number) {
-  if (pack.pages.length > 1) {
-    let text = pack.pages[0].text;
-    for (const page of pack.pages) {
-      if (currentTime + 1e-6 < page.at) break;
-      text = page.text;
-    }
-    return text;
-  }
+  const end = pack.start + pack.duration;
+  if (currentTime + 1e-6 < pack.start || currentTime >= end - 1e-6) return "";
 
-  let text = pack.stages[0]?.text ?? pack.pages[0]?.text ?? pack.text;
-  for (const stage of pack.stages) {
-    if (currentTime + 1e-6 < stage.at) break;
-    text = stage.text;
+  // Professional subtitle presentation uses stable blocks, not karaoke-style
+  // progressive word accumulation. A one-page pack appears complete at its
+  // in-point and remains visually unchanged until its out-point. Longer packs
+  // switch only between complete two-line pages.
+  const pages = pack.pages.length
+    ? pack.pages
+    : [{ at: pack.start, text: pack.text }];
+
+  let text = pages[0]?.text ?? pack.text;
+  for (const page of pages) {
+    if (currentTime + 1e-6 < page.at) break;
+    text = page.text;
   }
   return text;
 }

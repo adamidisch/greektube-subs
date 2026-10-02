@@ -274,10 +274,15 @@ function subtitleFrames(text:string,maxLineCharacters=42){
 }
 function subtitleWindow(cue:Cue|undefined,currentTime:number,nextCue?:Cue){
   if(!cue)return "";
+  const cueEnd=cue.start+Math.max(0,cue.duration);
+  const nextStart=nextCue&&nextCue.start>cue.start?nextCue.start:Number.POSITIVE_INFINITY;
+  const visibleEnd=Math.min(cueEnd,nextStart);
+  if(currentTime+1e-6<cue.start||currentTime>=visibleEnd-1e-6)return "";
+
   const frames=subtitleFrames(cue.text);
   if(frames.length<=1)return frames[0]||"";
 
-  const nextBoundary=nextCue&&nextCue.start>cue.start?nextCue.start-cue.start:cue.duration;
+  const nextBoundary=Number.isFinite(nextStart)?nextStart-cue.start:cue.duration;
   const duration=Math.max(.1,Math.min(cue.duration,nextBoundary));
   const elapsed=Math.max(0,Math.min(duration-.001,currentTime-cue.start));
   const minReadable=duration>=frames.length*1.35?1.35:duration/frames.length;

@@ -122,9 +122,10 @@ assert.deepEqual(subtitleLines("μικρό κείμενο"),["μικρό κεί�
 assert.deepEqual(subtitleLines("   "),[],"blank text yields no lines");
 
 
-// --- No cue's words may appear before that cue's own start in ordinary packs. ---
-// Real cues from h2Pf6xO_NVM at 5:46. "ζάχαρη;" is a single word finishing the
-// question, so it joins the previous cue, but only reveals at its own 350.64.
+// --- Professional one-page packs render as stable blocks, never word-by-word. ---
+// Real cues from h2Pf6xO_NVM at 5:46. The one-word tail is part of the same
+// readable subtitle event, so the complete event appears at the in-point and
+// stays unchanged until the out-point.
 const sugar=[
   cue(346.72,3.92,"ίντερνετ αν έχω φάει πολλή"),
   cue(350.64,0.56,"ζάχαρη;"),
@@ -134,22 +135,24 @@ assert.deepEqual(sugarPack.sourceIndices,[0,1],"a one-word tail must be rescued"
 assert.ok(sugarPack.duration<=ORPHAN_MAX_PACK_DURATION,"rescue stays inside its own ceiling");
 assert.equal(sugarPack.start,346.72,"rescue must not move the start");
 
-for(const t of [346.72,348,350,350.63]){
-  assert.ok(!packTextAt(sugarPack,t).includes("ζάχαρη"),`«ζάχαρη» must not show at ${t}`);
-  assert.ok(packTextAt(sugarPack,t).includes("ίντερνετ"),`the spoken text must show at ${t}`);
+const stableSugar=packTextAt(sugarPack,346.72);
+assert.ok(stableSugar.includes("ζάχαρη"),"complete one-page subtitle appears at the pack in-point");
+for(const t of [348,350,350.64,351.19]){
+  assert.equal(packTextAt(sugarPack,t),stableSugar,`one-page subtitle must remain stable at ${t}`);
 }
-for(const t of [350.64,351,351.19]){
-  assert.ok(packTextAt(sugarPack,t).includes("ζάχαρη"),`«ζάχαρη» must show from ${t}`);
-}
+assert.equal(packTextAt(sugarPack,346.70),"","subtitle stays hidden before its in-point");
+assert.equal(packTextAt(sugarPack,351.20),"","subtitle clears exactly at its out-point");
 
-// --- The same holds for an ordinary two-cue pack (the 6:24 case). ---
+// --- Ordinary two-cue packs also remain visually stable across cue boundaries. ---
 const dopamine=packSubtitles([
   cue(384.0,1.2,"παίρνεις κάτι νέο και ενδιαφέρον,"),
   cue(385.2,2.4,"μπαμ, ένα σήμα ντοπαμίνης επίσης στον"),
 ]).packs[0];
 assert.equal(dopamine.sourceIndices.length,2,"expected a merge");
-assert.ok(!packTextAt(dopamine,384.9).includes("μπαμ"),"second cue must not leak in early");
-assert.ok(packTextAt(dopamine,385.2).includes("μπαμ"),"second cue shows at its own start");
+const stableDopamine=packTextAt(dopamine,384.0);
+assert.ok(stableDopamine.includes("μπαμ"),"full professional block appears from the event start");
+assert.equal(packTextAt(dopamine,384.9),stableDopamine,"no progressive word accumulation before cue boundary");
+assert.equal(packTextAt(dopamine,385.2),stableDopamine,"cue boundary must not mutate the visible subtitle");
 
 // --- Geometry never changes for ordinary one/two-line packs. ---
 for(const pack of [sugarPack,dopamine,...packSubtitles(glucose).packs]){
