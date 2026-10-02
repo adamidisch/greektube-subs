@@ -256,5 +256,6 @@ assert.equal(
   "legacy professional authoring preserves wording",
 );
 assert.ok(legacyProfessional.every(c=>c.text.length<=84),"legacy professional events stay inside two-line text envelope");
+assert.ok(legacyProfessional.every(c=>String(c.semanticSpanId||"").startsWith("legacy-v798-")),"legacy professional events are marked as source-authored");
 
 console.log("subtitle-packing tests passed");

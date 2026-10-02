@@ -453,51 +453,163 @@ export function packTextAt(pack: SubtitlePack, currentTime: number) {
   return text;
 }
 
-export function materializeLegacyProfessionalEvents(cues: PackableCue[] | undefined | null): PackableCue[] {
-  const source = cues ?? [];
-  const packed = packSubtitles(source);
-  const events: PackableCue[] = [];
+function splitLegacyCueText(text: string, maxCharacters = MAX_PACK_CHARACTERS) {
+  const clean = normalise(text);
+  if (!clean || clean.length <= maxCharacters) return clean ? [clean] : [];
 
-  packed.packs.forEach((pack, packIndex) => {
-    const sourceText = pack.sourceIndices
-      .map(index => normalise(source[index]?.text || ""))
-      .filter(Boolean)
-      .join(" ");
-    const frames = twoLineFrames(sourceText).map(framePlainText).filter(Boolean);
-    const texts = frames.length ? frames : [sourceText];
-    const totalDuration = Math.max(0.001, pack.duration);
-    const readingNeeds = texts.map(text => Math.max(MIN_DISPLAY_SECONDS, characterCount(text) / 17));
-    const readingNeedTotal = readingNeeds.reduce((sum, value) => sum + value, 0);
-    const charWeights = texts.map(text => Math.max(1, characterCount(text)));
-    const charTotal = charWeights.reduce((sum, value) => sum + value, 0);
-
-    let durations: number[];
-    if (readingNeedTotal <= totalDuration + 1e-6) {
-      const extra = Math.max(0, totalDuration - readingNeedTotal);
-      durations = readingNeeds.map((need, index) => need + extra * (charWeights[index] / charTotal));
-    } else {
-      const floor = Math.min(MIN_DISPLAY_SECONDS, totalDuration / Math.max(1, texts.length));
-      const remainder = Math.max(0, totalDuration - floor * texts.length);
-      durations = texts.map((_, index) => floor + remainder * (charWeights[index] / charTotal));
+  const words = clean.split(" ");
+  const chunks: string[] = [];
+  let start = 0;
+  while (start < words.length) {
+    let end = start;
+    let candidate = "";
+    while (end < words.length) {
+      const next = candidate ? `${candidate} ${words[end]}` : words[end];
+      if (next.length > maxCharacters) break;
+      candidate = next;
+      end += 1;
     }
 
-    let cursor = pack.start;
-    texts.forEach((text, frameIndex) => {
-      const isLast = frameIndex === texts.length - 1;
+    if (end === start) {
+      // Pathological very-long token: keep it intact. Validation will surface
+      // it rather than silently altering subtitle content.
+      chunks.push(words[start]);
+      start += 1;
+      continue;
+    }
+
+    let preferred = end;
+    for (let split = end; split > start + 1; split -= 1) {
+      const part = words.slice(start, split).join(" ");
+      if (/[.!?…,:;·—–][»"'”’)\]]*$/u.test(part) && part.length >= maxCharacters * 0.55) {
+        preferred = split;
+        break;
+      }
+    }
+    chunks.push(words.slice(start, preferred).join(" "));
+    start = preferred;
+  }
+  return chunks;
+}
+
+type LegacyAtom = { start: number; duration: number; text: string };
+
+function legacyAtoms(cues: PackableCue[]) {
+  const atoms: LegacyAtom[] = [];
+  for (const cue of cues) {
+    const parts = splitLegacyCueText(cue.text);
+    if (!parts.length) continue;
+    const weights = parts.map(part => Math.max(1, characterCount(part)));
+    const totalWeight = weights.reduce((sum, value) => sum + value, 0);
+    let cursor = cue.start;
+    parts.forEach((part, index) => {
+      const isLast = index === parts.length - 1;
       const duration = isLast
-        ? Math.max(0.001, pack.start + totalDuration - cursor)
-        : Math.max(0.001, durations[frameIndex]);
-      events.push({
-        start: cursor,
-        duration,
-        text,
-        semanticSpanId: `legacy-v797-${packIndex}-${frameIndex}`,
-      });
+        ? Math.max(0.001, cue.start + Math.max(0, cue.duration) - cursor)
+        : Math.max(0.001, Math.max(0, cue.duration) * (weights[index] / totalWeight));
+      atoms.push({ start: cursor, duration, text: part });
       cursor += duration;
     });
-  });
+  }
+  return atoms;
+}
 
-  return events;
+const LEGACY_AUTHORING_HOLD_SECONDS = 0.6;
+const LEGACY_AUTHORING_MAX_DURATION = 6.5;
+const LEGACY_AUTHORING_LOOKAHEAD = 12;
+const LEGACY_SENTENCE_END = /[.!?…][»"'”’)\]]*$/u;
+const LEGACY_SOFT_END = /[,;:·—–][»"'”’)\]]*$/u;
+
+function legacyCandidateEnd(atoms: LegacyAtom[], index: number) {
+  const speechEnd = atoms[index].start + atoms[index].duration;
+  const nextStart = atoms[index + 1]?.start;
+  const gap = Number.isFinite(nextStart) ? Math.max(0, (nextStart as number) - speechEnd) : 0;
+  return speechEnd + Math.min(LEGACY_AUTHORING_HOLD_SECONDS, gap);
+}
+
+function legacyCandidateScore(text: string, duration: number) {
+  const cps = characterCount(text) / Math.max(0.001, duration);
+  let score = 1;
+  if (cps > 17) score += Math.pow(cps - 17, 2) * 45;
+  if (duration < MIN_DISPLAY_SECONDS) score += (MIN_DISPLAY_SECONDS - duration) * 180;
+  if (duration > LEGACY_AUTHORING_MAX_DURATION) score += (duration - LEGACY_AUTHORING_MAX_DURATION) * 35;
+  if (LEGACY_SENTENCE_END.test(text)) score -= 12;
+  else if (LEGACY_SOFT_END.test(text)) score -= 4;
+
+  const words = text.split(/\s+/u).filter(Boolean);
+  if (words.length <= 2 && !isStandalone(text)) score += 35;
+  if (TRAILING_PENALTY.has(stripPunctuation(words.at(-1) || ""))) score += 12;
+  return score;
+}
+
+export function materializeLegacyProfessionalEvents(cues: PackableCue[] | undefined | null): PackableCue[] {
+  const source = cues ?? [];
+  const atoms = legacyAtoms(source);
+  if (!atoms.length) return [];
+
+  const count = atoms.length;
+  const best = new Array<number>(count + 1).fill(Number.POSITIVE_INFINITY);
+  const previous = new Array<number>(count + 1).fill(-1);
+  best[0] = 0;
+
+  for (let start = 0; start < count; start += 1) {
+    if (!Number.isFinite(best[start])) continue;
+    let text = "";
+
+    for (let end = start; end < Math.min(count, start + LEGACY_AUTHORING_LOOKAHEAD); end += 1) {
+      // Never merge a completed sentence/question with the following speech.
+      // This is deliberately conservative because the old transcript has no
+      // reliable speaker diarization.
+      if (end > start && LEGACY_SENTENCE_END.test(atoms[end - 1].text)) break;
+
+      text = text ? `${text} ${atoms[end].text}` : atoms[end].text;
+      if (characterCount(text) > MAX_PACK_CHARACTERS) break;
+
+      const lines = subtitleLines(text);
+      if (lines.length > MAX_PACK_LINES || lines.some(line => characterCount(line) > MAX_LINE_CHARACTERS)) continue;
+
+      const eventStart = atoms[start].start;
+      const eventEnd = legacyCandidateEnd(atoms, end);
+      const duration = Math.max(0.001, eventEnd - eventStart);
+      const score = best[start] + legacyCandidateScore(text, duration);
+
+      if (score < best[end + 1]) {
+        best[end + 1] = score;
+        previous[end + 1] = start;
+      }
+    }
+  }
+
+  if (previous[count] < 0) {
+    // Fail closed to the existing display packer if an unexpected token cannot
+    // be represented in the two-line envelope.
+    return materializeStableSubtitleEvents(source).map((cue, index) => ({
+      ...cue,
+      semanticSpanId: `legacy-fallback-v798-${index}`,
+    }));
+  }
+
+  const groups: Array<[number, number]> = [];
+  let cursor = count;
+  while (cursor > 0) {
+    const start = previous[cursor];
+    if (start < 0) break;
+    groups.push([start, cursor - 1]);
+    cursor = start;
+  }
+  groups.reverse();
+
+  return groups.map(([start, end], index) => {
+    const text = atoms.slice(start, end + 1).map(atom => atom.text).join(" ");
+    const eventStart = atoms[start].start;
+    const eventEnd = legacyCandidateEnd(atoms, end);
+    return {
+      start: eventStart,
+      duration: Math.max(0.001, eventEnd - eventStart),
+      text,
+      semanticSpanId: `legacy-v798-${index}`,
+    };
+  });
 }
 
 export function materializeStableSubtitleEvents(cues: PackableCue[] | undefined | null): PackableCue[] {
