@@ -13,10 +13,15 @@ async function adminSessionToken(password:string){
   return Array.from(new Uint8Array(signature)).map(value=>value.toString(16).padStart(2,"0")).join("");
 }
 function safeEqual(left:string,right:string){
-  const a=new TextEncoder().encode(left),b=new TextEncoder().encode(right);if(a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i+=1)diff|=a[i]^b[i];return diff===0;
+  const a=new TextEncoder().encode(left),b=new TextEncoder().encode(right);
+  if(a.length!==b.length)return false;
+  let diff=0;
+  for(let i=0;i<a.length;i+=1)diff|=a[i]^b[i];
+  return diff===0;
 }
 async function isAdmin(request:Request){
-  const password=await adminSecret();if(!password)return false;
+  const password=await adminSecret();
+  if(!password)return false;
   const cookie=request.headers.get("cookie")?.split(";").map(v=>v.trim()).find(v=>v.startsWith(`${ADMIN_COOKIE}=`))?.slice(ADMIN_COOKIE.length+1)||"";
   return safeEqual(cookie,await adminSessionToken(password));
 }
@@ -27,26 +32,33 @@ async function ensureTable(){
     session_id TEXT NOT NULL,event_name TEXT NOT NULL,path TEXT NOT NULL DEFAULT '/',video_id TEXT NOT NULL DEFAULT '',
     referrer_host TEXT NOT NULL DEFAULT 'direct',country TEXT NOT NULL DEFAULT '',city TEXT NOT NULL DEFAULT '',device TEXT NOT NULL DEFAULT '',browser TEXT NOT NULL DEFAULT '',properties JSONB NOT NULL DEFAULT '{}'::jsonb)`);
 }
-
-function libraryTitles(raw:unknown){
+function libraryMeta(raw:unknown){
   const titles:Record<string,string>={};
+  const videoMeta:Record<string,{title:string;originalTitle:string;speakerName:string}>={};
   try{
-    const parsed=JSON.parse(String(raw||"")) as {videos?:Array<{id?:unknown;title?:unknown;originalTitle?:unknown}>};
+    const parsed=JSON.parse(String(raw||"")) as {videos?:Array<{id?:unknown;title?:unknown;originalTitle?:unknown;speakerName?:unknown}>};
     for(const video of parsed.videos||[]){
       const id=String(video.id||"");
-      const title=String(video.title||video.originalTitle||"").trim();
-      if(id&&title)titles[id]=title;
+      if(!id)continue;
+      const title=String(video.title||video.originalTitle||id).trim();
+      const originalTitle=String(video.originalTitle||"").trim();
+      const speakerName=String(video.speakerName||"").trim();
+      titles[id]=title;
+      videoMeta[id]={title,originalTitle,speakerName};
     }
   }catch{}
-  return titles;
+  return {titles,videoMeta};
 }
 
 export async function GET(request:Request){
   if(!await isAdmin(request))return NextResponse.json({error:"unauthorized"},{status:401});
   try{
     await ensureTable();
-    const url=new URL(request.url);const rawDays=Number(url.searchParams.get("days")||7);const days=[1,7,30,90].includes(rawDays)?rawDays:7;
+    const url=new URL(request.url);
+    const rawDays=Number(url.searchParams.get("days")||7);
+    const days=[1,7,30,90].includes(rawDays)?rawDays:7;
     const db=database();
+
     const results=await Promise.all([
       db.query(`SELECT COUNT(DISTINCT session_id)::int AS sessions,
         COUNT(*) FILTER (WHERE event_name='page_view')::int AS page_views,
@@ -56,18 +68,55 @@ export async function GET(request:Request){
         MAX(created_at) AS latest_event,
         COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '15 minutes')::int AS recent_events
         FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval`,[days]),
-      db.query(`SELECT video_id,COUNT(*) FILTER (WHERE event_name='video_open')::int AS opens,
+
+      db.query(`SELECT video_id,
+        COUNT(*) FILTER (WHERE event_name='video_open')::int AS views,
         COUNT(DISTINCT session_id)::int AS sessions,
-        COALESCE(SUM((properties->>'seconds')::numeric) FILTER (WHERE event_name='video_watch'),0)::float AS watch_seconds
-        FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval AND video_id<>'' GROUP BY video_id ORDER BY opens DESC,watch_seconds DESC LIMIT 16`,[days]),
-      db.query(`SELECT path AS name,COUNT(*) FILTER (WHERE event_name='page_view')::int AS views,COUNT(DISTINCT session_id)::int AS sessions
-        FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval GROUP BY path ORDER BY views DESC,sessions DESC LIMIT 16`,[days]),
-      db.query(`SELECT referrer_host AS name,COUNT(DISTINCT session_id)::int AS sessions FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval AND event_name='page_view' GROUP BY referrer_host ORDER BY sessions DESC LIMIT 16`,[days]),
-      db.query(`SELECT COALESCE(NULLIF(country,''),'Unknown') AS name,COUNT(DISTINCT session_id)::int AS sessions FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval GROUP BY country ORDER BY sessions DESC LIMIT 16`,[days]),
-      db.query(`SELECT COALESCE(NULLIF(city,''),'Unknown') AS name,COALESCE(NULLIF(country,''),'') AS country,COUNT(DISTINCT session_id)::int AS sessions FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval GROUP BY city,country ORDER BY sessions DESC LIMIT 16`,[days]),
-      db.query(`SELECT COALESCE(NULLIF(device,''),'Other') AS name,COUNT(DISTINCT session_id)::int AS sessions FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval GROUP BY device ORDER BY sessions DESC LIMIT 16`,[days]),
-      db.query(`SELECT COALESCE(NULLIF(browser,''),'Other') AS name,COUNT(DISTINCT session_id)::int AS sessions FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval GROUP BY browser ORDER BY sessions DESC LIMIT 16`,[days]),
-      db.query(`SELECT event_name AS name,COUNT(*)::int AS count FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval GROUP BY event_name ORDER BY count DESC LIMIT 24`,[days]),
+        COALESCE(SUM((properties->>'seconds')::numeric) FILTER (WHERE event_name='video_watch'),0)::float AS watch_seconds,
+        MAX(created_at) AS last_seen
+        FROM analytics_events
+        WHERE created_at >= NOW() - ($1 || ' days')::interval AND video_id<>''
+        GROUP BY video_id
+        ORDER BY views DESC,watch_seconds DESC
+        LIMIT 40`,[days]),
+
+      db.query(`SELECT path AS name,
+        COUNT(*) FILTER (WHERE event_name='page_view')::int AS views,
+        COUNT(DISTINCT session_id)::int AS sessions
+        FROM analytics_events
+        WHERE created_at >= NOW() - ($1 || ' days')::interval
+        GROUP BY path ORDER BY views DESC,sessions DESC LIMIT 30`,[days]),
+
+      db.query(`SELECT referrer_host AS name,COUNT(DISTINCT session_id)::int AS sessions
+        FROM analytics_events
+        WHERE created_at >= NOW() - ($1 || ' days')::interval AND event_name='page_view'
+        GROUP BY referrer_host ORDER BY sessions DESC LIMIT 20`,[days]),
+
+      db.query(`SELECT COALESCE(NULLIF(country,''),'Unknown') AS name,
+        COUNT(DISTINCT session_id)::int AS sessions,
+        COUNT(DISTINCT session_id) FILTER (WHERE properties->>'geoCountrySource'='vercel-edge')::int AS confirmed_sessions
+        FROM analytics_events
+        WHERE created_at >= NOW() - ($1 || ' days')::interval
+        GROUP BY country ORDER BY sessions DESC LIMIT 20`,[days]),
+
+      db.query(`SELECT COALESCE(NULLIF(city,''),'Unknown') AS name,COALESCE(NULLIF(country,''),'') AS country,
+        COUNT(DISTINCT session_id)::int AS sessions
+        FROM analytics_events
+        WHERE created_at >= NOW() - ($1 || ' days')::interval
+        GROUP BY city,country ORDER BY sessions DESC LIMIT 20`,[days]),
+
+      db.query(`SELECT COALESCE(NULLIF(device,''),'Other') AS name,COUNT(DISTINCT session_id)::int AS sessions
+        FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval
+        GROUP BY device ORDER BY sessions DESC LIMIT 20`,[days]),
+
+      db.query(`SELECT COALESCE(NULLIF(browser,''),'Other') AS name,COUNT(DISTINCT session_id)::int AS sessions
+        FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval
+        GROUP BY browser ORDER BY sessions DESC LIMIT 20`,[days]),
+
+      db.query(`SELECT event_name AS name,COUNT(*)::int AS count
+        FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval
+        GROUP BY event_name ORDER BY count DESC LIMIT 30`,[days]),
+
       db.query(`SELECT session_id,MIN(created_at) AS first_seen,MAX(created_at) AS last_seen,
         COALESCE(MAX(NULLIF(country,'')),'') AS country,COALESCE(MAX(NULLIF(city,'')),'') AS city,
         COALESCE(MAX(NULLIF(device,'')),'') AS device,COALESCE(MAX(NULLIF(browser,'')),'') AS browser,
@@ -77,15 +126,37 @@ export async function GET(request:Request){
         COUNT(*) FILTER (WHERE event_name='video_open')::int AS video_opens,
         COALESCE(SUM((properties->>'seconds')::numeric) FILTER (WHERE event_name='video_watch'),0)::float AS watch_seconds,
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF(video_id,'')),NULL) AS videos,
-        ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF(path,'')),NULL) AS paths
-        FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval
-        GROUP BY session_id ORDER BY last_seen DESC LIMIT 60`,[days]),
-      db.query(`SELECT created_at,session_id,event_name,path,video_id,referrer_host,country,city,device,browser,properties FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval ORDER BY created_at DESC LIMIT 120`,[days]),
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF(path,'')),NULL) AS paths,
+        BOOL_OR(properties->>'geoCountrySource'='vercel-edge') AS country_confirmed
+        FROM analytics_events
+        WHERE created_at >= NOW() - ($1 || ' days')::interval
+        GROUP BY session_id ORDER BY last_seen DESC LIMIT 100`,[days]),
+
+      db.query(`SELECT session_id,video_id,
+        COUNT(*) FILTER (WHERE event_name='video_open')::int AS views,
+        COALESCE(SUM((properties->>'seconds')::numeric) FILTER (WHERE event_name='video_watch'),0)::float AS watch_seconds,
+        MAX(created_at) AS last_seen
+        FROM analytics_events
+        WHERE created_at >= NOW() - ($1 || ' days')::interval AND video_id<>''
+        GROUP BY session_id,video_id
+        ORDER BY last_seen DESC LIMIT 500`,[days]),
+
+      db.query(`SELECT created_at,session_id,event_name,path,video_id,referrer_host,country,city,device,browser,properties
+        FROM analytics_events
+        WHERE created_at >= NOW() - ($1 || ' days')::interval
+        ORDER BY created_at DESC LIMIT 180`,[days]),
+
       db.query(`SELECT value FROM app_state WHERE key=$1 LIMIT 1`,[SHARED_LIBRARY_KEY])
     ]);
-    const [summaryRows,topVideos,topPages,sources,countries,cities,devices,browsers,events,visitors,recent,libraryRows]=results.map(result=>result as Row[]);
-    const videoTitles=libraryTitles(libraryRows[0]?.value);
-    return NextResponse.json({days,summary:summaryRows[0]||{},topVideos,topPages,sources,countries,cities,devices,browsers,events,visitors,recent,videoTitles});
+
+    const [summaryRows,topVideos,topPages,sources,countries,cities,devices,browsers,events,visitors,visitorVideoStats,recent,libraryRows]=results.map(result=>result as Row[]);
+    const {titles:videoTitles,videoMeta}=libraryMeta(libraryRows[0]?.value);
+    return NextResponse.json({
+      days,
+      summary:summaryRows[0]||{},
+      topVideos,topPages,sources,countries,cities,devices,browsers,events,visitors,visitorVideoStats,recent,
+      videoTitles,videoMeta,
+    },{headers:{"Cache-Control":"private, no-store"}});
   }catch(error){
     console.error("analytics report failed",error);
     return NextResponse.json({error:"report_failed"},{status:500});

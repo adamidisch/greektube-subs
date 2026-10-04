@@ -92,6 +92,7 @@ export async function POST(request:Request){
     if(!incoming.length)return NextResponse.json({ok:true,accepted:0});
     await ensureTable();
     const ua=request.headers.get("user-agent")||"";
+    const edgeCountry=text(request.headers.get("x-vercel-ip-country"),8).toUpperCase();
     const city=cityFromRequest(request);
     const device=deviceFromUA(ua);
     const browser=browserFromUA(ua);
@@ -106,10 +107,15 @@ export async function POST(request:Request){
       const videoId=/^[A-Za-z0-9_-]{11}$/.test(text(event.videoId,32))?text(event.videoId,32):"";
       const clientTs=typeof event.ts==="number"&&Number.isFinite(event.ts)?new Date(event.ts).toISOString():null;
       const country=countryFromEvent(event,request);
+      const properties={
+        ...safeProps(event.properties),
+        geoCountrySource:edgeCountry?"vercel-edge":"timezone-fallback",
+        geoCitySource:city?"vercel-edge":"unknown",
+      };
       await db.query(
         `INSERT INTO analytics_events (client_ts,session_id,event_name,path,video_id,referrer_host,country,city,device,browser,properties)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)`,
-        [clientTs,sessionId,name,path,videoId,referrerHost(event.referrer),country,city,device,browser,JSON.stringify(safeProps(event.properties))]
+        [clientTs,sessionId,name,path,videoId,referrerHost(event.referrer),country,city,device,browser,JSON.stringify(properties)]
       );
       accepted+=1;
     }
