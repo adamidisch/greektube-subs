@@ -80,12 +80,20 @@ export async function GET(request:Request){
         ORDER BY views DESC,watch_seconds DESC
         LIMIT 40`,[days]),
 
-      db.query(`SELECT path AS name,
+      db.query(`SELECT canonical_path AS name,
         COUNT(*) FILTER (WHERE event_name='page_view')::int AS views,
-        COUNT(DISTINCT session_id)::int AS sessions
-        FROM analytics_events
-        WHERE created_at >= NOW() - ($1 || ' days')::interval
-        GROUP BY path ORDER BY views DESC,sessions DESC LIMIT 30`,[days]),
+        COUNT(DISTINCT session_id)::int AS sessions,
+        MIN(created_at) AS first_seen,
+        MAX(created_at) AS last_seen
+        FROM (
+          SELECT CASE
+            WHEN path LIKE '/?video=%' THEN '/?video=' || split_part(split_part(path,'video=',2),'&',1)
+            ELSE split_part(path,'?',1)
+          END AS canonical_path,event_name,session_id,created_at
+          FROM analytics_events
+          WHERE created_at >= NOW() - ($1 || ' days')::interval
+        ) page_events
+        GROUP BY canonical_path ORDER BY views DESC,sessions DESC LIMIT 40`,[days]),
 
       db.query(`SELECT referrer_host AS name,COUNT(DISTINCT session_id)::int AS sessions
         FROM analytics_events
