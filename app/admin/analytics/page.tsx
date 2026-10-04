@@ -16,6 +16,7 @@ type RecentEvent={created_at:string;session_id:string;event_name:string;path:str
 type VideoMeta={title:string;originalTitle:string;speakerName:string};
 type Report={days:number;summary:Summary;topVideos:TopVideo[];topPages:TopPage[];sources:CountRow[];countries:CountRow[];cities:CityRow[];devices:CountRow[];browsers:CountRow[];events:EventRow[];visitors:Visitor[];visitorVideoStats:VisitorVideoStat[];recent:RecentEvent[];videoTitles:Record<string,string>;videoMeta:Record<string,VideoMeta>};
 type AuthState="checking"|"yes"|"no";
+type DrawerState={kind:"visitors"|"pages"|"videos"|"watch"|"unique"}|{kind:"visitor";visitor:Visitor}|null;
 
 function formatDuration(value:number){
   const total=Math.max(0,Math.round(Number(value)||0));
