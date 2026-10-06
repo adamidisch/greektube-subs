@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {database} from "@/db/postgres";
+import crypto from "node:crypto";
 
 const MAX_BATCH=30;
 const ALLOWED_EVENTS=new Set([
@@ -62,6 +63,49 @@ function cityFromRequest(request:Request){
   if(!raw)return "";
   try{return decodeURIComponent(raw).slice(0,80);}catch{return raw.slice(0,80);}
 }
+
+type PlatformEvent={
+  event_name:string;
+  session_id:string;
+  path:string;
+  entity_type:string;
+  entity_id:string;
+  referrer_host:string;
+  country:string;
+  city:string;
+  device:string;
+  browser:string;
+  client_ts:number;
+  properties:Record<string,string|number|boolean|null>;
+};
+
+async function forwardToPlatform(events:PlatformEvent[]){
+  const base=(process.env.PLATFORM_ANALYTICS_URL||"").trim().replace(/\/$/,"");
+  const appId=(process.env.PLATFORM_ANALYTICS_APP_ID||"").trim();
+  const secret=(process.env.PLATFORM_ANALYTICS_APP_SECRET||"").trim();
+  if(!base||!appId||secret.length<32||!events.length)return;
+  const now=Math.floor(Date.now()/1000);
+  const envelope={v:1,issued_at:now,expires_at:now+60,app:{id:appId},request:{events}};
+  const body=Buffer.from(JSON.stringify(envelope),"utf8").toString("base64");
+  const signature=crypto.createHmac("sha256",secret).update(body).digest("hex");
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),2500);
+  try{
+    const response=await fetch(base+"/api/analytics",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({body,signature}),
+      signal:controller.signal,
+      cache:"no-store",
+    });
+    if(!response.ok)console.warn("[analytics] platform forward failed",response.status);
+  }catch(error){
+    if((error as Error)?.name!=="AbortError")console.warn("[analytics] platform forward unavailable");
+  }finally{
+    clearTimeout(timeout);
+  }
+}
+
 async function ensureTable(){
   const db=database();
   await db.query(`CREATE TABLE IF NOT EXISTS analytics_events (
@@ -98,6 +142,7 @@ export async function POST(request:Request){
     const browser=browserFromUA(ua);
     const db=database();
     let accepted=0;
+    const platformEvents:PlatformEvent[]=[];
     for(const raw of incoming){
       const event=raw as AnalyticsEvent;
       const sessionId=text(event.sessionId,80);
@@ -112,14 +157,30 @@ export async function POST(request:Request){
         geoCountrySource:edgeCountry?"vercel-edge":"timezone-fallback",
         geoCitySource:city?"vercel-edge":"unknown",
       };
+      const source=referrerHost(event.referrer);
       await db.query(
         `INSERT INTO analytics_events (client_ts,session_id,event_name,path,video_id,referrer_host,country,city,device,browser,properties)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)`,
-        [clientTs,sessionId,name,path,videoId,referrerHost(event.referrer),country,city,device,browser,JSON.stringify(properties)]
+        [clientTs,sessionId,name,path,videoId,source,country,city,device,browser,JSON.stringify(properties)]
       );
+      platformEvents.push({
+        event_name:name,
+        session_id:sessionId,
+        path,
+        entity_type:videoId?"video":"",
+        entity_id:videoId,
+        referrer_host:source,
+        country,
+        city,
+        device,
+        browser,
+        client_ts:typeof event.ts==="number"&&Number.isFinite(event.ts)?event.ts:Date.now(),
+        properties:{...safeProps(event.properties),source_app:"greektube"},
+      });
       accepted+=1;
     }
-    return NextResponse.json({ok:true,accepted});
+    if(platformEvents.length)await forwardToPlatform(platformEvents);
+    return NextResponse.json({ok:true,accepted,shared:platformEvents.length});
   }catch{
     return NextResponse.json({ok:false},{status:400});
   }
