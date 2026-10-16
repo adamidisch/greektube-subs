@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { get, put } from "@vercel/blob";
+import { get, list, put } from "@vercel/blob";
 import { database } from "@/db/postgres";
 import {
   completeTranscript,
@@ -221,7 +221,14 @@ async function writeJson(pathname: string, payload: unknown) {
 }
 
 async function readJson(pathname: string) {
-  const blob = await get(pathname, { access: "public" });
+  // Blob reads require the object URL in some deployments. Resolve by pathname
+  // when direct lookup is unavailable, while keeping the stored manifest stable.
+  let blob = await get(pathname, { access: "public" }).catch(() => null);
+  if (!blob?.stream) {
+    const listed = await list({ prefix: pathname, limit: 2 });
+    const match = listed.blobs.find(item => item.pathname === pathname);
+    blob = match ? await get(match.url, { access: "public" }).catch(() => null) : null;
+  }
   if (!blob?.stream) return null;
   return await new Response(blob.stream).json() as unknown;
 }
