@@ -1,5 +1,7 @@
 "use client";
 
+import OwnerSourceImportPanel from "./OwnerSourceImportPanel";
+
 import { useEffect, useRef, useState } from "react";
 
 type Validation = {
@@ -156,6 +158,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
     </>}
 
     {message && <div className="gts-owner-message" role="status">{message}</div>}
+    <OwnerSourceImportPanel videoId={videoId} onPublished={() => { void refresh(); }} />
     <style>{styles}</style>
   </section>;
 }
