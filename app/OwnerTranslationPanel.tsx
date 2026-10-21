@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 type Validation = {
   ok: boolean;
+  displayAudit?: {readable:boolean;fastPages:number;shortPages:number};
   cueCount: number;
   expectedCueCount: number;
   timestampMismatches: number;
@@ -102,7 +103,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
       if (result.validation) setValidation(result.validation);
       if (result.manifest) setManifest(result.manifest);
       if (!response.ok) throw new Error(result.error || "Το SRT δεν πέρασε validation.");
-      setMessage("Το ελληνικό SRT πέρασε όλα τα strict checks.");
+      setMessage(result.validation?.displayAudit?.readable?"Η δομή και η αναγνωσιμότητα του SRT ελέγχθηκαν. Ο συγχρονισμός με τον ήχο χρειάζεται ξεχωριστή επιβεβαίωση.":"Το SRT πέρασε τον έλεγχο δομής. Χρειάζεται επιμέλεια αναγνωσιμότητας πριν από τη δημοσίευση.");
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Το SRT δεν πέρασε validation.");
@@ -152,7 +153,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
           <div><span>Extra cues</span><b>{check.extraCues}</b></div>
           <div><span>Duplicate cues</span><b>{check.duplicateCues}</b></div>
           <div><span>Numeric mismatches</span><b>{check.numericMismatches}</b></div>
-          <div><span>Empty cues</span><b>{check.emptyCues}</b></div>
+          <div><span>Empty cues</span><b>{check.emptyCues}</b></div><div><span>Display readability</span><b>{check.displayAudit?.readable?"✓":`${check.displayAudit?.fastPages??"—"} for review`}</b></div>
         </div>;
       })()}
     </>}

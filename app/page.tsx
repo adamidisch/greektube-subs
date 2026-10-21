@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { database } from "@/db/postgres";
 import NavigationAwareGreekTubePlayer from "./NavigationAwareGreekTubePlayer";
 import GreekTubePlayer from "./GreekTubePlayer";
-import TranscriptPerformanceEnhancer from "./TranscriptPerformanceEnhancer";
 import CueEditEnhancer from "./CueEditEnhancer";
 import ThemeToggleEnhancer from "./ThemeToggleEnhancer";
 import NavigationUXEnhancer from "./NavigationUXEnhancer";
@@ -139,7 +138,6 @@ export default async function Home({
   return (
     <>
       <NavigationAwareGreekTubePlayer />
-      <TranscriptPerformanceEnhancer />
       <CueEditEnhancer />
       <ThemeToggleEnhancer />
       <NavigationUXEnhancer />

@@ -11,6 +11,8 @@ import {
 import { publishTranscript, publishTranscriptCheckpoint, readPublishedTranscript, readTranscriptCheckpoint } from "../transcript-blob";
 import { numberTokensMatch } from "../captions/numeric-integrity";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "../manual-captions/parser";
+import { requireReadableImport } from "../subtitle-track-store";
+import { legacySubtitleTrack, type SubtitleAudit } from "@/app/subtitle-track";
 
 export type OwnerTranslationStatus = "frozen" | "validated" | "publishing" | "published";
 
@@ -48,6 +50,7 @@ export type OwnerValidation = {
   greekRatio: number;
   sourceHash: string;
   timestampHash: string;
+  displayAudit?: SubtitleAudit;
 };
 
 type ManifestRow = {
@@ -396,6 +399,7 @@ export async function validateOwnerGreek(videoId: string, subtitleText: string) 
     greekRatio: ratio,
     sourceHash: manifest.sourceHash,
     timestampHash: manifest.timestampHash,
+    displayAudit: legacySubtitleTrack(cues).audit,
   };
   if (!validation.ok) return { manifest, validation };
 
@@ -607,6 +611,7 @@ export async function publishOwnerTranslation(videoId: string) {
 
   const english = await readSource(manifest);
   const greek = await readDraft(manifest);
+  await requireReadableImport(videoId,english,greek);
   const existing = await getTranscript(videoId);
   if (!existing) throw new Error("Το transcript record δεν υπάρχει.");
 

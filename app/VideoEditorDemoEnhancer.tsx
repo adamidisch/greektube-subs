@@ -1,8 +1,12 @@
 "use client";
+import {tr,useAppLanguage} from "./app-language";
 
 import {useEffect,useMemo,useRef,useState,type CSSProperties} from "react";
 import {createPortal} from "react-dom";
 import OwnerTranslationPanel from "./OwnerTranslationPanel";
+import SubtitleQualityPanel from "./SubtitleQualityPanel";
+import {displaySubtitleTrack,subtitleEventAt,type SubtitleTrack} from "./subtitle-track";
+import {subtitleLines} from "./subtitle-display";
 import {activeSkipTarget,formatSkipTimecode,normalizeSkipRanges,parseSkipTimecode,SKIP_RANGES_UPDATED_EVENT,VIDEO_EDITOR_SAVED_EVENT,validateSkipRanges,type SkipRange} from "./skip-ranges";
 import {editorExportStem} from "./editor-export-filename";
 
@@ -12,11 +16,11 @@ type EditorVideo={
 };
 type MetadataDraft={title:string;originalTitle:string;speakerName:string;speakerRole:string;channel:string;channelUrl:string;originalVideoUrl:string;category:string;tags:string[];description:string};
 type Cue={start:number;duration:number;text:string};
-type EditorCaptions={videoId:string;cues:Cue[];duration?:number;transcriptVersion?:number};
+type EditorCaptions={videoId:string;cues:Cue[];duration?:number;transcriptVersion?:number;subtitleTrack?:SubtitleTrack};
 type PlayerLike={destroy:()=>void;playVideo:()=>void;pauseVideo:()=>void;getPlayerState:()=>number;getCurrentTime:()=>number;getDuration:()=>number;seekTo:(seconds:number,allow:boolean)=>void;unloadModule?:(module:string)=>void};
 
 const CATEGORIES=[
-  ["Medical","Ιατρικά"],["Tech","Τεχνολογία"],["Podcasts","Συζητήσεις"],["Comedy","Κωμωδία"],["Education","Εκπαίδευση"],["Documentaries","Ντοκιμαντέρ"],["Other","Άλλα"],
+  ["Medical",tr("Ιατρικά")],["Tech",tr("Τεχνολογία")],["Podcasts",tr("Συζητήσεις")],["Comedy",tr("Κωμωδία")],["Education",tr("Εκπαίδευση")],["Documentaries",tr("Ντοκιμαντέρ")],["Other",tr("Άλλα")],
 ] as const;
 
 function clock(seconds:number,precise=false){
@@ -28,24 +32,6 @@ function metadataFrom(video:EditorVideo):MetadataDraft{
   return {title:video.title||"",originalTitle:video.originalTitle||"",speakerName:video.speakerName||"",speakerRole:video.speakerRole||"",channel:video.channel||"",channelUrl:video.channelUrl||"",originalVideoUrl:video.originalVideoUrl||video.url||`https://www.youtube.com/watch?v=${video.id}`,category:video.category||"Other",tags:Array.isArray(video.tags)?video.tags:[],description:video.description||""};
 }
 function snapshotOf(metadata:MetadataDraft,ranges:SkipRange[]){return JSON.stringify({metadata,ranges});}
-function cueIsActive(cue:Cue|undefined,time:number){return Boolean(cue&&Number.isFinite(time)&&Number.isFinite(cue.start)&&Number.isFinite(cue.duration)&&cue.duration>0&&time>=cue.start&&time<cue.start+cue.duration);}
-function activeCueIndex(cues:Cue[],time:number){let result=-1;let latestStart=-Infinity;for(let index=0;index<cues.length;index+=1){const cue=cues[index];if(cueIsActive(cue,time)&&cue.start>=latestStart){result=index;latestStart=cue.start;}}return result;}
-function subtitleFrames(text:string,maxLineCharacters=42){
-  const clean=text.replace(/\s+/g," ").trim();if(!clean)return [];
-  const lines:string[]=[];let line="";
-  for(const word of clean.split(" ")){const next=line?`${line} ${word}`:word;if(line&&next.length>maxLineCharacters){lines.push(line);line=word;}else line=next;}
-  if(line)lines.push(line);
-  return lines.flatMap((_,index)=>index%2===0?[lines.slice(index,index+2).join("\n")]:[]);
-}
-function subtitleWindow(cue:Cue|undefined,currentTime:number,nextCue?:Cue){
-  if(!cue||!cueIsActive(cue,currentTime))return "";const frames=subtitleFrames(cue.text);if(frames.length<=1)return frames[0]||"";
-  const boundary=nextCue&&nextCue.start>cue.start?nextCue.start-cue.start:cue.duration;
-  const duration=Math.max(.1,Math.min(cue.duration,boundary));const elapsed=Math.max(0,Math.min(duration-.001,currentTime-cue.start));
-  const minReadable=duration>=frames.length*1.35?1.35:duration/frames.length;const remaining=Math.max(0,duration-minReadable*frames.length);
-  const weights=frames.map(frame=>Math.max(1,frame.replace(/\s/g,"").length));const total=weights.reduce((sum,weight)=>sum+weight,0)||1;let end=0;
-  for(let index=0;index<frames.length;index+=1){end+=minReadable+(remaining*weights[index]/total);if(elapsed<end||index===frames.length-1)return frames[index];}
-  return frames[frames.length-1];
-}
 function isVerifiedGreekCaptions(data:EditorCaptions|null|undefined,duration=0){
   if(!data?.cues?.length||data.transcriptVersion!==12)return false;
   let latestStart=-Infinity;
@@ -95,7 +81,6 @@ function EditableField({label,value,onCommit,multiline,type,options}:{label:stri
   const [editing,setEditing]=useState(false);
   const [draft,setDraft]=useState(value);
   const editOrigin=useRef(value);
-  useEffect(()=>{if(!editing)setDraft(value);},[value,editing]);
   function beginEdit(){editOrigin.current=value;setDraft(value);setEditing(true);}
   function updateDraft(next:string){setDraft(next);onCommit(next);}
   function commit(){onCommit(draft);setEditing(false);}
@@ -124,6 +109,7 @@ function EditableField({label,value,onCommit,multiline,type,options}:{label:stri
   );
 }
 export default function VideoEditorDemoEnhancer(){
+  useAppLanguage();
   const [open,setOpen]=useState(false);
   const [authRequired,setAuthRequired]=useState(false);
   const [pendingId,setPendingId]=useState("");
@@ -155,17 +141,18 @@ export default function VideoEditorDemoEnhancer(){
   const captionsAbortController=useRef<AbortController|null>(null);
   const currentEditorVideoId=useRef("");
   const origin=useRef<{videoId:string;time:number}>({videoId:"",time:0});
+  const subtitleReviewDirty=useRef(false);
 
   const validationErrors=useMemo(()=>{
     const errors:string[]=[];
-    if(metadata&&!metadata.title.trim())errors.push("Ο ελληνικός τίτλος είναι υποχρεωτικός.");
+    if(metadata&&!metadata.title.trim())errors.push(tr("Ο ελληνικός τίτλος είναι υποχρεωτικός."));
     errors.push(...validateSkipRanges(ranges,duration).errors);
     if(Object.values(timecodeDrafts).some(value=>parseSkipTimecode(value)===null))errors.push("Υπάρχει μη έγκυρο timecode. Χρησιμοποίησε MM:SS.d ή δευτερόλεπτα.");
     return errors;
   },[metadata,ranges,duration,timecodeDrafts]);
   const dirty=Boolean(metadata&&snapshotOf(metadata,ranges)!==initialSnapshot);
   const totalSkipped=useMemo(()=>ranges.reduce((sum,item)=>sum+Math.max(0,item.end-item.start),0),[ranges]);
-  const activeCaption=useMemo(()=>captions?activeCueIndex(captions.cues,current):-1,[captions,current]);
+  const displayTrack=useMemo(()=>displaySubtitleTrack(captions?.cues||[],captions?.subtitleTrack),[captions]);
 
   async function loadEditor(videoId:string){
     captionsAbortController.current?.abort();
@@ -180,7 +167,7 @@ export default function VideoEditorDemoEnhancer(){
     try{
       const response=await fetch(`/api/video-editor?videoId=${encodeURIComponent(videoId)}`,{cache:"no-store",credentials:"same-origin"});
       const result=await response.json() as {video?:EditorVideo;error?:string};
-      if(!response.ok||!result.video)throw new Error(result.error||"Το βίντεο δεν φορτώθηκε.");
+      if(!response.ok||!result.video)throw new Error(result.error||tr("Το βίντεο δεν φορτώθηκε."));
       const editorVideo=result.video;
       if(requestSequence!==captionsRequestSequence.current||currentEditorVideoId.current!==videoId)return;
       const nextMetadata=metadataFrom(editorVideo),nextRanges=normalizeSkipRanges(editorVideo.skipRanges);
@@ -201,7 +188,7 @@ export default function VideoEditorDemoEnhancer(){
           if(captionsAbortController.current===controller)captionsAbortController.current=null;
         }
       })();
-    }catch(problem){if(requestSequence===captionsRequestSequence.current&&currentEditorVideoId.current===videoId)setStatus(problem instanceof Error?problem.message:"Το βίντεο δεν φορτώθηκε.");}
+    }catch(problem){if(requestSequence===captionsRequestSequence.current&&currentEditorVideoId.current===videoId)setStatus(problem instanceof Error?problem.message:tr("Το βίντεο δεν φορτώθηκε."));}
     finally{if(requestSequence===captionsRequestSequence.current&&currentEditorVideoId.current===videoId)setLoading(false);}
   }
   async function requestEditor(videoId:string){
@@ -218,9 +205,9 @@ export default function VideoEditorDemoEnhancer(){
     try{
       const response=await fetch("/api/admin-auth",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({password})});
       const result=await response.json().catch(()=>({})) as {authorized?:boolean;error?:string};
-      if(!response.ok||!result.authorized){setAuthError(result.error||"Ο κωδικός δεν είναι σωστός.");return;}
+      if(!response.ok||!result.authorized){setAuthError(result.error||tr("Ο κωδικός δεν είναι σωστός."));return;}
       setPassword("");await loadEditor(pendingId);
-    }catch{setAuthError("Δεν ήταν δυνατός ο έλεγχος του κωδικού.");}
+    }catch{setAuthError(tr("Δεν ήταν δυνατός ο έλεγχος του κωδικού."));}
   }
 
   useEffect(()=>{
@@ -290,7 +277,7 @@ export default function VideoEditorDemoEnhancer(){
         onApiChange:({target}:{target:PlayerLike})=>{if(captionReadyPlayer.current===target)suppressNativeCaptions(target);},
         onStateChange:({target,data}:{target:PlayerLike;data:number})=>{setPlaying(data===1);if(captionReadyPlayer.current===target)suppressNativeCaptions(target);restoreKeyboardFocus();},
       }});
-    }).catch(()=>{setPlayerVisualReady(false);setStatus("Δεν ήταν δυνατή η φόρτωση του YouTube player.");});
+    }).catch(()=>{setPlayerVisualReady(false);setStatus(tr("Δεν ήταν δυνατή η φόρτωση του YouTube player."));});
     return()=>{cancelled=true;captionReadyPlayer.current=null;player.current?.destroy();player.current=null;};
   },[open,video?.id,authRequired]);
 
@@ -313,7 +300,7 @@ export default function VideoEditorDemoEnhancer(){
   },[open,video?.id,authRequired,previewIndex,ranges,duration]);
 
   function closeEditor(){
-    if(dirty&&!window.confirm("Υπάρχουν μη αποθηκευμένες αλλαγές. Θέλεις να φύγεις χωρίς αποθήκευση;"))return;
+    if((dirty||subtitleReviewDirty.current)&&!window.confirm(tr("Υπάρχουν μη αποθηκευμένες αλλαγές. Θέλεις να φύγεις χωρίς αποθήκευση;")))return;
     if(video&&origin.current.videoId===video.id){
       nativeSeek(current);
       const params=new URLSearchParams(location.search);params.set("video",video.id);params.set("t",Math.max(0,current).toFixed(1));history.replaceState(null,"",`/?${params.toString()}`);
@@ -369,16 +356,16 @@ export default function VideoEditorDemoEnhancer(){
   }
   async function save(){
     if(!video||!metadata||validationErrors.length||saveBusy)return;
-    setSaveBusy(true);setStatus("Αποθήκευση metadata και markers…");
+    setSaveBusy(true);setStatus(tr("Αποθήκευση metadata και markers…"));
     try{
       const response=await fetch("/api/video-editor",{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({videoId:video.id,metadataVersion:Number(video.metadataVersion||0),metadata,skipRanges:ranges})});
       const result=await response.json() as {ok?:boolean;video?:EditorVideo;error?:string};
-      if(!response.ok||!result.ok||!result.video)throw new Error(result.error||"Η αποθήκευση απέτυχε.");
+      if(!response.ok||!result.ok||!result.video)throw new Error(result.error||tr("Η αποθήκευση απέτυχε."));
       const nextMetadata=metadataFrom(result.video),nextRanges=normalizeSkipRanges(result.video.skipRanges);
-      setVideo(result.video);setMetadata(nextMetadata);setRanges(nextRanges);setTimecodeDrafts({});setInitialSnapshot(snapshotOf(nextMetadata,nextRanges));setStatus("Όλες οι αλλαγές αποθηκεύτηκαν και συγχρονίστηκαν με τον player.");
+      setVideo(result.video);setMetadata(nextMetadata);setRanges(nextRanges);setTimecodeDrafts({});setInitialSnapshot(snapshotOf(nextMetadata,nextRanges));setStatus(tr("Όλες οι αλλαγές αποθηκεύτηκαν και συγχρονίστηκαν με τον player."));
       window.dispatchEvent(new CustomEvent(VIDEO_EDITOR_SAVED_EVENT,{detail:{video:result.video}}));
       window.dispatchEvent(new CustomEvent(SKIP_RANGES_UPDATED_EVENT,{detail:{videoId:result.video.id,skipRanges:nextRanges,metadataVersion:Number(result.video.metadataVersion||0)}}));
-    }catch(problem){setStatus(problem instanceof Error?problem.message:"Η αποθήκευση απέτυχε.");}
+    }catch(problem){setStatus(problem instanceof Error?problem.message:tr("Η αποθήκευση απέτυχε."));}
     finally{setSaveBusy(false);}
   }
 
@@ -387,16 +374,16 @@ export default function VideoEditorDemoEnhancer(){
   const rulerTicks=duration>0?Array.from({length:9},(_,index)=>index/8*duration):[];
   return createPortal(<>
     <div className="gts-editor-screen" ref={keyboardTarget} tabIndex={-1}>
-      {authRequired?<section className="gts-editor-auth"><div className="gts-editor-auth-card"><span className="gts-editor-kicker">VIDEO EDITOR</span><h1>Προστατευμένη επεξεργασία</h1><p>Βάλε τον κωδικό διαχειριστή για να ανοίξει ο νέος editor.</p><form onSubmit={authorize}><input type="password" autoFocus value={password} onChange={event=>setPassword(event.target.value)} placeholder="Κωδικός πρόσβασης"/><button className="primary">Συνέχεια</button></form>{authError&&<small className="gts-editor-error">{authError}</small>}<button className="gts-editor-auth-cancel" onClick={closeEditor}>Ακύρωση</button></div></section>:<>
+      {authRequired?<section className="gts-editor-auth"><div className="gts-editor-auth-card"><span className="gts-editor-kicker">VIDEO EDITOR</span><h1>{tr("Προστατευμένη επεξεργασία")}</h1><p>{tr("Βάλε τον κωδικό διαχειριστή για να ανοίξει ο νέος editor.")}</p><form onSubmit={authorize}><input type="password" autoFocus value={password} onChange={event=>setPassword(event.target.value)} placeholder={tr("Κωδικός πρόσβασης")}/><button className="primary">{tr("Συνέχεια")}</button></form>{authError&&<small className="gts-editor-error">{authError}</small>}<button className="gts-editor-auth-cancel" onClick={closeEditor}>{tr("Ακύρωση")}</button></div></section>:<>
         <header className="gts-editor-header">
-          <button className="gts-editor-back" onClick={closeEditor}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span>Πίσω</span></button>
-          <div className="gts-editor-title"><div className="gts-editor-title-row"><span className="gts-editor-kicker">EDITOR</span><h1 title={metadata?.title||video?.title||"Επεξεργασία βίντεο"}>{metadata?.title||video?.title||"Επεξεργασία βίντεο"}</h1></div>{(metadata?.originalTitle||video?.originalTitle)&&<p title={metadata?.originalTitle||video?.originalTitle}>{metadata?.originalTitle||video?.originalTitle}</p>}</div>
-          <div className="gts-editor-save-state"><span className={dirty?"dot dirty":"dot saved"} title={dirty?"Μη αποθηκευμένες αλλαγές":"Αποθηκευμένο"} aria-label={dirty?"Μη αποθηκευμένες αλλαγές":"Αποθηκευμένο"}><i/></span><button className="primary" disabled={!dirty||validationErrors.length>0||saveBusy||loading} onClick={()=>void save()}>{saveBusy?"Αποθήκευση…":"Αποθήκευση"}</button></div>
+          <button className="gts-editor-back" onClick={closeEditor}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span>{tr("Πίσω")}</span></button>
+          <div className="gts-editor-title"><div className="gts-editor-title-row"><span className="gts-editor-kicker">EDITOR</span><h1 title={metadata?.title||video?.title||tr("Επεξεργασία βίντεο")}>{metadata?.title||video?.title||tr("Επεξεργασία βίντεο")}</h1></div>{(metadata?.originalTitle||video?.originalTitle)&&<p title={metadata?.originalTitle||video?.originalTitle}>{metadata?.originalTitle||video?.originalTitle}</p>}</div>
+          <div className="gts-editor-save-state"><span className={dirty?"dot dirty":"dot saved"} title={dirty?tr("Μη αποθηκευμένες αλλαγές"):tr("Αποθηκευμένο")} aria-label={dirty?tr("Μη αποθηκευμένες αλλαγές"):tr("Αποθηκευμένο")}><i/></span><button className="primary" disabled={!dirty||validationErrors.length>0||saveBusy||loading} onClick={()=>void save()}>{saveBusy?tr("Αποθήκευση…"):tr("Αποθήκευση")}</button></div>
         </header>
-        {loading?<div className="gts-editor-loading"><span className="gts-editor-player-spinner"/>Φόρτωση editor…</div>:video&&metadata?<main className="gts-editor-layout">
+        {loading?<div className="gts-editor-loading"><span className="gts-editor-player-spinner"/>{tr("Φόρτωση editor…")}</div>:video&&metadata?<main className="gts-editor-layout">
           <section className="gts-editor-stage">
 
-            <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ</strong></div>{captions&&activeCaption>=0&&<div className="gts-editor-subtitles" aria-live="off">{subtitleWindow(captions.cues[activeCaption],current,captions.cues[activeCaption+1]).split("\n").map((line,index)=><span key={`${activeCaption}-${index}`}>{line}</span>)}</div>}<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div></div>
+            <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>{tr("ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ")}</strong></div>{captions&&(()=>{const track=displayTrack;const index=subtitleEventAt(track.events,current);return index<0?null:<div className="gts-editor-subtitles" aria-live="off">{subtitleLines(track.events[index].text).map((line,i)=><span key={`${index}-${i}`}>{line}</span>)}</div>})()}<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div></div>
 
             <div className="gts-editor-console">
               <div className="gts-editor-timeline-wrap"><div className="gts-editor-scrub-time" style={{"--editor-seek-progress":`${duration>0?Math.max(0,Math.min(100,current/duration*100)):0}%`} as CSSProperties}><span className="gts-editor-scrub-bubble" style={{left:`${duration>0?Math.max(4,Math.min(96,current/duration*100)):0}%`}}>{clock(current,true)}</span></div>
@@ -410,34 +397,35 @@ export default function VideoEditorDemoEnhancer(){
               </div>
 
               <div className="gts-editor-console-top">
-                <div className="gts-editor-transport"><button onClick={()=>seek(current-skipStep)} aria-label={`Πίσω ${skipStep} δευτερόλεπτα`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 19 2 12l9-7v14z"/><path d="M22 19l-9-7 9-7v14z"/></svg><em>{skipStep}</em></button><button className="gts-editor-play" onClick={toggle} aria-label={playing?"Παύση":"Αναπαραγωγή"}>{playing?<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>:<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.53.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>}</button><button onClick={()=>seek(current+skipStep)} aria-label={`Μπροστά ${skipStep} δευτερόλεπτα`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m13 19 9-7-9-7v14z"/><path d="M2 19l9-7-9-7v14z"/></svg><em>{skipStep}</em></button><label className="gts-editor-step" title="Βήμα μετακίνησης"><span>±</span><select value={skipStep} onChange={event=>setSkipStep(Number(event.target.value))} aria-label="Βήμα skip σε δευτερόλεπτα">{[1,2,5,10,30].map(value=><option key={value} value={value}>{value}s</option>)}</select></label></div>
+                <div className="gts-editor-transport"><button onClick={()=>seek(current-skipStep)} aria-label={`Πίσω ${skipStep} δευτερόλεπτα`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 19 2 12l9-7v14z"/><path d="M22 19l-9-7 9-7v14z"/></svg><em>{skipStep}</em></button><button className="gts-editor-play" onClick={toggle} aria-label={playing?tr("Παύση"):tr("Αναπαραγωγή")}>{playing?<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>:<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.53.85l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>}</button><button onClick={()=>seek(current+skipStep)} aria-label={`Μπροστά ${skipStep} δευτερόλεπτα`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m13 19 9-7-9-7v14z"/><path d="M2 19l9-7-9-7v14z"/></svg><em>{skipStep}</em></button><label className="gts-editor-step" title={tr("Βήμα μετακίνησης")}><span>±</span><select value={skipStep} onChange={event=>setSkipStep(Number(event.target.value))} aria-label="Βήμα skip σε δευτερόλεπτα">{[1,2,5,10,30].map(value=><option key={value} value={value}>{value}s</option>)}</select></label></div>
                 <div className="gts-editor-readout"><strong>{clock(current,true)}</strong><span>/ {clock(duration)}</span></div>
-                <div className="gts-editor-summary"><span><b>{ranges.length}</b>SKIP RANGES</span><span><b>{clock(totalSkipped)}</b>ΣΥΝΟΛΟ</span></div>
+                <div className="gts-editor-summary"><span><b>{ranges.length}</b>SKIP RANGES</span><span><b>{clock(totalSkipped)}</b>{tr("ΣΥΝΟΛΟ")}</span></div>
               </div>
 
               <div className="gts-editor-mark-actions" data-armed={draftStart!==null?"1":"0"}>
-                <button className={`gts-mark gts-mark-a ${draftStart!==null?"done":"live"}`} onClick={markStart}><span className="gts-mark-bracket" aria-hidden="true">[</span><span className="gts-mark-body"><b>Σημείο Α · έναρξη</b><em>{draftStart!==null?clock(draftStart,true):`τώρα · ${clock(current,true)}`}</em></span><span className="gts-mark-key" aria-hidden="true">Α</span></button>
-                <button className={`gts-mark gts-mark-b ${draftStart!==null?"live":"idle"}`} onClick={markEnd}><span className="gts-mark-key" aria-hidden="true">Β</span><span className="gts-mark-body"><b>Σημείο Β · λήξη</b><em>{draftStart!==null?`κόψε ως εδώ · ${clock(current,true)}`:"όρισε πρώτα το Α"}</em></span><span className="gts-mark-bracket" aria-hidden="true">]</span></button>
+                <button className={`gts-mark gts-mark-a ${draftStart!==null?"done":"live"}`} onClick={markStart}><span className="gts-mark-bracket" aria-hidden="true">[</span><span className="gts-mark-body"><b>{tr("Σημείο Α · έναρξη")}</b><em>{draftStart!==null?clock(draftStart,true):`τώρα · ${clock(current,true)}`}</em></span><span className="gts-mark-key" aria-hidden="true">{tr("Α")}</span></button>
+                <button className={`gts-mark gts-mark-b ${draftStart!==null?"live":"idle"}`} onClick={markEnd}><span className="gts-mark-key" aria-hidden="true">{tr("Β")}</span><span className="gts-mark-body"><b>{tr("Σημείο Β · λήξη")}</b><em>{draftStart!==null?`κόψε ως εδώ · ${clock(current,true)}`:tr("όρισε πρώτα το Α")}</em></span><span className="gts-mark-bracket" aria-hidden="true">]</span></button>
               </div>
             </div>
 
             <section className="gts-editor-ranges">
-              <div className="gts-editor-section-head"><div className="gts-editor-section-title"><div><span className="gts-editor-kicker">SKIP RANGES</span><h2>Περιοχές παράλειψης</h2></div><span className="gts-editor-range-count" aria-label={`${ranges.length} περιοχές παράλειψης`} title={`${ranges.length} περιοχές παράλειψης`}><b>{ranges.length}</b></span></div><div className="gts-editor-io"><button type="button" onClick={exportJson} title="Export metadata + skip ranges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Export</button><button type="button" onClick={triggerImport} title="Import JSON ως μη αποθηκευμένες αλλαγές"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12M8 11l4 4 4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Import</button></div></div><input ref={importInput} type="file" accept="application/json,.json" onChange={importJson} style={{display:"none"}}/>
-              {ranges.length===0?<div className="gts-editor-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><p>Δεν υπάρχουν ακόμη ranges. Παίξε το βίντεο και όρισε αρχή και τέλος.</p></div>:<div className="gts-editor-range-list">{ranges.map((range,index)=>{const startKey=`${index}-start`,endKey=`${index}-end`;const startDraft=timecodeDrafts[startKey]??formatSkipTimecode(range.start),endDraft=timecodeDrafts[endKey]??formatSkipTimecode(range.end);return <article key={index} className={`${validationErrors.some(error=>error.startsWith(`Range ${index+1}:`))?"invalid":""} ${previewIndex===index?"is-previewing":""}`}><div className="gts-editor-range-index">{String(index+1).padStart(2,"0")}</div><div className="gts-editor-range-main"><strong className="gts-editor-range-timecode">{formatSkipTimecode(range.start)} <span>→</span> {formatSkipTimecode(range.end)}<em>{formatSkipTimecode(Math.max(0,range.end-range.start))}</em></strong><div className="gts-editor-range-times"><label>ΑΠΟ<input type="text" inputMode="decimal" value={startDraft} aria-invalid={parseSkipTimecode(startDraft)===null} onChange={event=>updateTimecode(index,"start",event.target.value)} onBlur={()=>commitTimecode(index,"start",range.start)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label><span>→</span><label>ΜΕΧΡΙ<input type="text" inputMode="decimal" value={endDraft} aria-invalid={parseSkipTimecode(endDraft)===null} onChange={event=>updateTimecode(index,"end",event.target.value)} onBlur={()=>commitTimecode(index,"end",range.end)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label></div><div className="gts-editor-range-actions"><button onClick={()=>preview(index)}>{previewIndex===index?"Previewing…":"Preview"}</button><button onClick={()=>seek(range.start)}>Μετάβαση</button><button className="danger" onClick={()=>deleteRange(index)}>Διαγραφή</button></div></div></article>;})}</div>}
+              <div className="gts-editor-section-head"><div className="gts-editor-section-title"><div><span className="gts-editor-kicker">SKIP RANGES</span><h2>{tr("Περιοχές παράλειψης")}</h2></div><span className="gts-editor-range-count" aria-label={`${ranges.length} περιοχές παράλειψης`} title={`${ranges.length} περιοχές παράλειψης`}><b>{ranges.length}</b></span></div><div className="gts-editor-io"><button type="button" onClick={exportJson} title="Export metadata + skip ranges"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Export</button><button type="button" onClick={triggerImport} title={tr("Import JSON ως μη αποθηκευμένες αλλαγές")}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12M8 11l4 4 4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Import</button></div></div><input ref={importInput} type="file" accept="application/json,.json" onChange={importJson} style={{display:"none"}}/>
+              {ranges.length===0?<div className="gts-editor-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><p>{tr("Δεν υπάρχουν ακόμη ranges. Παίξε το βίντεο και όρισε αρχή και τέλος.")}</p></div>:<div className="gts-editor-range-list">{ranges.map((range,index)=>{const startKey=`${index}-start`,endKey=`${index}-end`;const startDraft=timecodeDrafts[startKey]??formatSkipTimecode(range.start),endDraft=timecodeDrafts[endKey]??formatSkipTimecode(range.end);return <article key={index} className={`${validationErrors.some(error=>error.startsWith(`Range ${index+1}:`))?"invalid":""} ${previewIndex===index?"is-previewing":""}`}><div className="gts-editor-range-index">{String(index+1).padStart(2,"0")}</div><div className="gts-editor-range-main"><strong className="gts-editor-range-timecode">{formatSkipTimecode(range.start)} <span>→</span> {formatSkipTimecode(range.end)}<em>{formatSkipTimecode(Math.max(0,range.end-range.start))}</em></strong><div className="gts-editor-range-times"><label>{tr("ΑΠΟ")}<input type="text" inputMode="decimal" value={startDraft} aria-invalid={parseSkipTimecode(startDraft)===null} onChange={event=>updateTimecode(index,"start",event.target.value)} onBlur={()=>commitTimecode(index,"start",range.start)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label><span>→</span><label>{tr("ΜΕΧΡΙ")}<input type="text" inputMode="decimal" value={endDraft} aria-invalid={parseSkipTimecode(endDraft)===null} onChange={event=>updateTimecode(index,"end",event.target.value)} onBlur={()=>commitTimecode(index,"end",range.end)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur();}}/></label></div><div className="gts-editor-range-actions"><button onClick={()=>preview(index)}>{previewIndex===index?"Previewing…":"Preview"}</button><button onClick={()=>seek(range.start)}>{tr("Μετάβαση")}</button><button className="danger" onClick={()=>deleteRange(index)}>{tr("Διαγραφή")}</button></div></div></article>;})}</div>}
             </section>
 
           </section>
 
           <aside className="gts-editor-sidebar">
-            <section className="gts-editor-card"><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VIDEO INFORMATION</span><h2>Πληροφορίες βίντεο</h2></div></div>
-              <div className="gts-editor-fields"><EditableField label="Ελληνικός τίτλος" value={metadata.title} onCommit={next=>setMetadata({...metadata,title:next})}/><EditableField label="Αγγλικός τίτλος" value={metadata.originalTitle} onCommit={next=>setMetadata({...metadata,originalTitle:next})}/><div className="gts-editor-fields-row"><EditableField label="Ομιλητής" value={metadata.speakerName} onCommit={next=>setMetadata({...metadata,speakerName:next})}/><EditableField label="Ιδιότητα" value={metadata.speakerRole} onCommit={next=>setMetadata({...metadata,speakerRole:next})}/></div><div className="gts-editor-fields-row"><EditableField label="Κανάλι" value={metadata.channel} onCommit={next=>setMetadata({...metadata,channel:next})}/><EditableField label="Κατηγορία" value={metadata.category} options={CATEGORIES} onCommit={next=>setMetadata({...metadata,category:next})}/></div><EditableField label="Link καναλιού" value={metadata.channelUrl} onCommit={next=>setMetadata({...metadata,channelUrl:next})}/><EditableField label="Original video link" value={metadata.originalVideoUrl} onCommit={next=>setMetadata({...metadata,originalVideoUrl:next})}/><EditableField label="Ετικέτες" value={metadata.tags.join(", ")} onCommit={next=>setMetadata({...metadata,tags:next.split(",").map(item=>item.trim()).filter(Boolean)})}/><EditableField label="Περιγραφή" value={metadata.description} multiline onCommit={next=>setMetadata({...metadata,description:next})}/></div>
+            <section className="gts-editor-card"><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VIDEO INFORMATION</span><h2>{tr("Πληροφορίες βίντεο")}</h2></div></div>
+              <div className="gts-editor-fields"><EditableField label={tr("Ελληνικός τίτλος")} value={metadata.title} onCommit={next=>setMetadata({...metadata,title:next})}/><EditableField label={tr("Αγγλικός τίτλος")} value={metadata.originalTitle} onCommit={next=>setMetadata({...metadata,originalTitle:next})}/><div className="gts-editor-fields-row"><EditableField label={tr("Ομιλητής")} value={metadata.speakerName} onCommit={next=>setMetadata({...metadata,speakerName:next})}/><EditableField label={tr("Ιδιότητα")} value={metadata.speakerRole} onCommit={next=>setMetadata({...metadata,speakerRole:next})}/></div><div className="gts-editor-fields-row"><EditableField label={tr("Κανάλι")} value={metadata.channel} onCommit={next=>setMetadata({...metadata,channel:next})}/><EditableField label={tr("Κατηγορία")} value={metadata.category} options={CATEGORIES} onCommit={next=>setMetadata({...metadata,category:next})}/></div><EditableField label={tr("Link καναλιού")} value={metadata.channelUrl} onCommit={next=>setMetadata({...metadata,channelUrl:next})}/><EditableField label="Original video link" value={metadata.originalVideoUrl} onCommit={next=>setMetadata({...metadata,originalVideoUrl:next})}/><EditableField label={tr("Ετικέτες")} value={metadata.tags.join(", ")} onCommit={next=>setMetadata({...metadata,tags:next.split(",").map(item=>item.trim()).filter(Boolean)})}/><EditableField label={tr("Περιγραφή")} value={metadata.description} multiline onCommit={next=>setMetadata({...metadata,description:next})}/></div>
             </section>
             <OwnerTranslationPanel videoId={video.id}/>
-            <section className={`gts-editor-card gts-editor-validation ${validationErrors.length?"has-errors":"ok"}`}><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VALIDATION</span><h2>{validationErrors.length?"Χρειάζεται διόρθωση":"Όλα έτοιμα"}</h2></div><strong>{validationErrors.length?"!":"✓"}</strong></div>{validationErrors.length?<ul>{validationErrors.map((error,index)=><li key={`${error}-${index}`}>{error}</li>)}</ul>:<p>Δεν υπάρχουν επικαλύψεις ή λανθασμένα timestamps. Metadata και markers μπορούν να αποθηκευτούν μαζί.</p>}</section>
+            <SubtitleQualityPanel key={video.id} videoId={video.id} onSeek={seek} onDirtyChange={dirty=>{subtitleReviewDirty.current=dirty}}/>
+            <section className={`gts-editor-card gts-editor-validation ${validationErrors.length?"has-errors":"ok"}`}><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VALIDATION</span><h2>{validationErrors.length?tr("Χρειάζεται διόρθωση"):tr("Όλα έτοιμα")}</h2></div><strong>{validationErrors.length?"!":"✓"}</strong></div>{validationErrors.length?<ul>{validationErrors.map((error,index)=><li key={`${error}-${index}`}>{error}</li>)}</ul>:<p>{tr("Δεν υπάρχουν επικαλύψεις ή λανθασμένα timestamps. Metadata και markers μπορούν να αποθηκευτούν μαζί.")}</p>}</section>
             {status&&<div className="gts-editor-status" role="status">{status}</div>}
           </aside>
-        </main>:<div className="gts-editor-loading">{status||"Το βίντεο δεν φορτώθηκε."}</div>}
-        <div className="gts-editor-mobile-save"><div>{dirty?"Μη αποθηκευμένες αλλαγές":"Όλα αποθηκευμένα"}</div><button className="primary" disabled={!dirty||validationErrors.length>0||saveBusy||loading} onClick={()=>void save()}>{saveBusy?"Αποθήκευση…":"Αποθήκευση"}</button></div>
+        </main>:<div className="gts-editor-loading">{status||tr("Το βίντεο δεν φορτώθηκε.")}</div>}
+        <div className="gts-editor-mobile-save"><div>{dirty?tr("Μη αποθηκευμένες αλλαγές"):tr("Όλα αποθηκευμένα")}</div><button className="primary" disabled={!dirty||validationErrors.length>0||saveBusy||loading} onClick={()=>void save()}>{saveBusy?tr("Αποθήκευση…"):tr("Αποθήκευση")}</button></div>
       </>}
     </div>
     <style>{styles}</style>

@@ -113,6 +113,7 @@ function sanitizeSharedVideo(video: VideoRecord) {
   sharedVideo.progress = 0;
   delete sharedVideo.lastWatched;
   delete sharedVideo.views;
+  delete sharedVideo.watchedSeconds;
   return sharedVideo;
 }
 
@@ -132,6 +133,7 @@ function mergeState(personal: PersonalState | null, sharedVideos: VideoRecord[])
       progress: Number(personalVideo?.progress || 0),
       lastWatched: typeof personalVideo?.lastWatched === "string" ? personalVideo.lastWatched : undefined,
       views: Number(personalVideo?.views || 0),
+      watchedSeconds: Math.max(0,Number(personalVideo?.watchedSeconds)||0),
       creatorChapters: Array.isArray(personalVideo?.creatorChapters) ? personalVideo.creatorChapters : video.creatorChapters,
       metadataVersion: Math.max(Number(video.metadataVersion || 0), Number(personalVideo?.metadataVersion || 0)),
     };
@@ -239,4 +241,19 @@ export async function PUT(request: Request) {
   } catch {
     return NextResponse.json({ error: "Δεν ήταν δυνατή η αποθήκευση." }, { status: 500 });
   }
+}
+
+/** Updates one preference without overwriting progress saved by another tab. */
+export async function PATCH(request:Request){
+  if(request.headers.get("origin")&&request.headers.get("origin")!==new URL(request.url).origin)return NextResponse.json({error:"Invalid origin"},{status:403});
+  try{
+    const body=await request.json();
+    if(body.appLanguage!=="el"&&body.appLanguage!=="en")return NextResponse.json({error:"Invalid language"},{status:400});
+    await ensureTable();
+    const identity=await ownerKey(request),now=new Date().toISOString();
+    const value=JSON.stringify({settings:{appLanguage:body.appLanguage}});
+    await database().query(`INSERT INTO personal_states(owner_key,value,created_at,updated_at) VALUES($1,$2,$3,$3)
+      ON CONFLICT(owner_key) DO UPDATE SET value=jsonb_set(personal_states.value::jsonb,'{settings}',COALESCE(personal_states.value::jsonb->'settings','{}'::jsonb)||($2::jsonb->'settings'),true)::text,updated_at=$3`,[identity.key,value,now]);
+    return withIdentityCookie(NextResponse.json({ok:true}),identity.cookie);
+  }catch{return NextResponse.json({error:"Δεν αποθηκεύτηκε η γλώσσα."},{status:500});}
 }

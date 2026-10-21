@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withSubtitleTrack } from "../subtitle-track";
 import { canonicalSpeakerForVideo } from "@/app/speaker-catalog";
 import { publishTranscript, readPublishedTranscript, transcriptBlobConfigured } from "../transcript-blob";
 import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
@@ -1419,7 +1420,7 @@ export async function GET(request: Request) {
       const publishedCues = published.cues as CaptionCue[];
       const publishedDuration = typeof published.duration === "number" ? published.duration : 0;
       validateCompleteGreekTranscript(publishedCues, publishedDuration);
-      return NextResponse.json({ ...published, speaker: normalizedPublishedSpeaker(videoId, published) }, {
+      return NextResponse.json(withSubtitleTrack({ ...published, speaker: normalizedPublishedSpeaker(videoId, published) }), {
         headers: {
           "Cache-Control": "no-cache, must-revalidate",
           "X-GreekTube-Transcript-Source": "blob",

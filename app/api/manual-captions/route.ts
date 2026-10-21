@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireReadableImport, SubtitleReviewRequired } from "../subtitle-track-store";
 import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../shared-cache";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "./parser";
 import { isOwnerChatgptVideo } from "../captions/owner-mode";
@@ -95,6 +96,7 @@ export async function POST(request: Request) {
       }
     }
 
+    await requireReadableImport(videoId,existingEnglish,cues);
     lockToken = crypto.randomUUID();
     if (!await acquireProcessingLock(videoId, lockToken, true)) return NextResponse.json({ error: "Το βίντεο επεξεργάζεται ήδη. Δοκίμασε ξανά σε λίγο." }, { status: 409 });
 
@@ -142,6 +144,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (videoId && lockToken) await releaseProcessingLock(videoId, lockToken).catch(() => undefined);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Η εισαγωγή της μετάφρασης απέτυχε." }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Η εισαγωγή της μετάφρασης απέτυχε." }, { status: error instanceof SubtitleReviewRequired ? 422 : 500 });
   }
 }

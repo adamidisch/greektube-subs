@@ -1,6 +1,7 @@
 import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../../shared-cache";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "../parser";
 import { isOwnerChatgptVideo } from "../../captions/owner-mode";
+import { requireReadableImport, SubtitleReviewRequired } from "../../subtitle-track-store";
 
 const ADMIN_COOKIE = "greektube-admin";
 const SESSION_MESSAGE = "greektube-edit-authorized";
@@ -76,7 +77,8 @@ function failure(error: unknown) {
   return {
     type: "error",
     error: error instanceof Error ? error.message : "Η εισαγωγή της μετάφρασης απέτυχε.",
-    status: error instanceof ManualImportError ? error.status : 500,
+    status: error instanceof ManualImportError ? error.status : error instanceof SubtitleReviewRequired ? 422 : 500,
+    ...(error instanceof SubtitleReviewRequired?{reviewRequired:true,draft:error.draft}:{}),
   };
 }
 
@@ -149,7 +151,9 @@ export async function POST(request: Request) {
             }
           }
 
-          report({ progress: 84, label: "Προετοιμασία αποθήκευσης", detail: "Όλοι οι έλεγχοι πέρασαν. Κλειδώνουμε την ασφαλή εγγραφή.", currentCue: cues.length, totalCues: cues.length });
+          report({ progress: 82, label: "Έλεγχος αναγνωσιμότητας", detail: "Ελέγχουμε τις τελικές εμφανίσεις και την ταχύτητα ανάγνωσης.", currentCue: cues.length, totalCues: cues.length });
+          await requireReadableImport(videoId,existingEnglish,cues);
+          report({ progress: 84, label: "Προετοιμασία αποθήκευσης", detail: "Οι έλεγχοι πέρασαν. Κλειδώνουμε την ασφαλή εγγραφή.", currentCue: cues.length, totalCues: cues.length });
           lockToken = crypto.randomUUID();
           if (!await acquireProcessingLock(videoId, lockToken, true)) throw new ManualImportError("Το βίντεο επεξεργάζεται ήδη. Δοκίμασε ξανά σε λίγο.", 409);
 

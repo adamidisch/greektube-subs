@@ -1,4 +1,6 @@
 import { get, list, put } from "@vercel/blob";
+import {approvedSubtitleTrack} from "./subtitle-track-store";
+import type {TimedCue} from "../subtitle-track";
 
 type PublishedTranscript = {
   status?: unknown;
@@ -254,7 +256,8 @@ export async function readPublishedTranscript(videoId: string, transcriptVersion
 export async function publishTranscript(videoId: string, transcriptVersion: number, payload: unknown) {
   if (!configured() || !validPayload(payload, videoId, transcriptVersion)) return false;
   try {
-    const greekPayload = greekOnly(payload);
+    const approved=Array.isArray(payload.englishCues)?await approvedSubtitleTrack(videoId,payload.englishCues as TimedCue[],payload.cues as TimedCue[]):null;
+    const greekPayload = greekOnly(approved?{...payload,subtitleTrack:approved}:payload);
     const writes = [
       put(greekPathname(videoId, transcriptVersion), JSON.stringify(greekPayload), {
         access: "public" as const,
