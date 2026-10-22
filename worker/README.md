@@ -66,8 +66,23 @@ labels. They do not assert bilingual or human acoustic approval and are not
 automatically imported into production. CTC confidence is a diagnostic, not an
 independent proof that the transcript was spoken correctly. Whole-video source
 review, bilingual QA and audio review remain required before professional
-publication. The existing web review's original-source window constraints must
-also be satisfied; this workbench does not bypass them.
+publication. The web review keeps legacy source-window checks and validates imported
+audio-anchored events against their explicit word evidence instead.
+
+### Import a complete authored draft into web review
+
+```bash
+python -m scripts.export_web_review --alignment full-alignment.json \
+  --draft full-draft.json --report downloaded-review.json --output web-review.json
+```
+
+The downloaded report supplies the current app source/translation SHA hashes.
+The converter also checks the worker's source and raw word timeline hashes,
+requires complete ordered word coverage and rejects overlapping anchors. It
+never converts a partial pilot into a full-video import. Compact output must
+remain within 4 MB. Import it in the existing subtitle review panel, save/resume
+as a draft and perform bilingual plus per-event acoustic review before approval.
+No network, model call or application write occurs in the converter.
 
 This worker is deliberately separate from Vercel. Its preferred input is a temporary owner-authorized browser capture uploaded directly to Vercel Blob. It converts that media to 16 kHz mono WAV, runs WhisperX word alignment and optionally diarization, maps the authoritative English source words onto the audio anchors and persists a versioned `WordTimeline`, `ProsodyMap` and gated proof output in Neon. YouTube download remains only as a backwards-compatible fallback.
 

@@ -77,3 +77,32 @@ Greek uppercase audit of the pilot fixture, actual CPU model execution,
 cache-only replay and a rendered preview frame. No UI or production data was
 changed. The word-evidence import schema, original-window reconciliation and
 existing semantic service still need integration before live use.
+
+
+## Compact audio evidence connected to web review
+
+The continuation adds compact source-bound word evidence to the app import,
+review editor, draft storage, server approval and payload validation. Legacy
+source-window checks remain. Audio imports require complete consecutive source
+word ranges, cue mapping, monotonic anchors, direct-confidence checks and exact
+speech out-points with at most 250 ms of real available silence. Model-only
+events cannot satisfy the publication gate. Source/translation changes invalidate
+the track. The standalone exporter refuses partial pilots. The full recording's
+compact word tuples occupy 443,868 bytes.
+
+The 70-word real opening fixture now passes the shared app validator, keeps its
+24.761-second out-point and uses the same events for playback lookup and SRT.
+36 Python tests and the new TypeScript audio import/publication regressions pass.
+TypeScript, scoped lint, uppercase checks and the production build pass. No new
+provider calls, full alignment reruns or production subtitle writes occurred.
+
+Still outstanding: actual word-range semantic provider integration, repair of
+remaining full-video confidence/overlap flags, whole-video Greek editing and
+acoustic/bilingual review. This branch remains draft and production is unchanged.
+
+Full-video parity check: all 18,770 source token texts and cue mappings agree
+between Python and TypeScript. Worker source SHA and both app content SHAs
+match the retained current report. Browser interaction/visual verification was
+not completed: the available browser archive download was invalid and the local
+server hit an environment network-interface error. No native iPhone Safari
+keyboard verification or production deployment is claimed.

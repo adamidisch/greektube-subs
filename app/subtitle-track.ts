@@ -1,8 +1,9 @@
+import { validateAudioEvidence, type SubtitleAudioEvidence } from "./subtitle-audio-evidence.ts";
 import { packSubtitles, subtitleLines } from "./subtitle-display.ts";
 
 export type TimedCue = { start: number; duration: number; text: string };
 export type TimingEvidence = "source_cue" | "estimated" | "audio_aligned" | "audio_reviewed";
-export type SubtitleEvent = TimedCue & { sourceIndices: number[]; timing: TimingEvidence };
+export type SubtitleEvent = TimedCue & { sourceIndices: number[]; timing: TimingEvidence; sourceWordRange?: [number, number] };
 export type SubtitleIssue = { event: number; code: string; value?: number };
 export type SubtitleAudit = {
   readable: boolean;
@@ -19,6 +20,7 @@ export type SubtitleTrack = {
   origin: "legacy" | "authored";
   events: SubtitleEvent[];
   audit: SubtitleAudit;
+  audioEvidence?: SubtitleAudioEvidence;
 };
 
 const normalise = (text: string) => text.replace(/\s+/gu, " ").trim();
@@ -91,9 +93,12 @@ export function legacySubtitleTrack(cues: TimedCue[]): SubtitleTrack {
 }
 
 /** Explicit authored events may resegment a translation but must remain tied to source speech windows. */
-export function validateAuthoredEvents(value: unknown, source: TimedCue[]): SubtitleTrack {
+export function validateAuthoredEvents(value: unknown, source: TimedCue[], audio?: { source: TimedCue[]; evidence: unknown }): SubtitleTrack {
   if (!Array.isArray(value) || !value.length || value.length > 30_000) throw new Error("Invalid subtitle event list");
   const allowed = new Set<TimingEvidence>(["source_cue", "estimated", "audio_aligned", "audio_reviewed"]);
+  const aligned = audio ? validateAudioEvidence(audio.evidence, audio.source) : null;
+  if (aligned && audio!.source.length !== source.length) throw Error("Audio and translation cue mapping differ");
+  let nextWord = 0;
   const covered = new Set<number>();
   let previousSource = -1;
   const events = value.map((item, index) => {
@@ -108,17 +113,39 @@ export function validateAuthoredEvents(value: unknown, source: TimedCue[]): Subt
     const start = Number(row.start), duration = Number(row.duration);
     if (!Number.isFinite(start) || !Number.isFinite(duration) || duration <= 0) throw new Error(`Invalid event timing ${index + 1}`);
     const first = source[indices[0]], last = source[indices[indices.length - 1]];
-    if (start < first.start - .12 || start + duration > last.start + last.duration + .12) throw new Error(`Event outside source speech window ${index + 1}`);
+    if (start < 0) throw Error(`Invalid event timing ${index + 1}`);
+    let sourceWordRange: [number, number] | undefined;
+    if (aligned) {
+      const range = row.sourceWordRange;
+      if (!Array.isArray(range) || range.length !== 2 || range.some(n => !Number.isInteger(n)) || range[0] !== nextWord || range[1] < range[0] || range[1] >= aligned.tokens.length)
+        throw Error(`Invalid source word coverage ${index + 1}`);
+      const [a, b] = range as [number, number];
+      const mapped = [...new Set(aligned.tokens.slice(a, b + 1).map(token => token.cueIndex))];
+      if (JSON.stringify(mapped) !== JSON.stringify(indices)) throw Error(`Audio source mapping differs ${index + 1}`);
+      const speechStart = aligned.evidence.words[a][0], speechEnd = aligned.evidence.words[b][1];
+      const nextStart = aligned.evidence.words[b + 1]?.[0] ?? speechEnd;
+      const latestEnd = Math.min(speechEnd + 250, nextStart);
+      if (Math.abs(start * 1000 - speechStart) > 2 || (start + duration) * 1000 < speechEnd - 2 || (start + duration) * 1000 > latestEnd + 2)
+        throw Error(`Event outside aligned speech window ${index + 1}`);
+      if ((row.timing === "audio_aligned" || row.timing === "audio_reviewed") && aligned.evidence.words.slice(a, b + 1).some(word => word[3] !== 1))
+        throw Error(`Estimated words require alignment repair ${index + 1}`);
+      sourceWordRange = [a, b];
+      nextWord = b + 1;
+    } else {
+      if (row.sourceWordRange !== undefined) throw Error("Source word ranges require audio evidence");
+      if (start < first.start - .12 || start + duration > last.start + last.duration + .12) throw new Error(`Event outside source speech window ${index + 1}`);
+    }
     const timing = row.timing as TimingEvidence;
     if (!allowed.has(timing)) throw new Error(`Missing timing evidence ${index + 1}`);
     const roundedStart=Number(start.toFixed(3)),roundedEnd=Number((start+duration).toFixed(3));
-    return { start:roundedStart, duration:Number((roundedEnd-roundedStart).toFixed(3)), text: normalise(row.text), sourceIndices: [...indices], timing };
+    return { start:roundedStart, duration:Number((roundedEnd-roundedStart).toFixed(3)), text: normalise(row.text), sourceIndices: [...indices], timing, ...(sourceWordRange ? { sourceWordRange } : {}) };
   });
+  if (aligned && nextWord !== aligned.tokens.length) throw Error("Audio word coverage is incomplete");
   if (covered.size !== source.length) throw new Error("Source coverage is incomplete");
   // Every numeric expression in the approved translation must survive resegmentation.
-  const numbers=(text:string)=>text.match(/\d+(?:[.,:/–-]\d+)*\s*%?/gu)?.map(n=>n.replace(/\s/gu,"" )).sort()||[];
+  const numbers=(text:string)=>text.match(/(?<![\p{L}\p{N}])[−-]?\d+(?:[.,:/–-]\d+)*\s*%?/gu)?.map(n=>n.replace(/\s/gu,"" ).replace(/−/gu,"-")).sort()||[];
   if(JSON.stringify(numbers(source.map(c=>c.text).join(" ")))!==JSON.stringify(numbers(events.map(c=>c.text).join(" "))))throw new Error("Numeric content changed during subtitle authoring");
-  return { schemaVersion: 1, inputKey:subtitleInputKey(source), origin: "authored", events, audit: auditSubtitleEvents(events) };
+  return { schemaVersion: 1, inputKey:subtitleInputKey(source), origin: "authored", events, audit: auditSubtitleEvents(events), ...(aligned ? { audioEvidence: aligned.evidence } : {}) };
 }
 
 /** Time lookup honours out-points and gaps. Track indexes are never shared across languages. */
