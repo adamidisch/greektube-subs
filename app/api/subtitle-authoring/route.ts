@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   if (request.headers.get("origin") && request.headers.get("origin") !== new URL(request.url).origin)
     return json({ error: "Μη έγκυρη προέλευση." }, 403);
   if (!await verifyAdminSession(request)) return json({ error: "Απαιτείται εξουσιοδότηση διαχειριστή." }, 401);
-  if (process.env.VERCEL_ENV === "preview") return json({ error: "Η επεξεργασία υποτίτλων είναι απενεργοποιημένη στο preview." }, 409);
+  if (process.env.VERCEL_ENV === "preview") return json({ code: "preview", error: "Η επεξεργασία υποτίτλων είναι απενεργοποιημένη στο preview." }, 409);
   let lockedVideo = "", token = "";
   try {
     const raw = await request.text();
@@ -51,27 +51,27 @@ export async function POST(request: Request) {
     token = randomUUID();
     const now = new Date().toISOString(), expires = new Date(Date.now() + 180_000).toISOString();
     const locked = await database().query("UPDATE video_transcripts SET lock_token=$1,lock_expires_at=$2 WHERE video_id=$3 AND status='ready' AND (lock_token IS NULL OR lock_expires_at IS NULL OR lock_expires_at<$4) RETURNING video_id", [token, expires, videoId, now]) as { video_id: string }[];
-    if (locked.length !== 1) return json({ error: "Η μεταγραφή ενημερώνεται ήδη ή δεν είναι έτοιμη." }, 409);
+    if (locked.length !== 1) return json({ code: "busy", error: "Η μεταγραφή ενημερώνεται ήδη ή δεν είναι έτοιμη." }, 409);
     lockedVideo = videoId;
     const record = await getTranscript(videoId);
     const published = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION, true);
     const source = (published?.englishCues ?? record?.englishTranscript ?? []) as TimedCue[];
     const translation = (published?.cues ?? record?.greekTranscript ?? []) as TimedCue[];
     if (!source.length || body.sourceHash !== subtitleContentHash(source) || body.translationHash !== subtitleContentHash(translation))
-      return json({ error: "Η πηγή ή η μετάφραση άλλαξε. Φόρτωσε ξανά." }, 409);
+      return json({ code: "changed", error: "Η πηγή ή η μετάφραση άλλαξε. Φόρτωσε ξανά." }, 409);
     const prefix = `subtitle-authoring/v1/${videoId}/${body.sourceHash}/${body.translationHash}`;
     let evidence = body.audioEvidence;
     if (!evidence) {
       const path = `${prefix}/evidence/${body.evidenceKey}.json`;
       evidence = evidenceCache.get(path) ?? await readSubtitleDraft(path) as SubtitleAudioEvidence | undefined;
-      if (!evidence || wordEvidenceKey(evidence) !== body.evidenceKey) return json({ error: "Δεν βρέθηκε ο χρονισμός. Εισήγαγε ξανά το αρχείο." }, 409);
+      if (!evidence || wordEvidenceKey(evidence) !== body.evidenceKey) return json({ code: "timing_missing", error: "Δεν βρέθηκε ο χρονισμός. Εισήγαγε ξανά το αρχείο." }, 409);
       cacheEvidence(path, evidence);
     }
     evidence = validateAudioEvidence(evidence, source, { overlapScope: [-1, -1] }).evidence;
-    if (evidence.sourceHash !== body.sourceHash) return json({ error: "Η πηγή του χρονισμού άλλαξε." }, 409);
+    if (evidence.sourceHash !== body.sourceHash) return json({ code: "changed", error: "Η πηγή του χρονισμού άλλαξε." }, 409);
     // Read-only reuse. A missing brief must not silently trigger whole-video model calls.
     const understanding = await readTranslationUnderstanding(videoId, TRANSCRIPT_VERSION, source);
-    if (!understanding) return json({ error: "Χρειάζεται η συνολική ανάλυση του βίντεο πριν από την επιμέλεια." }, 409);
+    if (!understanding) return json({ code: "understanding_required", error: "Χρειάζεται η συνολική ανάλυση του βίντεο πριν από την επιμέλεια." }, 409);
     const brief = JSON.parse(compactUnderstandingForPrompt(understanding)) as Record<string, unknown>;
     if (body.action === "plan") {
       const scopes = planWordAuthoring(source, translation, evidence, brief), evidenceKey = wordEvidenceKey(evidence);
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       return json({ status: "draft_ready", humanAudioReview: false, ...draft });
     }
     const packet = packetFor(body.sourceCueRange!), key = wordAuthoringKey(packet), path = pathFor(key);
-    if (body.key !== key) return json({ error: "Το τμήμα έχει αλλάξει. Φόρτωσε ξανά το σχέδιο επεξεργασίας." }, 409);
+    if (body.key !== key) return json({ code: "changed", error: "Το τμήμα έχει αλλάξει. Φόρτωσε ξανά το σχέδιο επεξεργασίας." }, 409);
     const semanticKey = wordSemanticKey(packet);
     const semanticPath = `subtitle-authoring/v1/${videoId}/${body.sourceHash}/${body.translationHash}/semantic-${semanticKey}.json`;
     const existing = await readSubtitleDraft(path) as WordAuthoringCheckpoint | null;
