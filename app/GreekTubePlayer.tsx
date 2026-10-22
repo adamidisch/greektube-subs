@@ -63,10 +63,10 @@ declare global {
   }
 }
 
-const CATEGORIES = [tr("Όλα"), "Medical", "Tech", "Podcasts", "Comedy", "Education", "Documentaries", "Other"] as const;
+const CATEGORIES = ["all", "Medical", "Tech", "Podcasts", "Comedy", "Education", "Documentaries", "Other"] as const;
 const CATEGORY_LABELS: Record<(typeof CATEGORIES)[number], string> = {
-  Όλα: tr("Όλα"), Medical: tr("Ιατρικά"), Tech: tr("Τεχνολογία"), Podcasts: tr("Συζητήσεις"),
-  Comedy: tr("Κωμωδία"), Education: tr("Εκπαίδευση"), Documentaries: tr("Ντοκιμαντέρ"), Other: tr("Άλλα"),
+  all: "Όλα", Medical: "Ιατρικά", Tech: "Τεχνολογία", Podcasts: "Συζητήσεις",
+  Comedy: "Κωμωδία", Education: "Εκπαίδευση", Documentaries: "Ντοκιμαντέρ", Other: "Άλλα",
 };
 const DEFAULT_SETTINGS: Settings = {
   subtitleMode: "el", subtitleSize: 19, subtitleSizeVersion: 2, subtitlePosition: "bottom", opacity: .8, delay: 0,
@@ -380,7 +380,7 @@ export default function GreekTubePlayer() {
   const [seekPreview,setSeekPreview]=useState<number|null>(null);
   const [visibleCount,setVisibleCount]=useState(INITIAL_LIBRARY_SIZE);
   const [search,setSearch]=useState("");
-  const [category,setCategory]=useState<(typeof CATEGORIES)[number]>(tr("Όλα"));
+  const [category,setCategory]=useState<(typeof CATEGORIES)[number]>("all");
   const [sort,setSort]=useState("recent");
   const [filter,setFilter]=useState<"all"|"new"|"favorites"|"recent"|"hidden">("all");
   const [speakerBioOpen,setSpeakerBioOpen]=useState(false);
@@ -746,7 +746,7 @@ export default function GreekTubePlayer() {
   const newVideoIds=useMemo(()=>new Set([...libraryVideos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt)).slice(0,10).map(video=>video.id)),[libraryVideos]);
   const filtered=useMemo(()=> {
     const terms=searchText(search).split(/\s+/).filter(Boolean);
-    let list=(filter==="hidden"?state.videos.filter(video=>video.libraryVisible===false):libraryVideos).filter(v=>(category===tr("Όλα")||v.category===category)&&terms.every(term=>searchHaystack(v).includes(term)));
+    let list=(filter==="hidden"?state.videos.filter(video=>video.libraryVisible===false):libraryVideos).filter(v=>(category==="all"||v.category===category)&&terms.every(term=>searchHaystack(v).includes(term)));
     if(filter==="new") list=list.filter(v=>newVideoIds.has(v.id));
     if(filter==="favorites") list=list.filter(v=>v.favorite);
     if(filter==="recent") list=list.filter(v=>v.lastWatched);
@@ -1082,18 +1082,31 @@ export default function GreekTubePlayer() {
     const t=Number.isFinite(rawTime)&&rawTime>=0?rawTime:0;
     const rawSpeed=Number(params.get("speed"));
     const validSpeed=isAllowedShareSpeed(rawSpeed)?rawSpeed:null;
-    if(hydrated&&id){
-      const v=state.videos.find(x=>x.id===id);
-      if(v){
-        window.setTimeout(()=>{
-          if(validSpeed!==null){
-            pendingShareSpeed.current=validSpeed;
-            setState(current=>({...current,settings:{...current.settings,speed:validSpeed}}));
-          }
-          void openVideo(v,t);
-        },0);
+    if(!hydrated||!id||!/^[A-Za-z0-9_-]{11}$/.test(id))return;
+    const controller=new AbortController();
+    const open=(video:Video,ready?:Captions)=>{
+      if(controller.signal.aborted||new URLSearchParams(location.search).get("video")!==id)return;
+      if(validSpeed!==null){
+        pendingShareSpeed.current=validSpeed;
+        setState(current=>({...current,settings:{...current.settings,speed:validSpeed}}));
       }
-    }
+      void openVideo(video,t,false,false,ready);
+    };
+    const existing=state.videos.find(video=>video.id===id);
+    const timer=window.setTimeout(()=>{
+      if(existing){open(existing);return;}
+      // Shared links may refer to published captions absent from this device's library.
+      // Resolve ready data only; opening a link must never start a translation job.
+      void fetch(`/api/captions?videoId=${encodeURIComponent(id)}`,{cache:"no-store",signal:controller.signal}).then(async response=>{
+        if(!response.ok)return;
+        const ready=await response.json() as Captions;
+        if(controller.signal.aborted||new URLSearchParams(location.search).get("video")!==id||ready.videoId!==id||!isCompleteGreekTranscript(ready))return;
+        const video:Video={id,url:`https://www.youtube.com/watch?v=${id}`,title:ready.title,originalTitle:ready.originalTitle,channel:ready.channel,channelUrl:ready.channelUrl,originalVideoUrl:ready.originalVideoUrl,category:"Other",tags:[],notes:"",description:ready.keyPoints?.[0]||"",duration:ready.duration||0,addedAt:new Date().toISOString(),favorite:false,lastPosition:0,progress:0,metadataVersion:6,speakerName:ready.speaker?.name,speakerRole:ready.speaker?.role};
+        setState(current=>({...current,videos:current.videos.some(item=>item.id===id)?current.videos:[video,...current.videos]}));
+        open(video,ready);
+      }).catch(()=>undefined);
+    },0);
+    return()=>{window.clearTimeout(timer);controller.abort()};
   },[hydrated]);
   useEffect(()=>{
     const key=(event:KeyboardEvent)=>{
