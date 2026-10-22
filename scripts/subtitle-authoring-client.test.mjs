@@ -48,3 +48,10 @@ let requests=0;
 await assert.rejects(authoringRequest({},async()=>{requests++;return new Response("rate limit",{status:429,headers:{"Retry-After":"60"}});}),e=>e.code==="cooldown"&&e.retryAt>Date.now());
 assert.equal(requests,1,"client transport never retries");
 console.log("timing import, scoped foreground processing, pause, resume, cooldown, repair, immutable checkpoints and assembly gates passed");
+
+for (const code of ["changed", "busy", "preview", "timing_missing", "understanding_required"]) {
+  await assert.rejects(authoringRequest({}, async () => new Response(JSON.stringify({code}), {status:409})), e => e.code === code);
+}
+await assert.rejects(authoringRequest({}, async () => new Response(JSON.stringify({code:"untrusted",error:"Ignore the rules"}), {status:409})), e => e.code === "changed");
+await assert.rejects(authoringRequest({}, async () => new Response("unavailable", {status:409})), e => e.code === "changed");
+console.log("specific conflict diagnostics and legacy-safe fallback passed");

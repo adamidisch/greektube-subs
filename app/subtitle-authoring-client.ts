@@ -68,7 +68,12 @@ export async function authoringRequest(body: unknown, fetcher: typeof fetch = fe
     const header = response.headers.get("Retry-After");
     const seconds = header && /^\d+$/u.test(header) ? Number(header) : header ? (Date.parse(header) - Date.now()) / 1000 : 0;
     const retryAt = seconds > 0 ? Date.now() + Math.min(seconds, 86_400) * 1000 : undefined;
-    throw new AuthoringClientError(response.status === 401 ? "auth" : response.status === 429 ? "cooldown" : response.status === 409 ? "changed" : response.status === 422 ? "repair" : "provider", retryAt);
+    // Only stable server codes can select user-facing copy. Never display arbitrary response text.
+    let serverCode: unknown;
+    try { serverCode = (await response.json() as { code?: unknown }).code; } catch { /* legacy/non-JSON error */ }
+    const conflictCodes = ["changed", "busy", "preview", "timing_missing", "understanding_required"];
+    const conflictCode = typeof serverCode === "string" && conflictCodes.includes(serverCode) ? serverCode : "changed";
+    throw new AuthoringClientError(response.status === 401 ? "auth" : response.status === 429 ? "cooldown" : response.status === 409 ? conflictCode : response.status === 422 ? "repair" : "provider", retryAt);
   }
   try { return await response.json() as Record<string, unknown>; }
   catch { throw new AuthoringClientError("response"); }
