@@ -1,6 +1,9 @@
-import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../../shared-cache";
+import { acquireProcessingLock, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../../shared-cache";
+import {commitManualCaptionImport} from "../publication";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "../parser";
 import { isOwnerChatgptVideo } from "../../captions/owner-mode";
+import {matchesCanonicalManualSource,manualNumericMismatches} from "../integrity";
+import { requireReadableImport, SubtitleReviewRequired } from "../../subtitle-track-store";
 
 const ADMIN_COOKIE = "greektube-admin";
 const SESSION_MESSAGE = "greektube-edit-authorized";
@@ -76,11 +79,13 @@ function failure(error: unknown) {
   return {
     type: "error",
     error: error instanceof Error ? error.message : "Η εισαγωγή της μετάφρασης απέτυχε.",
-    status: error instanceof ManualImportError ? error.status : 500,
+    status: error instanceof ManualImportError ? error.status : error instanceof SubtitleReviewRequired ? 422 : 500,
+    ...(error instanceof SubtitleReviewRequired?{reviewRequired:true,draft:error.draft}:{}),
   };
 }
 
 export async function POST(request: Request) {
+  if(process.env.VERCEL_ENV==="preview")return Response.json({error:"Η εισαγωγή υποτίτλων είναι απενεργοποιημένη στο preview."},{status:409});
   if (!await authorized(request)) return Response.json({ error: "Η εισαγωγή μετάφρασης απαιτεί εξουσιοδότηση διαχειριστή." }, { status: 401 });
 
   let body: ImportBody;
@@ -123,6 +128,8 @@ export async function POST(request: Request) {
             : [];
           if (hasSuppliedEnglish && !suppliedEnglish.length) throw new ManualImportError("Το αγγλικό SRT δεν μπόρεσε να διαβαστεί.");
           if (suppliedEnglish.length && !hasValidManualCueTimings(suppliedEnglish)) throw new ManualImportError("Το αγγλικό SRT περιέχει μη έγκυρα timestamps.");
+          const canonical=existing?.englishTranscript?.length?existing.englishTranscript:existing?.rawEnglishTranscript||[];
+          if(suppliedEnglish.length&&canonical.length&&!matchesCanonicalManualSource(suppliedEnglish,canonical))throw new ManualImportError("Το αγγλικό SRT διαφέρει από την κλειδωμένη πηγή. Εισήγαγε πρώτα νέα έκδοση πηγής.",409);
           const existingEnglish = (suppliedEnglish.length
             ? suppliedEnglish
             : existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];
@@ -149,7 +156,11 @@ export async function POST(request: Request) {
             }
           }
 
-          report({ progress: 84, label: "Προετοιμασία αποθήκευσης", detail: "Όλοι οι έλεγχοι πέρασαν. Κλειδώνουμε την ασφαλή εγγραφή.", currentCue: cues.length, totalCues: cues.length });
+          report({ progress: 82, label: "Έλεγχος αναγνωσιμότητας", detail: "Ελέγχουμε τις τελικές εμφανίσεις και την ταχύτητα ανάγνωσης.", currentCue: cues.length, totalCues: cues.length });
+          const numericMismatches=manualNumericMismatches(existingEnglish,cues);
+          if(numericMismatches.length)throw new ManualImportError(`Οι αριθμοί δεν συμφωνούν με την πηγή στα cues: ${numericMismatches.slice(0,12).join(", ")}.`,422);
+          await requireReadableImport(videoId,existingEnglish,cues);
+          report({ progress: 84, label: "Προετοιμασία αποθήκευσης", detail: "Οι έλεγχοι πέρασαν. Κλειδώνουμε την ασφαλή εγγραφή.", currentCue: cues.length, totalCues: cues.length });
           lockToken = crypto.randomUUID();
           if (!await acquireProcessingLock(videoId, lockToken, true)) throw new ManualImportError("Το βίντεο επεξεργάζεται ήδη. Δοκίμασε ξανά σε λίγο.", 409);
 
@@ -170,7 +181,7 @@ export async function POST(request: Request) {
             thumbnail: existing?.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
             duration,
             originalLanguage: "en",
-            rawEnglishTranscript: suppliedEnglish.length ? suppliedEnglish : existing?.rawEnglishTranscript || existingEnglish,
+            rawEnglishTranscript: existing?.rawEnglishTranscript?.length ? existing.rawEnglishTranscript : existingEnglish,
             englishTranscript: alignedEnglish,
             greekTranscript: cues,
             timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
@@ -182,20 +193,14 @@ export async function POST(request: Request) {
             createdAt: existing?.createdAt || now,
             updatedAt: now,
           };
-          if (!await completeTranscript(record, lockToken)) throw new Error("Η αποθήκευση της μετάφρασης δεν ολοκληρώθηκε.");
+          const imported=await commitManualCaptionImport(record,lockToken,existing,{originalTitle:typeof body.originalTitle==="string"?body.originalTitle:"",translationMethod:"manual_chatgpt_pro_v1",cached:false});
           lockToken = null;
 
           report({ progress: 98, label: "Ολοκλήρωση εισαγωγής", detail: "Οι υπότιτλοι αποθηκεύτηκαν. Ανοίγουμε το video.", currentCue: cues.length, totalCues: cues.length });
           send({
             type: "complete",
             progress: 100,
-            result: {
-              status: "ready", progress: 100, videoId, title,
-              originalTitle: typeof body.originalTitle === "string" ? body.originalTitle : "",
-              channel, duration, sourceLanguage: "en", cues, englishCues: alignedEnglish,
-              keyPoints: points, topics: record.topics, transcriptVersion: TRANSCRIPT_VERSION,
-              translationMethod: "manual_chatgpt_pro_v1", cached: false,
-            },
+            result: imported,
           });
         } catch (error) {
           if (videoId && lockToken) await releaseProcessingLock(videoId, lockToken).catch(() => undefined);

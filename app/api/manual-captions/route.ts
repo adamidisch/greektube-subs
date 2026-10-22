@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { acquireProcessingLock, completeTranscript, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../shared-cache";
+import { requireReadableImport, SubtitleReviewRequired } from "../subtitle-track-store";
+import { acquireProcessingLock, getTranscript, releaseProcessingLock, TRANSCRIPT_VERSION } from "../shared-cache";
+import {commitManualCaptionImport} from "./publication";
 import { hasValidManualCueTimings, parseManualSubtitleText } from "./parser";
 import { isOwnerChatgptVideo } from "../captions/owner-mode";
+import {matchesCanonicalManualSource,manualNumericMismatches} from "./integrity";
 
 const ADMIN_COOKIE = "greektube-admin";
 const SESSION_MESSAGE = "greektube-edit-authorized";
@@ -52,6 +55,7 @@ function keyPoints(cues: { text: string }[]) {
 }
 
 export async function POST(request: Request) {
+  if(process.env.VERCEL_ENV==="preview")return NextResponse.json({error:"Η εισαγωγή υποτίτλων είναι απενεργοποιημένη στο preview."},{status:409});
   if (!await authorized(request)) return NextResponse.json({ error: "Η εισαγωγή μετάφρασης απαιτεί εξουσιοδότηση διαχειριστή." }, { status: 401 });
   let lockToken: string | null = null;
   let videoId: string | null = null;
@@ -63,7 +67,6 @@ export async function POST(request: Request) {
     videoId = videoIdFrom(body.url);
     if (!videoId) return NextResponse.json({ error: "Δεν αναγνωρίζω αυτό το YouTube link." }, { status: 400 });
     if (await isOwnerChatgptVideo(videoId)) return NextResponse.json({ error: "Το βίντεο είναι owner-locked. Χρησιμοποίησε το Owner Translation panel του Video Editor." }, { status: 409 });
-    const strict = body.strict === true;
 
     const cues = parseManualSubtitleText(body.subtitleText);
     if (cues.length < 3) return NextResponse.json({ error: "Δεν βρέθηκαν αρκετά έγκυρα timed cues. Χρησιμοποίησε SRT, VTT ή transcript με timestamps." }, { status: 400 });
@@ -78,11 +81,13 @@ export async function POST(request: Request) {
       : [];
     if (hasSuppliedEnglish && !suppliedEnglish.length) return NextResponse.json({ error: "Το αγγλικό SRT δεν μπόρεσε να διαβαστεί." }, { status: 400 });
     if (suppliedEnglish.length && !hasValidManualCueTimings(suppliedEnglish)) return NextResponse.json({ error: "Το αγγλικό SRT περιέχει μη έγκυρα timestamps." }, { status: 400 });
+    const canonical=existing?.englishTranscript?.length?existing.englishTranscript:existing?.rawEnglishTranscript||[];
+    if(suppliedEnglish.length&&canonical.length&&!matchesCanonicalManualSource(suppliedEnglish,canonical))return NextResponse.json({error:"Το αγγλικό SRT διαφέρει από την κλειδωμένη πηγή. Εισήγαγε πρώτα νέα έκδοση πηγής."},{status:409});
     const existingEnglish = (suppliedEnglish.length
       ? suppliedEnglish
       : existing?.englishTranscript?.length ? existing.englishTranscript : existing?.rawEnglishTranscript || []) as { start: number; duration: number; text: string }[];
 
-    if (strict) {
+    {
       if (!existingEnglish.length) return NextResponse.json({ error: "Δεν υπάρχει αγγλικό transcript για σύγκριση. Κάνε πρώτα λήψη του αγγλικού SRT από αυτή τη οθόνη." }, { status: 409 });
       if (cues.length !== existingEnglish.length) return NextResponse.json({ error: `Ο αριθμός των υποτίτλων δεν ταιριάζει: το ελληνικό SRT έχει ${cues.length} cues, το αγγλικό έχει ${existingEnglish.length}. Μην προσθέσεις, αφαιρέσεις ή ενώσεις γραμμές — μετάφρασε γραμμή προς γραμμή.` }, { status: 400 });
       const TOLERANCE = 0.002;
@@ -95,6 +100,9 @@ export async function POST(request: Request) {
       }
     }
 
+    const numericMismatches=manualNumericMismatches(existingEnglish,cues);
+    if(numericMismatches.length)return NextResponse.json({error:`Οι αριθμοί δεν συμφωνούν με την πηγή στα cues: ${numericMismatches.slice(0,12).join(", ")}.`},{status:422});
+    await requireReadableImport(videoId,existingEnglish,cues);
     lockToken = crypto.randomUUID();
     if (!await acquireProcessingLock(videoId, lockToken, true)) return NextResponse.json({ error: "Το βίντεο επεξεργάζεται ήδη. Δοκίμασε ξανά σε λίγο." }, { status: 409 });
 
@@ -114,7 +122,7 @@ export async function POST(request: Request) {
       thumbnail: existing?.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
       duration,
       originalLanguage: "en",
-      rawEnglishTranscript: suppliedEnglish.length ? suppliedEnglish : existing?.rawEnglishTranscript || existingEnglish,
+      rawEnglishTranscript: existing?.rawEnglishTranscript?.length ? existing.rawEnglishTranscript : existingEnglish,
       englishTranscript: alignedEnglish,
       greekTranscript: cues,
       timestamps: cues.map(cue => ({ start: cue.start, duration: cue.duration })),
@@ -126,22 +134,14 @@ export async function POST(request: Request) {
       createdAt: existing?.createdAt || now,
       updatedAt: now,
     };
-    if (!await completeTranscript(record, lockToken)) throw new Error("Η αποθήκευση της μετάφρασης δεν ολοκληρώθηκε.");
+    const imported=await commitManualCaptionImport(record,lockToken,existing,{originalTitle:typeof body.originalTitle==="string"?body.originalTitle:"",translationMode:OWNER_TRANSLATION_MODE,translationMethod:OWNER_TRANSLATION_METHOD,cached:false});
     lockToken = null;
 
-    return NextResponse.json({
-      status: "ready", progress: 100, videoId, title,
-      originalTitle: typeof body.originalTitle === "string" ? body.originalTitle : "",
-      channel, duration, sourceLanguage: "en", cues, englishCues: alignedEnglish,
-      keyPoints: points, topics: record.topics, transcriptVersion: TRANSCRIPT_VERSION,
-      translationMode: OWNER_TRANSLATION_MODE,
-      translationMethod: OWNER_TRANSLATION_METHOD,
-      cached: false,
-    }, {
+    return NextResponse.json(imported, {
       headers: { "X-GreekTube-Translation-Mode": OWNER_TRANSLATION_MODE },
     });
   } catch (error) {
     if (videoId && lockToken) await releaseProcessingLock(videoId, lockToken).catch(() => undefined);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Η εισαγωγή της μετάφρασης απέτυχε." }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Η εισαγωγή της μετάφρασης απέτυχε." }, { status: error instanceof SubtitleReviewRequired ? 422 : 500 });
   }
 }

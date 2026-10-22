@@ -1,18 +1,19 @@
 import Link from "next/link";
 import type {ReactNode} from "react";
 import GtsFooter from "./GtsFooter";
+import LocalizedText from "./LocalizedText";
 
-type LegalPageProps={eyebrow:string;title:string;intro:string;children:ReactNode};
+type LegalPageProps={eyebrow:string;title:ReactNode;intro:ReactNode;children:ReactNode};
 
 export default function LegalPage({eyebrow,title,intro,children}:LegalPageProps){
   return <main className="legal-page">
     <header className="legal-header">
       <Link href="/" className="legal-brand" aria-label="GreekTube Subs αρχική"><span className="legal-logo" aria-hidden="true"/><span>GreekTube <b>Subs</b></span></Link>
-      <Link href="/" className="legal-back">← Επιστροφή</Link>
+      <Link href="/" className="legal-back"><LocalizedText el="← Επιστροφή" en="← Back"/></Link>
     </header>
 
     <article className="legal-shell">
-      <div className="legal-heading"><span>{eyebrow}</span><h1>{title}</h1><p>{intro}</p><small>Τελευταία ενημέρωση: 18 Αυγούστου 2026</small></div>
+      <div className="legal-heading"><span>{eyebrow}</span><h1>{title}</h1><p>{intro}</p><small><LocalizedText el="Τελευταία ενημέρωση: 18 Αυγούστου 2026" en="Last updated: August 18, 2026"/></small></div>
       <div className="legal-content">{children}</div>
     </article>
 

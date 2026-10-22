@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { withSubtitleTrack } from "../subtitle-track";
+import {requireReadableImport,SubtitleReviewRequired} from "../subtitle-track-store";
 import { canonicalSpeakerForVideo } from "@/app/speaker-catalog";
 import { publishTranscript, readPublishedTranscript, transcriptBlobConfigured } from "../transcript-blob";
 import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
@@ -1232,7 +1234,7 @@ async function translateCheckpointBatch(
 
 function baseProcessingStage(stage: string | null | undefined) {
   const value = stage || "source";
-  return value.endsWith("_google") ? value.slice(0, -7) : value;
+  return value.endsWith("_google") ? value.slice(0, -7) : value.endsWith("_pro")?value.slice(0,-4):value;
 }
 
 function modeFromProcessingStage(stage: string | null | undefined, fallback: TranslationMode): TranslationMode {
@@ -1419,7 +1421,10 @@ export async function GET(request: Request) {
       const publishedCues = published.cues as CaptionCue[];
       const publishedDuration = typeof published.duration === "number" ? published.duration : 0;
       validateCompleteGreekTranscript(publishedCues, publishedDuration);
-      return NextResponse.json({ ...published, speaker: normalizedPublishedSpeaker(videoId, published) }, {
+      const candidate=published.subtitleTrack as {origin?:unknown}|undefined;
+      const verified=candidate?.origin==="authored"&&!includeEnglish?await readPublishedTranscript(videoId,TRANSCRIPT_VERSION,true)||published:published;
+      const display=withSubtitleTrack({...verified,speaker:normalizedPublishedSpeaker(videoId,verified)});
+      return NextResponse.json(includeEnglish?display:{...display,englishCues:undefined}, {
         headers: {
           "Cache-Control": "no-cache, must-revalidate",
           "X-GreekTube-Transcript-Source": "blob",
@@ -1465,6 +1470,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if(process.env.VERCEL_ENV==="preview")return NextResponse.json({error:"Η αυτόματη μετάφραση είναι απενεργοποιημένη στο preview."},{status:409});
   let lockToken: string | null = null;
   let lockedVideoId: string | null = null;
   try {
@@ -1539,6 +1545,7 @@ export async function POST(request: Request) {
       if (!cached) throw new Error("Greek source checkpoint missing");
       const greek = cached.greekTranscript as CaptionCue[];
       validateCompleteGreekTranscript(greek, cached.duration);
+      await requireReadableImport(videoId,[],greek);
       const metadata = await fetchYouTubeOEmbed(videoId).catch(() => ({ title: "", authorName: "" }));
       const now = new Date().toISOString();
       const points = keyPoints(greek);
@@ -1686,6 +1693,7 @@ export async function POST(request: Request) {
       }
       validateAlignedTranscript(english, greek);
       validateCompleteGreekTranscript(greek, cached.duration);
+      await requireReadableImport(videoId,english,greek);
       if (!await updateProcessingProgress(videoId, lockToken, 94)) throw new Error("Processing lock was lost before final validation persisted");
       const translatedTitle = await translateTitleToGreek(cached.title || "YouTube video");
       const points = keyPoints(greek);
@@ -1708,6 +1716,10 @@ export async function POST(request: Request) {
     throw new Error(`Unknown processing stage: ${stage}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "retry";
+    if(error instanceof SubtitleReviewRequired){
+      if(lockedVideoId&&lockToken)await failTranscript(lockedVideoId,lockToken,`manual_review_required:${message}`).catch(()=>undefined);
+      return NextResponse.json({error:message,status:"manual_review_required",reviewRequired:true,draft:error.draft},{status:409,headers:{"Cache-Control":"no-store"}});
+    }
     console.error(`[captions:${lockedVideoId || "unknown"}] resumable slice failed`, error);
     const recoverable = /429|cooldown|timeout|timed out|abort|network|fetch failed|econn|eai_again|\b5\d\d\b/i.test(message);
     if (lockedVideoId && lockToken && recoverable) {

@@ -33,6 +33,7 @@ import {
   type CachedCue,
 } from "../shared-cache";
 import { publishTranscript } from "../transcript-blob";
+import {requireReadableImport,SubtitleReviewRequired} from "../subtitle-track-store";
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
 const SPAN_BATCH = 4;
@@ -430,6 +431,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if(process.env.VERCEL_ENV==="preview")return NextResponse.json({error:"Η αυτόματη μετάφραση είναι απενεργοποιημένη στο preview."},{status:409});
   const rawBody = await request.text();
   let body: TranslationRequestBody;
   try {
@@ -499,6 +501,7 @@ export async function POST(request: Request) {
       const issues = validateProfessionalSubtitleFile(greek);
       if (issues.length) throw new ManualReviewError(`professional-final-qc:${issues.slice(0, 12).join(",")}`);
       if (!greek.length) throw new ManualReviewError("professional-final-qc:empty-greek-transcript");
+      await requireReadableImport(videoId,current.englishTranscript as CachedCue[],greek);
       const points = keyPoints(greek);
       const updatedAt = new Date().toISOString();
       if (!await completeTranscript({
@@ -561,7 +564,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Professional subtitle translation failed";
-    const manualReview = error instanceof ManualReviewError;
+    const manualReview = error instanceof ManualReviewError || error instanceof SubtitleReviewRequired;
     const retryAfter = error instanceof GroqTranslationError ? error.retryAfterSeconds : /429/i.test(message) ? 30 : 8;
     const isRateLimit = /429/i.test(message);
     console.error("[captions:professional-v1-failed]", JSON.stringify({ videoId, message, manualReview }));

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { isOwnerChatgptVideo } from "../captions/owner-mode";
+import {SubtitleReviewRequired} from "../subtitle-track-store";
 import {
   freezeOwnerSource,
   getOwnerTranslationManifest,
@@ -20,7 +21,7 @@ function validVideoId(value: unknown) {
 function errorResponse(error: unknown, fallbackStatus = 500) {
   const message = error instanceof Error ? error.message : "Η ενέργεια owner translation απέτυχε.";
   const status = /δεν υπάρχει|Κάνε πρώτα|πρέπει πρώτα|επεξεργάζεται|δεν είναι διαθέσιμο|δεν ταιριάζει/i.test(message) ? 409 : fallbackStatus;
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message,...(error instanceof SubtitleReviewRequired?{reviewRequired:true,draft:error.draft}:{}) }, { status:error instanceof SubtitleReviewRequired?422:status });
 }
 
 export async function GET(request: Request) {

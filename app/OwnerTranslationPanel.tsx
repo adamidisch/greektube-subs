@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 type Validation = {
   ok: boolean;
+  displayAudit?: {readable:boolean;fastPages:number;shortPages:number};
   cueCount: number;
   expectedCueCount: number;
   timestampMismatches: number;
@@ -35,6 +36,13 @@ type Manifest = {
 
 type ApiResult = { manifest?: Manifest | null; validation?: Validation; legacyOwner?: boolean; error?: string };
 
+async function loadOwnerTranslation(videoId: string, signal?: AbortSignal): Promise<ApiResult> {
+  const response = await fetch(`/api/owner-translation?videoId=${encodeURIComponent(videoId)}`, { cache: "no-store", credentials: "same-origin", signal });
+  const result = await response.json() as ApiResult;
+  if (!response.ok) throw new Error(result.error || "Δεν φορτώθηκαν τα στοιχεία της μετάφρασης.");
+  return result;
+}
+
 function shortHash(value?: string | null) {
   return value ? `${value.slice(0, 8)}…${value.slice(-6)}` : "—";
 }
@@ -49,11 +57,8 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   async function refresh() {
-    setLoading(true);
     try {
-      const response = await fetch(`/api/owner-translation?videoId=${encodeURIComponent(videoId)}`, { cache: "no-store", credentials: "same-origin" });
-      const result = await response.json() as ApiResult;
-      if (!response.ok) throw new Error(result.error || "Το owner translation state δεν φορτώθηκε.");
+      const result = await loadOwnerTranslation(videoId);
       setManifest(result.manifest || null);
       setLegacyOwner(Boolean(result.legacyOwner));
       setValidation(result.manifest?.validation || null);
@@ -64,7 +69,20 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
     }
   }
 
-  useEffect(() => { void refresh(); }, [videoId]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadOwnerTranslation(videoId, controller.signal).then(result => {
+      if (controller.signal.aborted) return;
+      setManifest(result.manifest || null);
+      setLegacyOwner(Boolean(result.legacyOwner));
+      setValidation(result.manifest?.validation || null);
+    }).catch(error => {
+      if (!controller.signal.aborted) setMessage(error instanceof Error ? error.message : "Δεν φορτώθηκαν τα στοιχεία της μετάφρασης.");
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
+    return () => controller.abort();
+  }, [videoId]);
 
   async function action(name: "freeze" | "publish", payload: Record<string, unknown> = {}) {
     setBusy(name); setMessage("");
@@ -102,7 +120,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
       if (result.validation) setValidation(result.validation);
       if (result.manifest) setManifest(result.manifest);
       if (!response.ok) throw new Error(result.error || "Το SRT δεν πέρασε validation.");
-      setMessage("Το ελληνικό SRT πέρασε όλα τα strict checks.");
+      setMessage(result.validation?.displayAudit?.readable?"Η δομή και η αναγνωσιμότητα του SRT ελέγχθηκαν. Ο συγχρονισμός με τον ήχο χρειάζεται ξεχωριστή επιβεβαίωση.":"Το SRT πέρασε τον έλεγχο δομής. Χρειάζεται επιμέλεια αναγνωσιμότητας πριν από τη δημοσίευση.");
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Το SRT δεν πέρασε validation.");
@@ -152,7 +170,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
           <div><span>Extra cues</span><b>{check.extraCues}</b></div>
           <div><span>Duplicate cues</span><b>{check.duplicateCues}</b></div>
           <div><span>Numeric mismatches</span><b>{check.numericMismatches}</b></div>
-          <div><span>Empty cues</span><b>{check.emptyCues}</b></div>
+          <div><span>Empty cues</span><b>{check.emptyCues}</b></div><div><span>Display readability</span><b>{check.displayAudit?.readable?"✓":`${check.displayAudit?.fastPages??"—"} for review`}</b></div>
         </div>;
       })()}
     </>}

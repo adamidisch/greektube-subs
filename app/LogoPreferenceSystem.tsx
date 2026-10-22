@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import {tr,useAppLanguage} from "./app-language";
 
 type LogoStyle = "official" | "classic" | "reverse" | "premium";
 
@@ -23,26 +24,17 @@ const OPTIONS: ReadonlyArray<{
 function isLogoStyle(value: string | null): value is LogoStyle {
   return Boolean(value && LOGO_STYLES.includes(value as LogoStyle));
 }
+function readLogoStyle():LogoStyle{try{const value=localStorage.getItem(STORAGE_KEY);return isLogoStyle(value)?value:"official"}catch{return "official"}}
+function subscribeLogo(listener:()=>void){window.addEventListener("storage",listener);window.addEventListener("greektube:logo-style",listener);return()=>{window.removeEventListener("storage",listener);window.removeEventListener("greektube:logo-style",listener)}}
 
 export default function LogoPreferenceSystem() {
-  const [logoStyle, setLogoStyle] = useState<LogoStyle>("official");
+  useAppLanguage();
+  const logoStyle=useSyncExternalStore(subscribeLogo,readLogoStyle,()=>"official" as LogoStyle);
+  const setLogoStyle=(value:LogoStyle)=>{try{localStorage.setItem(STORAGE_KEY,value)}catch{}window.dispatchEvent(new Event("greektube:logo-style"));};
   const [settingsGrid, setSettingsGrid] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(STORAGE_KEY);
-    } catch {}
-    const next = isLogoStyle(saved) ? saved : "official";
-    setLogoStyle(next);
-    document.documentElement.dataset.gtsLogo = next;
-  }, []);
-
-  useEffect(() => {
     document.documentElement.dataset.gtsLogo = logoStyle;
-    try {
-      localStorage.setItem(STORAGE_KEY, logoStyle);
-    } catch {}
   }, [logoStyle]);
 
   useEffect(() => {
@@ -81,8 +73,8 @@ export default function LogoPreferenceSystem() {
     <section className="logo-preference-panel" aria-labelledby="logo-preference-title">
       <div className="logo-preference-heading">
         <div>
-          <h2 id="logo-preference-title">Λογότυπο</h2>
-          <p>Διάλεξε την εμφάνιση του GreekTube Subs σε αυτή τη συσκευή.</p>
+          <h2 id="logo-preference-title">{tr("Λογότυπο","Logo")}</h2>
+          <p>{tr("Διάλεξε την εμφάνιση του GreekTube Subs σε αυτή τη συσκευή.","Choose the GreekTube Subs logo for this device.")}</p>
         </div>
         <span>LIVE</span>
       </div>
@@ -102,8 +94,8 @@ export default function LogoPreferenceSystem() {
                 {option.src ? <img src={option.src} alt="" /> : <strong>GreekTube <b>Subs</b></strong>}
               </span>
               <span className="logo-preference-copy">
-                <strong>{option.title}</strong>
-                <small>{option.detail}</small>
+                <strong>{tr(option.title,option.id==="official"?"Official":option.title)}</strong>
+                <small>{tr(option.detail,option.id==="classic"?"Lines → play":option.id==="reverse"?"Play → lines":option.id==="premium"?"Deep gradient + glow":option.detail)}</small>
               </span>
               <i aria-hidden="true">{active ? "✓" : ""}</i>
             </button>
