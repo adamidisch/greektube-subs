@@ -106,3 +106,26 @@ match the retained current report. Browser interaction/visual verification was
 not completed: the available browser archive download was invalid and the local
 server hit an environment network-interface error. No native iPhone Safari
 keyboard verification or production deployment is claimed.
+
+
+## Word-range semantic provider adapter
+
+Added pure TypeScript word-phrase translation/review/authoring stages and an
+authenticated `/api/subtitle-authoring` adapter using the existing Groq account.
+Explicit plan/advance/assemble actions perform zero/at-most-one/zero model calls.
+Independent bilingual QA and complete source-word coverage precede deterministic
+authoring. Model errors stop immediately; paid stages resume from checkpoints.
+Semantic phrases can be reused after timing-only repairs while final event
+artifacts are re-authored and rebound. Actual 70-word opening parity with the
+Python worker passes. Full-timeline planning took 4.34 seconds with 159 healthy
+scopes and 840 blocked cues. No real provider call was made.
+
+The new API is not yet connected to a new UI action or executed in production.
+Remaining: targeted full-video acoustic repair, full Greek phrase generation and
+review, browser verification and publication after the existing review gates.
+
+Validation for this continuation: new semantic/provider tests, actual opening
+parity, timing-only semantic-cache reuse, the 36 existing Python tests, TypeScript
+checking, scoped lint, uppercase audit and production build passed. Compiled
+route gate tests covered auth/origin/preview/body size/invalid actions with zero
+network requests. HTTP/browser verification and real provider calls remain absent.

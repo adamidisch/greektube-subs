@@ -19,7 +19,7 @@ export function subtitleSourceWords(source: TimedCue[]): SourceWord[] {
     (cue.text.match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?/gu) || []).map(text => ({ cueIndex, text })));
 }
 
-export function validateAudioEvidence(value: unknown, source: TimedCue[]): { evidence: SubtitleAudioEvidence; tokens: SourceWord[] } {
+export function validateAudioEvidence(value: unknown, source: TimedCue[], options?: { overlapScope: [number, number] }): { evidence: SubtitleAudioEvidence; tokens: SourceWord[] } {
   if (!value || typeof value !== "object") throw Error("Missing audio evidence");
   const row = value as Record<string, unknown>;
   if (row.schemaVersion !== 1) throw Error("Unsupported audio evidence");
@@ -36,7 +36,9 @@ export function validateAudioEvidence(value: unknown, source: TimedCue[]): { evi
       throw Error(`Invalid audio word ${index + 1}`);
     const [start, end, confidence, direct] = entry as number[];
     const cue = source[tokens[index].cueIndex];
-    if (start < 0 || end <= start || start < previousEnd || confidence < 0 || confidence > 1000 || (direct !== 0 && direct !== 1))
+    const inScope = (cueIndex: number) => !options || cueIndex >= options.overlapScope[0] && cueIndex <= options.overlapScope[1];
+    const relevantOverlap = start < previousEnd && (inScope(tokens[index].cueIndex) || inScope(tokens[index - 1]?.cueIndex ?? -1));
+    if (start < 0 || end <= start || relevantOverlap || confidence < 0 || confidence > 1000 || (direct !== 0 && direct !== 1))
       throw Error(`Invalid or overlapping audio word ${index + 1}`);
     if (start < Math.max(0, Math.round(cue.start * 1000) - 750) || end > Math.round((cue.start + cue.duration) * 1000) + 750)
       throw Error(`Audio word outside source context ${index + 1}`);

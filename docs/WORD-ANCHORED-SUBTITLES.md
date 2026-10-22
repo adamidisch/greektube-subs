@@ -50,10 +50,10 @@ replace the full-video source.
 
 ## Remaining production integration
 
-1. Extend the existing semantic translator and bilingual reviewer to return
-   Greek phrases with explicit source word ranges. Reuse the existing global
-   understanding and locked glossary. Preserve uncertainty, attribution,
-   numbers, units and negation; repair only the failing scope.
+1. Connect explicit app controls to the new authenticated word-authoring
+   adapter and verify them in a browser. The adapter, provider transport,
+   phrase mapping, bilingual-review stage and caches are implemented.
+   No real provider generation has been executed by this workbench.
 2. Complete the full-video alignment repairs and semantic phrase editing. The
    compact audio-evidence import and web review validation are implemented;
    imported model evidence remains a draft until every event has audio review.
@@ -119,3 +119,62 @@ match the retained current report. Browser interaction/visual verification was
 not completed: the available browser archive download was invalid and the local
 server hit an environment network-interface error. No native iPhone Safari
 keyboard verification or production deployment is claimed.
+
+
+## Semantic service continuation
+
+The app now has an authenticated `POST /api/subtitle-authoring` adapter with
+three explicit actions: `plan`, `advance` and `assemble`. It uses the existing
+configured Groq account and GPT-OSS 120B model. No provider request was executed
+during implementation; transport tests inject HTTP responses. This endpoint is
+not a new background job and never publishes subtitles. Preview execution is
+blocked. There is not yet a new UI control for this endpoint.
+
+`plan` validates the current source and translation revisions and reuses the
+persisted whole-video understanding. It makes no model calls and does not
+regenerate the brief. It isolates uncertain/overlapping cues, then groups healthy
+complete cues into bounded semantic scopes. Only overlaps within a selected
+scope or its immediate boundary block work on that scope. Final assembly still
+requires the strict whole-video audio validator; unrelated bad boundaries are
+never silently approved. A dry run on the actual full retained timeline took
+4.34 seconds: 159 healthy scopes and 840 blocked source cues. A minimal planning
+brief was used for this dry run; no semantic text was generated or reviewed.
+
+`advance` makes at most one provider request: first translation, then independent
+bilingual review on a separate explicit invocation. Phrases reference immutable
+English word IDs. Both stages are cached. Numeric expressions, ordered coverage,
+Greek punctuation and uppercase accents are checked. A dynamic-programming
+authorer groups whole Greek phrases against real word anchors with no timing
+debt. The actual 70-word opening produces the same six event texts, word ranges
+and times as the Python worker. Failure to fit stops that scope for repair.
+
+Provider requests have one HTTP attempt, a 50-second timeout and no JSON-mode
+fallback request. Rate limits persist a cooldown immediately while preserving
+ready transcript status. Existing saved translation survives a failed reviewer
+request. Manual-review scopes do not automatically retry. A separate semantic
+cache binds source text, translation reference, whole-video brief, glossary,
+context, word IDs, model and prompts. It can reuse bilingual-reviewed phrases
+after timing-only repair. New times must still pass fresh deterministic authoring
+and produce a newly bound final artifact. Source or glossary changes invalidate
+that semantic reuse.
+
+`assemble` loads the exact saved scope checkpoints in order, requires full-video
+coverage and current source/translation/audio bindings and revalidates the whole
+event track. It saves an ordinary pending review draft. Human audio review,
+bilingual sign-off and existing publication checks remain mandatory. Writes use
+the existing admin session, same-origin gate and video lease. No schema migration
+or new credential is needed.
+
+Validation includes actual-opening parity, stage-by-stage checkpoint replay,
+reviewer failure/resume, stale source/audio/glossary rejection, numeric sign
+preservation, punctuation/uppercase checks, impossible-fit failures, partial and
+duplicate scope rejection, timing-only semantic reuse and single-attempt HTTP
+400/429/500/truncated-output cases. Browser and whole-video human review remain
+unverified. Full-video alignment repairs and Greek editing are still outstanding.
+
+The compiled Next.js route also passed admin-session, cross-origin, preview,
+oversized-body and invalid-action gate tests with network access replaced by
+a failing test stub. These tests made no provider or database requests. They
+exercise the compiled route directly, not a live HTTP deployment. A local
+listening server could start but was unreachable from the separate test process;
+no HTTP/browser verification is claimed.
