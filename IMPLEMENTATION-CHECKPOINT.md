@@ -129,3 +129,22 @@ parity, timing-only semantic-cache reuse, the 36 existing Python tests, TypeScri
 checking, scoped lint, uppercase audit and production build passed. Compiled
 route gate tests covered auth/origin/preview/body size/invalid actions with zero
 network requests. HTTP/browser verification and real provider calls remain absent.
+
+
+## 7.11.0 editor integration
+
+Connected the existing editor review panel to word-timing import, explicit
+foreground semantic processing, pause/resume and pending-draft assembly. Timings
+are uploaded once and subsequent stage requests use a validated content reference.
+IndexedDB separates timing payloads from small progress records. Exact planned
+packet keys prevent changed context from triggering an unintended provider call.
+
+All four compiled-browser scenarios passed: mobile pause/reload/resume, tablet
+English/light draft assembly, desktop blocked-scope gate and mobile rate-limit
+stop with persisted cooldown. No runtime errors/overflow; controls >=44px, focused
+selector 16px and viewport scale 1. Rendered screenshots were inspected. Actual
+full diagnostic import: 18,770 words, 444,225 compact bytes, 43ms. CLI client
+regressions, existing 36 Python tests, TypeScript, scoped lint, uppercase audit,
+production build and compiled-route auth gates passed. No real model call or
+subtitle publication occurred during implementation. Native Safari verification
+and whole-video timing/language review remain outstanding.

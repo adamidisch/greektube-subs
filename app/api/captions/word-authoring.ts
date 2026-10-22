@@ -5,6 +5,9 @@ import { auditSubtitleEvents, validateAuthoredEvents, type SubtitleEvent, type T
 import { subtitleContentHash } from "../subtitle-track.ts";
 
 export const WORD_AUTHORING_MODEL = "openai/gpt-oss-120b";
+export function wordEvidenceKey(evidence: SubtitleAudioEvidence) {
+  return createHash("sha256").update(JSON.stringify(evidence)).digest("hex");
+}
 export const WORD_TRANSLATION_PROMPT = `You are the GreekTube professional English-to-Greek audiovisual translator.
 Read the whole-video brief, locked glossary and read-only neighbouring context. Translate the complete meaning
 of the selected source into concise natural Greek. Reconstruct sentences across cue boundaries. Preserve

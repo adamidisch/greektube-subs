@@ -48,18 +48,17 @@ replace the full-video source.
 - Repair-required failure when text cannot fit, rather than accumulating delay.
 - Separate draft status, model evidence and human-review status.
 
-## Remaining production integration
+## Before whole-video publication
 
-1. Connect explicit app controls to the new authenticated word-authoring
-   adapter and verify them in a browser. The adapter, provider transport,
-   phrase mapping, bilingual-review stage and caches are implemented.
-   No real provider generation has been executed by this workbench.
-2. Complete the full-video alignment repairs and semantic phrase editing. The
-   compact audio-evidence import and web review validation are implemented;
-   imported model evidence remains a draft until every event has audio review.
-3. Exercise the complete path in isolation, including source changes,
-   translation edits, provider cooldown, stale artifacts, playback and export.
-4. Review the final full-video Greek wording and audio before publication.
+1. Repair the full-video alignment flags with targeted acoustic processing.
+2. Generate and review the complete Greek phrase track with the configured
+   provider, then assemble it through the existing full-coverage gates.
+3. Verify the authenticated production provider/storage path. Browser tests
+   exercise the compiled frontend with isolated API fixtures, not real model calls.
+4. Complete whole-video language and acoustic review before subtitle approval.
+5. Automatic audio alignment still requires the standalone local worker or a
+   separately provisioned audio compute host. The new app control imports word
+   timing JSON; it does not align an uploaded MP3 inside Vercel.
 
 The old isolated worker must not be launched against the production queue.
 The local commands do not create a queue, poll a service or publish content.
@@ -115,10 +114,9 @@ not a full-video production artifact.
 
 Full-video parity check: all 18,770 source token texts and cue mappings agree
 between Python and TypeScript. Worker source SHA and both app content SHAs
-match the retained current report. Browser interaction/visual verification was
-not completed: the available browser archive download was invalid and the local
-server hit an environment network-interface error. No native iPhone Safari
-keyboard verification or production deployment is claimed.
+match the retained current report. The UI continuation below adds browser
+interaction and visual verification. Native iPhone Safari keyboard verification
+remains unavailable.
 
 
 ## Semantic service continuation
@@ -128,7 +126,7 @@ three explicit actions: `plan`, `advance` and `assemble`. It uses the existing
 configured Groq account and GPT-OSS 120B model. No provider request was executed
 during implementation; transport tests inject HTTP responses. This endpoint is
 not a new background job and never publishes subtitles. Preview execution is
-blocked. There is not yet a new UI control for this endpoint.
+blocked. The UI continuation below connects this endpoint to the editor.
 
 `plan` validates the current source and translation revisions and reuses the
 persisted whole-video understanding. It makes no model calls and does not
@@ -169,12 +167,65 @@ Validation includes actual-opening parity, stage-by-stage checkpoint replay,
 reviewer failure/resume, stale source/audio/glossary rejection, numeric sign
 preservation, punctuation/uppercase checks, impossible-fit failures, partial and
 duplicate scope rejection, timing-only semantic reuse and single-attempt HTTP
-400/429/500/truncated-output cases. Browser and whole-video human review remain
-unverified. Full-video alignment repairs and Greek editing are still outstanding.
+400/429/500/truncated-output cases. Whole-video human review remains unverified.
+Full-video alignment repairs and Greek editing are still outstanding.
 
 The compiled Next.js route also passed admin-session, cross-origin, preview,
 oversized-body and invalid-action gate tests with network access replaced by
 a failing test stub. These tests made no provider or database requests. They
-exercise the compiled route directly, not a live HTTP deployment. A local
-listening server could start but was unreachable from the separate test process;
-no HTTP/browser verification is claimed.
+exercise the compiled route directly, not a live HTTP deployment. The UI continuation below adds a foreground preview-server/browser test. No
+positive authenticated production provider call is claimed.
+
+
+## Editor controls and mobile transfer budget — 7.11.0
+
+The existing Video Editor's Subtitle Quality panel now includes audio-timing
+import, scope progress, explicit foreground batches of 1/5/all ready sections,
+pause between provider stages, persisted resume, cooldown display and draft
+assembly. There is no auto-resume, polling, recurring task or background queue.
+The upper bound on provider requests is visible before a batch starts. Import
+only plans the work and never starts translation. Blocked scopes cannot assemble.
+
+The raw full worker diagnostic JSON can be imported up to 12 MB. The client
+checks the worker source digest and every lexical token/cue mapping, then compacts
+times to integer tuples with a new reproducible compact digest. It does not
+pretend to reproduce Python's floating-point JSON serialization hash. The actual
+18,770-word recording imported in 43 ms and produced 444,225 bytes of compact
+evidence without a model call. This is a local timing import, not acoustic review.
+
+The server stores timing evidence by its actual content SHA during planning.
+Later stage and assembly requests use the returned evidence reference rather
+than retransmitting the full video timeline. Warm functions keep a bounded
+eight-entry immutable-evidence cache. Every reference is constrained to the
+current video/source/translation path and its content digest is verified on read.
+Advance requests also carry the exact planned packet key; a changed glossary or
+packet is rejected before a new provider request.
+
+IndexedDB stores large timing data separately from small progress metadata.
+Provider reference keys and local storage keys are distinct and survive reload.
+An earlier local draft format can still be read. A timing replacement removes
+the superseded local timing row. Saved model stages remain on the server if
+local storage is unavailable; processing stops instead of silently losing progress.
+
+Browser verification used the compiled preview frontend at 390/768/1280 px,
+Greek and English, dark and light themes. Fixtures intercepted API traffic.
+Passed: file chooser/import, no translation on import, pause after translation,
+reload without auto-resume, exact next-stage continuation, separate IndexedDB
+storage, tiny evidence-reference stage requests, stale file rejection, blocked
+assembly, draft-to-review flow, per-event publication gate, HTTP 429 stop and
+reload-persistent cooldown. There were no runtime errors or horizontal overflow.
+Visible buttons measured at least 44 px and the focused selector 16 px; viewport
+scale stayed 1 after focus/blur. Rendered screenshots were inspected. Light-theme
+focus/field contrast and progress colors use the existing purple palette. Native
+iPhone Safari keyboard behavior has not been exercised.
+
+Run the browser suite after a preview build:
+
+```bash
+VERCEL_ENV=preview npm run build
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs CHROMIUM_PATH=/path/to/chromium \
+  node --experimental-strip-types scripts/subtitle-authoring-ui.browser-test.mjs
+```
+
+The suite starts and stops its own foreground server. It never calls a real
+provider, writes production subtitles or supplies production credentials.

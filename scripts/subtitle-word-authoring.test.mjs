@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { buildWordAuthoringPacket, advanceWordAuthoring, assembleWordAuthoring, parseWordPhrases,
-  authorWordPhrases, wordAuthoringKey, WordAuthoringNeedsReview, planWordAuthoring, wordSemanticKey, reusableWordSemantics } from "../app/api/captions/word-authoring.ts";
+  authorWordPhrases, wordAuthoringKey, WordAuthoringNeedsReview, planWordAuthoring, wordSemanticKey, wordEvidenceKey, reusableWordSemantics } from "../app/api/captions/word-authoring.ts";
 import { wordAuthoringJson, WordAuthoringProviderError } from "../app/api/captions/word-authoring-provider.ts";
 import { subtitleContentHash } from "../app/api/subtitle-track.ts";
 import { subtitleTrackSrt } from "../app/subtitle-track.ts";
@@ -113,3 +113,8 @@ assert.equal(reusedResult.status,"draft_ready");
 assert.equal(reusedResult.wordTimelineHash,retimed.wordTimelineHash);
 assert.equal(reusedResult.events[0].start,actualEvents[0].start+.001);
 assert.deepEqual(reusableWordSemantics({...packet,sourceHash:"different"},{key:wordSemanticKey(packet),proposed:cache.proposed}),{});
+
+assert.equal(wordEvidenceKey(structuredClone(review.audioEvidence)),wordEvidenceKey(review.audioEvidence));
+assert.notEqual(wordEvidenceKey({...review.audioEvidence,audioSha256:"a".repeat(64)}),wordEvidenceKey(review.audioEvidence));
+const tampered=structuredClone(review.audioEvidence);tampered.words[0][0]++;
+assert.notEqual(wordEvidenceKey(tampered),wordEvidenceKey(review.audioEvidence),"stored evidence references bind the exact word times");

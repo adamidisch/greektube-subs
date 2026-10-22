@@ -4,21 +4,26 @@ import { put } from "@vercel/blob";
 import { database } from "@/db/postgres";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { type TimedCue } from "@/app/subtitle-track";
-import { type SubtitleAudioEvidence } from "@/app/subtitle-audio-evidence";
+import { validateAudioEvidence, type SubtitleAudioEvidence } from "@/app/subtitle-audio-evidence";
 import { getTranscript, TRANSCRIPT_VERSION } from "../shared-cache";
 import { readPublishedTranscript } from "../transcript-blob";
 import { subtitleContentHash } from "../subtitle-track";
 import { readSubtitleDraft, saveSubtitleDraft } from "../subtitle-track-store";
 import { readTranslationUnderstanding, compactUnderstandingForPrompt } from "../captions/translation-understanding";
 import { advanceWordAuthoring, assembleWordAuthoring, buildWordAuthoringPacket, wordAuthoringKey, planWordAuthoring,
-  wordSemanticKey, reusableWordSemantics, type WordSemanticCheckpoint,
+  wordSemanticKey, wordEvidenceKey, reusableWordSemantics, type WordSemanticCheckpoint,
   type WordAuthoringCheckpoint, type WordAuthoringResult } from "../captions/word-authoring";
 import { wordAuthoringJson, WordAuthoringProviderError } from "../captions/word-authoring-provider";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 type Body = { videoId: string; action: "plan" | "advance" | "assemble"; sourceHash: string; translationHash: string;
-  audioEvidence: SubtitleAudioEvidence; sourceCueRange?: [number, number]; scopes?: { range: [number, number]; key: string }[] };
+  audioEvidence?: SubtitleAudioEvidence; evidenceKey?: string; sourceCueRange?: [number, number]; key?: string; scopes?: { range: [number, number]; key: string }[] };
+const evidenceCache = new Map<string, SubtitleAudioEvidence>();
+function cacheEvidence(path: string, evidence: SubtitleAudioEvidence) {
+  evidenceCache.delete(path); evidenceCache.set(path, evidence);
+  if (evidenceCache.size > 8) evidenceCache.delete(evidenceCache.keys().next().value!);
+}
 
 /** Explicit authenticated calls only: no queue, polling, automatic continuation or publication. */
 export async function POST(request: Request) {
@@ -36,9 +41,9 @@ export async function POST(request: Request) {
     if (!body || typeof body.videoId !== "string" || !/^[\w-]{11}$/u.test(body.videoId) || !["plan", "advance", "assemble"].includes(body.action))
       return json({ error: "Μη έγκυρη ενέργεια." }, 400);
     if (![body.sourceHash, body.translationHash].every(value => typeof value === "string" && /^[a-f0-9]{64}$/u.test(value))
-      || !body.audioEvidence || typeof body.audioEvidence !== "object") return json({ error: "Χρειάζεται έγκυρη αναφορά πηγής και χρονισμού." }, 400);
+      || !(body.audioEvidence && typeof body.audioEvidence === "object" || typeof body.evidenceKey === "string" && /^[a-f0-9]{64}$/u.test(body.evidenceKey))) return json({ error: "Χρειάζεται έγκυρη αναφορά πηγής και χρονισμού." }, 400);
     const validRange = (value: unknown) => Array.isArray(value) && value.length === 2 && value.every(Number.isInteger) && value[0] >= 0 && value[1] >= value[0];
-    if (body.action === "advance" && !validRange(body.sourceCueRange)) return json({ error: "Μη έγκυρο τμήμα υποτίτλων." }, 400);
+    if (body.action === "advance" && (!validRange(body.sourceCueRange) || typeof body.key !== "string" || !/^[a-f0-9]{64}$/u.test(body.key))) return json({ error: "Μη έγκυρο τμήμα υποτίτλων." }, 400);
     if (body.action === "assemble" && (!Array.isArray(body.scopes) || !body.scopes.length || body.scopes.length > 30_000
       || body.scopes.some(scope => !scope || !validRange(scope.range) || typeof scope.key !== "string" || !/^[a-f0-9]{64}$/u.test(scope.key))))
       return json({ error: "Μη έγκυρη λίστα τμημάτων." }, 400);
@@ -54,14 +59,29 @@ export async function POST(request: Request) {
     const translation = (published?.cues ?? record?.greekTranscript ?? []) as TimedCue[];
     if (!source.length || body.sourceHash !== subtitleContentHash(source) || body.translationHash !== subtitleContentHash(translation))
       return json({ error: "Η πηγή ή η μετάφραση άλλαξε. Φόρτωσε ξανά." }, 409);
+    const prefix = `subtitle-authoring/v1/${videoId}/${body.sourceHash}/${body.translationHash}`;
+    let evidence = body.audioEvidence;
+    if (!evidence) {
+      const path = `${prefix}/evidence/${body.evidenceKey}.json`;
+      evidence = evidenceCache.get(path) ?? await readSubtitleDraft(path) as SubtitleAudioEvidence | undefined;
+      if (!evidence || wordEvidenceKey(evidence) !== body.evidenceKey) return json({ error: "Δεν βρέθηκε ο χρονισμός. Εισήγαγε ξανά το αρχείο." }, 409);
+      cacheEvidence(path, evidence);
+    }
+    evidence = validateAudioEvidence(evidence, source, { overlapScope: [-1, -1] }).evidence;
+    if (evidence.sourceHash !== body.sourceHash) return json({ error: "Η πηγή του χρονισμού άλλαξε." }, 409);
     // Read-only reuse. A missing brief must not silently trigger whole-video model calls.
     const understanding = await readTranslationUnderstanding(videoId, TRANSCRIPT_VERSION, source);
     if (!understanding) return json({ error: "Χρειάζεται η συνολική ανάλυση του βίντεο πριν από την επιμέλεια." }, 409);
     const brief = JSON.parse(compactUnderstandingForPrompt(understanding)) as Record<string, unknown>;
-    if (body.action === "plan") return json({ status: "planned", sourceHash: body.sourceHash, translationHash: body.translationHash,
-      scopes: planWordAuthoring(source, translation, body.audioEvidence, brief), providerCalls: 0 });
+    if (body.action === "plan") {
+      const scopes = planWordAuthoring(source, translation, evidence, brief), evidenceKey = wordEvidenceKey(evidence);
+      const path = `${prefix}/evidence/${evidenceKey}.json`;
+      if (!evidenceCache.has(path)) await put(path, JSON.stringify(evidence), { access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true });
+      cacheEvidence(path, evidence);
+      return json({ status: "planned", sourceHash: body.sourceHash, translationHash: body.translationHash, evidenceKey, scopes, providerCalls: 0 });
+    }
     const pathFor = (key: string) => `subtitle-authoring/v1/${videoId}/${body.sourceHash}/${body.translationHash}/${key}.json`;
-    const packetFor = (range: [number, number]) => buildWordAuthoringPacket(source, translation, body.audioEvidence, range, brief);
+    const packetFor = (range: [number, number]) => buildWordAuthoringPacket(source, translation, evidence!, range, brief);
     if (body.action === "assemble") {
       if (!Array.isArray(body.scopes) || !body.scopes.length || body.scopes.length > source.length) throw Error("Invalid semantic scope list");
       const results: WordAuthoringResult[] = [];
@@ -72,11 +92,12 @@ export async function POST(request: Request) {
         if (saved?.key !== key || !saved.result) throw Error("Semantic scope is not ready");
         results.push(saved.result);
       }
-      const track = assembleWordAuthoring(source, translation, body.audioEvidence, results);
+      const track = assembleWordAuthoring(source, translation, evidence, results);
       const draft = await saveSubtitleDraft(videoId, source, translation, track.events, track.audioEvidence);
       return json({ status: "draft_ready", humanAudioReview: false, ...draft });
     }
     const packet = packetFor(body.sourceCueRange!), key = wordAuthoringKey(packet), path = pathFor(key);
+    if (body.key !== key) return json({ error: "Το τμήμα έχει αλλάξει. Φόρτωσε ξανά το σχέδιο επεξεργασίας." }, 409);
     const semanticKey = wordSemanticKey(packet);
     const semanticPath = `subtitle-authoring/v1/${videoId}/${body.sourceHash}/${body.translationHash}/semantic-${semanticKey}.json`;
     const existing = await readSubtitleDraft(path) as WordAuthoringCheckpoint | null;
