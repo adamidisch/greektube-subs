@@ -431,6 +431,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if(process.env.VERCEL_ENV==="preview")return NextResponse.json({error:"Η αυτόματη μετάφραση είναι απενεργοποιημένη στο preview."},{status:409});
   const rawBody = await request.text();
   let body: TranslationRequestBody;
   try {

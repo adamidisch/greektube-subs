@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {tr,useAppLanguage} from "./app-language";
-import {logoutProfile} from "./session-client";
+import {logoutProfile,SESSION_ENDED_KEY} from "./session-client";
 
 type Profile = { username: string; anonymous: boolean; createdAt?: string };
 type Availability = "idle" | "checking" | "available" | "taken" | "invalid";
@@ -32,6 +32,7 @@ export default function UserProfileEnhancer() {
   const [profileLoadMessage, setProfileLoadMessage] = useState(tr("Φόρτωση προφίλ…"));
   const [menuOpen, setMenuOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [logoutOpen,setLogoutOpen]=useState(false),[logoutBusy,setLogoutBusy]=useState(false);
   const [draft, setDraft] = useState("");
   const [availability, setAvailability] = useState<Availability>("idle");
   const [availableUsername, setAvailableUsername] = useState<string | null>(null);
@@ -45,13 +46,29 @@ export default function UserProfileEnhancer() {
 
   useEffect(() => {
     const syncTarget = () => {
-      setTarget(document.querySelector<HTMLElement>("main.app-shell:not(.viewer) > header.app-header"));
+      setTarget(document.querySelector<HTMLElement>(".settings-screen-layer .app-header")||document.querySelector<HTMLElement>("main.app-shell:not(.viewer) > header.app-header"));
     };
     syncTarget();
     const observer = new MutationObserver(syncTarget);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
+  useEffect(()=>{const ended=(event:StorageEvent)=>{if(event.key===SESSION_ENDED_KEY)location.reload()};window.addEventListener("storage",ended);return()=>window.removeEventListener("storage",ended)},[]);
+  useEffect(()=>{
+    if(!editorOpen&&!logoutOpen)return;
+    const previous=document.body.style.overflow;document.body.style.overflow="hidden";
+    const key=(event:KeyboardEvent)=>{
+      if(event.key==="Escape"&&!saving&&!logoutBusy){setEditorOpen(false);setLogoutOpen(false);return}
+      if(event.key!=="Tab")return;
+      const dialog=document.querySelector<HTMLElement>(".profile-editor[aria-modal=true]");
+      const controls=dialog?[...dialog.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),textarea,select,[tabindex="0"]')]:[];
+      const first=controls[0],last=controls.at(-1);if(!first||!last)return;
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}
+    };
+    document.addEventListener("keydown",key);
+    return()=>{document.body.style.overflow=previous;document.removeEventListener("keydown",key)};
+  },[editorOpen,logoutOpen,saving,logoutBusy]);
 
   const loadProfile = useCallback(() => {
     const request = ++profileRequest.current;
@@ -174,6 +191,7 @@ export default function UserProfileEnhancer() {
 
   function openUsernameEditor() {
     if (!profile) return;
+    setMenuOpen(false);
     setDraft(profile.username);
     setAvailability("idle");
     setAvailableUsername(null);
@@ -277,11 +295,11 @@ export default function UserProfileEnhancer() {
         <span className="user-avatar user-avatar-large"><UserIcon/></span>
         <div><strong>{profile.username}</strong><small>{profile.anonymous ? tr("Ανώνυμο προφίλ") : tr("Προφίλ χρήστη")}</small></div>
       </div>
-      <Link prefetch={false} href="/account" className="user-menu-row" role="menuitem"><span className="user-menu-icon"><UserIcon/></span><span><strong>{tr("Λογαριασμός")}</strong><small>{tr("Προσωπικό προφίλ")}</small></span></Link>
-      <Link prefetch={false} href="/?action=add" className="user-menu-row" role="menuitem" onClick={event=>{if(location.pathname==="/"&&!new URLSearchParams(location.search).has("video")){event.preventDefault();setMenuOpen(false);window.dispatchEvent(new Event("greektube:add-video"))}}}><span className="user-menu-icon"><MenuIcon kind="add"/></span><span><strong>{tr("Προσθήκη βίντεο")}</strong></span></Link>
-      <Link prefetch={false} href="/?view=settings" className="user-menu-row" role="menuitem"><span className="user-menu-icon"><MenuIcon kind="settings"/></span><span><strong>{tr("Ρυθμίσεις")}</strong></span></Link>
-      <button type="button" className="user-menu-row user-menu-logout" role="menuitem" onClick={()=>{void logoutProfile().catch(error=>setMessage(error.message));}}><span className="user-menu-icon"><MenuIcon kind="logout"/></span><span><strong>{tr("Αποσύνδεση")}</strong></span></button>
-      {message&&<p role="status">{message}</p>}
+      <Link prefetch={false} href="/account" onClick={()=>setMenuOpen(false)} className="user-menu-row" role="menuitem"><span className="user-menu-icon"><UserIcon/></span><span><strong>{tr("Λογαριασμός")}</strong><small>{tr("Προσωπικό προφίλ")}</small></span></Link>
+      <Link prefetch={false} href="/?action=add" className="user-menu-row" role="menuitem" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"&&!new URLSearchParams(location.search).has("video")){event.preventDefault();setMenuOpen(false);window.dispatchEvent(new Event("greektube:add-video"))}}}><span className="user-menu-icon"><MenuIcon kind="add"/></span><span><strong>{tr("Προσθήκη βίντεο")}</strong></span></Link>
+      <Link prefetch={false} href="/?view=settings" onClick={()=>setMenuOpen(false)} className="user-menu-row" role="menuitem"><span className="user-menu-icon"><MenuIcon kind="settings"/></span><span><strong>{tr("Ρυθμίσεις")}</strong></span></Link>
+      <button type="button" className="user-menu-row user-menu-logout" role="menuitem" onClick={()=>{setMenuOpen(false);setMessage("");setLogoutOpen(true)}}><span className="user-menu-icon"><MenuIcon kind="logout"/></span><span><strong>{tr("Αποσύνδεση")}</strong></span></button>
+      {message&&<p role="status">{tr(message)}</p>}
     </div>}
   </div>;
 
@@ -294,12 +312,13 @@ export default function UserProfileEnhancer() {
           <span className="user-avatar"><UserIcon/></span>
           <input id="greektube-username" autoFocus autoComplete="off" maxLength={24} value={draft} onChange={event => updateDraft(event.target.value)} />
         </div>
-        <div className={`profile-availability ${availability}`} aria-live="polite">{message || tr("Μπορείς να το αλλάξεις οποιαδήποτε στιγμή.")}</div>
+        <div className={`profile-availability ${availability}`} aria-live="polite">{tr(message) || tr("Μπορείς να το αλλάξεις οποιαδήποτε στιγμή.")}</div>
         <p>{tr("Το username είναι μοναδικό για το GreekTube Subs. Το πραγματικό anonymous ID του προφίλ σου δεν αλλάζει.")}</p>
         <div className="profile-editor-actions"><button type="button" className="secondary" onClick={() => setEditorOpen(false)} disabled={saving}>{tr("Ακύρωση")}</button><button type="submit" className="primary" disabled={saving || (draft.trim() !== profile.username && (availability !== "available" || availableUsername !== draft.normalize("NFKC").trim()))}>{saving ? tr("Αποθήκευση…") : tr("Αποθήκευση")}</button></div>
       </form>
     </section>
   </div>, document.body) : null;
 
-  return <>{createPortal(profileUi, target)}{editor}</>;
+  const logoutDialog=logoutOpen?createPortal(<div className="profile-editor-backdrop"><section className="profile-editor" role="dialog" aria-modal="true" aria-labelledby="logout-title"><header><h2 id="logout-title">{tr("Αποσύνδεση")}</h2><button type="button" disabled={logoutBusy} aria-label={tr("Κλείσιμο")} onClick={()=>setLogoutOpen(false)}>×</button></header><div className="profile-logout-body"><p>{tr("Αυτό είναι προφίλ συσκευής χωρίς στοιχεία σύνδεσης. Η αποσύνδεση αφαιρεί την πρόσβαση αυτού του browser στην πρόοδο, στα αγαπημένα και στις αποθηκευμένες στιγμές. Το όνομα από μόνο του δεν αρκεί για επανασύνδεση.","This device profile has no sign-in credentials. Logging out removes this browser’s access to its progress, favorites and saved moments. Your username alone cannot restore access.")}</p><Link href="/account" onClick={()=>setLogoutOpen(false)}>{tr("Εξαγωγή δεδομένων πριν από την αποσύνδεση","Export data before logging out")}</Link>{message&&<p role="alert">{message}</p>}<div className="profile-editor-actions"><button type="button" className="secondary" disabled={logoutBusy} onClick={()=>setLogoutOpen(false)}>{tr("Ακύρωση")}</button><button type="button" className="primary" disabled={logoutBusy} onClick={()=>{setLogoutBusy(true);void logoutProfile().catch(error=>{setMessage(error.message);setLogoutBusy(false)})}}>{logoutBusy?tr("Αποσύνδεση…","Logging out…"):tr("Αποσύνδεση")}</button></div></div></section></div>,document.body):null;
+  return <>{createPortal(profileUi, target)}{editor}{logoutDialog}</>;
 }

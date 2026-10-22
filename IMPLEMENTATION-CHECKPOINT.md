@@ -36,9 +36,15 @@ Any missing audio/evidence must remain explicit in QC and completion reports.
 - [x] Import/owner publishing gates and reviewed timeline support
 - [x] Shared player/transcript/export timeline
 - [x] Account menu, analytics and independent core-app language
-- [ ] Build, type, targeted tests and desktop/mobile browser checks
+- [x] Build, type and targeted lint/tests
+- [x] Desktop browser and 390px/768px iframe layout checks
+- [ ] Native iPhone Safari keyboard/viewport verification (not available in this browser)
 - [ ] Reviewed commit and verified production deployment
 
 The old source cue at 110.290 seconds is covered by a regression fixture. The actual production audit still reports 838 fast pages and 122 under 1.5 seconds. This release makes that debt visible and reviewable; it does not falsely mark the video acoustically verified.
 
 Implemented: source/translation hash binding, client invalidation, same-origin authenticated review writes with video leases, per-event audio review, inline text/timing editor, draft retention, safe logout and per-device account metrics. No new translation provider work was launched. Preview-only `/qa` provides 390px and 768px iframe viewports; production returns 404.
+
+Final audit also routed new Auto Translate actions to the semantic professional pipeline, applied readability gates to both legacy and professional finalization, made manual imports validate canonical source and numbers, preserved original raw English evidence and added guarded publication plus origin read-back of the actual Blob. Forced operations can no longer steal an active video lease. Its actual UPSERT passed local SQLite conflict-semantics regressions; production Postgres mutations were not exercised.
+
+The account remains a device profile, not a new credential-based authentication system. Logout explicitly explains the loss of browser access and offers data export before confirmation. Public contact/legal copy and core application labels have independent EL/EN translations. Video subtitle language remains separate.

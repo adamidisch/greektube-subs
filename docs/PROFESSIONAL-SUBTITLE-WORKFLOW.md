@@ -29,6 +29,8 @@ The reviewer is responsible for meaning, terminology, negation and audible timin
 
 Admin authorization, same-origin checks and the existing per-video lease protect timeline writes. Preview deployments cannot approve or publish timelines. Source changes invalidate approval on the server. Local text/timing edits also invalidate the client display artifact.
 
+New Auto Translate actions use the semantic professional route. Existing legacy work can resume but its final display also passes the readability gate. Already readable authored SRT boundaries are preserved. Fallback packing cannot bridge source gaps. Manual imports validate numbers and the canonical English revision, retain original raw English evidence and switch the published Blob before acknowledging completion. Publication is read back from origin storage; mutable review artifacts also bypass stale CDN content. Force means restart after acquiring a lease, not take over another active writer.
+
 ## Regression and release evidence
 
 Run `npm run build`, `npm run test:subtitle-track` and targeted lint. The shared-timeline suite includes the actual xYB6uYyRjCA 110.290-second cue, gaps, independent language timing, numeric preservation, source coverage and stale-artifact invalidation.

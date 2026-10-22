@@ -336,8 +336,7 @@ export async function acquireProcessingLock(videoId: string, token: string, forc
       processing_started_at = CASE WHEN $8 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version THEN EXCLUDED.processing_started_at ELSE COALESCE(video_transcripts.processing_started_at, EXCLUDED.processing_started_at) END,
       lock_token = EXCLUDED.lock_token, lock_expires_at = EXCLUDED.lock_expires_at, error = NULL,
       transcript_version = EXCLUDED.transcript_version, updated_at = EXCLUDED.updated_at
-    WHERE $8 = 1 OR video_transcripts.transcript_version != EXCLUDED.transcript_version OR video_transcripts.status = 'failed'
-       OR video_transcripts.lock_expires_at IS NULL OR video_transcripts.lock_expires_at < EXCLUDED.updated_at
+    WHERE video_transcripts.lock_token IS NULL OR video_transcripts.lock_expires_at IS NULL OR video_transcripts.lock_expires_at < EXCLUDED.updated_at
     RETURNING video_id`,
     [videoId, token, expires, TRANSCRIPT_VERSION, now.toISOString(), now.toISOString(), now.toISOString(), force ? 1 : 0],
   ) as { video_id: string }[];

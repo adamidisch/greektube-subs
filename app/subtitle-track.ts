@@ -70,11 +70,18 @@ export function auditSubtitleEvents(events: SubtitleEvent[]): SubtitleAudit {
 
 /** Legacy timing is compiled once and honestly labelled as an estimate, never an audio proof. */
 export function legacySubtitleTrack(cues: TimedCue[]): SubtitleTrack {
-  const events: SubtitleEvent[] = packSubtitles(cues).packs.flatMap(pack => {
+  const direct:SubtitleEvent[]=cues.map((cue,index)=>({...cue,text:normalise(cue.text),sourceIndices:[index],timing:"source_cue"}));
+  const directAudit=auditSubtitleEvents(direct);
+  // Already readable authored SRTs must not be resegmented by the fallback packer.
+  if(directAudit.readable)return {schemaVersion:1,inputKey:subtitleInputKey(cues),origin:"legacy",events:direct,audit:directAudit};
+  const runs:{cues:TimedCue[];offset:number}[]=[];
+  cues.forEach((cue,index)=>{const previous=cues[index-1];if(!previous||cue.start>previous.start+previous.duration+.002)runs.push({cues:[cue],offset:index});else runs[runs.length-1].cues.push(cue)});
+  const packs=runs.flatMap(run=>packSubtitles(run.cues).packs.map(pack=>({...pack,sourceIndices:pack.sourceIndices.map(index=>index+run.offset)})));
+  const events: SubtitleEvent[] = packs.flatMap(pack => {
     const pages = pack.pages.length ? pack.pages : [{ at: pack.start, text: pack.text }];
     return pages.map((page, index) => ({
-      start: page.at,
-      duration: Math.max(0, (pages[index + 1]?.at ?? pack.start + pack.duration) - page.at),
+      start: Number(page.at.toFixed(3)),
+      duration: Math.max(0,Number((Number((pages[index + 1]?.at ?? pack.start + pack.duration).toFixed(3))-Number(page.at.toFixed(3))).toFixed(3))),
       text: normalise(page.text),
       sourceIndices: [...pack.sourceIndices],
       timing: (pages.length === 1 ? "source_cue" : "estimated") as TimingEvidence,
@@ -104,7 +111,8 @@ export function validateAuthoredEvents(value: unknown, source: TimedCue[]): Subt
     if (start < first.start - .12 || start + duration > last.start + last.duration + .12) throw new Error(`Event outside source speech window ${index + 1}`);
     const timing = row.timing as TimingEvidence;
     if (!allowed.has(timing)) throw new Error(`Missing timing evidence ${index + 1}`);
-    return { start, duration, text: normalise(row.text), sourceIndices: [...indices], timing };
+    const roundedStart=Number(start.toFixed(3)),roundedEnd=Number((start+duration).toFixed(3));
+    return { start:roundedStart, duration:Number((roundedEnd-roundedStart).toFixed(3)), text: normalise(row.text), sourceIndices: [...indices], timing };
   });
   if (covered.size !== source.length) throw new Error("Source coverage is incomplete");
   // Every numeric expression in the approved translation must survive resegmentation.

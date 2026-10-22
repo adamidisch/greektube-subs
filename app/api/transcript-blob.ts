@@ -96,11 +96,11 @@ function validCheckpoint(value: unknown, videoId: string, transcriptVersion: num
 async function readJson(pathname: string) {
   // Blob reads require the object URL in some deployments. Resolve by pathname
   // when direct lookup is unavailable, while keeping the stored manifest stable.
-  let blob = await get(pathname, { access: "public" }).catch(() => null);
+  let blob = await get(pathname, { access: "public",useCache:false }).catch(() => null);
   if (!blob?.stream) {
     const listed = await list({ prefix: pathname, limit: 2 });
     const match = listed.blobs.find(item => item.pathname === pathname);
-    blob = match ? await get(match.url, { access: "public" }).catch(() => null) : null;
+    blob = match ? await get(match.url, { access: "public",useCache:false }).catch(() => null) : null;
   }
   if (!blob?.stream) return null;
   return await new Response(blob.stream).json() as unknown;
@@ -121,6 +121,8 @@ function cleanTrailingOrphanArticle(value: unknown) {
 
 function greekOnly(payload: PublishedTranscript): PublishedTranscript {
   const { englishCues: _englishCues, ...rest } = payload;
+  // An approved artifact is bound to exact canonical text; never silently rewrite it.
+  if(rest.subtitleTrack&&typeof rest.subtitleTrack==="object"&&(rest.subtitleTrack as {origin?:unknown}).origin==="authored")return rest;
   if (!Array.isArray(rest.cues)) return rest;
   return {
     ...rest,

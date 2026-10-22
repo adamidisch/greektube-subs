@@ -11,7 +11,7 @@ export function subtitleTrackForPayload(payload: { cues?: unknown; englishCues?:
   const cues = Array.isArray(payload.cues) ? payload.cues as TimedCue[] : [];
   const english = Array.isArray(payload.englishCues) ? payload.englishCues as TimedCue[] : [];
   const candidate = payload.subtitleTrack as Partial<ReviewedSubtitleTrack> | null;
-  if (candidate?.origin === "authored" && candidate.translationHash === subtitleContentHash(cues) && (!english.length || candidate.sourceHash === subtitleContentHash(english)) && candidate.bilingualReview === "approved" && typeof candidate.reviewNote==="string" && candidate.reviewNote.trim().length>=20) {
+  if (candidate?.origin === "authored" && candidate.translationHash === subtitleContentHash(cues) && english.length>0 && candidate.sourceHash === subtitleContentHash(english) && candidate.bilingualReview === "approved" && typeof candidate.reviewNote==="string" && candidate.reviewNote.trim().length>=20) {
     try {
       const track = validateAuthoredEvents(candidate.events, cues);
       if (track.audit.professionalReady) return { ...candidate, ...track } as ReviewedSubtitleTrack;

@@ -32,8 +32,8 @@ export async function approvedSubtitleTrack(videoId:string,source:TimedCue[],tra
 }
 
 export async function readSubtitleDraft(path:string) {
-  let blob=await get(path,{access:"public"}).catch(()=>null);
-  if(!blob?.stream){const result=await list({prefix:path,limit:2});const match=result.blobs.find(item=>item.pathname===path);if(match)blob=await get(match.url,{access:"public"});}
+  let blob=await get(path,{access:"public",useCache:false}).catch(()=>null);
+  if(!blob?.stream){const result=await list({prefix:path,limit:2});const match=result.blobs.find(item=>item.pathname===path);if(match)blob=await get(match.url,{access:"public",useCache:false});}
   return blob?.stream?await new Response(blob.stream).json():null;
 }
 

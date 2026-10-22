@@ -1,3 +1,4 @@
+import LocalizedText from "../LocalizedText";
 import Link from "next/link";
 import GtsFooter from "../GtsFooter";
 
@@ -15,24 +16,24 @@ export default function ContactPage(){
   return <main className="contact-page">
     <header className="contact-header">
       <Link href="/" className="contact-brand" aria-label="GreekTube Subs αρχική"><span className="contact-logo" aria-hidden="true"/><span>GreekTube <b>Subs</b></span></Link>
-      <Link href="/" className="contact-back">← Επιστροφή</Link>
+      <Link href="/" className="contact-back"><LocalizedText el="← Επιστροφή" en="← Back"/></Link>
     </header>
 
     <section className="contact-shell">
-      <div className="contact-intro"><span className="contact-kicker">CONTACT</span><h1>Επικοινωνία</h1><p>Για υποστήριξη, feedback, θέματα απορρήτου ή περιεχομένου μπορείς να επικοινωνήσεις απευθείας μαζί μας.</p></div>
+      <div className="contact-intro"><span className="contact-kicker">CONTACT</span><h1><LocalizedText el="Επικοινωνία" en="Contact"/></h1><p><LocalizedText el="Για υποστήριξη, feedback, θέματα απορρήτου ή περιεχομένου μπορείς να επικοινωνήσεις απευθείας μαζί μας." en="You can contact us directly for support, feedback, privacy or content matters."/></p></div>
 
       <section className="contact-card" aria-label="Email επικοινωνίας">
-        <div className="contact-card-main"><span className="contact-card-eyebrow">EMAIL</span><h2>{EMAIL}</h2><p>Στείλε μας το μήνυμά σου και αν αφορά συγκεκριμένο βίντεο πρόσθεσε το link ή το timestamp ώστε να εντοπίσουμε γρηγορότερα το θέμα.</p></div>
-        <a href={`mailto:${EMAIL}`} className="contact-mail-button"><MailIcon/><span>Στείλε email</span><ArrowIcon/></a>
+        <div className="contact-card-main"><span className="contact-card-eyebrow">EMAIL</span><h2>{EMAIL}</h2><p><LocalizedText el="Στείλε μας το μήνυμά σου και αν αφορά συγκεκριμένο βίντεο πρόσθεσε το link ή το timestamp ώστε να εντοπίσουμε γρηγορότερα το θέμα." en="Send us your message. If it concerns a particular video, include its link or timestamp so we can locate the issue more quickly."/></p></div>
+        <a href={`mailto:${EMAIL}`} className="contact-mail-button"><MailIcon/><span><LocalizedText el="Στείλε email" en="Send email"/></span><ArrowIcon/></a>
       </section>
 
       <section className="contact-grid" aria-label="Θέματα επικοινωνίας">
-        <article><span>01</span><h2>Τεχνική υποστήριξη</h2><p>Για bugs, προβλήματα αναπαραγωγής, υπότιτλους ή οτιδήποτε δεν λειτουργεί όπως πρέπει.</p></article>
-        <article><span>02</span><h2>Απόρρητο</h2><p>Για ερωτήσεις ή αιτήματα σχετικά με προσωπικά δεδομένα και ιδιωτικότητα.</p></article>
-        <article><span>03</span><h2>Περιεχόμενο</h2><p>Για αναφορές βίντεο, δικαιώματα περιεχομένου ή θέματα που αφορούν συγκεκριμένο YouTube link.</p></article>
+        <article><span>01</span><h2><LocalizedText el="Τεχνική υποστήριξη" en="Technical support"/></h2><p><LocalizedText el="Για bugs, προβλήματα αναπαραγωγής, υπότιτλους ή οτιδήποτε δεν λειτουργεί όπως πρέπει." en="For bugs, playback problems, subtitles or anything that is not working as expected."/></p></article>
+        <article><span>02</span><h2><LocalizedText el="Απόρρητο" en="Privacy"/></h2><p><LocalizedText el="Για ερωτήσεις ή αιτήματα σχετικά με προσωπικά δεδομένα και ιδιωτικότητα." en="For questions or requests concerning personal data and privacy."/></p></article>
+        <article><span>03</span><h2><LocalizedText el="Περιεχόμενο" en="Content"/></h2><p><LocalizedText el="Για αναφορές βίντεο, δικαιώματα περιεχομένου ή θέματα που αφορούν συγκεκριμένο YouTube link." en="For video reports, content rights or matters concerning a particular YouTube link."/></p></article>
       </section>
 
-      <section className="contact-note"><div className="contact-note-dot"/><div><strong>Για πιο γρήγορη εξυπηρέτηση</strong><p>Αν το μήνυμα αφορά συγκεκριμένο βίντεο βάλε το link του GreekTube Subs ή του YouTube και μια σύντομη περιγραφή του θέματος.</p></div></section>
+      <section className="contact-note"><div className="contact-note-dot"/><div><strong><LocalizedText el="Για πιο γρήγορη εξυπηρέτηση" en="For faster support"/></strong><p><LocalizedText el="Αν το μήνυμα αφορά συγκεκριμένο βίντεο βάλε το link του GreekTube Subs ή του YouTube και μια σύντομη περιγραφή του θέματος." en="If your message concerns a particular video, include its GreekTube Subs or YouTube link and a short description of the issue."/></p></div></section>
     </section>
 
     <GtsFooter/>

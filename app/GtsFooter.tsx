@@ -1,7 +1,10 @@
+"use client";
 import Link from "next/link";
+import {tr,useAppLanguage} from "./app-language";
 import {APP_VERSION} from "./version";
 
 export default function GtsFooter(){
+  useAppLanguage();
   const year=new Date().getFullYear();
   return <footer className="gts-standard-footer" aria-label="GreekTube Subs">
     <div className="gts-standard-footer-inner">
@@ -10,8 +13,8 @@ export default function GtsFooter(){
           <span className="gts-standard-footer-logo" aria-hidden="true"/>
           <span>GreekTube <b>Subs</b></span>
         </Link>
-        <p className="gts-standard-footer-description">Αυτόματοι ελληνικοί υπότιτλοι με AI για δημόσια βίντεο YouTube.</p>
-        <p className="gts-standard-footer-made">Φτιαγμένο με <b>♥</b> για ελληνόφωνους θεατές</p>
+        <p className="gts-standard-footer-description">{tr("Αυτόματοι ελληνικοί υπότιτλοι με AI για δημόσια βίντεο YouTube.","AI-translated Greek subtitles for public YouTube videos.")}</p>
+        <p className="gts-standard-footer-made">{tr("Φτιαγμένο με","Made with")} <b>♥</b> {tr("για ελληνόφωνους θεατές","for Greek-speaking viewers")}</p>
       </div>
       <div className="gts-standard-footer-right">
         <nav className="gts-standard-footer-nav" aria-label="Νομικές πληροφορίες">
