@@ -2,9 +2,11 @@ import { get, list, put } from "@vercel/blob";
 import { subtitleContentHash, subtitleTrackForPayload, type ReviewedSubtitleTrack } from "./subtitle-track";
 import { legacySubtitleTrack, validateAuthoredEvents, type SubtitleEvent, type TimedCue } from "../subtitle-track";
 
-export async function saveSubtitleDraft(videoId: string, source: TimedCue[], translation: TimedCue[], events?: SubtitleEvent[]) {
+export async function saveSubtitleDraft(videoId: string, source: TimedCue[], translation: TimedCue[], events?: SubtitleEvent[], audioEvidence?: unknown) {
   const sourceHash=subtitleContentHash(source),translationHash=subtitleContentHash(translation);
-  const track=events?validateAuthoredEvents(events,translation):legacySubtitleTrack(translation);
+  if(audioEvidence && (audioEvidence as {sourceHash?:unknown}).sourceHash!==sourceHash)throw Error("Audio source changed");
+  if(audioEvidence && !events)throw Error("Audio evidence requires authored events");
+  const track=events?validateAuthoredEvents(events,translation,audioEvidence?{source,evidence:audioEvidence}:undefined):legacySubtitleTrack(translation);
   const path=`subtitle-review/v1/${videoId}/${sourceHash}/${translationHash}.json`;
   const draft={videoId,sourceHash,translationHash,source,translation,track,createdAt:new Date().toISOString()};
   await put(path,JSON.stringify(draft),{access:"public",contentType:"application/json",addRandomSuffix:false,allowOverwrite:true});
@@ -37,14 +39,7 @@ export async function readSubtitleDraft(path:string) {
   return blob?.stream?await new Response(blob.stream).json():null;
 }
 
-export function reviewedTrack(source:TimedCue[],translation:TimedCue[],events:unknown,bilingualReview:unknown,reviewNote:unknown):ReviewedSubtitleTrack {
-  const track=validateAuthoredEvents(events,translation);
-  if(bilingualReview!=="approved")throw new Error("Απαιτείται εγκεκριμένος έλεγχος μετάφρασης.");
-  if(typeof reviewNote!=="string"||reviewNote.trim().length<20||reviewNote.length>2000)throw new Error("Κατάγραψε πώς ελέγχθηκαν το νόημα και ο συγχρονισμός με τον ήχο.");
-  if(track.events.some(event=>event.timing!=="audio_reviewed"))throw new Error("Η χειροκίνητη δημοσίευση χρειάζεται ακουστικό έλεγχο κάθε εμφάνισης.");
-  if(!track.audit.professionalReady)throw new Error(`Οι υπότιτλοι χρειάζονται έλεγχο: ${track.audit.issues.length} προβλήματα αναγνωσιμότητας. Επιβεβαίωση ήχου: ${track.audit.speechVerified?"ναι":"όχι"}.`);
-  return {...track,sourceHash:subtitleContentHash(source),translationHash:subtitleContentHash(translation),reviewedAt:new Date().toISOString(),bilingualReview:"approved",reviewNote:reviewNote.trim()};
-}
+export { reviewedTrack } from "./subtitle-track";
 
 export class SubtitleReviewRequired extends Error{
   constructor(public draft:Awaited<ReturnType<typeof saveSubtitleDraft>>){super(`Η μετάφραση κρατήθηκε ως προσχέδιο για έλεγχο. ${draft.audit.fastPages} εμφανίσεις διαβάζονται πολύ γρήγορα. Δεν αντικαταστάθηκε η δημοσιευμένη έκδοση.`);this.name="SubtitleReviewRequired";}

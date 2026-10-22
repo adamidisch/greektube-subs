@@ -50,3 +50,101 @@ Final audit also routed new Auto Translate actions to the semantic professional 
 The account remains a device profile, not a new credential-based authentication system. Logout explicitly explains the loss of browser access and offers data export before confirmation. Public contact/legal copy and core application labels have independent EL/EN translations. Video subtitle language remains separate.
 
 Resume audit (2026-10-22): fixed English All-category filtering by using a language-independent category ID. Direct published-video links now resolve ready cached captions even when the current device library lacks that video. The resolver never starts translation. Final preview account was visually inspected at 390px and 768px: header 62px, first content 82px, title 26px, body 14px and editable input 16px at mobile width with no horizontal overflow. Native iPhone Safari keyboard verification remains unavailable.
+
+## Local word-anchored workbench (2026-10-22, draft branch)
+
+See `docs/WORD-ANCHORED-SUBTITLES.md` for measured evidence and the remaining
+production integration. New local commands perform direct CTC alignment,
+bounded adjacent-boundary repair and semantic-phrase authoring without starting
+the isolated queued worker. A provider-neutral translation plus independent
+bilingual-QA contract is covered with injected test providers; no new LLM
+provider calls were launched.
+
+Actual Sarah Myhill audio was aligned across all 1,073 source cues and 18,770
+words in 904.91 seconds. 17,034 words met the model-confidence threshold;
+1,736 confidence flags and 293 overlap flags remain. Full-video acoustic
+approval is still absent. A retained per-cue worklist identifies 491 existing
+Greek cues over the 17 CPS audio-window budget.
+
+The manually edited opening scope (source cues 1–4, 70 source words) produces
+six readable draft events, maximum 15.37 CPS, no event below 1.5 seconds and no
+alignment flags. The existing live timeline has eight events in that scope,
+seven over 17.05 CPS and two below 1.5 seconds. A 25-second audio/video preview
+and SRT were generated. These are a pilot, not a full-video finished track.
+
+Validation: 33 Python worker tests, Python compilation, diff whitespace check,
+Greek uppercase audit of the pilot fixture, actual CPU model execution,
+cache-only replay and a rendered preview frame. No UI or production data was
+changed. The word-evidence import schema, original-window reconciliation and
+existing semantic service still need integration before live use.
+
+
+## Compact audio evidence connected to web review
+
+The continuation adds compact source-bound word evidence to the app import,
+review editor, draft storage, server approval and payload validation. Legacy
+source-window checks remain. Audio imports require complete consecutive source
+word ranges, cue mapping, monotonic anchors, direct-confidence checks and exact
+speech out-points with at most 250 ms of real available silence. Model-only
+events cannot satisfy the publication gate. Source/translation changes invalidate
+the track. The standalone exporter refuses partial pilots. The full recording's
+compact word tuples occupy 443,868 bytes.
+
+The 70-word real opening fixture now passes the shared app validator, keeps its
+24.761-second out-point and uses the same events for playback lookup and SRT.
+36 Python tests and the new TypeScript audio import/publication regressions pass.
+TypeScript, scoped lint, uppercase checks and the production build pass. No new
+provider calls, full alignment reruns or production subtitle writes occurred.
+
+Still outstanding: actual word-range semantic provider integration, repair of
+remaining full-video confidence/overlap flags, whole-video Greek editing and
+acoustic/bilingual review. This branch remains draft and production is unchanged.
+
+Full-video parity check: all 18,770 source token texts and cue mappings agree
+between Python and TypeScript. Worker source SHA and both app content SHAs
+match the retained current report. Browser interaction/visual verification was
+not completed: the available browser archive download was invalid and the local
+server hit an environment network-interface error. No native iPhone Safari
+keyboard verification or production deployment is claimed.
+
+
+## Word-range semantic provider adapter
+
+Added pure TypeScript word-phrase translation/review/authoring stages and an
+authenticated `/api/subtitle-authoring` adapter using the existing Groq account.
+Explicit plan/advance/assemble actions perform zero/at-most-one/zero model calls.
+Independent bilingual QA and complete source-word coverage precede deterministic
+authoring. Model errors stop immediately; paid stages resume from checkpoints.
+Semantic phrases can be reused after timing-only repairs while final event
+artifacts are re-authored and rebound. Actual 70-word opening parity with the
+Python worker passes. Full-timeline planning took 4.34 seconds with 159 healthy
+scopes and 840 blocked cues. No real provider call was made.
+
+The new API is not yet connected to a new UI action or executed in production.
+Remaining: targeted full-video acoustic repair, full Greek phrase generation and
+review, browser verification and publication after the existing review gates.
+
+Validation for this continuation: new semantic/provider tests, actual opening
+parity, timing-only semantic-cache reuse, the 36 existing Python tests, TypeScript
+checking, scoped lint, uppercase audit and production build passed. Compiled
+route gate tests covered auth/origin/preview/body size/invalid actions with zero
+network requests. HTTP/browser verification and real provider calls remain absent.
+
+
+## 7.11.0 editor integration
+
+Connected the existing editor review panel to word-timing import, explicit
+foreground semantic processing, pause/resume and pending-draft assembly. Timings
+are uploaded once and subsequent stage requests use a validated content reference.
+IndexedDB separates timing payloads from small progress records. Exact planned
+packet keys prevent changed context from triggering an unintended provider call.
+
+All four compiled-browser scenarios passed: mobile pause/reload/resume, tablet
+English/light draft assembly, desktop blocked-scope gate and mobile rate-limit
+stop with persisted cooldown. No runtime errors/overflow; controls >=44px, focused
+selector 16px and viewport scale 1. Rendered screenshots were inspected. Actual
+full diagnostic import: 18,770 words, 444,225 compact bytes, 43ms. CLI client
+regressions, existing 36 Python tests, TypeScript, scoped lint, uppercase audit,
+production build and compiled-route auth gates passed. No real model call or
+subtitle publication occurred during implementation. Native Safari verification
+and whole-video timing/language review remain outstanding.
