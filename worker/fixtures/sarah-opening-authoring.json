@@ -1,0 +1,551 @@
+{
+  "source": "xYB6uYyRjCA opening; owner-provided audio; WhisperX 3.8.6 WAV2VEC2_ASR_BASE_960H; draft, not human audio review",
+  "words": [
+    {
+      "word_id": "W000001",
+      "cue_id": 1,
+      "start_ms": 100,
+      "end_ms": 201,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000002",
+      "cue_id": 1,
+      "start_ms": 261,
+      "end_ms": 662,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000003",
+      "cue_id": 1,
+      "start_ms": 703,
+      "end_ms": 883,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000004",
+      "cue_id": 1,
+      "start_ms": 923,
+      "end_ms": 984,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000005",
+      "cue_id": 1,
+      "start_ms": 1044,
+      "end_ms": 1365,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000006",
+      "cue_id": 1,
+      "start_ms": 1385,
+      "end_ms": 1887,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000007",
+      "cue_id": 1,
+      "start_ms": 2128,
+      "end_ms": 2369,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000008",
+      "cue_id": 1,
+      "start_ms": 2389,
+      "end_ms": 3011,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000009",
+      "cue_id": 1,
+      "start_ms": 3051,
+      "end_ms": 3232,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000010",
+      "cue_id": 1,
+      "start_ms": 3272,
+      "end_ms": 3373,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000011",
+      "cue_id": 1,
+      "start_ms": 3413,
+      "end_ms": 3754,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000012",
+      "cue_id": 1,
+      "start_ms": 4095,
+      "end_ms": 4216,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000013",
+      "cue_id": 1,
+      "start_ms": 4397,
+      "end_ms": 4517,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000014",
+      "cue_id": 1,
+      "start_ms": 4577,
+      "end_ms": 4617,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000015",
+      "cue_id": 1,
+      "start_ms": 4637,
+      "end_ms": 5180,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000016",
+      "cue_id": 1,
+      "start_ms": 5200,
+      "end_ms": 5501,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000017",
+      "cue_id": 2,
+      "start_ms": 5767,
+      "end_ms": 5827,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000018",
+      "cue_id": 2,
+      "start_ms": 5907,
+      "end_ms": 6148,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000019",
+      "cue_id": 2,
+      "start_ms": 6168,
+      "end_ms": 6408,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000020",
+      "cue_id": 2,
+      "start_ms": 6448,
+      "end_ms": 6548,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000021",
+      "cue_id": 2,
+      "start_ms": 6568,
+      "end_ms": 6648,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000022",
+      "cue_id": 2,
+      "start_ms": 6689,
+      "end_ms": 6949,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000023",
+      "cue_id": 2,
+      "start_ms": 7069,
+      "end_ms": 7149,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000024",
+      "cue_id": 2,
+      "start_ms": 7189,
+      "end_ms": 7390,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000025",
+      "cue_id": 2,
+      "start_ms": 7410,
+      "end_ms": 7790,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000026",
+      "cue_id": 2,
+      "start_ms": 7891,
+      "end_ms": 8071,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000027",
+      "cue_id": 2,
+      "start_ms": 8191,
+      "end_ms": 8271,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000028",
+      "cue_id": 2,
+      "start_ms": 8331,
+      "end_ms": 8752,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000029",
+      "cue_id": 2,
+      "start_ms": 8953,
+      "end_ms": 9073,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000030",
+      "cue_id": 2,
+      "start_ms": 9193,
+      "end_ms": 9634,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000031",
+      "cue_id": 2,
+      "start_ms": 9694,
+      "end_ms": 9814,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000032",
+      "cue_id": 2,
+      "start_ms": 9854,
+      "end_ms": 10054,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000033",
+      "cue_id": 2,
+      "start_ms": 10135,
+      "end_ms": 10215,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000034",
+      "cue_id": 2,
+      "start_ms": 10275,
+      "end_ms": 10375,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000035",
+      "cue_id": 2,
+      "start_ms": 10455,
+      "end_ms": 10796,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000036",
+      "cue_id": 2,
+      "start_ms": 11016,
+      "end_ms": 11136,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000037",
+      "cue_id": 2,
+      "start_ms": 11176,
+      "end_ms": 11357,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000038",
+      "cue_id": 2,
+      "start_ms": 11397,
+      "end_ms": 11537,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000039",
+      "cue_id": 2,
+      "start_ms": 11577,
+      "end_ms": 11637,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000040",
+      "cue_id": 2,
+      "start_ms": 11677,
+      "end_ms": 11878,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000041",
+      "cue_id": 2,
+      "start_ms": 11938,
+      "end_ms": 12358,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000042",
+      "cue_id": 3,
+      "start_ms": 12663,
+      "end_ms": 13344,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000043",
+      "cue_id": 3,
+      "start_ms": 13364,
+      "end_ms": 13444,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000044",
+      "cue_id": 3,
+      "start_ms": 13485,
+      "end_ms": 14005,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000045",
+      "cue_id": 3,
+      "start_ms": 14045,
+      "end_ms": 14546,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000046",
+      "cue_id": 3,
+      "start_ms": 14806,
+      "end_ms": 14927,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000047",
+      "cue_id": 3,
+      "start_ms": 15167,
+      "end_ms": 15427,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000048",
+      "cue_id": 3,
+      "start_ms": 15728,
+      "end_ms": 16008,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000049",
+      "cue_id": 3,
+      "start_ms": 16169,
+      "end_ms": 16729,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000050",
+      "cue_id": 3,
+      "start_ms": 16870,
+      "end_ms": 16950,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000051",
+      "cue_id": 3,
+      "start_ms": 17090,
+      "end_ms": 17490,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000052",
+      "cue_id": 3,
+      "start_ms": 17511,
+      "end_ms": 17731,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000053",
+      "cue_id": 3,
+      "start_ms": 17771,
+      "end_ms": 18151,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000054",
+      "cue_id": 4,
+      "start_ms": 18335,
+      "end_ms": 18615,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000055",
+      "cue_id": 4,
+      "start_ms": 18675,
+      "end_ms": 18816,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000056",
+      "cue_id": 4,
+      "start_ms": 18876,
+      "end_ms": 19056,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000057",
+      "cue_id": 4,
+      "start_ms": 19116,
+      "end_ms": 19256,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000058",
+      "cue_id": 4,
+      "start_ms": 19316,
+      "end_ms": 19796,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000059",
+      "cue_id": 4,
+      "start_ms": 19836,
+      "end_ms": 19977,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000060",
+      "cue_id": 4,
+      "start_ms": 20037,
+      "end_ms": 20357,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000061",
+      "cue_id": 4,
+      "start_ms": 20417,
+      "end_ms": 20677,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000062",
+      "cue_id": 4,
+      "start_ms": 20817,
+      "end_ms": 21378,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000063",
+      "cue_id": 4,
+      "start_ms": 21578,
+      "end_ms": 21898,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000064",
+      "cue_id": 4,
+      "start_ms": 22159,
+      "end_ms": 22419,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000065",
+      "cue_id": 4,
+      "start_ms": 22559,
+      "end_ms": 22599,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000066",
+      "cue_id": 4,
+      "start_ms": 22739,
+      "end_ms": 23159,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000067",
+      "cue_id": 4,
+      "start_ms": 23240,
+      "end_ms": 23300,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000068",
+      "cue_id": 4,
+      "start_ms": 23340,
+      "end_ms": 23420,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000069",
+      "cue_id": 4,
+      "start_ms": 23560,
+      "end_ms": 24280,
+      "timing_evidence": "forced_alignment"
+    },
+    {
+      "word_id": "W000070",
+      "cue_id": 4,
+      "start_ms": 24340,
+      "end_ms": 24761,
+      "timing_evidence": "forced_alignment"
+    }
+  ],
+  "phrases": [
+    {
+      "firstWordId": "W000001",
+      "lastWordId": "W000006",
+      "text": "Για την κόπωση ξεκινάμε,",
+      "hardBreakBefore": false
+    },
+    {
+      "firstWordId": "W000007",
+      "lastWordId": "W000011",
+      "text": "αφού οι υδατάνθρακες μάς κουράζουν,",
+      "hardBreakBefore": false
+    },
+    {
+      "firstWordId": "W000012",
+      "lastWordId": "W000016",
+      "text": "με κετογονική διατροφή.",
+      "hardBreakBefore": false
+    },
+    {
+      "firstWordId": "W000017",
+      "lastWordId": "W000028",
+      "text": "Πάντα ως βάση: διατροφή και λειτουργία εντέρου.",
+      "hardBreakBefore": true
+    },
+    {
+      "firstWordId": "W000029",
+      "lastWordId": "W000035",
+      "text": "Αν αυτά είναι εντάξει,",
+      "hardBreakBefore": false
+    },
+    {
+      "firstWordId": "W000036",
+      "lastWordId": "W000041",
+      "text": "εξετάζουμε τον θυρεοειδή.",
+      "hardBreakBefore": false
+    },
+    {
+      "firstWordId": "W000042",
+      "lastWordId": "W000053",
+      "text": "Ο υποθυρεοειδισμός δεν διαγιγνώσκεται μόνο με παθολογικές εξετάσεις αίματος.",
+      "hardBreakBefore": true
+    },
+    {
+      "firstWordId": "W000054",
+      "lastWordId": "W000062",
+      "text": "Αν είστε σε κέτωση αλλά νιώθετε χάλια,",
+      "hardBreakBefore": true
+    },
+    {
+      "firstWordId": "W000063",
+      "lastWordId": "W000070",
+      "text": "συχνά είναι ένδειξη υποθυρεοειδισμού.",
+      "hardBreakBefore": false
+    }
+  ]
+}

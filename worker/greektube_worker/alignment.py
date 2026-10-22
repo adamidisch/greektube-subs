@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import math
 import unicodedata
 from difflib import SequenceMatcher
 from typing import Any
@@ -55,15 +56,26 @@ def flatten_asr_words(aligned_result: dict[str, Any]) -> list[AsrWord]:
             end = raw.get("end")
             text = str(raw.get("word", "")).strip()
             normalized = normalize_token(text)
-            if start is None or end is None or not normalized or float(end) <= float(start):
+            if start is None or end is None or not normalized:
                 continue
+            try:
+                start, end = float(start), float(end)
+            except (TypeError, ValueError):
+                continue
+            if not math.isfinite(start) or not math.isfinite(end) or start < 0 or end <= start:
+                continue
+            try:
+                score = float(raw.get("score", segment.get("score", 0.75)))
+            except (TypeError, ValueError):
+                score = 0.0
+            confidence = max(0.0, min(1.0, score)) if math.isfinite(score) else 0.0
             words.append(AsrWord(
                 asr_index=len(words),
                 text=text,
                 normalized=normalized,
-                start_ms=round(float(start) * 1000),
-                end_ms=round(float(end) * 1000),
-                confidence=max(0.0, min(1.0, float(raw.get("score", segment.get("score", 0.75))))),
+                start_ms=round(start * 1000),
+                end_ms=round(end * 1000),
+                confidence=confidence,
                 speaker_id=str(raw.get("speaker") or segment_speaker) if raw.get("speaker") or segment_speaker else None,
             ))
     return words

@@ -50,3 +50,30 @@ Final audit also routed new Auto Translate actions to the semantic professional 
 The account remains a device profile, not a new credential-based authentication system. Logout explicitly explains the loss of browser access and offers data export before confirmation. Public contact/legal copy and core application labels have independent EL/EN translations. Video subtitle language remains separate.
 
 Resume audit (2026-10-22): fixed English All-category filtering by using a language-independent category ID. Direct published-video links now resolve ready cached captions even when the current device library lacks that video. The resolver never starts translation. Final preview account was visually inspected at 390px and 768px: header 62px, first content 82px, title 26px, body 14px and editable input 16px at mobile width with no horizontal overflow. Native iPhone Safari keyboard verification remains unavailable.
+
+## Local word-anchored workbench (2026-10-22, draft branch)
+
+See `docs/WORD-ANCHORED-SUBTITLES.md` for measured evidence and the remaining
+production integration. New local commands perform direct CTC alignment,
+bounded adjacent-boundary repair and semantic-phrase authoring without starting
+the isolated queued worker. A provider-neutral translation plus independent
+bilingual-QA contract is covered with injected test providers; no new LLM
+provider calls were launched.
+
+Actual Sarah Myhill audio was aligned across all 1,073 source cues and 18,770
+words in 904.91 seconds. 17,034 words met the model-confidence threshold;
+1,736 confidence flags and 293 overlap flags remain. Full-video acoustic
+approval is still absent. A retained per-cue worklist identifies 491 existing
+Greek cues over the 17 CPS audio-window budget.
+
+The manually edited opening scope (source cues 1–4, 70 source words) produces
+six readable draft events, maximum 15.37 CPS, no event below 1.5 seconds and no
+alignment flags. The existing live timeline has eight events in that scope,
+seven over 17.05 CPS and two below 1.5 seconds. A 25-second audio/video preview
+and SRT were generated. These are a pilot, not a full-video finished track.
+
+Validation: 33 Python worker tests, Python compilation, diff whitespace check,
+Greek uppercase audit of the pilot fixture, actual CPU model execution,
+cache-only replay and a rendered preview frame. No UI or production data was
+changed. The word-evidence import schema, original-window reconciliation and
+existing semantic service still need integration before live use.
