@@ -229,3 +229,23 @@ PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs CHROMIUM_PATH=/path/to/chromium 
 
 The suite starts and stops its own foreground server. It never calls a real
 provider, writes production subtitles or supplies production credentials.
+
+
+## Resumable whole-video preparation — 7.12.0
+
+The production import check exposed a missing source-bound global analysis for Sarah Myhill.
+The editor now offers explicit one-stage preparation when that prerequisite is missing.
+Each request reads current source and translation hashes under the video lease, reuses
+completed section/synthesis artifacts and makes at most one single-attempt Groq call.
+Section/synthesis output is bounded to 900 tokens and final global analysis to 1600.
+The same persisted context format remains compatible with the existing pipeline.
+No transcript, translation or subtitle event is published by analysis preparation.
+429 stores the existing per-video server cooldown and stops. The browser never
+continues after reload by itself. If the timing file is still in memory, completion
+replans it without another file chooser or subtitle translation call.
+
+Tests exercise hierarchical reduction, persisted resume, final reuse without calls,
+source changes, failed/truncated output and bounded provider budgets. Analysis progress
+shown in the browser refers to the current hierarchy stage, not a percentage of all
+remaining requests. Whole-video subtitle delivery still requires alignment repair,
+Greek authoring and review.

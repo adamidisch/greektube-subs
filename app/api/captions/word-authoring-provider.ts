@@ -12,7 +12,7 @@ export class WordAuthoringProviderError extends Error {
 
 /** Same configured Groq account/model as the existing semantic service. Exactly one HTTP attempt. */
 export async function wordAuthoringJson(system: string, input: unknown,
-  options: { apiKey?: string; fetcher?: typeof fetch } = {}): Promise<unknown> {
+  options: { apiKey?: string; fetcher?: typeof fetch; maxTokens?: number } = {}): Promise<unknown> {
   const apiKey = options.apiKey ?? process.env.GROQ_API_KEY;
   if (!apiKey) throw new WordAuthoringProviderError(503, 30);
   const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 50_000);
@@ -20,7 +20,7 @@ export async function wordAuthoringJson(system: string, input: unknown,
     const response = await (options.fetcher ?? fetch)("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST", signal: controller.signal,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: WORD_AUTHORING_MODEL, temperature: 0, max_tokens: 4000,
+      body: JSON.stringify({ model: WORD_AUTHORING_MODEL, temperature: 0, max_tokens: options.maxTokens === 900 || options.maxTokens === 1600 ? options.maxTokens : 4000,
         reasoning_format: "hidden", reasoning_effort: "low", response_format: { type: "json_object" },
         messages: [{ role: "system", content: system }, { role: "user", content: JSON.stringify(input) }] }),
     });

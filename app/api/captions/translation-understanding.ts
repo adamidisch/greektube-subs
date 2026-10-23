@@ -467,8 +467,9 @@ async function understandSegment(
   total: number,
   previousTail: string,
   nextHead: string,
+  send = groqJson,
 ) {
-  const result = await groqJson(
+  const result = await send(
     "You are preparing one ordered section of a source-analysis brief for a professional English-to-Greek translator. " +
     "Understand the current section's arguments, references, technical meaning, uncertainty, negation, causality, irony and changes of position. " +
     "The small preceding/following excerpts are CONTINUITY CONTEXT only. Use them to resolve references crossing a section boundary but do not treat them as part of the current section's content. " +
@@ -523,11 +524,12 @@ async function synthesizeGroup(
   group: string,
   groupIndex: number,
   groupCount: number,
+  send = groqJson,
 ) {
   const groupHash = textHash(group);
   const cached = await readPersistedSynthesis(videoId, transcriptVersion, sourceHash, level, groupHash);
   if (cached) return cached;
-  const result = await groqJson(
+  const result = await send(
     "You are consolidating consecutive source-analysis sections for a professional English-to-Greek translator. Preserve chronology, disagreements, attribution, uncertainty, technical terminology and unresolved ambiguity. " +
     "Do not translate subtitle lines. Return compact JSON only with keys summary, points, terms, ambiguities, tone. " +
     "Output limits are strict: summary at most 600 characters; points at most 7 short items; terms at most 9 entries; ambiguities at most 5 short items; tone at most 4 short items. Preserve the most translation-critical distinctions.",
@@ -708,4 +710,84 @@ export function compactUnderstandingForPrompt(understanding: TranslationUndersta
     toneAndStance: understanding.toneAndStance,
     fidelityRules: understanding.fidelityRules,
   });
+}
+
+/** One paid analysis stage per explicit request. Existing completed stages are reused. */
+export async function advanceTranslationUnderstanding(
+  videoId: string, transcriptVersion: number, cues: UnderstandingCue[],
+  options: {
+    send: (system: string, user: string, maxTokens: number) => Promise<Record<string, unknown>>;
+    read?: typeof readJson; write?: typeof writeJson;
+  },
+) {
+  if (!cues.length) throw new Error("Cannot understand an empty transcript");
+  const read = options.read ?? readJson, write = options.write ?? writeJson;
+  const sourceHash = transcriptHash(cues);
+  const readSafe = async (path: string) => { try { return await read(path); } catch { return null; } };
+  const existing = await readSafe(pathname(videoId, transcriptVersion));
+  if (validUnderstanding(existing, videoId, transcriptVersion, sourceHash, cues.length))
+    return { status: "analysis_ready" as const, stage: "complete", completed: 1, total: 1, providerCalls: 0 };
+  const completedPath = `transcripts/v${transcriptVersion}/context/${videoId}/prepared-${sourceHash}.json`;
+  const completed = await readSafe(completedPath);
+  if (validUnderstanding(completed, videoId, transcriptVersion, sourceHash, cues.length)) {
+    await write(pathname(videoId, transcriptVersion), completed);
+    memory.set(key(videoId, transcriptVersion), completed);
+    return { status: "analysis_ready" as const, stage: "complete", completed: 1, total: 1, providerCalls: 0 };
+  }
+  const finish = async (result: Record<string, unknown>) => {
+    const understanding = buildUnderstanding(videoId, transcriptVersion, sourceHash, cues.length, result);
+    if (!understanding.mainTopic || !understanding.purpose || !understanding.discussion.length)
+      throw new Error("Whole-video analysis is incomplete");
+    await write(completedPath, understanding);
+    await write(pathname(videoId, transcriptVersion), understanding);
+    memory.set(key(videoId, transcriptVersion), understanding);
+    return { status: "analysis_ready" as const, stage: "complete", completed: 1, total: 1, providerCalls: 1 };
+  };
+  const fullTranscript = transcriptForPrompt(cues);
+  if (fullTranscript.length <= DIRECT_MAX_CHARS)
+    return finish(await options.send(GLOBAL_SYSTEM,
+      `The following is the COMPLETE repaired English transcript in chronological order. Read it as one conversation and build the global translation brief from the whole thing:\n\n${fullTranscript}`, 1600));
+  const segments = segmentTranscript(fullTranscript), analysed: SegmentUnderstanding[] = [];
+  for (let index = 0; index < segments.length; index++) {
+    const part = index + 1, segmentHash = textHash(segments[index]);
+    const path = segmentPath(videoId, transcriptVersion, sourceHash, part);
+    const saved = await readSafe(path);
+    if (validPersistedSegment(saved, videoId, transcriptVersion, sourceHash, segmentHash, part, segments.length)) {
+      analysed.push(normalizeSegment(saved.analysis as unknown as Record<string, unknown>)); continue;
+    }
+    const analysis = await understandSegment(segments[index], part, segments.length,
+      index ? segments[index - 1].slice(-EDGE_CONTEXT_CHARS) : "",
+      index + 1 < segments.length ? segments[index + 1].slice(0, EDGE_CONTEXT_CHARS) : "", options.send);
+    if (!analysis.summary) throw new Error("Section analysis is incomplete");
+    await write(path, { videoId, transcriptVersion, sourceHash, segmentHash, part, total: segments.length,
+      analysis, generatedAt: new Date().toISOString() } satisfies PersistedSegmentUnderstanding);
+    return { status: "analysis_progress" as const, stage: "sections", completed: part, total: segments.length, providerCalls: 1 };
+  }
+  let level = analysed;
+  for (let pass = 1; pass <= 8; pass++) {
+    const lines = level.map(compactSegmentForSynthesis), compact = lines.join("\n");
+    if (compact.length <= SYNTHESIS_MAX_CHARS)
+      return finish(await options.send(GLOBAL_SYSTEM,
+        `These ordered analyses jointly cover the COMPLETE transcript. Synthesize them into one coherent global brief without dropping disagreements, attribution, uncertainty or ambiguity:\n\n${compact}`, 1600));
+    const groups = groupBySize(lines, SYNTHESIS_GROUP_MAX_CHARS), next: SegmentUnderstanding[] = [];
+    if (!groups.length || groups.length >= level.length) throw new Error("Understanding synthesis could not reduce safely within provider limits");
+    for (let index = 0; index < groups.length; index++) {
+      const groupHash = textHash(groups[index]), path = synthesisPath(videoId, transcriptVersion, sourceHash, pass, groupHash);
+      const saved = await readSafe(path);
+      if (validPersistedSynthesis(saved, videoId, transcriptVersion, sourceHash, pass, groupHash)) {
+        next.push(normalizeSegment(saved.analysis as unknown as Record<string, unknown>)); continue;
+      }
+      // Same synthesis prompt as the existing pipeline, with injected persistence and single-attempt transport.
+      const result = await options.send(
+        "You are consolidating consecutive source-analysis sections for a professional English-to-Greek translator. Preserve chronology, disagreements, attribution, uncertainty, technical terminology and unresolved ambiguity. Do not translate subtitle lines. Return compact JSON only with keys summary, points, terms, ambiguities, tone. Output limits: summary 600 characters; points 7 short items; terms 9 entries; ambiguities 5 items; tone 4 items.",
+        `Ordered analysis group ${index + 1}/${groups.length} at synthesis level ${pass}:\n\n${groups[index]}`, 900);
+      const analysis = normalizeSegment(result);
+      if (!analysis.summary) throw new Error("Synthesis analysis is incomplete");
+      await write(path, { videoId, transcriptVersion, sourceHash, level: pass, groupHash, analysis,
+        generatedAt: new Date().toISOString() } satisfies PersistedSynthesis);
+      return { status: "analysis_progress" as const, stage: "synthesis", completed: index + 1, total: groups.length, providerCalls: 1 };
+    }
+    level = next;
+  }
+  throw new Error("Understanding synthesis exceeded maximum hierarchy depth");
 }

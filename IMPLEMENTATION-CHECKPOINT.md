@@ -148,3 +148,27 @@ regressions, existing 36 Python tests, TypeScript, scoped lint, uppercase audit,
 production build and compiled-route auth gates passed. No real model call or
 subtitle publication occurred during implementation. Native Safari verification
 and whole-video timing/language review remain outstanding.
+
+## 2026-10-22 — live prerequisite and bounded preparation (7.12.0)
+
+7.11.0 and diagnostic 7.11.1 are deployed. The approved energy/health Greek title
+and Greek speaker designation were saved through the authenticated real editor,
+then verified after reload. Existing skip ranges and subtitle publication remain.
+Raw timing import reached the production server without a provider call. The
+specific conflict is missing whole-video understanding for the current source.
+
+The editor now exposes explicit resumable analysis preparation for that case.
+Each request performs at most one provider call with a 900/1600-token output
+budget, persists source-bound sections/hierarchical synthesis and reuses cached
+work. It shares the current lease/cooldown, leaves published subtitles untouched
+and replans an in-memory timing file after successful completion. No auto-run on
+reload. Standalone worker boundary repair is continuing separately with checkpoints.
+
+Validation: full preview build, TypeScript, scoped ESLint, Greek uppercase,
+compiled auth/origin/preview/payload gates and whitespace pass. Seven compiled
+browser fixture cases passed, including preparation at 390/768/1280, EL/EN,
+dark/light, automatic reuse of selected timing and zero subtitle translation on
+preparation. Screenshots inspected, no overflow or runtime errors, 44px buttons.
+Pure staged tests cover persisted hierarchical reduction, source changes, cached
+completion with zero calls and stop on failure. Native iPhone Safari and actual
+new preparation provider calls remain unverified at this checkpoint.

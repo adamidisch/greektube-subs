@@ -118,3 +118,8 @@ assert.equal(wordEvidenceKey(structuredClone(review.audioEvidence)),wordEvidence
 assert.notEqual(wordEvidenceKey({...review.audioEvidence,audioSha256:"a".repeat(64)}),wordEvidenceKey(review.audioEvidence));
 const tampered=structuredClone(review.audioEvidence);tampered.words[0][0]++;
 assert.notEqual(wordEvidenceKey(tampered),wordEvidenceKey(review.audioEvidence),"stored evidence references bind the exact word times");
+
+for(const [requested,expected] of [[900,900],[1600,1600],[undefined,4000],[999999,4000]]){
+ await wordAuthoringJson("analysis", "bounded source", {apiKey:"test-only",maxTokens:requested,fetcher:async(_url,init)=>{assert.equal(JSON.parse(init.body).max_tokens,expected);return Response.json({choices:[{finish_reason:"stop",message:{content:"{}"}}]});}});
+}
+console.log("bounded analysis output budgets passed");

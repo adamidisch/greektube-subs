@@ -9,7 +9,7 @@ import { getTranscript, TRANSCRIPT_VERSION } from "../shared-cache";
 import { readPublishedTranscript } from "../transcript-blob";
 import { subtitleContentHash } from "../subtitle-track";
 import { readSubtitleDraft, saveSubtitleDraft } from "../subtitle-track-store";
-import { readTranslationUnderstanding, compactUnderstandingForPrompt } from "../captions/translation-understanding";
+import { advanceTranslationUnderstanding, readTranslationUnderstanding, compactUnderstandingForPrompt } from "../captions/translation-understanding";
 import { advanceWordAuthoring, assembleWordAuthoring, buildWordAuthoringPacket, wordAuthoringKey, planWordAuthoring,
   wordSemanticKey, wordEvidenceKey, reusableWordSemantics, type WordSemanticCheckpoint,
   type WordAuthoringCheckpoint, type WordAuthoringResult } from "../captions/word-authoring";
@@ -17,7 +17,7 @@ import { wordAuthoringJson, WordAuthoringProviderError } from "../captions/word-
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
-type Body = { videoId: string; action: "plan" | "advance" | "assemble"; sourceHash: string; translationHash: string;
+type Body = { videoId: string; action: "plan" | "advance" | "assemble" | "prepare"; sourceHash: string; translationHash: string;
   audioEvidence?: SubtitleAudioEvidence; evidenceKey?: string; sourceCueRange?: [number, number]; key?: string; scopes?: { range: [number, number]; key: string }[] };
 const evidenceCache = new Map<string, SubtitleAudioEvidence>();
 function cacheEvidence(path: string, evidence: SubtitleAudioEvidence) {
@@ -38,10 +38,10 @@ export async function POST(request: Request) {
     const raw = await request.text();
     if (new TextEncoder().encode(raw).byteLength > 4_000_000) return json({ error: "Το αρχείο χρονισμού είναι πολύ μεγάλο." }, 413);
     const body = JSON.parse(raw) as Body;
-    if (!body || typeof body.videoId !== "string" || !/^[\w-]{11}$/u.test(body.videoId) || !["plan", "advance", "assemble"].includes(body.action))
+    if (!body || typeof body.videoId !== "string" || !/^[\w-]{11}$/u.test(body.videoId) || !["plan", "advance", "assemble", "prepare"].includes(body.action))
       return json({ error: "Μη έγκυρη ενέργεια." }, 400);
     if (![body.sourceHash, body.translationHash].every(value => typeof value === "string" && /^[a-f0-9]{64}$/u.test(value))
-      || !(body.audioEvidence && typeof body.audioEvidence === "object" || typeof body.evidenceKey === "string" && /^[a-f0-9]{64}$/u.test(body.evidenceKey))) return json({ error: "Χρειάζεται έγκυρη αναφορά πηγής και χρονισμού." }, 400);
+      || (body.action !== "prepare" && !(body.audioEvidence && typeof body.audioEvidence === "object" || typeof body.evidenceKey === "string" && /^[a-f0-9]{64}$/u.test(body.evidenceKey)))) return json({ error: "Χρειάζεται έγκυρη αναφορά πηγής και χρονισμού." }, 400);
     const validRange = (value: unknown) => Array.isArray(value) && value.length === 2 && value.every(Number.isInteger) && value[0] >= 0 && value[1] >= value[0];
     if (body.action === "advance" && (!validRange(body.sourceCueRange) || typeof body.key !== "string" || !/^[a-f0-9]{64}$/u.test(body.key))) return json({ error: "Μη έγκυρο τμήμα υποτίτλων." }, 400);
     if (body.action === "assemble" && (!Array.isArray(body.scopes) || !body.scopes.length || body.scopes.length > 30_000
@@ -59,6 +59,22 @@ export async function POST(request: Request) {
     const translation = (published?.cues ?? record?.greekTranscript ?? []) as TimedCue[];
     if (!source.length || body.sourceHash !== subtitleContentHash(source) || body.translationHash !== subtitleContentHash(translation))
       return json({ code: "changed", error: "Η πηγή ή η μετάφραση άλλαξε. Φόρτωσε ξανά." }, 409);
+    const provider = async (system: string, input: unknown, maxTokens?: number) => {
+      const remaining = Math.ceil((Date.parse(record?.groqCooldownUntil || "") - Date.now()) / 1000);
+      if (remaining > 0) throw new WordAuthoringProviderError(429, remaining);
+      try { return await wordAuthoringJson(system, input, { maxTokens }); }
+      catch (error) {
+        if (error instanceof WordAuthoringProviderError && error.status === 429)
+          await database().query("UPDATE video_transcripts SET groq_cooldown_until=$1 WHERE video_id=$2 AND lock_token=$3", [new Date(Date.now() + error.retryAfterSeconds * 1000).toISOString(), videoId, token]);
+        throw error;
+      }
+    };
+    if (body.action === "prepare") {
+      const result = await advanceTranslationUnderstanding(videoId, TRANSCRIPT_VERSION, source, {
+        send: async (system, user, maxTokens) => await provider(system, user, maxTokens) as Record<string, unknown>,
+      });
+      return json(result);
+    }
     const prefix = `subtitle-authoring/v1/${videoId}/${body.sourceHash}/${body.translationHash}`;
     let evidence = body.audioEvidence;
     if (!evidence) {
@@ -106,16 +122,6 @@ export async function POST(request: Request) {
       await put(path, JSON.stringify(cache), { access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true });
       await put(semanticPath, JSON.stringify({ key: semanticKey, proposed: cache.proposed, reviewed: cache.reviewed }),
         { access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true });
-    };
-    const provider = async (system: string, input: unknown) => {
-      const remaining = Math.ceil((Date.parse(record?.groqCooldownUntil || "") - Date.now()) / 1000);
-      if (remaining > 0) throw new WordAuthoringProviderError(429, remaining);
-      try { return await wordAuthoringJson(system, input); }
-      catch (error) {
-        if (error instanceof WordAuthoringProviderError && error.status === 429)
-          await database().query("UPDATE video_transcripts SET groq_cooldown_until=$1 WHERE video_id=$2 AND lock_token=$3", [new Date(Date.now() + error.retryAfterSeconds * 1000).toISOString(), videoId, token]);
-        throw error;
-      }
     };
     const result = await advanceWordAuthoring(packet, cache, provider, checkpoint);
     return json({ ...result, key, sourceCueRange: packet.sourceCueRange });
