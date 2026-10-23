@@ -249,3 +249,14 @@ source changes, failed/truncated output and bounded provider budgets. Analysis p
 shown in the browser refers to the current hierarchy stage, not a percentage of all
 remaining requests. Whole-video subtitle delivery still requires alignment repair,
 Greek authoring and review.
+
+### Boundary repair import compatibility
+
+The real full-file import rejected joint alignment candidates whose estimated
+words fell outside their original cue's 750 ms context. Boundary acceptance now
+checks every candidate word against the same cue mapping and context bounds used
+by the web importer. It rejects the entire candidate instead of clamping times
+or loosening the importer. The 196 cached groups can be re-evaluated without
+another audio-model call. On Sarah Myhill, 103 groups pass this stricter check
+and all 18,770 words pass actual client import validation. Remaining low-confidence
+anchors and overlaps still require review; this is not human acoustic approval.

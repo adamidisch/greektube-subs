@@ -13,6 +13,19 @@ class DirectAlignmentTests(unittest.TestCase):
         clean = [word(1, 0, 1000), word(2, 1100, 1800), word(3, 1900, 3000)]
         self.assertTrue(prefer_boundary_repair(original, clean))
 
+    def test_repair_must_remain_importable_in_its_original_source_context(self):
+        cue = SourceCue(1, 0, 1000, "Hello there")
+        def word(n, start, end):
+            return {"word_id": str(n), "text": str(n), "cue_id": 1,
+                    "start_ms": start, "end_ms": end, "timing_evidence": "forced_alignment"}
+        original = [word(1, 0, 400), word(2, 300, 700)]
+        clean = [word(1, 0, 400), word(2, 400, 700)]
+        outside = [word(1, 0, 400), word(2, 1800, 1900)]
+        self.assertTrue(prefer_boundary_repair(original, clean, [cue]))
+        self.assertFalse(prefer_boundary_repair(original, outside, [cue]))
+        reassigned = [word(1, 0, 400), {**word(2, 400, 700), "cue_id": 2}]
+        self.assertFalse(prefer_boundary_repair(original, reassigned, [cue, SourceCue(2, 0, 1000, "there")]))
+
     def test_identical_words_in_another_cue_cannot_supply_missing_audio(self):
         first = SourceCue(1, 0, 1000, "Yes")
         second = SourceCue(2, 2000, 3000, "Yes")
