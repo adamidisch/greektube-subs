@@ -1,0 +1,27 @@
+import assert from "node:assert/strict";
+import { advanceTranslationUnderstanding } from "../app/api/captions/translation-understanding.ts";
+const saved=new Map();let calls=0,writes=0;
+const section={summary:"Section summary "+"x".repeat(580),points:Array.from({length:7},(_,i)=>`point ${i} `+"x".repeat(200)),terms:Array.from({length:9},(_,i)=>({source:`term${i}`,greek:`όρος${i}`,note:"x".repeat(170)})),ambiguities:[],tone:["Conversational"]};
+const complete={mainTopic:"Energy and health",purpose:"Understand the interview",discussion:["Chronological discussion"],claimsAndPositions:[],glossary:[],ambiguities:[],toneAndStance:["Interview"],fidelityRules:[]};
+const options={read:async path=>saved.get(path)??null,write:async(path,value)=>{writes++;saved.set(path,structuredClone(value));},send:async(system,user,maxTokens)=>{calls++;assert.ok([900,1600].includes(maxTokens));assert.ok(user.length<12000);return system.includes("senior source analyst")?complete:section;}};
+const cues=Array.from({length:100},(_,i)=>({start:i*10,duration:10,text:`Sentence ${i}. `+"This is the source discussion. ".repeat(25)}));
+let result,stages=0,seenSynthesis=false;
+do{const before=calls;result=await advanceTranslationUnderstanding("xYB6uYyRjCA",84,cues,options);assert.equal(calls-before,1,"each explicit advance performs exactly one new provider call");assert.ok(result.completed<=result.total);seenSynthesis ||= result.stage==="synthesis";stages++;assert.ok(stages<70);}while(result.status!=="analysis_ready");
+assert.ok(seenSynthesis,"long transcripts exercise persisted hierarchical synthesis");
+const before=calls;result=await advanceTranslationUnderstanding("xYB6uYyRjCA",84,cues,options);assert.equal(result.status,"analysis_ready");assert.equal(result.providerCalls,0);assert.equal(calls,before,"complete analysis is reused without a provider call");
+const modified=structuredClone(cues);modified[0].text+=" Changed source.";
+result=await advanceTranslationUnderstanding("xYB6uYyRjCA",84,modified,options);assert.equal(result.stage,"sections");assert.equal(result.completed,1,"changed source cannot reuse stale section analysis");
+const isolated=new Map();let failures=0;
+const failed={...options,read:async p=>isolated.get(p)??null,write:async(p,v)=>isolated.set(p,v),send:async()=>{failures++;throw Error("429");}};
+await assert.rejects(advanceTranslationUnderstanding("abcdefghijk",84,cues,failed),/429/);assert.equal(failures,1);assert.equal(isolated.size,0,"failed stages never persist fabricated results");
+await assert.rejects(advanceTranslationUnderstanding("abcdefghijk",84,[{start:0,duration:1,text:"Short source"}],{...failed,send:async()=>({})}),/incomplete/);
+assert.equal(isolated.size,0);
+console.log("bounded whole-video analysis, persisted sections/synthesis, source binding, reuse and failure stop passed",{stages,calls,writes});
+
+const durable=new Map();let finalCalls=0,failCanonical=true;
+const recover={read:async p=>durable.get(p)??null,write:async(p,v)=>{if(p.endsWith("/recovery123.json")&&failCanonical){failCanonical=false;throw Error("write interrupted");}durable.set(p,structuredClone(v));},send:async()=>{finalCalls++;return complete;}};
+const short=[{start:0,duration:2,text:"A complete short conversation."}];
+await assert.rejects(advanceTranslationUnderstanding("recovery123",84,short,recover),/write interrupted/);
+const recovered=await advanceTranslationUnderstanding("recovery123",84,short,recover);
+assert.equal(recovered.status,"analysis_ready");assert.equal(recovered.providerCalls,0);assert.equal(finalCalls,1,"a failed canonical write reuses the saved final analysis");
+console.log("final-analysis write recovery avoids repeated model calls");

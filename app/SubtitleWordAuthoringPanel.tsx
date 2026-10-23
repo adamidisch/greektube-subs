@@ -37,6 +37,9 @@ export default function SubtitleWordAuthoringPanel({ videoId, sourceHash, transl
   const [job, setJob] = useState<AuthoringJob | null>(null), [busy, setBusy] = useState(false), [running, setRunning] = useState(false);
   const [error, setError] = useState<unknown>(null), [message, setMessage] = useState(""), [batch, setBatch] = useState("1");
   const [paused, setPaused] = useState(false), [clock, setClock] = useState(() => Date.now());
+  const [analysis, setAnalysis] = useState<{ stage: string; completed: number; total: number } | null>(null);
+  const [analysisRetryAt, setAnalysisRetryAt] = useState(0);
+  const pendingTiming = useRef<File | null>(null);
   const [source, setSource] = useState<TimedCue[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
   const stop = useRef(false), mounted = useRef(true), working = useRef(false);
@@ -59,10 +62,11 @@ export default function SubtitleWordAuthoringPanel({ videoId, sourceHash, transl
     return () => { active = false; };
   }, [videoId, sourceHash, translationHash]);
   useEffect(() => {
-    if (!job?.retryAt || job.retryAt <= Date.now()) return;
-    const timer = setTimeout(() => setClock(Date.now()), Math.min(job.retryAt - Date.now() + 100, 86_400_100));
+    const retryAt = Math.max(job?.retryAt || 0, analysisRetryAt);
+    if (retryAt <= Date.now()) return;
+    const timer = setTimeout(() => setClock(Date.now()), Math.min(retryAt - Date.now() + 100, 86_400_100));
     return () => clearTimeout(timer);
-  }, [job?.retryAt]);
+  }, [job?.retryAt, analysisRetryAt]);
 
   async function save(next: AuthoringJob) {
     if (mounted.current) setJob(next);
@@ -70,6 +74,7 @@ export default function SubtitleWordAuthoringPanel({ videoId, sourceHash, transl
   }
   async function load(file: File) {
     if (working.current) return;
+    pendingTiming.current = file;
     working.current = true; setBusy(true); setError(null); setMessage("");
     try {
       if (file.size > 12_000_000) throw new AuthoringClientError("format");
@@ -89,9 +94,28 @@ export default function SubtitleWordAuthoringPanel({ videoId, sourceHash, transl
       const previous = new Map(job?.scopes.filter(s => s.key).map(s => [s.key!, s.phase]) || []);
       await save({ schemaVersion: 1, videoId, sourceHash, translationHash, audioEvidence: evidence,
         evidenceKey: result.evidenceKey, scopes: scopes.map(s => ({ ...s, phase: s.key ? previous.get(s.key) : undefined })), fileName: file.name });
-      setMessage("loaded");
+      setMessage("loaded"); setAnalysis(null); pendingTiming.current = null;
     } catch (issue) { if (mounted.current) setError(issue); }
     finally { working.current = false; if (mounted.current) setBusy(false); if (fileInput.current) fileInput.current.value = ""; }
+  }
+  async function prepareAnalysis() {
+    if (working.current || analysisRetryAt > Date.now()) return;
+    working.current = true; setBusy(true); setError(null); setMessage("");
+    setAnalysis(previous => previous ?? { stage: "sections", completed: 0, total: 0 });
+    let ready = false;
+    try {
+      const result = await authoringRequest({ videoId, action: "prepare", sourceHash, translationHash });
+      if (!["analysis_ready", "analysis_progress"].includes(String(result.status))
+        || !["sections", "synthesis", "complete"].includes(String(result.stage))
+        || !Number.isInteger(result.completed) || !Number.isInteger(result.total)
+        || Number(result.completed) < 0 || Number(result.total) < 1 || Number(result.completed) > Number(result.total))
+        throw new AuthoringClientError("response");
+      setAnalysis({ stage: String(result.stage), completed: Number(result.completed), total: Number(result.total) });
+      setAnalysisRetryAt(0); ready = result.status === "analysis_ready";
+    } catch (issue) {
+      if (mounted.current) { setError(issue); if (issue instanceof AuthoringClientError && issue.retryAt) setAnalysisRetryAt(issue.retryAt); }
+    } finally { working.current = false; if (mounted.current) setBusy(false); }
+    if (ready && mounted.current && pendingTiming.current) await load(pendingTiming.current);
   }
   async function run() {
     if (!job || working.current) return;
@@ -127,6 +151,12 @@ export default function SubtitleWordAuthoringPanel({ videoId, sourceHash, transl
     <summary>{tr("Υπότιτλοι από τον χρονισμό ήχου", "Subtitles from audio timing")}</summary>
     <p>{tr("Εισήγαγε το αρχείο χρονισμού. Η μετάφραση και ο ξεχωριστός έλεγχος εκτελούνται μόνο όταν επιλέξεις επεξεργασία.", "Import the timing file. Translation and independent review run only when you choose to process sections.")}</p>
     <div className="subtitle-quality-actions"><input ref={fileInput} type="file" accept=".json,application/json" hidden aria-label={tr("Αρχείο χρονισμού ήχου", "Audio timing file")} onChange={event => { const file = event.target.files?.[0]; if (file) void load(file); }}/><button type="button" disabled={busy} onClick={() => fileInput.current?.click()}>{tr("Εισαγωγή χρονισμού", "Import timing")}</button></div>
+    {(analysis || error instanceof AuthoringClientError && error.code === "understanding_required") && <div className="subtitle-authoring-preparation">
+      <p>{tr("Η ανάλυση διαβάζει ολόκληρη τη συζήτηση πριν από τη μετάφραση. Κάθε επιλογή εκτελεί έως ένα αίτημα. Τα ολοκληρωμένα στάδια επαναχρησιμοποιούνται.", "Analysis reads the whole discussion before translation. Each click runs at most one request. Completed stages are reused.")}</p>
+      {analysis && <p role="status">{analysis.stage === "complete" ? tr("Η συνολική ανάλυση ολοκληρώθηκε.", "Whole-video analysis completed.") : `${analysis.stage === "synthesis" ? tr("Σύνθεση ανάλυσης", "Analysis synthesis") : tr("Ανάλυση τμημάτων", "Section analysis")}: ${analysis.completed}/${analysis.total || "…"}`}</p>}
+      <div className="subtitle-quality-actions"><button type="button" disabled={busy || analysisRetryAt > clock || analysis?.stage === "complete"} onClick={() => void prepareAnalysis()}>{analysis ? tr("Συνέχεια ανάλυσης", "Continue analysis") : tr("Προετοιμασία ανάλυσης", "Prepare analysis")}</button></div>
+      {analysisRetryAt > clock && <p role="status">{tr("Διαθέσιμη συνέχεια μετά τις", "Resume available after")} {new Date(analysisRetryAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}.</p>}
+    </div>}
     {job && <><p className="subtitle-authoring-filename">{job.fileName}</p>
       <dl className="subtitle-authoring-stats"><div><dt>{tr("Ολοκληρωμένα", "Completed")}</dt><dd>{counts!.complete}/{counts!.ready}</dd></div><div><dt>{tr("Προς επεξεργασία", "Remaining")}</dt><dd>{counts!.remaining}</dd></div><div><dt>{tr("Προς διόρθωση", "Needs repair")}</dt><dd>{counts!.blocked}</dd></div></dl>
       <progress max={Math.max(1, counts!.ready)} value={counts!.complete} aria-label={tr("Πρόοδος επιμέλειας", "Authoring progress")}/>
