@@ -102,10 +102,20 @@ def alignment_audit(words: list[dict[str, Any]]) -> dict[str, Any]:
             "humanAudioReview": False}
 
 
-def prefer_boundary_repair(original: list[dict[str, Any]], candidate: list[dict[str, Any]]) -> bool:
+def prefer_boundary_repair(original: list[dict[str, Any]], candidate: list[dict[str, Any]],
+                           source_cues: list[SourceCue] | None = None) -> bool:
     """Compare the group AND neighbouring cues so a repair cannot move its defect outside the group."""
     if [(w["word_id"], w["text"]) for w in original] != [(w["word_id"], w["text"]) for w in candidate]:
         return False
+    if source_cues is not None:
+        source_by_id = {cue.cue_id: cue for cue in source_cues}
+        for old_word, word in zip(original, candidate):
+            cue = source_by_id.get(word.get("cue_id"))
+            start, end = word["start_ms"], word["end_ms"]
+            if (cue is None or old_word.get("cue_id") != word.get("cue_id")
+                    or start is None or end is None
+                    or not max(0, cue.start_ms - 750) <= start < end <= cue.end_ms + 750):
+                return False
     old, new = alignment_audit(original), alignment_audit(candidate)
     count = lambda audit, code: sum(issue["code"] == code for issue in audit["issues"])
     return (count(new, "overlap") < count(old, "overlap")

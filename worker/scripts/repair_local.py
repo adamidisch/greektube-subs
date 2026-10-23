@@ -103,7 +103,7 @@ def main():
         context_ids = {cue.cue_id for cue in cues[first:last + 1]}
         old_context = [words[index] for index in sorted(words) if words[index]["cue_id"] in context_ids]
         new_context = [replacement.get(w["source_index"], w) for w in old_context]
-        accepted = prefer_boundary_repair(old_context, new_context)
+        accepted = prefer_boundary_repair(old_context, new_context, cues[first:last + 1])
         cache["groups"][key]["accepted"] = accepted
         write_json(args.checkpoint, cache)
         print(f"Boundary group {key}: {'accepted' if accepted else 'needs review'}", flush=True)
