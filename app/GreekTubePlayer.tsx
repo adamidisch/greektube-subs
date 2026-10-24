@@ -8,6 +8,7 @@ import {activeSkipTarget,normalizeSkipRanges,SKIP_RANGES_UPDATED_EVENT,VIDEO_EDI
 import {subtitleLines} from "./subtitle-display";
 import {displaySubtitleTrack,legacySubtitleTrack,subtitleEventAt,type SubtitleTrack} from "./subtitle-track";
 import SubtitleTranscript from "./SubtitleTranscript";
+import { SARAH_PILOT_EVENTS, isSarahPilot } from "./subtitle-pilot";
 import {APP_LANGUAGE_EVENT,APP_LANGUAGE_KEY,getAppLanguage,setAppLanguage,tr,useAppLanguage,type AppLanguage} from "./app-language";
 import {SESSION_ENDING_EVENT,SESSION_ENDED_KEY} from "./session-client";
 import {
@@ -364,7 +365,21 @@ export default function GreekTubePlayer() {
   const [view,setView]=useState<"library"|"settings">("library");
   const [selectedId,setSelectedId]=useState<string|null>(null);
   const [captions,setCaptions]=useState<Captions|null>(null);
-  const displayTrack=useMemo(()=>displaySubtitleTrack(captions?.cues||[],captions?.subtitleTrack),[captions]);
+  const subtitlePilot=hydrated&&selectedId==="xYB6uYyRjCA"&&isSarahPilot(location.search);
+  const displayTrack=useMemo(()=>{
+    const track=displaySubtitleTrack(captions?.cues||[],captions?.subtitleTrack);
+    if(!subtitlePilot)return track;
+    // Preview only: retain the normal track outside the candidate window.
+    const outside=track.events.flatMap(event=>{
+      const end=event.start+event.duration;
+      if(end<=86||event.start>=140)return [event];
+      return [
+        ...(event.start<86?[{...event,duration:86-event.start}]:[]),
+        ...(end>140?[{...event,start:140,duration:end-140}]:[]),
+      ];
+    });
+    return {...track,events:[...outside,...SARAH_PILOT_EVENTS].sort((a,b)=>a.start-b.start)};
+  },[captions,subtitlePilot]);
   const englishTrack=useMemo(()=>legacySubtitleTrack(captions?.englishCues||[]),[captions?.englishCues]);
   const [loading,setLoading]=useState(false);
   const [checkingReady,setCheckingReady]=useState(false);
@@ -859,7 +874,8 @@ export default function GreekTubePlayer() {
     pendingPlayerStart.current=start??video.lastPosition;
     setSelectedId(video.id); setView("library"); setSpeakerBioOpen(false); setError(""); setLoadingDescription(video.description||tr("Ετοιμάζουμε την ελληνική περιγραφή του βίντεο.")); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
     const proofQuery=proofVersionRef.current==="v81"?ALIGNMENT_V81_PROOF_QUERY_VALUE:ALIGNMENT_PROOF_QUERY_VALUE;
-    history.replaceState(null,"",`/?video=${video.id}${proofMode?`&proof=${proofQuery}`:""}${start?`&t=${Math.floor(start)}`:""}`);
+    const pilotQuery=video.id==="xYB6uYyRjCA"&&isSarahPilot(location.search)?"&subtitlePilot=sarah-v1":"";
+    history.replaceState(null,"",`/?video=${video.id}${pilotQuery}${proofMode?`&proof=${proofQuery}`:""}${start?`&t=${Math.floor(start)}`:""}`);
     if(proofMode){
       if(proofVersionRef.current==="v81"){
         setLoading(true);setCheckingReady(false);setCaptions(null);
@@ -1408,6 +1424,7 @@ export default function GreekTubePlayer() {
                   {seekPreview!==null&&seekDuration>0&&<output className="seek-preview" style={{"--seek-preview-position":`${Math.min(100,Math.max(0,(seekPreview/seekDuration)*100))}%`} as CSSProperties}>{clock(seekPreview)}</output>}
                   <input className="player-seek-bar" type="range" min={0} max={Math.max(1,seekDuration)} step="0.1" value={Math.min(playhead,Math.max(1,seekDuration))} disabled={seekDuration<=0} aria-label="Μετακίνηση στο βίντεο" style={{"--seek-progress":`${seekDuration>0?Math.min(100,(playhead/seekDuration)*100):0}%`} as CSSProperties} onPointerDown={event=>{event.stopPropagation();updateSeekPreview(event,seekDuration);}} onPointerMove={event=>updateSeekPreview(event,seekDuration)} onPointerUp={()=>{setSeekPreview(null);revealPlayerUi();}} onPointerCancel={()=>setSeekPreview(null)} onPointerLeave={()=>setSeekPreview(null)} onClick={event=>event.stopPropagation()} onChange={event=>{const nextTime=Number(event.currentTarget.value);setPlayhead(nextTime);currentPlayer()?.seekTo(nextTime,true);revealPlayerUi();}}/>
                 </div>
+                {subtitlePilot&&<div role="status" style={{position:"absolute",top:12,left:12,padding:"6px 10px",borderRadius:8,background:"rgba(10,12,18,.85)",color:"#f2f3f6",fontSize:13,pointerEvents:"none",zIndex:3}}>Δοκιμαστικοί υπότιτλοι · 1:26–2:20</div>}
                 {state.settings.subtitles&&(()=>{const gi=subtitleEventAt(displayTrack.events,playhead),ei=subtitleEventAt(englishTrack.events,playhead);const greek=subtitleLines(displayTrack.events[gi]?.text||"").join("\n"),english=subtitleLines(englishTrack.events[ei]?.text||"").join("\n");if(!greek&&!english)return null;return <div className={`subtitles ${state.settings.subtitlePosition}`} style={{"--subtitle-size":`${state.settings.subtitleSize}px`,background:`rgba(0,0,0,${state.settings.opacity})`} as CSSProperties}>{state.settings.subtitleMode==="en"?english:state.settings.subtitleMode==="dual"?<><span>{greek}</span>{english&&<small>{english}</small>}</>:greek}</div>;})()}
                 <button className="video-tap-toggle" aria-label={isPlaying?tr("Παύση βίντεο"):tr("Αναπαραγωγή βίντεο")} onClick={handleVideoTap}/>
                 {(isFullscreen||isPseudoFullscreen)&&showFsExit&&<button className="custom-fullscreen" title={tr("Έξοδος από πλήρη οθόνη")} aria-label="Έξοδος από πλήρη οθόνη" onClick={e=>{e.preventDefault();e.stopPropagation();e.currentTarget.blur();void toggleFullscreen();}}><FullscreenExitIcon/></button>}
