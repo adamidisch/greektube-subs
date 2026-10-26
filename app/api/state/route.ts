@@ -149,7 +149,7 @@ function mergeState(personal: PersonalState | null, sharedVideos: VideoRecord[])
   return { settings: personal?.settings, moments: personal?.moments || [], videos };
 }
 
-async function getSharedVideos() {
+async function getSharedVideos(): Promise<VideoRecord[]> {
   const db = database();
   const rows = await db.query("SELECT value FROM app_state WHERE key = $1 LIMIT 1", [SHARED_LIBRARY_KEY]) as { value: string }[];
   const row = rows[0];
