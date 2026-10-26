@@ -1,0 +1,131 @@
+/* GreekTube v7.12.2 — actual player controls (gts31 shell).
+   Overrides existing gts31 rules; dimensions are ~80% of the previous UI.
+   No global buttons, subtitles, player state or database are changed. */
+html body .viewer.viewer.viewer .gts31-controls {
+  padding:8px!important;
+  margin-bottom:10px!important;
+  border-radius:14px!important;
+}
+html body .viewer.viewer.viewer .gts31-controls-row-1 {
+  height:69px!important;
+  gap:11px!important;
+  padding:5px 6px 10px!important;
+}
+html body .viewer.viewer.viewer .gts31-play-cluster {
+  width:138px!important;
+  height:53px!important;
+  gap:6px!important;
+  padding:4px 5px!important;
+  border-radius:14px!important;
+  justify-content:center!important;
+}
+html body .viewer.viewer.viewer .gts31-settings-cluster {
+  width:104px!important;
+  height:43px!important;
+  gap:5px!important;
+  padding:4px 5px!important;
+  border-radius:14px!important;
+  justify-content:center!important;
+}
+html body .viewer.viewer.viewer .gts31-control,
+html body .viewer.viewer.viewer .gts31-skip {
+  width:35px!important;
+  min-width:35px!important;
+  height:35px!important;
+  min-height:35px!important;
+  flex:0 0 35px!important;
+  border-radius:10px!important;
+}
+html body .viewer.viewer.viewer .gts31-skip>svg {
+  width:16px!important;
+  height:16px!important;
+}
+html body .viewer.viewer.viewer .gts31-skip>small {
+  right:2px!important;
+  bottom:0!important;
+  font-size:12px!important;
+}
+html body .viewer.viewer.viewer .gts31-play {
+  width:43px!important;
+  min-width:43px!important;
+  height:43px!important;
+  min-height:43px!important;
+  flex:0 0 43px!important;
+  border-radius:12px!important;
+  box-shadow:0 5px 14px rgba(124,116,224,.34)!important;
+}
+html body .viewer.viewer.viewer .gts31-play>svg {
+  width:16px!important;
+  height:16px!important;
+}
+html body .viewer.viewer.viewer .gts31-speed {
+  width:55px!important;
+  min-width:55px!important;
+  height:35px!important;
+  flex:0 0 55px!important;
+}
+html body .viewer.viewer.viewer .gts31-speed>select {
+  height:35px!important;
+  font-size:12px!important;
+}
+html body .viewer.viewer.viewer .gts31-volume {
+  width:35px!important;
+  height:35px!important;
+  flex:0 0 35px!important;
+}
+html body .viewer.viewer.viewer .gts31-volume-toggle>svg {
+  width:14px!important;
+  height:14px!important;
+}
+html body .viewer.viewer.viewer .gts31-controls-row-2 {
+  min-height:54px!important;
+  gap:6px!important;
+  padding:8px 0 0!important;
+}
+html body .viewer.viewer.viewer .gts31-segment {
+  min-height:45px!important;
+  gap:3px!important;
+  padding:5px 3px!important;
+  border-radius:9px!important;
+}
+html body .viewer.viewer.viewer .gts31-segment>svg {
+  width:14px!important;
+  height:14px!important;
+  flex:0 0 14px!important;
+}
+html body .viewer.viewer.viewer .gts31-segment>span:not(.gts31-moment-count) {
+  font-size:12px!important;
+  line-height:1.15!important;
+}
+html body .viewer.viewer.viewer .player-info-card .player-greek-title {
+  font-size:clamp(17px,2.2vw,20px)!important;
+  line-height:1.25!important;
+  text-wrap:pretty;
+}
+@media(min-width:721px) {
+  html body .viewer.viewer.viewer .gts31-play-cluster {
+    width:176px!important;
+    gap:10px!important;
+  }
+  html body .viewer.viewer.viewer .gts31-settings-cluster {
+    width:136px!important;
+    gap:8px!important;
+  }
+  html body .viewer.viewer.viewer .gts31-controls-row-1 {
+    padding-inline:11px!important;
+  }
+}
+@media(max-width:350px) {
+  html body .viewer.viewer.viewer .gts31-controls-row-1 {
+    gap:6px!important;
+    padding-inline:3px!important;
+  }
+  html body .viewer.viewer.viewer .gts31-play-cluster {
+    width:138px!important;
+    gap:5px!important;
+  }
+  html body .viewer.viewer.viewer .gts31-settings-cluster {
+    width:104px!important;
+    gap:4px!important;
+  }
+}
