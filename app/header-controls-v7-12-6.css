@@ -1,0 +1,234 @@
+/* GreekTube v7.12.6 — canonical header controls.
+   Stable portal slots remove overlapping absolute-position buttons.
+   Scoped to the four real app headers (library, video, settings, account). */
+
+html body .app-shell.app-shell.app-shell > header.app-header {
+  overflow:visible!important;
+}
+html body main.app-shell:not(.viewer) > header.app-header {
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+}
+html body main.app-shell:not(.viewer) > header.app-header > .brand {
+  flex:0 1 auto!important;
+  min-width:0;
+  margin-right:0!important;
+}
+html body main.app-shell:not(.viewer) > header.app-header > .desktop-nav {
+  margin-inline:auto!important;
+}
+html body main.app-shell:not(.viewer) > header.app-header > .gts-header-actions {
+  margin-left:auto!important;
+  order:3!important;
+}
+html body main.app-shell:not(.viewer) > header.app-header > .mobile-menu-toggle {
+  order:4!important;
+}
+html body .app-shell.app-shell.app-shell > header.app-header > .gts-header-actions {
+  position:relative!important;
+  top:auto!important;
+  left:auto!important;
+  right:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex:0 0 auto!important;
+  gap:7px!important;
+  min-width:0!important;
+  height:40px!important;
+  z-index:48!important;
+  transform:none!important;
+}
+html body .app-shell.app-shell.app-shell .gts-header-actions > .gts-theme-slot,
+html body .app-shell.app-shell.app-shell .gts-header-actions > .gts-profile-slot {
+  position:relative!important;
+  display:flex!important;
+  flex:0 0 auto!important;
+  align-items:center!important;
+  min-height:38px!important;
+}
+html body .app-shell.app-shell.app-shell .gts-header-actions .theme-quick-toggle,
+html body .app-shell.app-shell.app-shell .gts-header-actions > .icon-button[aria-label="Ρυθμίσεις"] {
+  position:relative!important;
+  inset:auto!important;
+  top:auto!important;
+  right:auto!important;
+  left:auto!important;
+  bottom:auto!important;
+  display:grid!important;
+  place-items:center!important;
+  flex:0 0 38px!important;
+  width:38px!important;
+  min-width:38px!important;
+  height:38px!important;
+  min-height:38px!important;
+  margin:0!important;
+  padding:0!important;
+  border:1px solid var(--line)!important;
+  border-radius:11px!important;
+  background:rgba(255,255,255,.025)!important;
+  color:var(--muted)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+  transform:none!important;
+  font-size:0!important;
+  transition:background .15s ease,border-color .15s ease,color .15s ease!important;
+}
+html body .app-shell.app-shell.app-shell .gts-header-actions .theme-quick-toggle:hover,
+html body .app-shell.app-shell.app-shell .gts-header-actions > .icon-button[aria-label="Ρυθμίσεις"]:hover {
+  border-color:rgba(145,132,244,.4)!important;
+  background:rgba(126,114,220,.1)!important;
+  color:#c5bdff!important;
+}
+html body .app-shell.app-shell.app-shell .gts-header-actions .theme-quick-toggle svg,
+html body .app-shell.app-shell.app-shell .gts-header-actions > .icon-button[aria-label="Ρυθμίσεις"] svg {
+  display:block!important;
+  width:17px!important;
+  height:17px!important;
+  flex:none!important;
+  stroke:currentColor!important;
+  stroke-width:1.8!important;
+  fill:none!important;
+}
+html body .app-shell.app-shell.app-shell .gts-header-actions .user-profile-shell {
+  position:relative!important;
+  flex:0 0 auto!important;
+  margin:0!important;
+  order:0!important;
+}
+html body .app-shell.app-shell.app-shell .gts-header-actions .user-profile-trigger {
+  position:relative!important;
+  min-height:38px!important;
+  height:38px!important;
+  margin:0!important;
+  transform:none!important;
+}
+html body .app-shell.app-shell.app-shell .gts-header-actions .user-profile-menu {
+  right:0!important;
+  left:auto!important;
+  top:calc(100% + 9px)!important;
+  z-index:180!important;
+}
+/* Viewer is a 3-column header, not three absolutely positioned controls. */
+html body .app-shell.app-shell.app-shell.viewer > header.app-header {
+  display:grid!important;
+  grid-template-columns:minmax(0,auto) minmax(0,1fr) minmax(0,auto)!important;
+  align-items:center!important;
+  column-gap:10px!important;
+  padding-right:0!important;
+}
+html body .app-shell.app-shell.app-shell.viewer > header.app-header > .back-library,
+html body .app-shell.app-shell.app-shell.viewer > header.app-header > .back-to-video {
+  position:static!important;
+  grid-column:1!important;
+  justify-self:start!important;
+  margin:0!important;
+}
+html body .app-shell.app-shell.app-shell.viewer > header.app-header > .brand {
+  position:static!important;
+  grid-column:2!important;
+  justify-self:center!important;
+  left:auto!important;
+  top:auto!important;
+  transform:none!important;
+  margin:0!important;
+}
+html body .app-shell.app-shell.app-shell.viewer > header.app-header > .gts-header-actions {
+  grid-column:3!important;
+  justify-self:end!important;
+  order:initial!important;
+  margin:0!important;
+}
+/* Keep the account trigger at the same right edge as library. */
+html body main.app-shell.account-shell > header.app-header > .gts-header-actions {
+  margin-left:auto!important;
+}
+/* One compact component scale across profile trigger and its menu. */
+html body .user-profile-menu {
+  width:min(276px,calc(100vw - 24px))!important;
+  padding:7px!important;
+  border-radius:14px!important;
+}
+html body .user-profile-menu .user-profile-summary {
+  gap:9px!important;
+  padding:8px 8px 10px!important;
+}
+html body .user-profile-menu .user-avatar-large {
+  width:29px!important;height:29px!important;border-radius:9px!important;
+}
+html body .user-profile-menu .user-avatar-large svg,
+html body .user-profile-menu .user-menu-icon svg {
+  width:16px!important;height:16px!important;
+}
+html body .user-profile-menu .user-profile-summary strong,
+html body .user-profile-menu .user-menu-row strong,
+html body .user-profile-menu .user-profile-summary small,
+html body .user-profile-menu .user-menu-row small {
+  font-size:12px!important;line-height:1.35!important;
+}
+html body .user-profile-menu .user-menu-row {
+  min-height:44px!important;
+  grid-template-columns:29px minmax(0,1fr)!important;
+  gap:9px!important;
+  padding:6px 8px!important;
+  margin-top:3px!important;
+  border-radius:10px!important;
+}
+html body .user-profile-menu .user-menu-icon {
+  width:29px!important;height:29px!important;border-radius:9px!important;
+}
+html body .gts-header-actions .theme-quick-toggle:focus-visible,
+html body .gts-header-actions .icon-button:focus-visible,
+html body .gts-header-actions .user-profile-trigger:focus-visible,
+html body .user-profile-menu .user-menu-row:focus-visible {
+  outline:2px solid #9d92f7!important;
+  outline-offset:2px!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .gts-header-actions .theme-quick-toggle,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .gts-header-actions > .icon-button[aria-label="Ρυθμίσεις"] {
+  background:#fff!important;
+  color:#566479!important;
+  border-color:rgba(38,52,88,.15)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .gts-header-actions .theme-quick-toggle:hover,
+html[data-theme="light"] body .app-shell.app-shell.app-shell .gts-header-actions > .icon-button[aria-label="Ρυθμίσεις"]:hover {
+  background:#f2f0fc!important;
+  color:#6c5ecb!important;
+}
+@media(max-width:620px){
+  html body main.app-shell:not(.viewer) > header.app-header {gap:7px!important}
+  html body main.app-shell:not(.viewer) > header.app-header > .desktop-nav {display:none!important}
+  html body main.app-shell:not(.viewer) > header.app-header > .gts-header-actions {margin-left:auto!important}
+  html body .app-shell.app-shell.app-shell > header.app-header > .gts-header-actions {gap:5px!important}
+  html body .app-shell.app-shell.app-shell .gts-header-actions .theme-quick-toggle,
+  html body .app-shell.app-shell.app-shell .gts-header-actions > .icon-button[aria-label="Ρυθμίσεις"] {
+    width:36px!important;min-width:36px!important;height:36px!important;min-height:36px!important;flex-basis:36px!important;
+  }
+  html body .app-shell.app-shell.app-shell.viewer > header.app-header {column-gap:6px!important}
+  html body .app-shell.app-shell.app-shell.viewer > header.app-header > .back-library,
+  html body .app-shell.app-shell.app-shell.viewer > header.app-header > .back-to-video {
+    max-width:90px!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+  html body .user-profile-menu {max-height:calc(100dvh - 85px);overflow-y:auto;}
+}
+@media(max-width:390px){
+  html body .app-shell.app-shell.app-shell.viewer > header.app-header > .brand > span:not(.brand-mark),
+  html body .app-shell.app-shell.app-shell.viewer > header.app-header > .brand > small {display:none!important}
+  html body .app-shell.app-shell.app-shell.viewer > header.app-header > .back-library,
+  html body .app-shell.app-shell.app-shell.viewer > header.app-header > .back-to-video {
+    max-width:55px!important;
+    font-size:0!important;
+    padding-inline:5px!important;
+  }
+  html body .app-shell.app-shell.app-shell.viewer > header.app-header > .back-library > span {font-size:22px!important}
+  html body .app-shell.app-shell.app-shell.viewer > header.app-header > .back-to-video::before {
+    content:"‹";
+    font-size:22px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  html body .app-shell .gts-header-actions button{transition:none!important}
+}

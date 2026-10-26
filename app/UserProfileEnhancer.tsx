@@ -46,7 +46,7 @@ export default function UserProfileEnhancer() {
 
   useEffect(() => {
     const syncTarget = () => {
-      setTarget(document.querySelector<HTMLElement>(".settings-screen-layer .app-header")||document.querySelector<HTMLElement>("main.app-shell:not(.viewer) > header.app-header"));
+      setTarget(document.querySelector<HTMLElement>(".settings-screen-layer .gts-profile-slot")||document.querySelector<HTMLElement>("main.app-shell > header.app-header .gts-profile-slot"));
     };
     syncTarget();
     const observer = new MutationObserver(syncTarget);
@@ -297,7 +297,7 @@ export default function UserProfileEnhancer() {
       </div>
       <Link prefetch={false} href="/account" onClick={()=>setMenuOpen(false)} className="user-menu-row" role="menuitem"><span className="user-menu-icon"><UserIcon/></span><span><strong>{tr("Λογαριασμός")}</strong><small>{tr("Προσωπικό προφίλ")}</small></span></Link>
       <Link prefetch={false} href="/?action=add" className="user-menu-row" role="menuitem" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"&&!new URLSearchParams(location.search).has("video")){event.preventDefault();setMenuOpen(false);window.dispatchEvent(new Event("greektube:add-video"))}}}><span className="user-menu-icon"><MenuIcon kind="add"/></span><span><strong>{tr("Προσθήκη βίντεο")}</strong></span></Link>
-      <Link prefetch={false} href="/?view=settings" onClick={()=>setMenuOpen(false)} className="user-menu-row" role="menuitem"><span className="user-menu-icon"><MenuIcon kind="settings"/></span><span><strong>{tr("Ρυθμίσεις")}</strong></span></Link>
+      <Link prefetch={false} href="/?view=settings" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"){event.preventDefault();window.dispatchEvent(new Event("greektube:open-settings"));}}} className="user-menu-row" role="menuitem"><span className="user-menu-icon"><MenuIcon kind="settings"/></span><span><strong>{tr("Ρυθμίσεις")}</strong></span></Link>
       <button type="button" className="user-menu-row user-menu-logout" role="menuitem" onClick={()=>{setMenuOpen(false);setMessage("");setLogoutOpen(true)}}><span className="user-menu-icon"><MenuIcon kind="logout"/></span><span><strong>{tr("Αποσύνδεση")}</strong></span></button>
       {message&&<p role="status">{tr(message)}</p>}
     </div>}

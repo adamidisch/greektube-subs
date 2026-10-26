@@ -22,7 +22,7 @@ import "./v7-8-9-design.css";
 import "./v7-8-10-polish.css";
 import "./v7-8-10-caption-icons.css";
 import "./v7-8-11-light-polish.css";
-import "./v7-8-12-theme-toggle.css";
+/* Legacy absolute-position theme styles retired in v7.12.6. */
 import "./v7-8-13-designerui.css";
 import "./v7-8-13-reference-controls-footer.css";
 import "./v7-8-15-modal-shell.css";
@@ -50,6 +50,7 @@ import "./professional-workflow.css";
 import "./player-controls-gts31-v7-12-2.css";
 import "./home-loading-polish-v7-12-3.css";
 import "./premium-header-watch-rail-v7-12-5.css";
+import "./header-controls-v7-12-6.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

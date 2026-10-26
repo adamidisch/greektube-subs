@@ -81,8 +81,8 @@ export default function ThemeToggleEnhancer() {
 
   useEffect(() => {
     const syncHeader = () => setHeader(
-      document.querySelector<HTMLElement>(".settings-screen-layer .app-header") ||
-      document.querySelector<HTMLElement>(".app-header"),
+      document.querySelector<HTMLElement>(".settings-screen-layer .gts-theme-slot") ||
+      document.querySelector<HTMLElement>("main.app-shell > header.app-header .gts-theme-slot"),
     );
     syncHeader();
     const observer = new MutationObserver(syncHeader);
@@ -149,67 +149,6 @@ export default function ThemeToggleEnhancer() {
         </button>,
         header,
       )}
-      <style>{`
-        /* Canonical viewer-header action zone.
-           These selectors intentionally outrank the legacy brand.css !important rules. */
-        html body .app-shell.app-shell.app-shell.viewer > .app-header {
-          position: relative !important;
-          display: grid !important;
-          grid-template-columns: minmax(0,auto) minmax(0,1fr) 94px !important;
-          column-gap: 10px !important;
-          align-items: center !important;
-          padding-right: 0 !important;
-        }
-        html body .app-shell.app-shell.app-shell.viewer > .app-header > .brand {
-          position: static !important;
-          left: auto !important;
-          top: auto !important;
-          transform: none !important;
-          grid-column: 2 !important;
-          justify-self: center !important;
-          margin: 0 !important;
-        }
-        html body .app-shell.app-shell.app-shell.viewer > .app-header > .back-library,
-        html body .app-shell.app-shell.app-shell.viewer > .app-header > .back-to-video {
-          grid-column: 1 !important;
-          justify-self: start !important;
-        }
-        html body .app-shell.app-shell.app-shell.viewer > .app-header > .theme-quick-toggle,
-        html body .app-shell.app-shell.app-shell.viewer > .app-header > .icon-button[aria-label="Ρυθμίσεις"] {
-          position: absolute !important;
-          top: 50% !important;
-          width: 38px !important;
-          height: 38px !important;
-          min-width: 38px !important;
-          min-height: 38px !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          display: inline-grid !important;
-          place-items: center !important;
-          z-index: 8 !important;
-          transform: translateY(-50%) !important;
-          grid-column: auto !important;
-          justify-self: auto !important;
-          border-radius: 11px !important;
-        }
-        html body .app-shell.app-shell.app-shell.viewer > .app-header > .theme-quick-toggle {
-          right: 46px !important;
-        }
-        html body .app-shell.app-shell.app-shell.viewer > .app-header > .icon-button[aria-label="Ρυθμίσεις"] {
-          right: 0 !important;
-        }
-        html body .app-shell.app-shell.app-shell.viewer > .app-header > .theme-quick-toggle svg,
-        html body .app-shell.app-shell.app-shell.viewer > .app-header > .icon-button[aria-label="Ρυθμίσεις"] svg {
-          width: 17px !important;
-          height: 17px !important;
-          display: block !important;
-        }
-        @media (max-width: 620px) {
-          html body .app-shell.app-shell.app-shell.viewer > .app-header {
-            grid-template-columns: minmax(0,auto) minmax(0,1fr) 94px !important;
-          }
-        }
-      `}</style>
     </>
   );
 }
