@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/check-greek-uppercase.mjs app public && node --experimental-strip-types scripts/player-shell-layout.test.mjs && node --experimental-strip-types scripts/home-history-regression.test.mjs && node scripts/brand-cleanup.mjs && node --experimental-strip-types scripts/navigation-history.test.mjs && node --experimental-strip-types scripts/editor-export-filename.test.mjs && node --experimental-strip-types scripts/subtitle-packing.test.mjs && node --experimental-strip-types scripts/subtitle-track.test.mjs && node --experimental-strip-types scripts/subtitle-audio-evidence.test.mjs && node --experimental-strip-types scripts/subtitle-word-authoring.test.mjs && node --experimental-strip-types scripts/subtitle-authoring-client.test.mjs && node --experimental-strip-types scripts/subtitle-speech-alignment-v11.test.mjs && node --experimental-strip-types scripts/professional-subtitle-pipeline.test.mjs && node --experimental-strip-types scripts/subtitle-understanding-progress.test.mjs && next build",
+    "build": "node scripts/check-greek-uppercase.mjs app public && node --experimental-strip-types scripts/player-shell-layout.test.mjs && node --experimental-strip-types scripts/home-history-regression.test.mjs && node scripts/brand-cleanup.mjs && node --experimental-strip-types scripts/premium-ui-navigation.test.mjs && node --experimental-strip-types scripts/navigation-history.test.mjs && node --experimental-strip-types scripts/editor-export-filename.test.mjs && node --experimental-strip-types scripts/subtitle-packing.test.mjs && node --experimental-strip-types scripts/subtitle-track.test.mjs && node --experimental-strip-types scripts/subtitle-audio-evidence.test.mjs && node --experimental-strip-types scripts/subtitle-word-authoring.test.mjs && node --experimental-strip-types scripts/subtitle-authoring-client.test.mjs && node --experimental-strip-types scripts/subtitle-speech-alignment-v11.test.mjs && node --experimental-strip-types scripts/professional-subtitle-pipeline.test.mjs && node --experimental-strip-types scripts/subtitle-understanding-progress.test.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "check:greek-uppercase": "node scripts/check-greek-uppercase.mjs app public",
@@ -29,7 +29,8 @@
     "test:professional-subtitles": "node --experimental-strip-types scripts/professional-subtitle-pipeline.test.mjs",
     "test:subtitle-understanding-progress": "node --experimental-strip-types scripts/subtitle-understanding-progress.test.mjs",
     "test:player-shell": "node --experimental-strip-types scripts/player-shell-layout.test.mjs",
-    "test:home-history": "node --experimental-strip-types scripts/home-history-regression.test.mjs"
+    "test:home-history": "node --experimental-strip-types scripts/home-history-regression.test.mjs",
+    "test:premium-ui": "node --experimental-strip-types scripts/premium-ui-navigation.test.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.1",
