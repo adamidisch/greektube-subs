@@ -102,11 +102,6 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .continue-row > .co
     min-height:34px!important;
     padding:0 8px!important;
   }
-  html body .user-profile-menu {
-    right:0!important;
-    max-height:calc(100dvh - 85px);
-    overflow-y:auto;
-  }
 }
 @media(prefers-reduced-motion:reduce){
   html body .app-shell .continue-row > .continue-card {transition:none!important;}
