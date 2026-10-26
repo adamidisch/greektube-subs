@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { database } from "@/db/postgres";
+import { editorialVideoTitle } from "./editorial-video-titles";
 import NavigationAwareGreekTubePlayer from "./NavigationAwareGreekTubePlayer";
 import GreekTubePlayer from "./GreekTubePlayer";
 import CueEditEnhancer from "./CueEditEnhancer";
@@ -70,9 +71,9 @@ export async function generateMetadata({
   if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return {};
 
   const record = await getSharedVideo(videoId);
-  const videoTitle = typeof record?.title === "string" && record.title.trim()
+  const videoTitle = editorialVideoTitle(videoId, typeof record?.title === "string" && record.title.trim()
     ? record.title.trim()
-    : "Βίντεο με ελληνικούς υπότιτλους";
+    : "Βίντεο με ελληνικούς υπότιτλους");
 
   const shareUrl = new URL(SITE_URL);
   shareUrl.searchParams.set("video", videoId);
