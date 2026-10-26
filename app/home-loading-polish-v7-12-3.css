@@ -1,0 +1,119 @@
+/* v7.12.3 — stable home loading, clear selection and readable hierarchy.
+   Keep existing layout/style after hydration; prevent old placeholder thumbnail. */
+html body .app-shell .featured.featured-loading {
+  display:grid!important;
+  grid-template-columns:minmax(0,1.85fr) minmax(260px,.95fr)!important;
+  align-items:stretch;
+  min-height:316px;
+  overflow:hidden;
+  border:1px solid rgba(160,150,234,.12)!important;
+  border-radius:17px!important;
+  background:linear-gradient(125deg,#12151c,#191c26 56%,#151921)!important;
+}
+html body .app-shell .home-featured-loading-image {
+  min-width:0;
+  min-height:300px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  background:radial-gradient(circle at 50% 50%,rgba(133,121,229,.14),transparent 46%),linear-gradient(120deg,#121720,#1b1d2a 50%,#121720);
+}
+html body .app-shell .home-loading-mark {
+  width:44px;height:44px;
+  display:grid;place-items:center;
+  padding-left:2px;
+  border:1px solid rgba(165,152,255,.34);
+  border-radius:14px;
+  background:rgba(134,121,230,.13);
+  color:#aba1ff;
+  font-size:15px;
+}
+html body .app-shell .home-loading-status {
+  color:#b4adce;
+  font-size:12px!important;
+  font-weight:550;
+  letter-spacing:.015em;
+}
+html body .app-shell .home-featured-loading-info {
+  display:flex;
+  flex-direction:column;
+  gap:13px;
+  min-width:0;
+  justify-content:center;
+  padding:25px;
+}
+html body .app-shell .home-loading-line,
+html body .app-shell .home-loading-button {
+  display:block;
+  height:12px;
+  max-width:100%;
+  border-radius:6px;
+  background:linear-gradient(100deg,#252a36 10%,#34384b 35%,#252a36 60%);
+  background-size:250% 100%;
+  animation:home-loading-shimmer 2.2s ease-in-out infinite;
+}
+html body .app-shell .home-loading-line.short {width:44%;height:8px;}
+html body .app-shell .home-loading-line.title {width:95%;height:21px;}
+html body .app-shell .home-loading-line.medium {width:74%;height:20px;}
+html body .app-shell .home-loading-line.wide {width:89%;height:10px;margin-top:13px;}
+html body .app-shell .home-loading-button {width:100%;height:37px;margin-top:14px;border-radius:9px;}
+html body .app-shell .home-featured-context {
+  color:#b9aff7;
+  font-size:12px;
+  font-weight:650;
+  letter-spacing:.05em;
+  line-height:1.2;
+}
+html body .app-shell .home-library-error {
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:22px;border:1px solid rgba(212,140,135,.3);border-radius:14px;
+  background:rgba(160,65,65,.09);color:var(--text);font-size:13px;
+}
+html body .app-shell .home-library-error button {
+  min-height:36px;padding:5px 12px;
+  border:1px solid rgba(161,149,238,.36);border-radius:9px;
+  background:var(--raised);color:var(--text);font-size:12px;
+}
+html body .app-shell ::selection {
+  color:#fff!important;
+  background:rgba(117,100,226,.64)!important;
+  text-shadow:none!important;
+}
+html[data-theme="light"] body .app-shell ::selection {
+  color:#201b3d!important;
+  background:rgba(159,144,245,.48)!important;
+}
+html[data-theme="light"] body .app-shell .featured.featured-loading {
+  background:linear-gradient(125deg,#e9eaf4,#f5f4fa)!important;
+  border-color:rgba(94,79,163,.14)!important;
+}
+html[data-theme="light"] body .app-shell .home-featured-loading-image {
+  background:linear-gradient(125deg,#efedf8,#e5e5f2)!important;
+}
+html[data-theme="light"] body .app-shell .home-loading-line,
+html[data-theme="light"] body .app-shell .home-loading-button {
+  background:linear-gradient(100deg,#e5e1f0,#d6d1e5,#e5e1f0);
+  background-size:250% 100%;
+}
+html[data-theme="light"] body .app-shell .home-loading-status {color:#605d7c;}
+@keyframes home-loading-shimmer {0%{background-position:120% 0}100%{background-position:-120% 0}}
+@media(max-width:720px) {
+  html body .app-shell .featured.featured-loading {
+    grid-template-columns:minmax(0,1fr)!important;
+    min-height:0;
+  }
+  html body .app-shell .home-featured-loading-image {
+    min-height:0;aspect-ratio:16/9;
+  }
+  html body .app-shell .home-featured-loading-info {
+    padding:18px;gap:11px;
+  }
+  html body .app-shell .home-loading-line.wide {margin-top:3px;}
+  html body .app-shell .home-loading-button {margin-top:5px;}
+}
+@media(prefers-reduced-motion:reduce){
+  html body .app-shell .home-loading-line,
+  html body .app-shell .home-loading-button{animation:none!important;}
+}
