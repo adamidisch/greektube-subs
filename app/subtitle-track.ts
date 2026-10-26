@@ -64,10 +64,21 @@ export function auditSubtitleEvents(events: SubtitleEvent[]): SubtitleAudit {
     if (!characters) add("empty_text");
     if (characters > 84 || lines.length > 2 || lines.some(line => Array.from(line).length > 42)) add("line_layout");
     if (!event.sourceIndices.length || event.sourceIndices.some(value => !Number.isInteger(value) || value < 0)) add("source_mapping");
-    if (event.timing !== "audio_aligned" && event.timing !== "audio_reviewed") speechVerified = false;
+    if (event.timing !== "audio_reviewed") speechVerified = false;
   });
   const readable = issues.length === 0;
   return { readable, speechVerified, professionalReady: readable && speechVerified, eventCount: events.length, shortPages, fastPages, issues };
+}
+
+/** Preview baseline: preserve source boundaries even when readability needs editing.
+ * The caller must supply timing provenance; coarse exports must use estimated.
+ * This deliberately does not replace the published legacy fallback.
+ */
+export function sourceStableSubtitleTrack(cues: TimedCue[], timing: "source_cue" | "estimated"): SubtitleTrack {
+  const events: SubtitleEvent[] = cues.map((cue, index) => ({
+    ...cue, text: normalise(cue.text), sourceIndices: [index], timing,
+  }));
+  return { schemaVersion: 1, inputKey: subtitleInputKey(cues), origin: "authored", events, audit: auditSubtitleEvents(events) };
 }
 
 /** Legacy timing is compiled once and honestly labelled as an estimate, never an audio proof. */
