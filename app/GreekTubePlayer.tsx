@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSP
 import AudioTimingCapturePanel from "./AudioTimingCapturePanel";
 import { APP_VERSION } from "./version";
 import { latestViewedAt, pickHomeFeaturedVideo, preferredWatchState } from "./home-featured-selection";
+import { editorialVideoTitle } from "./editorial-video-titles";
 import { canonicalSpeakerForVideo, type CanonicalSpeakerProfile } from "./speaker-catalog";
 import {activeSkipTarget,normalizeSkipRanges,SKIP_RANGES_UPDATED_EVENT,VIDEO_EDITOR_SAVED_EVENT,type SkipRange} from "./skip-ranges";
 import {subtitleLines} from "./subtitle-display";
@@ -139,7 +140,8 @@ const CURATED_VIDEO_METADATA:Partial<Record<string,Pick<Video,"title"|"descripti
 };
 function canonicalVideoMetadata(video:Video):Video{
   const metadata=CURATED_VIDEO_METADATA[video.id];
-  return metadata?{...video,...metadata}:video;
+  const merged=metadata?{...video,...metadata}:video;
+  return {...merged,title:editorialVideoTitle(merged.id,merged.title)};
 }
 const GREEK_TITLES:Record<string,string>={
   ATKu1Cxs2Pc:"Καρδιοχειρουργός: Ο μεγαλύτερος παράγοντας κινδύνου για καρδιακή νόσο",
@@ -150,7 +152,7 @@ const GREEK_TITLES:Record<string,string>={
   "0_adZSC0sFI":"Ο πιο γρήγορος τρόπος αντιμετώπισης της ζύμωσης στο ανώτερο έντερο",
   D2RjneeG_xA:"Ο ευκολότερος τρόπος αντιστροφής μεταβολικών προβλημάτων",
 };
-function greekTitle(video:Video){return isGreekTitle(video.title)?video.title:GREEK_TITLES[video.id]||video.title;}
+function greekTitle(video:Video){return editorialVideoTitle(video.id,isGreekTitle(video.title)?video.title:GREEK_TITLES[video.id]||video.title);}
 function appTitle(video:Video){return getAppLanguage()==="en"?(englishTitle(video)||greekTitle(video)):greekTitle(video);}
 function isGreekTitle(value:string){const letters=value.match(/\p{L}/gu)?.length||0;const greek=value.match(/[\u0370-\u03ff\u1f00-\u1fff]/g)?.length||0;return letters>0&&greek/letters>.22;}
 function mobileSummary(video:Video,captions:Captions){
