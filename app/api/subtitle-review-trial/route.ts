@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { safeEqual } from "@/lib/admin-auth";
 import { FINAL_SUBTITLE_REVIEW_PROMPT, finalCandidateHash, finalReviewEvents, validateFinalReview } from "../captions/final-subtitle-review";
 import { wordAuthoringJson, WordAuthoringProviderError } from "../captions/word-authoring-provider";
@@ -8,6 +8,20 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 const completed = new Map<string, Promise<unknown>>();
 const sourceText = "and the adrenal gearbox, which allows you to gear up in response to stress.";
+
+/** The Vercel connector supports GET fetches. A signed URL authorizes one fixed
+ * candidate for at most five minutes; it never carries the trial credential. */
+export async function GET(request: Request) {
+  const url = new URL(request.url), candidate = url.searchParams.get("candidate"), expires = Number(url.searchParams.get("expires"));
+  let access: { token?: string; expiresAt?: number };
+  try { access = JSON.parse(process.env.SUBTITLE_PREVIEW_TRIAL_ACCESS || "{}"); } catch { access = {}; }
+  const signature = url.searchParams.get("signature") || "";
+  if (process.env.VERCEL_ENV !== "preview" || !access.token || access.token.length !== 64 || !access.expiresAt || access.expiresAt <= Date.now()
+    || !["ambiguous", "complete"].includes(candidate || "") || !Number.isSafeInteger(expires) || expires < Date.now() || expires > Date.now() + 300_000
+    || !safeEqual(signature, createHmac("sha256", access.token).update(`${candidate}:${expires}`).digest("hex")))
+    return Response.json({ error: "Trial unavailable" }, { status: 403, headers: { "Cache-Control": "private, no-store" } });
+  return POST(new Request(url.origin + url.pathname, { method: "POST", headers: { authorization: `Bearer ${access.token}` }, body: JSON.stringify({ candidate }) }));
+}
 
 /** Fixed, expiring preview experiment. No database, Blob, transcript or publication writes. */
 export async function POST(request: Request) {
