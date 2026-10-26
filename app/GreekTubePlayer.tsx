@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import AudioTimingCapturePanel from "./AudioTimingCapturePanel";
 import { APP_VERSION } from "./version";
+import { latestViewedAt, pickHomeFeaturedVideo, preferredWatchState } from "./home-featured-selection";
 import { canonicalSpeakerForVideo, type CanonicalSpeakerProfile } from "./speaker-catalog";
 import {activeSkipTarget,normalizeSkipRanges,SKIP_RANGES_UPDATED_EVENT,VIDEO_EDITOR_SAVED_EVENT,type SkipRange} from "./skip-ranges";
 import {subtitleLines} from "./subtitle-display";
@@ -95,7 +96,7 @@ async function saveStateToServer(state:AppState,keepalive=false,requireShared=fa
 }
 function mergeAppStates(base:AppState,incoming:AppState):AppState{
   const videos=new Map(base.videos.map(video=>[video.id,video]));
-  incoming.videos.forEach(video=>videos.set(video.id,canonicalVideoMetadata({...(videos.get(video.id)||{}),...video})));
+  incoming.videos.forEach(video=>videos.set(video.id,canonicalVideoMetadata(preferredWatchState(videos.get(video.id),{...(videos.get(video.id)||{}),...video}))));
   return {
     settings:normalizedSettings(incoming.settings||base.settings),
     moments:[...(incoming.moments||[]),...base.moments.filter(moment=>!(incoming.moments||[]).some(item=>item.id===moment.id))],
@@ -359,8 +360,9 @@ const LIBRARY_PAGE_SIZE=10;
 
 export default function GreekTubePlayer() {
   useAppLanguage();
-  const [state,setState]=useState<AppState>({videos:SEED,moments:[],settings:DEFAULT_SETTINGS});
+  const [state,setState]=useState<AppState>({videos:[],moments:[],settings:DEFAULT_SETTINGS});
   const [hydrated,setHydrated]=useState(false);
+  const [libraryLoadFailed,setLibraryLoadFailed]=useState(false);
   const [view,setView]=useState<"library"|"settings">("library");
   const [selectedId,setSelectedId]=useState<string|null>(null);
   const [captions,setCaptions]=useState<Captions|null>(null);
@@ -506,14 +508,15 @@ export default function GreekTubePlayer() {
     if(fallback?.videos){
       const fallbackState={settings:normalizedSettings(fallback.settings),videos:fallback.videos,moments:fallback.moments||[]};
       setState(current=>mergeAppStates(current,fallbackState));
-      void saveStateToServer(fallbackState);
     }
     try{
       const r=await fetch("/api/state",{credentials:"same-origin",cache:"no-store"});
       if(r.ok){
         const j=await r.json();
         if(j.state?.videos)setState(current=>mergeAppStates(current,{settings:normalizedSettings(j.state.settings),videos:j.state.videos,moments:j.state.moments||[]}));
-      }
+      }else if(!fallback?.videos?.length){setLibraryLoadFailed(true);}
+    }catch{
+      if(!fallback?.videos?.length)setLibraryLoadFailed(true);
     }finally{setHydrated(true);}
   })(); },[]);
   useEffect(()=>{
