@@ -40,4 +40,7 @@ assert.match(page,/editorialVideoTitle/,"shared preview title updated");
 assert.match(layout,/home-loading-polish-v7-12-3\.css/);
 assert.match(css,/::selection/,"text selection has readable colors");
 assert.doesNotMatch(player,/void saveStateToServer\(fallbackState\)/,"do not overwrite server with stale local cache during hydration");
+const mobileUi=read("app/MobileUXFixesEnhancer.tsx");
+assert.doesNotMatch(mobileUi,/\.gts31-transcript-button>span::after\s*\{/, "player text must not be duplicated by CSS");
+assert.doesNotMatch(mobileUi,/\.gts31-transcript-button>span\s*\{font-size:0/, "real transcript button label must remain accessible");
 console.log("home loading, account history, resume, guest selection, title and selection tests passed");
