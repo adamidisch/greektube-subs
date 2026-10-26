@@ -47,7 +47,7 @@ import "./player-time-ui.css";
 import "./audio-timing-capture.css";
 import "./player-loading-polish.css";
 import "./professional-workflow.css";
-import "./player-controls-compact-v7-12-1.css";
+import "./player-controls-gts31-v7-12-2.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
