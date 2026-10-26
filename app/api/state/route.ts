@@ -11,20 +11,26 @@ const ADMIN_SESSION_MESSAGE = "greektube-edit-authorized";
 type VideoRecord = Record<string, unknown> & { id?: unknown; addedAt?: unknown };
 type PersonalState = { videos?: VideoRecord[]; moments?: unknown[]; settings?: Record<string, unknown> };
 
+let schemaReady:Promise<void>|null=null;
 async function ensureTable() {
-  const db = database();
-  await db.query(`CREATE TABLE IF NOT EXISTS app_state (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`);
-  await db.query(`CREATE TABLE IF NOT EXISTS personal_states (
-    owner_key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`);
+  if(!schemaReady){
+    schemaReady=(async()=>{
+      const db = database();
+      await db.query(`CREATE TABLE IF NOT EXISTS app_state (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`);
+      await db.query(`CREATE TABLE IF NOT EXISTS personal_states (
+        owner_key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`);
+    })().catch(error=>{schemaReady=null;throw error;});
+  }
+  await schemaReady;
 }
 
 async function ownerKey(request: Request) {
