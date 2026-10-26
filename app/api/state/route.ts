@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { database } from "@/db/postgres";
 import { canonicalSpeakerForVideo, speakerMatchesChannel } from "@/app/speaker-catalog";
+import { editorialVideoTitle } from "@/app/editorial-video-titles";
 
 const LEGACY_KEY = "greektube-library-v2";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
@@ -107,6 +108,7 @@ function sanitizePersonalState(input: unknown) {
 
 function sanitizeSharedVideo(video: VideoRecord) {
   const sharedVideo = normalizeSpeakerFields(video);
+  sharedVideo.title = editorialVideoTitle(String(sharedVideo.id||""),typeof sharedVideo.title==="string"?sharedVideo.title:"");
   delete sharedVideo.captions;
   sharedVideo.favorite = false;
   sharedVideo.lastPosition = 0;
@@ -148,7 +150,7 @@ async function getSharedVideos() {
   if (!row) return [];
   try {
     const parsed = JSON.parse(row.value) as { videos?: VideoRecord[] };
-    return Array.isArray(parsed.videos) ? parsed.videos : [];
+    return Array.isArray(parsed.videos) ? parsed.videos.map(video=>({...video,title:editorialVideoTitle(String(video.id||""),typeof video.title==="string"?video.title:"")})) : [];
   } catch {
     return [];
   }
