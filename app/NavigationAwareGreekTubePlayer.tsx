@@ -38,10 +38,11 @@ function videoIdFromEditButton(button: HTMLElement): string {
 }
 
 function settingsButton(): HTMLButtonElement | null {
-  const direct = document.querySelector<HTMLButtonElement>('button[aria-label="Ρυθμίσεις"]');
-  if (direct) return direct;
-  return [...document.querySelectorAll<HTMLButtonElement>(".mobile-menu > button")]
-    .find(button => button.textContent?.trim() === "Ρυθμίσεις") || null;
+  // A direct /?view=settings link must work even if the mobile menu is closed.
+  return document.querySelector<HTMLButtonElement>('button[data-gts-settings-trigger="true"]')
+    || document.querySelector<HTMLButtonElement>('button[aria-label="Ρυθμίσεις"]')
+    || [...document.querySelectorAll<HTMLButtonElement>(".mobile-menu > button")]
+      .find(button => button.textContent?.trim() === "Ρυθμίσεις") || null;
 }
 
 function editorButton(videoId: string): HTMLButtonElement | null {

@@ -49,6 +49,7 @@ import "./player-loading-polish.css";
 import "./professional-workflow.css";
 import "./player-controls-gts31-v7-12-2.css";
 import "./home-loading-polish-v7-12-3.css";
+import "./premium-header-watch-rail-v7-12-5.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

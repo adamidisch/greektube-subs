@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+
+const file = name => readFileSync(new URL("../"+name,import.meta.url),"utf8");
+const player=file("app/GreekTubePlayer.tsx");
+const router=file("app/NavigationAwareGreekTubePlayer.tsx");
+const profile=file("app/UserProfileEnhancer.tsx");
+const account=file("app/account/AccountPage.tsx");
+const css=file("app/premium-header-watch-rail-v7-12-5.css");
+const layout=file("app/layout.tsx");
+const pkg=JSON.parse(file("package.json"));
+
+assert.ok(player.includes('data-gts-settings-trigger="true"'),"Settings nav must expose a stable non-translated target");
+assert.ok(router.includes('button[data-gts-settings-trigger="true"]'),"Settings deep link must find its trigger even when mobile menu is closed");
+assert.ok(profile.includes('href="/?view=settings"'),"Profile menu settings route must match router");
+assert.ok(account.includes('href="/?view=settings"'),"Account settings route must match router");
+assert.ok(player.includes('function SettingsGearIcon()'),"Settings icon must be an SVG instead of large text glyph");
+assert.ok(player.includes('<SettingsGearIcon/>'),"Header settings buttons must use new vector icon");
+assert.ok(!player.includes('>⚙</button>'),"Old inconsistent large emoji gear should not be rendered");
+assert.ok(css.includes('main.app-shell.account-shell > header.app-header > .user-profile-shell'),"Account profile needs a right-aligned flex slot");
+assert.ok(css.includes('margin-left:auto!important'),"Account avatar must align on right");
+assert.ok(css.includes('.user-profile-menu .user-menu-icon svg'),"Profile menu icon dimensions must be controlled");
+assert.ok(css.includes('font-size:12px!important'),"Profile menu text remains readable");
+assert.ok(css.includes('.continue-row > .continue-card'),"Continue rail cards must be scoped separately from library grid");
+assert.ok(css.includes('scroll-snap-type:x mandatory'),"Mobile horizontal cards must snap");
+assert.ok(css.includes('html[data-theme="light"]'),"Continue rail must support light theme");
+assert.ok(css.includes('@media(max-width:620px)'),"Compact responsive rules are required");
+assert.ok(layout.includes('import "./premium-header-watch-rail-v7-12-5.css";'),"Design layer must load after legacy CSS");
+assert.equal(pkg.version,"7.12.5");
+console.log("Premium UI, account alignment, accessible settings routes and compact watch rail regression checks passed.");
