@@ -1,0 +1,38 @@
+/* v7.12.1 compact-controls audit: final, scoped overrides.
+   Reduce visible controls ~20% without changing their behavior or subtitle data. */
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .play-toggle {
+  width:35px!important;min-width:35px!important;height:35px!important;min-height:35px!important;flex:0 0 35px!important;
+  border-radius:12px!important;font-size:12px!important;
+}
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button {
+  width:35px!important;min-width:35px!important;height:35px!important;min-height:35px!important;flex:0 0 35px!important;
+}
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button svg {
+  width:13px!important;height:13px!important;
+}
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .volume-toggle {
+  width:35px!important;min-width:35px!important;height:35px!important;min-height:35px!important;
+}
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .volume-control {
+  flex:0 0 35px!important;
+}
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls {
+  min-height:40px!important;gap:8px!important;padding:3px 8px!important;
+}
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary,
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.transcript-toggle,
+html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control>.cc-toggle {
+  height:45px!important;min-height:45px!important;border-radius:10px!important;
+}
+html body .viewer.viewer.viewer .paused-video-title {
+  max-width:calc(100% - 32px)!important;
+}
+html body .viewer.viewer.viewer .paused-video-title strong {
+  display:-webkit-box!important;-webkit-box-orient:vertical!important;
+  -webkit-line-clamp:2!important;line-clamp:2!important;
+  white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;
+}
+@media(max-width:620px){
+  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions {gap:7px!important;}
+}
