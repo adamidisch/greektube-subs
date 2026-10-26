@@ -54,3 +54,5 @@ assert.equal(matchesCanonicalManualSource([{...englishSource[0],text:'The  propo
 assert.equal(matchesCanonicalManualSource([{...englishSource[0],text:'The proportion is 35%.'}],englishSource),false);
 assert.deepEqual(manualNumericMismatches(englishSource,[{...englishSource[0],text:'Το ποσοστό είναι 25%.'}]),[]);
 assert.deepEqual(manualNumericMismatches(englishSource,[{...englishSource[0],text:'Το ποσοστό είναι 35%.'}]),[1]);
+
+assert.equal(auditSubtitleEvents([{...events[0],timing:"audio_aligned"}]).speechVerified,false,"model alignment is not acoustic approval");

@@ -1,0 +1,407 @@
+{
+  "schemaVersion": 1,
+  "videoId": "xYB6uYyRjCA",
+  "revision": "sarah-stable-pilot-v2",
+  "status": "timing_review",
+  "range": {
+    "start": 87,
+    "end": 140
+  },
+  "sourceHash": "87f193a5ed81ddd427605c6be1382931c7c220e5aad402a68b6713420772c6cd",
+  "translationHash": "73c3393decffdff505bcb95570fcae9067e9b9273533a60628f246ce50d9f82f",
+  "v65SrtSha256": "8fbd928c7b779224688d206f776ca39cb5ba90c7fffaec46f1421cc856f0bf9a",
+  "audioSha256": "08ec1e749ac511a925b3fe90c06abcf1a00f33de71c27b21edef7cdfb17477eb",
+  "wordTimelineHash": "2f7c1ab689fe098c960c9a8c2797a1424be33ff2a83a7ef19287bd81aa19cb44",
+  "sourceCueCount": 1073,
+  "v65CueCount": 1029,
+  "events": [
+    {
+      "id": "sarah-pilot-01",
+      "start": 87.071,
+      "duration": 3.709,
+      "text": "Δρ Μάιχιλ, αν κάποιος σας πει:",
+      "sourceIndices": [
+        13,
+        14
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        13
+      ],
+      "wordIds": [
+        "W000273",
+        "W000284"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 90760,
+        "holdMs": 20,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 90760,
+        "listened": false,
+        "minConfidence": 0.71
+      },
+      "cps": 8.09,
+      "issues": []
+    },
+    {
+      "id": "sarah-pilot-02",
+      "start": 90.78,
+      "duration": 4.974,
+      "text": "«Κοιμάμαι αρκετά και καλά τη νύχτα",
+      "sourceIndices": [
+        14
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        13
+      ],
+      "wordIds": [
+        "W000285",
+        "W000297"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 95504,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 95504,
+        "listened": false,
+        "minConfidence": 0.668
+      },
+      "cps": 6.84,
+      "issues": []
+    },
+    {
+      "id": "sarah-pilot-03",
+      "start": 95.824,
+      "duration": 2.192,
+      "text": "αλλά ξυπνώ εξαντλημένος",
+      "sourceIndices": [
+        14
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        14
+      ],
+      "wordIds": [
+        "W000298",
+        "W000304"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 97766,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 97766,
+        "listened": false,
+        "minConfidence": 0.681
+      },
+      "cps": 10.49,
+      "issues": []
+    },
+    {
+      "id": "sarah-pilot-04",
+      "start": 98.452,
+      "duration": 1.956,
+      "text": "και όλη μέρα δεν έχω ενέργεια».",
+      "sourceIndices": [
+        15
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        14
+      ],
+      "wordIds": [
+        "W000305",
+        "W000312"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 100158,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 100158,
+        "listened": false,
+        "minConfidence": 0.379
+      },
+      "cps": 15.85,
+      "issues": [
+        "low_confidence_word_alignment"
+      ]
+    },
+    {
+      "id": "sarah-pilot-05",
+      "start": 100.96,
+      "duration": 2.597,
+      "text": "Πώς εντοπίζετε τι συμβαίνει;",
+      "sourceIndices": [
+        15
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        14
+      ],
+      "wordIds": [
+        "W000313",
+        "W000322"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 103307,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 103307,
+        "listened": false,
+        "minConfidence": 0.745
+      },
+      "cps": 10.78,
+      "issues": []
+    },
+    {
+      "id": "sarah-pilot-06",
+      "start": 104.202,
+      "duration": 5.277,
+      "text": "Αυτό είναι τυπικό σύμπτωμα ανεπαρκούς\nλειτουργίας των μηχανισμών ενέργειας.",
+      "sourceIndices": [
+        16
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        15
+      ],
+      "wordIds": [
+        "W000323",
+        "W000333"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 109229,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 109229,
+        "listened": false,
+        "minConfidence": 0.001
+      },
+      "cps": 14.02,
+      "issues": [
+        "low_confidence_word_alignment"
+      ]
+    },
+    {
+      "id": "sarah-pilot-07",
+      "start": 110.703,
+      "duration": 5.183,
+      "text": "Για τους μηχανισμούς παροχής ενέργειας,\nχρησιμοποιώ την αναλογία του αυτοκινήτου.",
+      "sourceIndices": [
+        17
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        16
+      ],
+      "wordIds": [
+        "W000334",
+        "W000347"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 115636,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 115636,
+        "listened": false,
+        "minConfidence": 0.568
+      },
+      "cps": 15.44,
+      "issues": []
+    },
+    {
+      "id": "sarah-pilot-08",
+      "start": 116.12,
+      "duration": 4.176,
+      "text": "Για να κινηθεί το σώμα σαν αυτοκίνητο,\nθέλει σωστό καύσιμο.",
+      "sourceIndices": [
+        17,
+        18
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        17
+      ],
+      "wordIds": [
+        "W000348",
+        "W000366"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 120046,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 120046,
+        "listened": false,
+        "minConfidence": 0.0
+      },
+      "cps": 13.89,
+      "issues": [
+        "low_confidence_word_alignment"
+      ]
+    },
+    {
+      "id": "sarah-pilot-09",
+      "start": 120.46,
+      "duration": 3.703,
+      "text": "Διατροφή, λειτουργία του εντέρου\nκαι οξυγόνο.",
+      "sourceIndices": [
+        18,
+        19
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        17
+      ],
+      "wordIds": [
+        "W000367",
+        "W000381"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 123913,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 123913,
+        "listened": false,
+        "minConfidence": 0.022
+      },
+      "cps": 11.88,
+      "issues": [
+        "low_confidence_word_alignment"
+      ]
+    },
+    {
+      "id": "sarah-pilot-10",
+      "start": 124.734,
+      "duration": 2.253,
+      "text": "Μετά, τον μιτοχονδριακό κινητήρα.",
+      "sourceIndices": [
+        19
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        18
+      ],
+      "wordIds": [
+        "W000382",
+        "W000387"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 126737,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 126737,
+        "listened": false,
+        "minConfidence": 0.712
+      },
+      "cps": 14.65,
+      "issues": []
+    },
+    {
+      "id": "sarah-pilot-11",
+      "start": 128.062,
+      "duration": 2.663,
+      "text": "Και το «γκάζι» του θυρεοειδούς.",
+      "sourceIndices": [
+        20
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        19
+      ],
+      "wordIds": [
+        "W000388",
+        "W000395"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 130565,
+        "holdMs": 160,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 130565,
+        "listened": false,
+        "minConfidence": 0.685
+      },
+      "cps": 11.64,
+      "issues": []
+    },
+    {
+      "id": "sarah-pilot-12",
+      "start": 130.725,
+      "duration": 4.033,
+      "text": "Αυτό καθορίζει πόσο γρήγορα\nδουλεύει ο μιτοχονδριακός κινητήρας.",
+      "sourceIndices": [
+        20
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        19
+      ],
+      "wordIds": [
+        "W000396",
+        "W000404"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 134508,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 134508,
+        "listened": false,
+        "minConfidence": 0.736
+      },
+      "cps": 15.62,
+      "issues": []
+    },
+    {
+      "id": "sarah-pilot-13",
+      "start": 135.62,
+      "duration": 4.357,
+      "text": "Τα επινεφρίδια: «κιβώτιο ταχυτήτων»\nγια να ανεβάζετε ταχύτητα στο στρες.",
+      "sourceIndices": [
+        21
+      ],
+      "timing": "estimated",
+      "v65CueIds": [
+        20
+      ],
+      "wordIds": [
+        "W000405",
+        "W000418"
+      ],
+      "evidence": {
+        "method": "cached_forced_alignment_and_independent_whisper_candidate",
+        "speechEndMs": 139727,
+        "holdMs": 250,
+        "boundaryReviewRequired": true,
+        "originalEndMs": 139727,
+        "listened": false,
+        "minConfidence": 0.768
+      },
+      "cps": 16.3,
+      "issues": []
+    }
+  ],
+  "checks": {
+    "audioListening": false,
+    "desktopPlayback": false,
+    "mobilePlayback": false,
+    "userReview": false
+  },
+  "publicationAllowed": false,
+  "notes": [
+    "Partial preview only; never submit as full track.",
+    "Live source has 1073 cues; v6.5 has 1029. Cue identities are mapped explicitly.",
+    "Cached alignment is a proposal and does not establish acoustic approval.",
+    "v2 corrects the ambiguous gearbox rendering; language review and playback acceptance remain pending."
+  ]
+}

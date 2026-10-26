@@ -1,3 +1,4 @@
+import { finalCandidateHash, finalReviewEvents, validateFinalReview, assertFinalReviewBinding } from "../app/api/captions/final-subtitle-review.ts";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { buildWordAuthoringPacket, advanceWordAuthoring, assembleWordAuthoring, parseWordPhrases,
@@ -22,7 +23,8 @@ assert.ok(subtitleTrackSrt(actualEvents).includes("00:00:24,761"));
 
 let calls = 0, checkpoints = 0;
 const cache = {};
-const provider = async () => (++calls === 1 ? { phrases: opening.phrases } : { status: "approved", issues: [], phrases: opening.phrases });
+const approve = input => ({ status: "approved", candidateHash: input.candidateHash, reviewedEventIds: input.finalEvents.map(e => e.eventId), findings: [] });
+const provider = async (_system,input) => (++calls === 1 ? { phrases: opening.phrases } : approve(input));
 const checkpoint = async () => { checkpoints++; };
 assert.equal((await advanceWordAuthoring(packet, cache, provider, checkpoint)).status, "translation_ready");
 assert.equal(calls, 1, "translation and review never chain provider requests inside one invocation");
@@ -46,13 +48,13 @@ await assert.rejects(advanceWordAuthoring(packet, resume, async () => { reviewCa
 assert.equal(reviewCalls, 1);
 assert.ok(resume.proposed);
 assert.equal(resume.reviewed, undefined);
-await advanceWordAuthoring(packet, resume, async () => { reviewCalls++; return { status: "approved", issues: [], phrases: opening.phrases }; }, checkpoint);
+await advanceWordAuthoring(packet, resume, async (_system,input) => { reviewCalls++; return approve(input); }, checkpoint);
 assert.equal(reviewCalls, 2, "review resumes without retranslating the paid first stage");
 await assert.rejects(advanceWordAuthoring({ ...packet, globalBrief: { ...brief, mainTopic: "Changed" } }, cache, provider, checkpoint), /Stale/);
 assert.notEqual(wordAuthoringKey({ ...packet, existingGreek: "Changed" }), wordAuthoringKey(packet));
 assert.notEqual(wordAuthoringKey({ ...packet, audioSha256: "0".repeat(64) }), wordAuthoringKey(packet));
 
-const declined = { ...cache, result: undefined, reviewed: { status: "manual_review_required", issues: ["Meaning unclear"] }, status: "translation_ready" };
+const declined = { ...cache, result: undefined, reviewed: { ...cache.reviewed, status: "manual_review_required" }, status: "translation_ready" };
 await assert.rejects(advanceWordAuthoring(packet, declined, provider, checkpoint), /Independent/);
 assert.equal(declined.status, "manual_review_required");
 const oldCalls = calls;
@@ -123,3 +125,28 @@ for(const [requested,expected] of [[900,900],[1600,1600],[undefined,4000],[99999
  await wordAuthoringJson("analysis", "bounded source", {apiKey:"test-only",maxTokens:requested,fetcher:async(_url,init)=>{assert.equal(JSON.parse(init.body).max_tokens,expected);return Response.json({choices:[{finish_reason:"stop",message:{content:"{}"}}]});}});
 }
 console.log("bounded analysis output budgets passed");
+
+// A readable candidate cannot be approved by incomplete, stale or self-rewritten review output.
+const contextKey = wordSemanticKey(packet), hash = finalCandidateHash(contextKey, actualEvents);
+const goodReview = { status: "approved", candidateHash: hash, reviewedEventIds: finalReviewEvents(actualEvents).map(e=>e.eventId), findings: [] };
+for (const bad of [
+ {...goodReview, reviewedEventIds: []},
+ {...goodReview, reviewedEventIds: goodReview.reviewedEventIds.map(()=>"E0001")},
+ {...goodReview, candidateHash: "old"},
+ {...goodReview, phrases: opening.phrases},
+ {...goodReview, findings: [{eventIds:["unknown"]}]},
+]) assert.throws(()=>validateFinalReview(bad,contextKey,actualEvents,packet.words.map(w=>w.wordId)),/review/);
+const editedEvents = structuredClone(result.events); editedEvents[0].text += " Άλλη έννοια.";
+assert.throws(()=>assertFinalReviewBinding(result.finalReview,editedEvents),/stale/);
+assert.throws(()=>assembleWordAuthoring(source,translation,review.audioEvidence,[{...result,events:editedEvents}]),/stale/);
+assert.throws(()=>assembleWordAuthoring(source,translation,review.audioEvidence,[{...result,finalReview:undefined}]),/Missing/);
+const meaningDefect = {...goodReview,status:"manual_review_required",findings:[{
+ eventIds:["E0001"],sourceWordIds:[packet.words[0].wordId],category:"analogy_loss",severity:"major",
+ sourceExcerpt:"gearbox",greekExcerpt:"κιβώτιο",explanation:"The vehicle relation is unclear",suggestedRepair:"κιβώτιο ταχυτήτων"
+}]};
+assert.throws(()=>validateFinalReview(meaningDefect,contextKey,actualEvents,packet.words.map(w=>w.wordId)),/targeted repair/);
+console.log("final event coverage, immutable review binding, meaning findings and stale assembly gates passed");
+
+assert.throws(()=>validateFinalReview({...meaningDefect,status:"approved"},contextKey,actualEvents,packet.words.map(w=>w.wordId)),/targeted repair/);
+const regrouped=structuredClone(actualEvents);regrouped[0].sourceIndices=[99];
+assert.notEqual(finalCandidateHash(contextKey,regrouped),hash,'review binds source mapping as well as text');

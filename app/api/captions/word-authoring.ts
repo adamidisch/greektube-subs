@@ -1,3 +1,4 @@
+import { FINAL_SUBTITLE_REVIEW_PROMPT, finalReviewEvents, finalCandidateHash, validateFinalReview, assertFinalReviewBinding, type FinalSemanticReview } from "./final-subtitle-review.ts";
 import { createHash } from "node:crypto";
 import { validateAudioEvidence, type SubtitleAudioEvidence } from "../../subtitle-audio-evidence.ts";
 import { subtitleLines } from "../../subtitle-display.ts";
@@ -22,15 +23,7 @@ display event. Adjacent phrases can form one event, so do not pad short phrases.
 speaker changes or mandatory semantic boundaries. No comma before και or ή. All-uppercase Greek has no tonos.
 Return JSON only: {"phrases":[{"firstWordId":"W000001","lastWordId":"W000008","text":"...","hardBreakBefore":false}]}.
 If faithful wording cannot fit, return {"status":"manual_review_required","issues":["actionable reason"]}.`;
-export const WORD_REVIEW_PROMPT = `Independently review the proposed Greek audiovisual translation against the
-selected English source, whole-video brief and glossary. Read sentences across phrase boundaries. Check every
-negation, quantity, unit, name, technical term, uncertainty, attribution and claim. Repair awkward Greek and
-overlong wording while preserving complete meaning. Every Greek phrase must be supported by its source-word
-range. Cover all selected source words once in order. Do not translate read-only context or add timestamps.
-Preserve digit-based quantities as digits and spelled-out quantities as words. No comma before και or ή. All-uppercase Greek has no tonos.
-Return JSON only: {"status":"approved","phrases":[{"firstWordId":"...","lastWordId":"...","text":"...","hardBreakBefore":false}],"issues":[]}.
-Otherwise return {"status":"manual_review_required","issues":["actionable reason"]}.
-This is a bilingual model review, never a human acoustic approval.`;
+export const WORD_REVIEW_PROMPT = FINAL_SUBTITLE_REVIEW_PROMPT;
 
 type Phrase = { firstWordId: string; lastWordId: string; text: string; hardBreakBefore: boolean };
 type PacketWord = { wordId: string; cueIndex: number; text: string; startMs: number; endMs: number };
@@ -51,7 +44,7 @@ export type WordAuthoringPacket = {
 export type WordAuthoringResult = {
   status: "draft_ready"; modelBilingualQa: "approved"; humanAudioReview: false;
   sourceHash: string; translationHash: string; audioSha256: string; wordTimelineHash: string;
-  sourceCueRange: [number, number]; phrases: Phrase[]; events: SubtitleEvent[];
+  sourceCueRange: [number, number]; phrases: Phrase[]; events: SubtitleEvent[]; finalReview: FinalSemanticReview;
 };
 export type WordAuthoringCheckpoint = {
   key?: string; proposed?: unknown; reviewed?: unknown; result?: WordAuthoringResult;
@@ -235,7 +228,7 @@ export async function advanceWordAuthoring(packet: WordAuthoringPacket, cache: W
   if (cache.key && cache.key !== key) fail("Stale semantic checkpoint");
   cache.key = key;
   if (cache.status === "manual_review_required") fail(cache.issue || "Semantic scope requires repair");
-  if (cache.result) return cache.result;
+  if (cache.result) { assertFinalReviewBinding(cache.result.finalReview, cache.result.events); return cache.result; }
   try {
     if (cache.proposed === undefined) {
       cache.proposed = await callJson(WORD_TRANSLATION_PROMPT, packet);
@@ -243,18 +236,22 @@ export async function advanceWordAuthoring(packet: WordAuthoringPacket, cache: W
       cache.status = "translation_ready"; await checkpoint();
       return { status: "translation_ready" as const, key, humanAudioReview: false as const };
     }
-    parseWordPhrases(cache.proposed, packet);
-    if (cache.reviewed === undefined) {
-      cache.reviewed = await callJson(WORD_REVIEW_PROMPT, { ...packet, proposedGreek: cache.proposed });
-      // Save paid output before any deterministic fit check.
-      await checkpoint();
+    const phrases = parseWordPhrases(cache.proposed, packet), events = authorWordPhrases(packet, phrases);
+    const contextKey = wordSemanticKey(packet), candidateHash = finalCandidateHash(contextKey, events);
+    // Reuse cached meaning review only for the exact same final text, grouping and source mapping.
+    if (cache.reviewed !== undefined && (cache.reviewed as {candidateHash?: unknown})?.candidateHash !== candidateHash) {
+      cache.reviewed = undefined;
     }
-    const review = cache.reviewed as { status?: unknown; issues?: unknown } | null;
-    if (!review || review.status !== "approved" || !Array.isArray(review.issues) || review.issues.length) fail("Independent bilingual review requires repair");
-    const phrases = parseWordPhrases(cache.reviewed, packet), events = authorWordPhrases(packet, phrases);
+    if (cache.reviewed === undefined) {
+      cache.reviewed = await callJson(WORD_REVIEW_PROMPT, { ...packet, candidateHash, finalEvents: finalReviewEvents(events) });
+      await checkpoint(); // retain the paid output even if validation fails
+    }
+    let finalReview: FinalSemanticReview;
+    try { finalReview = validateFinalReview(cache.reviewed, contextKey, events, packet.words.map(w => w.wordId)); }
+    catch (error) { fail(error instanceof Error ? error.message : "Independent final review failed"); }
     const result: WordAuthoringResult = { status: "draft_ready", sourceHash: packet.sourceHash, translationHash: packet.translationHash,
       audioSha256: packet.audioSha256, wordTimelineHash: packet.wordTimelineHash, sourceCueRange: packet.sourceCueRange,
-      modelBilingualQa: "approved", humanAudioReview: false, phrases, events };
+      modelBilingualQa: "approved", humanAudioReview: false, phrases, events, finalReview: finalReview! };
     cache.result = result; cache.status = "draft_ready"; await checkpoint(); return result;
   } catch (error) {
     if (error instanceof WordAuthoringNeedsReview) {
@@ -273,6 +270,7 @@ export function assembleWordAuthoring(source: TimedCue[], translation: TimedCue[
       || result.sourceHash !== sourceHash || result.translationHash !== translationHash || result.audioSha256 !== evidence.audioSha256
       || result.wordTimelineHash !== evidence.wordTimelineHash || result.sourceCueRange[0] !== nextCue
       || result.sourceCueRange[1] < nextCue) fail("Missing, reordered or stale semantic scope");
+    assertFinalReviewBinding(result.finalReview, result.events);
     nextCue = result.sourceCueRange[1] + 1;
   }
   if (nextCue !== source.length) fail("Full-video semantic coverage is incomplete");
