@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { database } from "@/db/postgres";
 import { canonicalSpeakerForVideo, speakerMatchesChannel } from "@/app/speaker-catalog";
+import { editorialVideoTitle } from "@/app/editorial-video-titles";
 
 const LEGACY_KEY = "greektube-library-v2";
 const SHARED_LIBRARY_KEY = "greektube-shared-library-v1";
@@ -10,20 +11,26 @@ const ADMIN_SESSION_MESSAGE = "greektube-edit-authorized";
 type VideoRecord = Record<string, unknown> & { id?: unknown; addedAt?: unknown };
 type PersonalState = { videos?: VideoRecord[]; moments?: unknown[]; settings?: Record<string, unknown> };
 
+let schemaReady:Promise<void>|null=null;
 async function ensureTable() {
-  const db = database();
-  await db.query(`CREATE TABLE IF NOT EXISTS app_state (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`);
-  await db.query(`CREATE TABLE IF NOT EXISTS personal_states (
-    owner_key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`);
+  if(!schemaReady){
+    schemaReady=(async()=>{
+      const db = database();
+      await db.query(`CREATE TABLE IF NOT EXISTS app_state (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`);
+      await db.query(`CREATE TABLE IF NOT EXISTS personal_states (
+        owner_key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`);
+    })().catch(error=>{schemaReady=null;throw error;});
+  }
+  await schemaReady;
 }
 
 async function ownerKey(request: Request) {
@@ -107,6 +114,7 @@ function sanitizePersonalState(input: unknown) {
 
 function sanitizeSharedVideo(video: VideoRecord) {
   const sharedVideo = normalizeSpeakerFields(video);
+  sharedVideo.title = editorialVideoTitle(String(sharedVideo.id||""),typeof sharedVideo.title==="string"?sharedVideo.title:"");
   delete sharedVideo.captions;
   sharedVideo.favorite = false;
   sharedVideo.lastPosition = 0;
@@ -141,14 +149,14 @@ function mergeState(personal: PersonalState | null, sharedVideos: VideoRecord[])
   return { settings: personal?.settings, moments: personal?.moments || [], videos };
 }
 
-async function getSharedVideos() {
+async function getSharedVideos(): Promise<VideoRecord[]> {
   const db = database();
   const rows = await db.query("SELECT value FROM app_state WHERE key = $1 LIMIT 1", [SHARED_LIBRARY_KEY]) as { value: string }[];
   const row = rows[0];
   if (!row) return [];
   try {
     const parsed = JSON.parse(row.value) as { videos?: VideoRecord[] };
-    return Array.isArray(parsed.videos) ? parsed.videos : [];
+    return Array.isArray(parsed.videos) ? parsed.videos.map(video=>({...video,title:editorialVideoTitle(String(video.id||""),typeof video.title==="string"?video.title:"")})) : [];
   } catch {
     return [];
   }
