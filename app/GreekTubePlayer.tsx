@@ -763,18 +763,11 @@ export default function GreekTubePlayer() {
   },[state.videos,libraryVideos,category,search,sort,filter,newVideoIds]);
   const visibleVideos=filtered.slice(0,visibleCount);
   const continueVideos=libraryVideos.filter(v=>v.lastPosition>=CONTINUE_MIN_SECONDS&&v.progress>=CONTINUE_MIN_PROGRESS&&v.progress<WATCHED_THRESHOLD).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||"")).slice(0,5);
-  const featured=useMemo(()=>{
-    const unfinished=libraryVideos.filter(v=>v.lastPosition>=CONTINUE_MIN_SECONDS&&v.progress>=CONTINUE_MIN_PROGRESS&&v.progress<WATCHED_THRESHOLD&&v.lastWatched).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||""));
-    if(unfinished[0])return unfinished[0];
-    const lastCompleted=[...libraryVideos].filter(v=>v.progress>=WATCHED_THRESHOLD&&v.lastWatched).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||""))[0];
-    if(lastCompleted){
-      const index=libraryVideos.findIndex(v=>v.id===lastCompleted.id);
-      return libraryVideos[(index+1)%libraryVideos.length]||lastCompleted;
-    }
-    return [...libraryVideos].sort((a,b)=>b.addedAt.localeCompare(a.addedAt))[0]||null;
-  },[libraryVideos]);
+  const featured=useMemo(()=>hydrated?pickHomeFeaturedVideo(libraryVideos):null,[hydrated,libraryVideos]);
+  const featuredHasHistory=Boolean(featured&&Number.isFinite(latestViewedAt(featured)));
+  const featuredResumeTime=featured&&featuredHasHistory&&featured.lastPosition>=CONTINUE_MIN_SECONDS&&featured.progress<WATCHED_THRESHOLD?featured.lastPosition:0;
   const featuredMoments=featured?state.moments.filter(m=>m.videoId===featured.id):[];
-  useEffect(()=>{if(hydrated&&featured&&!proofModeRef.current)void getReadyCaptions(featured);},[hydrated,featured?.id]);
+  // Avoid prefetching a full transcript on home load. Captions load on demand.
   useEffect(()=>{const reset=window.setTimeout(()=>setVisibleCount(INITIAL_LIBRARY_SIZE),0);return()=>window.clearTimeout(reset);},[search,category,sort,filter]);
 
   function patchVideo(id:string,patch:Partial<Video>){setState(s=>({...s,videos:s.videos.map(v=>v.id===id?{...v,...patch}:v)}));}
@@ -857,7 +850,7 @@ export default function GreekTubePlayer() {
     const proofMode=proofModeRef.current&&video.id===ALIGNMENT_PROOF_VIDEO_ID;
     const translationMode:TranslationMode=video.translationMode||"legacy";
     const knownPoints=transcriptHighlights(video.captions||[]);
-    patchVideo(video.id,{views:(video.views||0)+1});
+    patchVideo(video.id,{views:(video.views||0)+1,lastWatched:new Date().toISOString()});
     player.current?.pauseVideo();setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);
     pendingPlayerStart.current=start??video.lastPosition;
     setSelectedId(video.id); setView("library"); setSpeakerBioOpen(false); setError(""); setLoadingDescription(video.description||tr("Ετοιμάζουμε την ελληνική περιγραφή του βίντεο.")); setLoadingPoints(knownPoints); setTranscriptOpen(showTranscript); setProcessingTelemetry(null); lastTelemetryUpdatedAt.current=null;
