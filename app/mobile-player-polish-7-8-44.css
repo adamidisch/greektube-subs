@@ -79,15 +79,6 @@ html body .app-shell.viewer.viewer.viewer{
 }
 
 @media(max-width:700px){
-  /* Keep the 46px touch target but make Settings visually lighter. */
-  html body .app-shell.viewer.viewer.viewer .icon-button[aria-label="Ρυθμίσεις"]::before{
-    width:16px!important;
-    height:16px!important;
-    opacity:.88!important;
-    -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 7h9M17 7h3M4 17h3M11 17h9M13 4v6M8 14v6' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'/%3E%3C/svg%3E")!important;
-    mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 7h9M17 7h3M4 17h3M11 17h9M13 4v6M8 14v6' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'/%3E%3C/svg%3E")!important;
-  }
-
   /* Play stays above the 44px mobile touch minimum while becoming ~10% smaller. */
   html body .viewer.viewer.viewer .gts31-play-cluster .gts31-play{
     width:49px!important;

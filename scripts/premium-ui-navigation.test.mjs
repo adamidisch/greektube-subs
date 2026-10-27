@@ -4,6 +4,8 @@ const file = name => readFileSync(new URL("../"+name,import.meta.url),"utf8");
 const player=file("app/GreekTubePlayer.tsx");
 const router=file("app/NavigationAwareGreekTubePlayer.tsx");
 const profile=file("app/UserProfileEnhancer.tsx");
+const auditEnhancer=file("app/PlayerUIAuditEnhancer.tsx");
+const mobilePolish=file("app/mobile-player-polish-7-8-44.css");
 const theme=file("app/ThemeToggleEnhancer.tsx");
 const account=file("app/account/AccountPage.tsx");
 const headerCss=file("app/header-controls-v7-12-6.css");
@@ -39,5 +41,10 @@ assert.ok(railCss.includes('.continue-row > .continue-card'),"Compact continue r
 assert.ok(railCss.includes('scroll-snap-type:x mandatory'),"Continue rail snaps on mobile");
 assert.ok(railCss.includes('html[data-theme="light"]'),"Continue rail has light scheme");
 assert.ok(!railCss.includes('.user-profile-menu'),"Watch rail no longer mixes header styles");
-assert.equal(pkg.version,"7.12.6");
+assert.ok(pkg.version.split(".").slice(0,2).join(".")==="7.12"&&Number(pkg.version.split(".")[2])>=6,"Header slot architecture remains tested in later 7.12 releases");
+assert.doesNotMatch(auditEnhancer,/\.icon-button\[aria-label="Ρυθμίσεις"\]::before/,"SVG gear cannot coexist with injected pseudo gear");
+assert.doesNotMatch(mobilePolish,/\.icon-button\[aria-label="Ρυθμίσεις"\]::before/,"Mobile CSS must not recreate a second gear");
+assert.doesNotMatch(auditEnhancer,/MutationObserver/,"Retired pseudo-icon cleanup should not observe entire body");
+assert.ok((player.match(/<SettingsGearIcon\/>/g)||[]).length>=3,"Player and settings buttons render the one accessible gear SVG");
+
 console.log("Header slots, account alignment, SPA settings navigation, light/mobile and independent watch-rail regression checks passed.");
