@@ -40,7 +40,7 @@ import "./v7-8-38-footer-redesign.css";
 import "./v7-8-39-editor-production.css";
 import "./gts-footer.css";
 import "./contact-footer-guard.css";
-import "./release-lock-7-8-44.css";
+/* Retired v7.8.44 CSS-injected gear: canonical icon is rendered by React. */
 import "./mobile-player-polish-7-8-44.css";
 import "./release-lock-7-8-45.css";
 import "./player-time-ui.css";
