@@ -6,6 +6,7 @@ const router=file("app/NavigationAwareGreekTubePlayer.tsx");
 const profile=file("app/UserProfileEnhancer.tsx");
 const auditEnhancer=file("app/PlayerUIAuditEnhancer.tsx");
 const mobilePolish=file("app/mobile-player-polish-7-8-44.css");
+const globalsCss=file("app/globals.css");
 const theme=file("app/ThemeToggleEnhancer.tsx");
 const account=file("app/account/AccountPage.tsx");
 const headerCss=file("app/header-controls-v7-12-6.css");
@@ -45,6 +46,9 @@ assert.ok(pkg.version.split(".").slice(0,2).join(".")==="7.12"&&Number(pkg.versi
 assert.doesNotMatch(auditEnhancer,/\.icon-button\[aria-label="Ρυθμίσεις"\]::before/,"SVG gear cannot coexist with injected pseudo gear");
 assert.doesNotMatch(mobilePolish,/\.icon-button\[aria-label="Ρυθμίσεις"\]::before/,"Mobile CSS must not recreate a second gear");
 assert.doesNotMatch(auditEnhancer,/MutationObserver/,"Retired pseudo-icon cleanup should not observe entire body");
+assert.ok(!layout.includes('import "./release-lock-7-8-44.css";'),"Obsolete CSS that hides SVG and injects gear must not load");
+assert.doesNotMatch(globalsCss,/\.viewer \.icon-button:after\s*\{/, "Globals cannot inject another icon");
+assert.ok(player.includes('m10.5 2.5-.4 2.1'),"Use the new refined outline settings gear");
 assert.ok((player.match(/<SettingsGearIcon\/>/g)||[]).length>=3,"Player and settings buttons render the one accessible gear SVG");
 
 console.log("Header slots, account alignment, SPA settings navigation, light/mobile and independent watch-rail regression checks passed.");
