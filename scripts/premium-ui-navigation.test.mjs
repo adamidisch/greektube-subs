@@ -65,4 +65,12 @@ assert.ok(profile.includes('profile.anonymous ? tr("Προφίλ συσκευή�
 assert.ok(headerCss.includes('.user-profile-summary-link:focus-visible'),"Clickable profile summary remains keyboard accessible");
 assert.ok(headerCss.includes('.user-profile-summary-link:hover'),"Clickable profile summary provides a hover state");
 
+assert.ok(account.includes('className="account-identity-actions"'),"Account heading must display identity beside Rename");
+assert.ok(account.includes('fetch("/api/profile"'),"Username must come from the current authenticated device profile");
+assert.ok(account.includes('data.profile?.username'),"Render persisted username rather than a static placeholder");
+assert.ok(account.includes('new BroadcastChannel("greektube-profile:v1")'),"Keep Account username in sync after renaming");
+assert.ok(account.includes('username||"—"'),"Use a neutral placeholder while identity loads");
+assert.ok(headerCss.includes('.account-shell .account-identity-actions'),"Account identity controls must have refined layout");
+assert.ok(headerCss.includes('@media(max-width:560px)'),"Username and Rename must fit narrow iPhone widths");
+
 console.log("Header slots, account alignment, SPA settings navigation, light/mobile and independent watch-rail regression checks passed.");
