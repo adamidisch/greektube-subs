@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import AudioTimingCapturePanel from "./AudioTimingCapturePanel";
 import { APP_VERSION } from "./version";
+import SettingsIcon from "./SettingsIcon";
 import { latestViewedAt, pickHomeFeaturedVideo, preferredWatchState } from "./home-featured-selection";
 import { editorialVideoTitle } from "./editorial-video-titles";
 import { canonicalSpeakerForVideo, type CanonicalSpeakerProfile } from "./speaker-catalog";
@@ -200,7 +201,6 @@ function playerVolumeFromUi(value:number){
   const normalized=Math.max(0,Math.min(100,value))/100;
   return Math.round(Math.pow(normalized,2.2)*100);
 }
-function SettingsGearIcon(){return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m10.5 2.5-.4 2.1c-.7.2-1.4.5-2 .9L6.2 4.4 4.4 6.2l1.1 1.9c-.4.6-.7 1.3-.9 2l-2.1.4v3l2.1.4c.2.7.5 1.4.9 2l-1.1 1.9 1.8 1.8 1.9-1.1c.6.4 1.3.7 2 .9l.4 2.1h3l.4-2.1c.7-.2 1.4-.5 2-.9l1.9 1.1 1.8-1.8-1.1-1.9c.4-.6.7-1.3.9-2l2.1-.4v-3l-2.1-.4c-.2-.7-.5-1.4-.9-2l1.1-1.9-1.8-1.8-1.9 1.1c-.6-.4-1.3-.7-2-.9l-.4-2.1z"/><circle cx="12" cy="12" r="3"/></svg>}
 function PlayIcon(){return <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.4 5.55a1 1 0 011.52-.85l9.1 6.45a1.04 1.04 0 010 1.7l-9.1 6.45a1 1 0 01-1.52-.85V5.55z"/></svg>;}
 function PauseIcon(){return <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.8" y="5" width="3.7" height="14" rx="1.2"/><rect x="13.5" y="5" width="3.7" height="14" rx="1.2"/></svg>;}
 function VolumeIcon({muted=false}:{muted?:boolean}){return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 5V4L8 9H4z"/>{muted?<><path d="M16 9l5 5"/><path d="M21 9l-5 5"/></>:<><path d="M16.5 8.5a5 5 0 010 7"/><path d="M19 6a8 8 0 010 12"/></>}</svg>;}
@@ -1297,7 +1297,7 @@ export default function GreekTubePlayer() {
     const settingsFromPlayer=view==="settings";
     return <>
     <main className={`app-shell viewer player-screen-transition ${checkingReady?"player-is-opening":""} ${settingsFromPlayer?"viewer-settings-open":""}`} aria-hidden={settingsFromPlayer?true:undefined}>
-      <header className="app-header"><button className="ghost back-library" onClick={close}><span aria-hidden="true">‹</span> {tr("Βιβλιοθήκη")}</button><Brand home={goHome}/><div className="gts-header-actions"><div className="gts-theme-slot"/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}><SettingsGearIcon/></button><div className="gts-profile-slot"/></div></header>
+      <header className="app-header"><button className="ghost back-library" onClick={close}><span aria-hidden="true">‹</span> {tr("Βιβλιοθήκη")}</button><Brand home={goHome}/><div className="gts-header-actions"><div className="gts-theme-slot"/><button className="icon-button" aria-label="Ρυθμίσεις" onClick={goToSettings}><SettingsIcon/></button><div className="gts-profile-slot"/></div></header>
       {checkingReady&&<section className="watch-layout player-only player-opening-shell" role="status" aria-live="polite" aria-label="Φόρτωση βίντεο">
         <div className="watch-main">
           <div className="mobile-video-byline player-opening-byline"><strong>{displaySpeakerLabel}</strong><span aria-hidden="true"><i/><i/><i/></span></div>
@@ -1469,7 +1469,7 @@ export default function GreekTubePlayer() {
       <SiteFooter />
     </main>
     {speakerBioOpen&&canonicalSpeaker?.biography&&<SpeakerBioModal profile={canonicalSpeaker} close={closeSpeakerBio}/>}
-    {settingsFromPlayer&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-player settings-screen-shell"><header className="app-header"><button className="ghost back-to-video" autoFocus onClick={returnToVideo}>{tr("← Πίσω στο βίντεο")}</button><Brand home={goHome}/><div className="gts-header-actions"><div className="gts-theme-slot"/><button className="icon-button active" aria-label="Ρυθμίσεις" onClick={returnToVideo}><SettingsGearIcon/></button><div className="gts-profile-slot"/></div></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patchSettings} close={returnToVideo}/></div></div></div>}
+    {settingsFromPlayer&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-player settings-screen-shell"><header className="app-header"><button className="ghost back-to-video" autoFocus onClick={returnToVideo}>{tr("← Πίσω στο βίντεο")}</button><Brand home={goHome}/><div className="gts-header-actions"><div className="gts-theme-slot"/><button className="icon-button active" aria-label="Ρυθμίσεις" onClick={returnToVideo}><SettingsIcon/></button><div className="gts-profile-slot"/></div></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patchSettings} close={returnToVideo}/></div></div></div>}
     </>;
   }
 
@@ -1518,7 +1518,7 @@ export default function GreekTubePlayer() {
     {proImportVideo&&<ManualTranslateModal video={proImportVideo} authorizationRequired={()=>{setManualImportRequest(proImportVideo);setProImportVideo(null);}} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video,undefined,false,false,result);}}/>}
     {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"professional" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"professional"});void rebuildTranslation(next);}} onOpenManual={()=>void requestManualImport(translationChoiceVideo)}/>}
   </main>
-  {settingsFromLibrary&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-library settings-screen-shell"><header className="app-header"><button className="ghost back-library" autoFocus onClick={returnToLibrary}>{tr("← Βιβλιοθήκη")}</button><Brand home={goHome}/><div className="gts-header-actions"><div className="gts-theme-slot"/><button className="icon-button active" aria-label="Ρυθμίσεις" onClick={returnToLibrary}><SettingsGearIcon/></button><div className="gts-profile-slot"/></div></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patchSettings} close={returnToLibrary}/></div></div></div>}
+  {settingsFromLibrary&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-library settings-screen-shell"><header className="app-header"><button className="ghost back-library" autoFocus onClick={returnToLibrary}>{tr("← Βιβλιοθήκη")}</button><Brand home={goHome}/><div className="gts-header-actions"><div className="gts-theme-slot"/><button className="icon-button active" aria-label="Ρυθμίσεις" onClick={returnToLibrary}><SettingsIcon/></button><div className="gts-profile-slot"/></div></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patchSettings} close={returnToLibrary}/></div></div></div>}
   </>;
 }
 
