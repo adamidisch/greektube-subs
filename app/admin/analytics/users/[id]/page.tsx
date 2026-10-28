@@ -18,7 +18,7 @@ export default async function UserDetailPage({params}:{params:Promise<{id:string
   const rows=await database().query(
     `SELECT p.public_id::text AS public_id,p.username,p.created_at,p.updated_at,ps.updated_at AS last_saved,ps.value,p.owner_key
      FROM user_profiles p LEFT JOIN personal_states ps ON ps.owner_key=p.owner_key
-     WHERE p.public_id=$1::bigint LIMIT 1`,[id]) as Data[];
+     WHERE p.public_id=$1::bigint LIMIT 1`,[id]) as unknown as Data[];
   const row=rows[0];if(!row)notFound();
   let state:State={};try{state=JSON.parse(row.value||"{}") as State}catch{}
   const videos=Array.isArray(state.videos)?state.videos.filter(v=>Number(v.progress||0)>0||Number(v.lastPosition||0)>0):[];
