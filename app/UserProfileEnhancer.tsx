@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import SettingsIcon from "./SettingsIcon";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -16,7 +17,8 @@ function UserIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Z"/><path d="M4.4 20c.8-4 3.2-6 7.6-6s6.8 2 7.6 6"/></svg>;
 }
 function MenuIcon({kind}:{kind:"add"|"settings"|"logout"}) {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d={kind==="add"?"M12 5v14M5 12h14":kind==="logout"?"M10 4H5v16h5M14 8l4 4-4 4M9 12h9":"M4 7h16M4 17h16M8 4v6M16 14v6"}/></svg>;
+  if (kind === "settings") return <SettingsIcon/>;
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d={kind==="add"?"M12 5v14M5 12h14":"M10 4H5v16h5M14 8l4 4-4 4M9 12h9"}/></svg>;
 }
 
 function validUsername(value: string) {
@@ -299,7 +301,7 @@ export default function UserProfileEnhancer() {
       <Link prefetch={false} href="/?action=add" className="user-menu-row" role="menuitem" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"&&!new URLSearchParams(location.search).has("video")){event.preventDefault();setMenuOpen(false);window.dispatchEvent(new Event("greektube:add-video"))}}}><span className="user-menu-icon"><MenuIcon kind="add"/></span><span><strong>{tr("Προσθήκη βίντεο")}</strong></span></Link>
       <Link prefetch={false} href="/?view=settings" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"){event.preventDefault();window.dispatchEvent(new Event("greektube:open-settings"));}}} className="user-menu-row" role="menuitem"><span className="user-menu-icon"><MenuIcon kind="settings"/></span><span><strong>{tr("Ρυθμίσεις")}</strong></span></Link>
       <button type="button" className="user-menu-row user-menu-logout" role="menuitem" onClick={()=>{setMenuOpen(false);setMessage("");setLogoutOpen(true)}}><span className="user-menu-icon"><MenuIcon kind="logout"/></span><span><strong>{tr("Αποσύνδεση")}</strong></span></button>
-      {message&&<p role="status">{tr(message)}</p>}
+      
     </div>}
   </div>;
 

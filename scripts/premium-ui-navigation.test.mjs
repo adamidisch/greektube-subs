@@ -4,6 +4,7 @@ const file = name => readFileSync(new URL("../"+name,import.meta.url),"utf8");
 const player=file("app/GreekTubePlayer.tsx");
 const router=file("app/NavigationAwareGreekTubePlayer.tsx");
 const profile=file("app/UserProfileEnhancer.tsx");
+const settingsIcon=file("app/SettingsIcon.tsx");
 const auditEnhancer=file("app/PlayerUIAuditEnhancer.tsx");
 const mobilePolish=file("app/mobile-player-polish-7-8-44.css");
 const globalsCss=file("app/globals.css");
@@ -20,7 +21,8 @@ assert.ok(profile.includes('href="/?view=settings"'),"Menu settings route matche
 assert.ok(account.includes('href="/?view=settings"'),"Account settings route matches router");
 assert.ok(profile.includes('event.preventDefault();window.dispatchEvent(new Event("greektube:open-settings"))'),"Home SPA menu must open settings in place");
 assert.ok(player.includes('window.addEventListener("greektube:open-settings",openSettings)'),"Home must listen for settings event");
-assert.ok(player.includes('function SettingsGearIcon()'),"Settings uses SVG gear");
+assert.ok(player.includes('import SettingsIcon from "./SettingsIcon";'),"Player renders shared settings sliders");
+assert.ok(profile.includes('import SettingsIcon from "./SettingsIcon";'),"Profile menu renders same settings sliders");
 assert.ok(!player.includes('>⚙</button>'),"Old emoji gear is not rendered");
 
 const slot=(name)=>`className="${name}"`;
@@ -48,7 +50,11 @@ assert.doesNotMatch(mobilePolish,/\.icon-button\[aria-label="Ρυθμίσεις"
 assert.doesNotMatch(auditEnhancer,/MutationObserver/,"Retired pseudo-icon cleanup should not observe entire body");
 assert.ok(!layout.includes('import "./release-lock-7-8-44.css";'),"Obsolete CSS that hides SVG and injects gear must not load");
 assert.doesNotMatch(globalsCss,/\.viewer \.icon-button:after\s*\{/, "Globals cannot inject another icon");
-assert.ok(player.includes('m10.5 2.5-.4 2.1'),"Use the new refined outline settings gear");
-assert.ok((player.match(/<SettingsGearIcon\/>/g)||[]).length>=3,"Player and settings buttons render the one accessible gear SVG");
+assert.ok(settingsIcon.includes('M3.5 7h7M16 7h4.5'),"Settings icon uses the requested horizontal sliders symbol");
+assert.ok(!player.includes("SettingsGearIcon"),"No legacy gear component should remain");
+assert.ok(!profile.includes('{message&&<p role="status">{tr(message)}</p>}'),"No stale username availability messages in the main profile dropdown");
+assert.ok(profile.includes('className={`profile-availability ${availability}`}'),"Username availability feedback remains in the name editor");
+assert.equal((player.match(/<SettingsIcon\/>/g)||[]).length,3,"All three player/settings header icon buttons render the same sliders SVG");
+assert.ok(profile.includes('if (kind === "settings") return <SettingsIcon/>'),"The profile menu uses the identical shared icon");
 
 console.log("Header slots, account alignment, SPA settings navigation, light/mobile and independent watch-rail regression checks passed.");
