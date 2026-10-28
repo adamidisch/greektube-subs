@@ -263,3 +263,60 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .gts-header-actions
 @media(prefers-reduced-motion:reduce){
   html body .app-shell .gts-header-actions button{transition:none!important}
 }
+
+/* Account page identity: one clear username next to Rename, no login claims. */
+html body .account-shell .account-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:16px;
+}
+html body .account-shell .account-identity-actions {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  min-width:0;
+}
+html body .account-shell .account-identity {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:center;
+  gap:3px;
+  min-width:90px;
+}
+html body .account-shell .account-identity>span {
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.2;
+}
+html body .account-shell .account-identity>strong {
+  color:var(--text);
+  font-size:13px;
+  line-height:1.3;
+  font-weight:650;
+  max-width:180px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+html body .account-shell .account-identity-actions>.secondary {
+  min-height:38px;
+  padding-inline:13px;
+  font-size:12px;
+}
+@media(max-width:560px) {
+  html body .account-shell .account-heading {
+    align-items:flex-start;
+    gap:12px;
+  }
+  html body .account-shell .account-identity-actions {
+    width:100%;
+    justify-content:space-between;
+  }
+  html body .account-shell .account-identity {
+    align-items:flex-start;
+  }
+}
