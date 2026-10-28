@@ -153,6 +153,37 @@ html body .user-profile-menu .user-profile-summary {
   gap:9px!important;
   padding:8px 8px 10px!important;
 }
+html body .user-profile-menu .user-profile-summary-link {
+  display:flex!important;
+  align-items:center!important;
+  width:100%!important;
+  min-height:56px!important;
+  border-radius:10px!important;
+  color:inherit!important;
+  text-decoration:none!important;
+  cursor:pointer!important;
+  transition:background .15s ease!important;
+}
+html body .user-profile-menu .user-profile-summary-link:hover {
+  background:rgba(145,130,238,.10)!important;
+}
+html body .user-profile-menu .user-profile-summary-link:focus-visible {
+  outline:2px solid #9d92f7!important;
+  outline-offset:2px!important;
+}
+html body .user-profile-menu .user-profile-summary-text {
+  display:flex!important;
+  flex-direction:column!important;
+  min-width:0!important;
+  gap:2px!important;
+}
+html body .user-profile-menu .user-profile-summary-text strong,
+html body .user-profile-menu .user-profile-summary-text small {
+  display:block!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
 html body .user-profile-menu .user-avatar-large {
   width:29px!important;height:29px!important;border-radius:9px!important;
 }
