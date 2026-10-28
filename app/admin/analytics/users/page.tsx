@@ -25,7 +25,7 @@ export default async function UsersPage({searchParams}:{searchParams:Promise<{q?
     db.query(`SELECT COUNT(*)::int AS profiles,
        COUNT(*) FILTER(WHERE ps.owner_key IS NOT NULL)::int AS with_history,
        COUNT(*) FILTER(WHERE ps.updated_at::timestamptz>NOW()-INTERVAL '7 days')::int AS recently_saved
-       FROM user_profiles p LEFT JOIN personal_states ps ON ps.owner_key=p.owner_key`) as Promise<Array<{profiles:number;with_history:number;recently_saved:number}>>,
+       FROM user_profiles p LEFT JOIN personal_states ps ON ps.owner_key=p.owner_key`) as unknown as Promise<Array<{profiles:number;with_history:number;recently_saved:number}>>,
     db.query(`SELECT p.public_id::text AS public_id,p.username,p.created_at,
       ps.updated_at AS last_saved,
       COALESCE(jsonb_array_length(COALESCE(ps.value::jsonb->'videos','[]'::jsonb)),0)::int AS total_videos,
@@ -43,7 +43,7 @@ export default async function UsersPage({searchParams}:{searchParams:Promise<{q?
       ) stats ON true
       WHERE ($1='' OR p.username ILIKE '%'||$1||'%')
       ORDER BY COALESCE(ps.updated_at,p.created_at) DESC
-      LIMIT $2 OFFSET $3`,[q,size+1,(page-1)*size]) as Promise<ProfileRow[]>
+      LIMIT $2 OFFSET $3`,[q,size+1,(page-1)*size]) as unknown as Promise<ProfileRow[]>
   ]);
   const metrics=counts[0]||{profiles:0,with_history:0,recently_saved:0};
   const hasNext=rows.length>size;
