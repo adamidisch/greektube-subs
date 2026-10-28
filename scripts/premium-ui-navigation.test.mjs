@@ -57,4 +57,11 @@ assert.ok(profile.includes('className={`profile-availability ${availability}`}')
 assert.equal((player.match(/<SettingsIcon\/>/g)||[]).length,3,"All three player/settings header icon buttons render the same sliders SVG");
 assert.ok(profile.includes('if (kind === "settings") return <SettingsIcon/>'),"The profile menu uses the identical shared icon");
 
+assert.equal((profile.match(/href="\/account"/g)||[]).length,1,"Profile dropdown must expose exactly one account navigation link");
+assert.ok(profile.includes('className="user-profile-summary user-profile-summary-link"'),"The named profile summary is the clickable account link");
+assert.ok(!profile.includes('tr("Ανώνυμο προφίλ")'),"A named device profile must not be labelled anonymous in the menu");
+assert.ok(profile.includes('profile.anonymous ? tr("Προφίλ συσκευής") : tr("Προσωπικό προφίλ")'),"Display accurate device-profile and personal-profile labels");
+assert.ok(headerCss.includes('.user-profile-summary-link:focus-visible'),"Clickable profile summary remains keyboard accessible");
+assert.ok(headerCss.includes('.user-profile-summary-link:hover'),"Clickable profile summary provides a hover state");
+
 console.log("Header slots, account alignment, SPA settings navigation, light/mobile and independent watch-rail regression checks passed.");
