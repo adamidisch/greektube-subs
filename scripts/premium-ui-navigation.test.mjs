@@ -57,7 +57,8 @@ assert.ok(profile.includes('className={`profile-availability ${availability}`}')
 assert.equal((player.match(/<SettingsIcon\/>/g)||[]).length,3,"All three player/settings header icon buttons render the same sliders SVG");
 assert.ok(profile.includes('if (kind === "settings") return <SettingsIcon/>'),"The profile menu uses the identical shared icon");
 
-assert.equal((profile.match(/href="\/account"/g)||[]).length,1,"Profile dropdown must expose exactly one account navigation link");
+const profileMenuSource=profile.slice(profile.indexOf('const profileUi ='),profile.indexOf('const editor ='));
+assert.equal((profileMenuSource.match(/href="\/account"/g)||[]).length,1,"Profile dropdown must expose exactly one account navigation link");
 assert.ok(profile.includes('className="user-profile-summary user-profile-summary-link"'),"The named profile summary is the clickable account link");
 assert.ok(!profile.includes('tr("Ανώνυμο προφίλ")'),"A named device profile must not be labelled anonymous in the menu");
 assert.ok(profile.includes('profile.anonymous ? tr("Προφίλ συσκευής") : tr("Προσωπικό προφίλ")'),"Display accurate device-profile and personal-profile labels");
