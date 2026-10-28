@@ -293,11 +293,10 @@ export default function UserProfileEnhancer() {
       <span className="user-profile-chevron" aria-hidden="true">⌄</span>
     </button>
     {menuOpen && <div className="user-profile-menu" role="menu">
-      <div className="user-profile-summary">
+      <Link prefetch={false} href="/account" onClick={()=>setMenuOpen(false)} className="user-profile-summary user-profile-summary-link" role="menuitem" aria-label={tr("Άνοιγμα λογαριασμού")}>
         <span className="user-avatar user-avatar-large"><UserIcon/></span>
-        <div><strong>{profile.username}</strong><small>{profile.anonymous ? tr("Ανώνυμο προφίλ") : tr("Προφίλ χρήστη")}</small></div>
-      </div>
-      <Link prefetch={false} href="/account" onClick={()=>setMenuOpen(false)} className="user-menu-row" role="menuitem"><span className="user-menu-icon"><UserIcon/></span><span><strong>{tr("Λογαριασμός")}</strong><small>{tr("Προσωπικό προφίλ")}</small></span></Link>
+        <span className="user-profile-summary-text"><strong>{profile.username}</strong><small>{profile.anonymous ? tr("Προφίλ συσκευής") : tr("Προσωπικό προφίλ")}</small></span>
+      </Link>
       <Link prefetch={false} href="/?action=add" className="user-menu-row" role="menuitem" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"&&!new URLSearchParams(location.search).has("video")){event.preventDefault();setMenuOpen(false);window.dispatchEvent(new Event("greektube:add-video"))}}}><span className="user-menu-icon"><MenuIcon kind="add"/></span><span><strong>{tr("Προσθήκη βίντεο")}</strong></span></Link>
       <Link prefetch={false} href="/?view=settings" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"){event.preventDefault();window.dispatchEvent(new Event("greektube:open-settings"));}}} className="user-menu-row" role="menuitem"><span className="user-menu-icon"><MenuIcon kind="settings"/></span><span><strong>{tr("Ρυθμίσεις")}</strong></span></Link>
       <button type="button" className="user-menu-row user-menu-logout" role="menuitem" onClick={()=>{setMenuOpen(false);setMessage("");setLogoutOpen(true)}}><span className="user-menu-icon"><MenuIcon kind="logout"/></span><span><strong>{tr("Αποσύνδεση")}</strong></span></button>
