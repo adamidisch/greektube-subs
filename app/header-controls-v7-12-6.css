@@ -380,3 +380,16 @@ html body .account-shell .account-consent-error {font-size:12px;color:#e7a4a4}
   html body .account-shell .account-consent-choice input[role="switch"],
   html body .account-shell .account-consent-choice input[role="switch"]::after {transition:none}
 }
+
+/* Explicit verified-account linking, scaled to existing Account visual system. */
+html body .account-shell .account-verified-content {display:flex;flex-direction:column;gap:11px}
+html body .account-shell .account-verified-content p {margin:0;font-size:12px;line-height:1.6;color:var(--muted)}
+html body .account-shell .account-verified-content strong {color:var(--text);font-size:12px;font-weight:650;overflow-wrap:anywhere}
+html body .account-shell .account-link-confirm {padding:14px;border:1px solid rgba(139,124,231,.26);border-radius:12px;background:rgba(132,113,218,.065);display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+html body .account-shell .account-link-confirm .secondary {font-size:12px;min-height:38px;padding:0 13px;border-radius:10px}
+html body .account-shell .account-link-status {padding:11px 13px;border-radius:10px;border:1px solid rgba(78,161,124,.27);background:rgba(72,151,120,.075);color:var(--text)!important}
+html body .account-shell .account-auth-links {display:flex;flex-wrap:wrap;align-items:center;gap:9px}
+html body .account-shell .account-auth-links a {display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 12px;font-size:12px;font-weight:620;text-decoration:none;border-radius:10px;color:#c9beff;border:1px solid rgba(148,131,232,.36);background:rgba(132,114,222,.09)}
+html body .account-shell .account-auth-links a:last-child {color:#fff;background:#7464cf}
+html body .account-shell .account-auth-links a:focus-visible {outline:2px solid #b8adff;outline-offset:2px}
+@media(max-width:440px){html body .account-shell .account-auth-links a{flex:1;white-space:nowrap}}
