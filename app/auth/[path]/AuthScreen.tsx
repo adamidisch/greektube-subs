@@ -41,6 +41,8 @@ export default function AuthScreen({mode}:{mode:"sign-in"|"sign-up"|"verify-emai
         email:email.trim().toLowerCase(),password
       });
       if(result.error)throw new Error(result.error.message||"Η σύνδεση απέτυχε.");
+      // Server reads the verified Auth session and records a hashed session identifier.
+      await fetch("/api/account/auth-session",{method:"POST",credentials:"same-origin"}).catch(()=>{});
       window.location.assign("/account");
     }catch(err){
       setError(err instanceof Error?err.message:"Δεν ήταν δυνατή η ολοκλήρωση.");
