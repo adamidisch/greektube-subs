@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { database } from "@/db/postgres";
-import { automaticUsername, profileOwnerKey, usernameKey, validateUsername } from "@/app/profile-domain";
+import { automaticUsername, usernameKey, validateUsername } from "@/app/profile-domain";
+import {resolveProOwner} from "@/lib/pro-auth/identity";
 
 type ProfileRow = {
   public_id: string | number;
@@ -57,7 +58,7 @@ function isUniqueViolation(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    const owner = await profileOwnerKey(request);
+    const owner = (await resolveProOwner(request)).key;
     if (!owner) {
       return NextResponse.json(
         { error: "identity_pending", code: "identity_pending" },
@@ -89,7 +90,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const owner = await profileOwnerKey(request);
+    const owner = (await resolveProOwner(request)).key;
     if (!owner) return NextResponse.json({ error: "Η ταυτότητα χρήστη δεν είναι ακόμη έτοιμη.", code: "identity_pending" }, { status: 409 });
     const profile = await getOrCreateProfile(owner);
     const body = await request.json().catch(() => null) as { username?: unknown; currentUsername?: unknown } | null;
