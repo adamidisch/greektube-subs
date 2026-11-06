@@ -67,3 +67,4 @@ export default function AuthScreen({mode}:{mode:"sign-in"|"sign-up"|"verify-emai
       <p className="gt-auth-legal"><Link href="/privacy">Απόρρητο</Link><span>·</span><Link href="/terms">Όροι</Link></p>
     </section>
   </main>;
+}
