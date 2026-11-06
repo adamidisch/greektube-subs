@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS gt_account_links (
   CONSTRAINT gt_account_links_owner CHECK (device_owner_key LIKE 'anon:%'),
   CONSTRAINT gt_account_links_method CHECK (linkage_method = 'explicit_verified_session')
 );
-CREATE INDEX IF NOT EXISTS gt_account_links_user_idx ON gt_account_links(auth_user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS gt_account_links_one_per_user_idx ON gt_account_links(auth_user_id);
 
 CREATE TABLE IF NOT EXISTS gt_user_sessions (
   session_id TEXT PRIMARY KEY,
