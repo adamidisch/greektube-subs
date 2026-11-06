@@ -1,6 +1,7 @@
 import {NextResponse} from "next/server";
 import {database} from "@/db/postgres";
 import crypto from "node:crypto";
+import {readAnonymousId} from "@/app/profile-domain";
 
 const MAX_BATCH=30;
 const ALLOWED_EVENTS=new Set([
@@ -141,6 +142,19 @@ export async function POST(request:Request){
     const device=deviceFromUA(ua);
     const browser=browserFromUA(ua);
     const db=database();
+    // Derive device identity from its HTTP-only cookie, not client-side event fields.
+    const deviceId=readAnonymousId(request);
+    const ownerKey=deviceId?"anon:"+deviceId:"";
+    let detailedActivity=false;
+    if(ownerKey){
+      try {
+        const preferences=await db.query("SELECT detailed_activity FROM gt_user_privacy_preferences WHERE device_owner_key=$1 LIMIT 1",[ownerKey]) as Array<{detailed_activity:boolean}>;
+        detailedActivity=preferences[0]?.detailed_activity===true;
+      } catch {
+        // An optional telemetry table must not interrupt the existing analytics pipeline.
+        detailedActivity=false;
+      }
+    }
     let accepted=0;
     const platformEvents:PlatformEvent[]=[];
     for(const raw of incoming){
@@ -163,6 +177,24 @@ export async function POST(request:Request){
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)`,
         [clientTs,sessionId,name,path,videoId,source,country,city,device,browser,JSON.stringify(properties)]
       );
+      // No raw search terms, IPs or unrestricted user-supplied properties in named activity.
+      if(detailedActivity&&ownerKey){
+        const activityDetails:Record<string,string|number|boolean>={};
+        for(const key of ["progress","seconds","speed","tab","sort","resultCount","fullscreen","enabled"]){
+          const value=properties[key];
+          if(typeof value==="string")activityDetails[key]=value.slice(0,48);
+          else if(typeof value==="number"&&Number.isFinite(value))activityDetails[key]=value;
+          else if(typeof value==="boolean")activityDetails[key]=value;
+        }
+        try{
+          await db.query(
+            "INSERT INTO gt_user_activity_events (device_owner_key,session_id,event_name,page_path,video_id,details) VALUES ($1,$2,$3,$4,$5,$6::jsonb)",
+            [ownerKey,sessionId,name,path.split("?")[0],videoId,JSON.stringify(activityDetails)]
+          );
+        }catch{
+          console.warn("[analytics] optional activity write unavailable");
+        }
+      }
       platformEvents.push({
         event_name:name,
         session_id:sessionId,
