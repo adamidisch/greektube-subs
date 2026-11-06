@@ -320,3 +320,63 @@ html body .account-shell .account-identity-actions>.secondary {
     align-items:flex-start;
   }
 }
+
+/* Explicit device analytics consent — small, accessible and consistent with Account UI. */
+html body .account-shell .account-consent-choice {
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:15px 16px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(138,121,230,.06);
+  cursor:pointer;
+}
+html body .account-shell .account-consent-choice span {
+  display:flex;flex-direction:column;min-width:0;gap:5px;
+}
+html body .account-shell .account-consent-choice strong {
+  font-size:13px;font-weight:650;color:var(--text);
+}
+html body .account-shell .account-consent-choice small,
+html body .account-shell .account-consent-description {
+  color:var(--muted);font-size:12px;line-height:1.55;
+}
+html body .account-shell .account-consent-choice input[role="switch"] {
+  appearance:none;-webkit-appearance:none;
+  position:relative;flex:0 0 38px;width:38px;height:23px;
+  margin:0;border:1px solid rgba(135,130,161,.42);
+  border-radius:999px;background:#424653;cursor:pointer;
+  transition:background .15s,border-color .15s;
+}
+html body .account-shell .account-consent-choice input[role="switch"]::after {
+  content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;
+  background:#fff;border-radius:50%;box-shadow:0 1px 4px #0003;
+  transition:transform .15s;
+}
+html body .account-shell .account-consent-choice input[role="switch"]:checked {
+  background:#7868d6;border-color:#9484e7;
+}
+html body .account-shell .account-consent-choice input[role="switch"]:checked::after {
+  transform:translateX(15px);
+}
+html body .account-shell .account-consent-choice input[role="switch"]:focus-visible {
+  outline:2px solid #b2a8f9;outline-offset:3px;
+}
+html body .account-shell .account-consent-choice input[role="switch"]:disabled {
+  opacity:.52;cursor:wait;
+}
+html body .account-shell .account-privacy-actions {
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+}
+html body .account-shell .account-privacy-actions a {
+  font-size:12px;text-decoration:none;color:#b5aafb;
+}
+html body .account-shell .account-privacy-actions a:hover {text-decoration:underline}
+html body .account-shell .account-consent-error {font-size:12px;color:#e7a4a4}
+@media(max-width:620px) {
+  html body .account-shell .account-consent-choice {gap:10px;padding:13px}
+}
+@media(prefers-reduced-motion:reduce) {
+  html body .account-shell .account-consent-choice input[role="switch"],
+  html body .account-shell .account-consent-choice input[role="switch"]::after {transition:none}
+}
