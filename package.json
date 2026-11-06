@@ -1,6 +1,6 @@
 {
   "name": "greektube-subs",
-  "version": "7.12.12",
+  "version": "7.12.13",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -37,7 +37,8 @@
     "@vercel/blob": "^2.8.0",
     "next": "16.2.6",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "@neondatabase/auth": "0.7.0-beta"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.2.1",
