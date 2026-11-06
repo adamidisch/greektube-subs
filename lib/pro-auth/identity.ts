@@ -35,5 +35,5 @@ export async function resolveProOwner(request:Request):Promise<{key:string|null;
     "SELECT auth_user_id FROM gt_account_links WHERE device_owner_key=$1 LIMIT 1",[legacy]
   ) as unknown as Array<{auth_user_id:string}>;
   if(occupied.length)return {key:null,cookie:null,locked:true,verified:false};
-  return {key:legacy,cookie:null,locked:false,verified:Boolean(verified)};
+  return {key:legacy,cookie:null,locked:false,verified:false};
 }
