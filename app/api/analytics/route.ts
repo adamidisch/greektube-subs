@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {database} from "@/db/postgres";
 import crypto from "node:crypto";
-import {readAnonymousId} from "@/app/profile-domain";
+import {resolveProOwner} from "@/lib/pro-auth/identity";
 
 const MAX_BATCH=30;
 const ALLOWED_EVENTS=new Set([
@@ -143,8 +143,8 @@ export async function POST(request:Request){
     const browser=browserFromUA(ua);
     const db=database();
     // Derive device identity from its HTTP-only cookie, not client-side event fields.
-    const deviceId=readAnonymousId(request);
-    const ownerKey=deviceId?"anon:"+deviceId:"";
+    const resolved=await resolveProOwner(request);
+    const ownerKey=resolved.key||"";
     let detailedActivity=false;
     if(ownerKey){
       try {
