@@ -44,10 +44,11 @@ async function getOrCreateProfile(owner: string) {
   return profile;
 }
 
-function publicProfile(profile: ProfileRow) {
+function publicProfile(profile: ProfileRow, verified=false) {
   return {
     username: profile.username,
-    anonymous: profile.owner_key.startsWith("anon:"),
+    anonymous: !verified && profile.owner_key.startsWith("anon:"),
+    verified,
     createdAt: profile.created_at,
   };
 }
@@ -58,7 +59,8 @@ function isUniqueViolation(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    const owner = (await resolveProOwner(request)).key;
+    const identity = await resolveProOwner(request);
+    const owner=identity.key;
     if (!owner) {
       return NextResponse.json(
         { error: "identity_pending", code: "identity_pending" },
@@ -82,7 +84,7 @@ export async function GET(request: Request) {
       const available = !rows[0] || rows[0].owner_key === owner;
       return NextResponse.json({ available, valid: true });
     }
-    return NextResponse.json({ profile: publicProfile(profile) }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
+    return NextResponse.json({ profile: publicProfile(profile,identity.verified) }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
   } catch {
     return NextResponse.json({ error: "Δεν ήταν δυνατή η φόρτωση του προφίλ." }, { status: 500 });
   }
@@ -90,7 +92,8 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const owner = (await resolveProOwner(request)).key;
+    const identity = await resolveProOwner(request);
+    const owner=identity.key;
     if (!owner) return NextResponse.json({ error: "Η ταυτότητα χρήστη δεν είναι ακόμη έτοιμη.", code: "identity_pending" }, { status: 409 });
     const profile = await getOrCreateProfile(owner);
     const body = await request.json().catch(() => null) as { username?: unknown; currentUsername?: unknown } | null;
@@ -100,7 +103,7 @@ export async function PATCH(request: Request) {
     const expectedUsernameKey = typeof body.currentUsername === "string" ? usernameKey(body.currentUsername) : profile.username_key;
     if (expectedUsernameKey !== profile.username_key) {
       return NextResponse.json(
-        { error: "Το προφίλ άλλαξε σε άλλη καρτέλα. Έγινε επαναφόρτωση του τρέχοντος ονόματος.", code: "profile_changed", profile: publicProfile(profile) },
+        { error: "Το προφίλ άλλαξε σε άλλη καρτέλα. Έγινε επαναφόρτωση του τρέχοντος ονόματος.", code: "profile_changed", profile: publicProfile(profile,identity.verified) },
         { status: 409 },
       );
     }
@@ -125,11 +128,11 @@ export async function PATCH(request: Request) {
         ) as ProfileRow[];
         const current = currentRows[0];
         return NextResponse.json(
-          { error: "Το προφίλ άλλαξε σε άλλη καρτέλα. Έγινε επαναφόρτωση του τρέχοντος ονόματος.", code: "profile_changed", profile: current ? publicProfile(current) : undefined },
+          { error: "Το προφίλ άλλαξε σε άλλη καρτέλα. Έγινε επαναφόρτωση του τρέχοντος ονόματος.", code: "profile_changed", profile: current ? publicProfile(current,identity.verified) : undefined },
           { status: 409 },
         );
       }
-      return NextResponse.json({ profile: publicProfile(updated) });
+      return NextResponse.json({ profile: publicProfile(updated,identity.verified) });
     } catch (error) {
       if (isUniqueViolation(error)) return NextResponse.json({ error: "Το όνομα χρησιμοποιείται ήδη." }, { status: 409 });
       throw error;
