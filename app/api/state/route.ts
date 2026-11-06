@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import {resolveProOwner} from "@/lib/pro-auth/identity";
 import { database } from "@/db/postgres";
 import { canonicalSpeakerForVideo, speakerMatchesChannel } from "@/app/speaker-catalog";
 import { editorialVideoTitle } from "@/app/editorial-video-titles";
@@ -33,16 +34,13 @@ async function ensureTable() {
   await schemaReady;
 }
 
-async function ownerKey(request: Request) {
-  const email = request.headers.get("oai-authenticated-user-email");
-  if (email) {
-    const bytes = new TextEncoder().encode(email.trim().toLowerCase());
-    const digest = await crypto.subtle.digest("SHA-256", bytes);
-    return { key: `user:${Array.from(new Uint8Array(digest)).map(x=>x.toString(16).padStart(2,"0")).join("")}`, cookie: null };
-  }
-  const cookie = request.headers.get("cookie")?.split(";").map(x=>x.trim()).find(x=>x.startsWith(`${COOKIE}=`))?.slice(COOKIE.length+1);
-  const id = cookie && /^[a-zA-Z0-9-]{12,80}$/.test(cookie) ? cookie : crypto.randomUUID();
-  return { key: `anon:${id}`, cookie: cookie ? null : id };
+async function ownerKey(request: Request):Promise<{key:string;cookie:string|null;locked:boolean}> {
+  const verified=await resolveProOwner(request);
+  if(verified.locked)return {key:"",cookie:null,locked:true};
+  if(verified.key)return {key:verified.key,cookie:null,locked:false};
+  // New anonymous browsers are assigned a fresh, unguessable device identity.
+  const id=crypto.randomUUID();
+  return {key:"anon:"+id,cookie:id,locked:false};
 }
 
 async function adminSecret() {
@@ -188,6 +186,7 @@ export async function GET(request: Request) {
   try {
     await ensureTable();
     const identity = await ownerKey(request);
+    if(identity.locked)return NextResponse.json({error:"Απαιτείται σύνδεση στον επαληθευμένο λογαριασμό."},{status:401});
     const db = database();
     const personalRows = await db.query("SELECT value FROM personal_states WHERE owner_key = $1 LIMIT 1", [identity.key]) as { value: string }[];
     const row = personalRows[0];
@@ -220,6 +219,7 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const identity = await ownerKey(request);
+    if(identity.locked)return NextResponse.json({error:"Απαιτείται σύνδεση στον επαληθευμένο λογαριασμό."},{status:401});
     const incoming = await request.json();
     const wantsSharedWrite = request.headers.get("x-greektube-shared-write") === "1";
     const canWriteShared = await isAdminRequest(request);
@@ -259,6 +259,7 @@ export async function PATCH(request:Request){
     if(body.appLanguage!=="el"&&body.appLanguage!=="en")return NextResponse.json({error:"Invalid language"},{status:400});
     await ensureTable();
     const identity=await ownerKey(request),now=new Date().toISOString();
+    if(identity.locked)return NextResponse.json({error:"Απαιτείται σύνδεση στον επαληθευμένο λογαριασμό."},{status:401});
     const value=JSON.stringify({settings:{appLanguage:body.appLanguage}});
     await database().query(`INSERT INTO personal_states(owner_key,value,created_at,updated_at) VALUES($1,$2,$3,$3)
       ON CONFLICT(owner_key) DO UPDATE SET value=jsonb_set(personal_states.value::jsonb,'{settings}',COALESCE(personal_states.value::jsonb->'settings','{}'::jsonb)||($2::jsonb->'settings'),true)::text,updated_at=$3`,[identity.key,value,now]);
