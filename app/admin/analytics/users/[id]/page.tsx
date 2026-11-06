@@ -29,11 +29,11 @@ export default async function UserDetailPage({params}:{params:Promise<{id:string
      WHERE p.public_id=$1::bigint LIMIT 1`,[id]) as unknown as Data[];
   const row=rows[0];if(!row)notFound();
   const [consents,activity]=await Promise.all([
-    database().query("SELECT detailed_activity FROM gt_user_privacy_preferences WHERE device_owner_key=$1 LIMIT 1",[row.owner_key])
-      as unknown as Promise<Array<{detailed_activity:boolean}>>,
-    database().query(`SELECT event_id::text,occurred_at,event_name,video_id,page_path,details
+    (database().query("SELECT detailed_activity FROM gt_user_privacy_preferences WHERE device_owner_key=$1 LIMIT 1",[row.owner_key])
+      as unknown as Promise<Array<{detailed_activity:boolean}>>),
+    (database().query(`SELECT event_id::text,occurred_at,event_name,video_id,page_path,details
       FROM gt_user_activity_events WHERE device_owner_key=$1 AND retention_until>NOW()
-      ORDER BY occurred_at DESC LIMIT 100`,[row.owner_key]) as unknown as Promise<ActivityRow[]>
+      ORDER BY occurred_at DESC LIMIT 100`,[row.owner_key]) as unknown as Promise<ActivityRow[]>)
   ]);
   const userOptedIn=consents[0]?.detailed_activity===true;
   let state:State={};try{state=JSON.parse(row.value||"{}") as State}catch{}
