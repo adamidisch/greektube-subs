@@ -10,10 +10,16 @@ const admin=read("app/admin/analytics/users/[id]/page.tsx");
 const auth=read("lib/pro-auth/server.ts");
 const authScreen=read("app/auth/[path]/AuthScreen.tsx");
 const pkg=JSON.parse(read("package.json"));
+const linked=read("app/api/account/link-history/route.ts");
+const resolved=read("lib/pro-auth/identity.ts");
+const stateApi=read("app/api/state/route.ts");
+const logout=read("app/session-client.ts");
+const sessionAudit=read("app/api/account/auth-session/route.ts");
+
 for(const name of ["gt_account_links","gt_user_sessions","gt_user_privacy_preferences","gt_user_activity_events"])
   assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS "+name),"Additive migration missing "+name);
 assert.doesNotMatch(migration,/\bDROP\s+TABLE\b|\bTRUNCATE\b|\bDELETE\s+FROM\s+(?:user_profiles|personal_states)/i,"Do not change existing history");
-assert.ok(analytics.includes("readAnonymousId(request)"),"Detailed analytics identity must derive from HttpOnly cookie");
+assert.ok(analytics.includes("resolveProOwner(request)"),"Detailed analytics identity must be server-resolved from verified session or HttpOnly cookie");
 assert.ok(analytics.includes("if(detailedActivity&&ownerKey)"),"Never associate per-profile clicks without explicit consent");
 assert.ok(analytics.includes("const detailedActivity=false")||analytics.includes("let detailedActivity=false"),"Consent defaults to off");
 assert.ok(analytics.includes('["progress","seconds","speed","tab","sort","resultCount","fullscreen","enabled"]'),"Store only allowlisted, bounded details");
@@ -29,5 +35,15 @@ assert.ok(auth.includes("createNeonAuth"),"Managed auth must use supported provi
 assert.ok(authScreen.includes("authClient.signIn.email")&&authScreen.includes("authClient.signUp.email"),"Sign in and up use Neon-managed credentials");
 assert.ok(authScreen.includes("authClient.emailOtp.verifyEmail"),"Verification must require OTP");
 assert.ok(authScreen.includes("δεν μεταφέρονται αυτόματα"),"Never promise unverified account history migration");
+assert.ok(linked.includes("verifiedAuthUser()"),"Account linking requires a verified Auth session");
+assert.ok(linked.includes('readAnonymousId(request)'),"Linking requires possession of current device cookie");
+assert.ok(linked.includes("ON CONFLICT DO NOTHING"),"Link must never take over someone else's history");
+assert.ok(migration.includes("UNIQUE INDEX IF NOT EXISTS gt_account_links_one_per_user_idx"),"Only one device history may be claimed per account");
+assert.ok(resolved.includes("if(occupied.length)return {key:null,cookie:null,locked:true"),"Unverified legacy cookie is denied after link");
+assert.ok(resolved.includes("verifiedAuthUser()"),"Account history resolution requires server session");
+assert.ok(stateApi.includes("if(identity.locked)"),"State APIs must reject detached legacy cookie");
+assert.ok(sessionAudit.includes('createHmac("sha256"'),"Session audits must store keyed fingerprints not raw session tokens");
+assert.ok(logout.includes('authClient.signOut()'),"Account logout must revoke the Auth session");
+assert.ok(logout.includes('!identity.authenticated||!identity.linked'),"Unlinked device history must be protected from destructive logout");
 assert.equal(pkg.version,"7.12.13");
 console.log("Identity schema, explicit consent, safe event attribution and Managed Auth staging guards passed");
