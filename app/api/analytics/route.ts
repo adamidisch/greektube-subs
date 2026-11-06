@@ -166,7 +166,7 @@ export async function POST(request:Request){
       const videoId=/^[A-Za-z0-9_-]{11}$/.test(text(event.videoId,32))?text(event.videoId,32):"";
       const clientTs=typeof event.ts==="number"&&Number.isFinite(event.ts)?new Date(event.ts).toISOString():null;
       const country=countryFromEvent(event,request);
-      const properties={
+      const properties:Record<string,string|number|boolean|null>={
         ...safeProps(event.properties),
         geoCountrySource:edgeCountry?"vercel-edge":"timezone-fallback",
         geoCitySource:city?"vercel-edge":"unknown",
