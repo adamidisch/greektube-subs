@@ -10,6 +10,30 @@ export default function AccountPage(){
   const language=useAppLanguage();
   const [state,setState]=useState<PersonalState|null>(null),[error,setError]=useState("");
   const [username,setUsername]=useState("");
+  const [activityConsent,setActivityConsent]=useState<boolean|null>(null);
+  const [activitySaving,setActivitySaving]=useState(false);
+  const [activityError,setActivityError]=useState("");
+  useEffect(()=>{
+    const controller=new AbortController();
+    void fetch("/api/activity-consent",{credentials:"same-origin",cache:"no-store",signal:controller.signal})
+      .then(async response=>{if(!response.ok)throw new Error("privacy preference unavailable");return response.json()})
+      .then(data=>setActivityConsent(data.detailedActivity===true))
+      .catch(()=>{if(!controller.signal.aborted)setActivityError(tr("Δεν φορτώθηκε η επιλογή απορρήτου."))});
+    return ()=>controller.abort();
+  },[]);
+  async function updateActivityConsent(next:boolean){
+    setActivitySaving(true);setActivityError("");
+    try{
+      const response=await fetch("/api/activity-consent",{
+        method:"PUT",credentials:"same-origin",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({detailedActivity:next})
+      });
+      if(!response.ok)throw new Error("preference failed");
+      setActivityConsent(next);
+    }catch{setActivityError(tr("Δεν αποθηκεύτηκε η επιλογή απορρήτου."))}
+    finally{setActivitySaving(false)}
+  }
   useEffect(()=>{if(!state)return;const controller=new AbortController();void fetch("/api/profile",{credentials:"same-origin",cache:"no-store",signal:controller.signal}).then(async response=>{if(!response.ok)return;const data=await response.json() as {profile?:{username?:string}};if(data.profile?.username)setUsername(data.profile.username)}).catch(()=>{});return()=>controller.abort()},[Boolean(state)]);
   useEffect(()=>{if(!("BroadcastChannel" in window))return;const channel=new BroadcastChannel("greektube-profile:v1");channel.onmessage=event=>{const data=event.data as {type?:string;profile?:{username?:string}}|null;if(data?.type==="profile-updated"&&data.profile?.username)setUsername(data.profile.username)};return()=>channel.close()},[]);
   useEffect(()=>{const controller=new AbortController();void fetch("/api/state",{cache:"no-store",signal:controller.signal}).then(async response=>{if(!response.ok)throw Error(tr("Δεν φορτώθηκε ο λογαριασμός.","Could not load account."));const data=await response.json();setState(data.state||{videos:[],moments:[],settings:{}});const theme=data.state?.settings?.theme;document.documentElement.dataset.theme=theme==="system"?(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):theme==="light"?"light":"dark"}).catch(error=>{if(!controller.signal.aborted)setError(error.message)});return()=>controller.abort()},[]);
@@ -22,5 +46,20 @@ export default function AccountPage(){
   return <main className="app-shell account-shell"><header className="app-header"><Link prefetch={false} className="brand brand-home" href="/"><span className="brand-mark" aria-hidden="true"/><span>GreekTube <b>Subs</b></span><small className="brand-version">ver {APP_VERSION}</small></Link><div className="gts-header-actions"><div className="gts-profile-slot"/></div></header><section className="account-page"><Link prefetch={false} className="account-back" href="/">← {tr("Βιβλιοθήκη")}</Link><header className="account-heading"><div><h1>{tr("Ο λογαριασμός μου")}</h1><p>{tr("Προτιμήσεις και προσωπική πρόοδος σε ένα σημείο.")}</p></div><div className="account-identity-actions"><div className="account-identity" aria-live="polite"><span>{tr("Όνομα χρήστη")}</span><strong>{username||"—"}</strong></div><button type="button" className="secondary" onClick={()=>window.dispatchEvent(new Event("greektube:rename-profile"))}>{tr("Αλλαγή ονόματος")}</button></div></header>{error&&<p role="alert">{error}</p>}{!state&&!error&&<p role="status">{tr("Φόρτωση…")}</p>}
   <section className="account-section"><h2>{tr("Η δραστηριότητά σου")}</h2><div className="account-stats">{[[tr("Χρόνος προβολής"),`${Math.floor(videos.reduce((sum,v)=>sum+(v.watchedSeconds||0),0)/60)} min`],[tr("Βίντεο που είδες"),watched.length],[tr("Ολοκληρωμένα"),watched.filter(v=>(v.progress||0)>=90).length],[tr("Προβολές βίντεο","Video views"),videos.reduce((sum,v)=>sum+(v.views||0),0)],[tr("Αποθηκευμένες στιγμές"),state?.moments?.length||0]].map(([label,value])=><article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div><p className="account-meta">{tr("Η μέτρηση χρόνου ξεκινά από αυτή την αναβάθμιση. Οι παλιές θέσεις προβολής παραμένουν διαθέσιμες.")}</p></section>
   <div className="account-columns"><section className="account-section"><h2>{tr("Πρόσφατη δραστηριότητα")}</h2>{recent.length?recent.map(video=><Link prefetch={false} className="account-video" key={video.id} href={`/?video=${video.id}`}><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span><strong>{language==="en"?video.originalTitle||video.title:video.title}</strong><small>{Math.round(video.progress||0)}% · {video.channel}</small></span></Link>):<p>{tr("Δεν υπάρχει ακόμη δραστηριότητα.")}</p>}</section><section className="account-section"><h2>{tr("Ρυθμίσεις")}</h2><label className="account-language">{tr("Γλώσσα εφαρμογής")}<select value={language} onChange={e=>void changeLanguage(e.target.value as "el"|"en")}><option value="el">Ελληνικά</option><option value="en">English</option></select></label><p>{tr("Η γλώσσα εφαρμογής δεν αλλάζει τη γλώσσα των υποτίτλων.")}</p><Link prefetch={false} className="account-settings-link" href="/?view=settings">{tr("Ρυθμίσεις")} →</Link></section></div>
-  <section className="account-section account-privacy"><p>{tr("Τα δεδομένα σου συνδέονται με το προφίλ αυτής της συσκευής.")}</p><button className="secondary" disabled={!state} onClick={exportData}>{tr("Εξαγωγή δεδομένων")}</button></section></section></main>;
+  <section className="account-section account-privacy">
+    <h2>{tr("Ιδιωτικότητα δραστηριότητας")}</h2>
+    <label className="account-consent-choice">
+      <span><strong>{tr("Αναλυτική καταγραφή ενεργειών")}</strong>
+      <small>{tr("Προαιρετικά συνδέονται προβολές, ενέργειες και χρόνοι με το προφίλ αυτής της συσκευής. Διαθέσιμα στους διαχειριστές. Χωρίς δεδομένα αναζήτησης ή IP. Η πρόοδος βίντεο λειτουργεί ανεξάρτητα.")}</small></span>
+      <input type="checkbox" role="switch" checked={activityConsent===true}
+        disabled={activityConsent===null||activitySaving}
+        onChange={event=>void updateActivityConsent(event.target.checked)}
+        aria-label={tr("Αναλυτική καταγραφή ενεργειών")}/>
+    </label>
+    <p className="account-consent-description">{tr("Αρχικά απενεργοποιημένο. Μπορείς να το αλλάξεις οποτεδήποτε. Τα νέα αναλυτικά events έχουν περίοδο εμφάνισης 30 ημερών.")}</p>
+    {activityError&&<p role="alert" className="account-consent-error">{activityError}</p>}
+    <div className="account-privacy-actions"><Link href="/privacy">{tr("Πολιτική απορρήτου")}</Link>
+    <button className="secondary" disabled={!state} onClick={exportData}>{tr("Εξαγωγή δεδομένων")}</button></div>
+    <p>{tr("Τα δεδομένα προόδου παραμένουν συνδεδεμένα με το προφίλ αυτής της συσκευής μέχρι να ενεργοποιηθεί ασφαλής λογαριασμός.")}</p>
+  </section></section></main>;
 }
