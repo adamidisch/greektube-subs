@@ -10,6 +10,34 @@ export default function AccountPage(){
   const language=useAppLanguage();
   const [state,setState]=useState<PersonalState|null>(null),[error,setError]=useState("");
   const [username,setUsername]=useState("");
+  const [authStatus,setAuthStatus]=useState<{authenticated:boolean;linked:boolean;email?:string}|null>(null);
+  const [linkError,setLinkError]=useState("");
+  const [linkBusy,setLinkBusy]=useState(false);
+  useEffect(()=>{
+    const controller=new AbortController();
+    void fetch("/api/account/link-history",{credentials:"same-origin",cache:"no-store",signal:controller.signal})
+      .then(async response=>response.ok?response.json():null)
+      .then(data=>{if(data)setAuthStatus(data)})
+      .catch(()=>{});
+    return ()=>controller.abort();
+  },[]);
+  useEffect(()=>{
+    if(!authStatus?.authenticated)return;
+    // Record only a real verified Neon Auth session, not a device-page visit.
+    void fetch("/api/account/auth-session",{method:"POST",credentials:"same-origin"}).catch(()=>{});
+  },[authStatus?.authenticated]);
+  async function linkExistingHistory(){
+    if(linkBusy)return;
+    setLinkBusy(true);setLinkError("");
+    try{
+      const response=await fetch("/api/account/link-history",{method:"POST",credentials:"same-origin"});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||"Δεν συνδέθηκε το ιστορικό.");
+      setAuthStatus(current=>current?{...current,linked:true}:current);
+    }catch(error){setLinkError(error instanceof Error?error.message:"Δεν συνδέθηκε το ιστορικό.")}
+    finally{setLinkBusy(false)}
+  }
+
   const [activityConsent,setActivityConsent]=useState<boolean|null>(null);
   const [activitySaving,setActivitySaving]=useState(false);
   const [activityError,setActivityError]=useState("");
@@ -46,6 +74,24 @@ export default function AccountPage(){
   return <main className="app-shell account-shell"><header className="app-header"><Link prefetch={false} className="brand brand-home" href="/"><span className="brand-mark" aria-hidden="true"/><span>GreekTube <b>Subs</b></span><small className="brand-version">ver {APP_VERSION}</small></Link><div className="gts-header-actions"><div className="gts-profile-slot"/></div></header><section className="account-page"><Link prefetch={false} className="account-back" href="/">← {tr("Βιβλιοθήκη")}</Link><header className="account-heading"><div><h1>{tr("Ο λογαριασμός μου")}</h1><p>{tr("Προτιμήσεις και προσωπική πρόοδος σε ένα σημείο.")}</p></div><div className="account-identity-actions"><div className="account-identity" aria-live="polite"><span>{tr("Όνομα χρήστη")}</span><strong>{username||"—"}</strong></div><button type="button" className="secondary" onClick={()=>window.dispatchEvent(new Event("greektube:rename-profile"))}>{tr("Αλλαγή ονόματος")}</button></div></header>{error&&<p role="alert">{error}</p>}{!state&&!error&&<p role="status">{tr("Φόρτωση…")}</p>}
   <section className="account-section"><h2>{tr("Η δραστηριότητά σου")}</h2><div className="account-stats">{[[tr("Χρόνος προβολής"),`${Math.floor(videos.reduce((sum,v)=>sum+(v.watchedSeconds||0),0)/60)} min`],[tr("Βίντεο που είδες"),watched.length],[tr("Ολοκληρωμένα"),watched.filter(v=>(v.progress||0)>=90).length],[tr("Προβολές βίντεο","Video views"),videos.reduce((sum,v)=>sum+(v.views||0),0)],[tr("Αποθηκευμένες στιγμές"),state?.moments?.length||0]].map(([label,value])=><article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div><p className="account-meta">{tr("Η μέτρηση χρόνου ξεκινά από αυτή την αναβάθμιση. Οι παλιές θέσεις προβολής παραμένουν διαθέσιμες.")}</p></section>
   <div className="account-columns"><section className="account-section"><h2>{tr("Πρόσφατη δραστηριότητα")}</h2>{recent.length?recent.map(video=><Link prefetch={false} className="account-video" key={video.id} href={`/?video=${video.id}`}><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span><strong>{language==="en"?video.originalTitle||video.title:video.title}</strong><small>{Math.round(video.progress||0)}% · {video.channel}</small></span></Link>):<p>{tr("Δεν υπάρχει ακόμη δραστηριότητα.")}</p>}</section><section className="account-section"><h2>{tr("Ρυθμίσεις")}</h2><label className="account-language">{tr("Γλώσσα εφαρμογής")}<select value={language} onChange={e=>void changeLanguage(e.target.value as "el"|"en")}><option value="el">Ελληνικά</option><option value="en">English</option></select></label><p>{tr("Η γλώσσα εφαρμογής δεν αλλάζει τη γλώσσα των υποτίτλων.")}</p><Link prefetch={false} className="account-settings-link" href="/?view=settings">{tr("Ρυθμίσεις")} →</Link></section></div>
+  <section className="account-section account-verified-section">
+    <h2>{tr("Ασφαλής λογαριασμός")}</h2>
+    {authStatus?.authenticated?
+      <div className="account-verified-content">
+        <p>{tr("Επαληθευμένη σύνδεση")}: <strong>{authStatus.email||"Email"}</strong></p>
+        {authStatus.linked?
+          <p className="account-link-status">{tr("Το ιστορικό αυτής της συσκευής είναι συνδεδεμένο με τον λογαριασμό. Παραμένει διαθέσιμο μετά από αποσύνδεση και νέα σύνδεση.")}</p>:
+          <div className="account-link-confirm">
+            <p>{tr("Το υπάρχον ιστορικό δεν μεταφέρεται αυτόματα. Μπορείς να το συνδέσεις ρητά με αυτόν τον επαληθευμένο λογαριασμό. Δεν διαγράφονται βίντεο ή στιγμές.")}</p>
+            <button type="button" className="secondary" disabled={linkBusy} onClick={()=>void linkExistingHistory()}>{linkBusy?tr("Σύνδεση…"):tr("Σύνδεση υπάρχοντος ιστορικού")}</button>
+          </div>}
+      </div>:
+      <div className="account-verified-content">
+        <p>{tr("Το σημερινό προφίλ λειτουργεί σε αυτή τη συσκευή. Για πρόσβαση από άλλες συσκευές χρειάζεται επαληθευμένος λογαριασμός.")}</p>
+        <div className="account-auth-links"><Link href="/auth/sign-in">{tr("Σύνδεση")}</Link><Link href="/auth/sign-up">{tr("Δημιουργία λογαριασμού")}</Link></div>
+      </div>}
+    {linkError&&<p role="alert" className="account-consent-error">{linkError}</p>}
+  </section>
   <section className="account-section account-privacy">
     <h2>{tr("Ιδιωτικότητα δραστηριότητας")}</h2>
     <label className="account-consent-choice">
