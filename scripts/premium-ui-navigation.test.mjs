@@ -44,7 +44,8 @@ assert.ok(railCss.includes('.continue-row > .continue-card'),"Compact continue r
 assert.ok(railCss.includes('scroll-snap-type:x mandatory'),"Continue rail snaps on mobile");
 assert.ok(railCss.includes('html[data-theme="light"]'),"Continue rail has light scheme");
 assert.ok(!railCss.includes('.user-profile-menu'),"Watch rail no longer mixes header styles");
-assert.ok(pkg.version.split(".").slice(0,2).join(".")==="7.12"&&Number(pkg.version.split(".")[2])>=6,"Header slot architecture remains tested in later 7.12 releases");
+const [vMajor,vMinor,vPatch]=pkg.version.split(".").map(Number);
+assert.ok(vMajor>7||(vMajor===7&&(vMinor>12||(vMinor===12&&vPatch>=6))),"Header slot architecture remains tested in 7.12.6 and later releases");
 assert.doesNotMatch(auditEnhancer,/\.icon-button\[aria-label="Ρυθμίσεις"\]::before/,"SVG gear cannot coexist with injected pseudo gear");
 assert.doesNotMatch(mobilePolish,/\.icon-button\[aria-label="Ρυθμίσεις"\]::before/,"Mobile CSS must not recreate a second gear");
 assert.doesNotMatch(auditEnhancer,/MutationObserver/,"Retired pseudo-icon cleanup should not observe entire body");

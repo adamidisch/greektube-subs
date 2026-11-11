@@ -20,5 +20,6 @@ assert.match(layout,/import "\.\/player-controls-gts31-v7-12-2\.css";/,"correct 
 assert.doesNotMatch(layout,/import "\.\/player-controls-compact-v7-12-1\.css";/,"obsolete mismatched rules must not load");
 assert.match(jsx,/<h1 className="player-greek-title">\{appTitle\(selected\)\}<\/h1>/,"preserve main video title");
 assert.doesNotMatch(jsx,/className="paused-video-title"/,"do not show duplicate title over video");
-assert.ok(pkg.version.split(".").slice(0,2).join(".")==="7.12" && Number(pkg.version.split(".")[2])>=2,"keep v7.12.2 player control fix in newer releases");
+const [major,minor,patch]=pkg.version.split(".").map(Number);
+assert.ok(major>7||(major===7&&(minor>12||(minor===12&&patch>=2))),"keep v7.12.2 player control fix in newer releases");
 console.log("player gts31 compact controls, correct selectors and single title checks passed");
