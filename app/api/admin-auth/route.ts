@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { recordServerEvent } from "@/lib/analytics-server";
 import { ADMIN_SESSION_COOKIE, adminPassword, adminSessionToken, safeEqual } from "@/lib/admin-auth";
 
 export async function GET(request: Request) {
@@ -14,8 +15,10 @@ export async function POST(request: Request) {
   if (!configuredPassword) return NextResponse.json({ error: "Η προστασία επεξεργασίας δεν έχει ρυθμιστεί." }, { status: 503 });
   const suppliedPassword = String((await request.json() as { password?: string }).password || "");
   if (!safeEqual(suppliedPassword, configuredPassword)) {
+    await recordServerEvent(request, "login_failed");
     return NextResponse.json({ error: "Ο κωδικός δεν είναι σωστός." }, { status: 401 });
   }
+  await recordServerEvent(request, "login");
   const response = NextResponse.json({ authorized: true });
   response.cookies.set(ADMIN_SESSION_COOKIE, await adminSessionToken(configuredPassword), {
     httpOnly: true,

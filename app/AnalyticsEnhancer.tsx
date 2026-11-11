@@ -43,7 +43,7 @@ export default function AnalyticsEnhancer(){
   const queue=useRef<QueuedEvent[]>([]);
   const lastPath=useRef("");
   const watchAccum=useRef(0);
-  const lastTick=useRef(Date.now());
+  const lastTick=useRef(0);
   const lastProgressBucket=useRef<Record<string,number>>({});
 
   useEffect(()=>{const value=getConsent();consentRef.current=value;try{if(!localStorage.getItem(CONSENT_KEY))localStorage.setItem(CONSENT_KEY,"yes");}catch{}},[]);
@@ -145,9 +145,43 @@ export default function AnalyticsEnhancer(){
     const originalPush=history.pushState.bind(history),originalReplace=history.replaceState.bind(history);
     history.pushState=((...args:Parameters<History["pushState"]>)=>{originalPush(...args);queueMicrotask(page);}) as History["pushState"];
     history.replaceState=((...args:Parameters<History["replaceState"]>)=>{originalReplace(...args);queueMicrotask(page);}) as History["replaceState"];
+    // Bug tracking: uncaught JS errors, unhandled promise rejections and failing /api calls (deduplicated, max 25 per page load).
+    const seenErrors=new Set<string>();
+    const reportError=(kind:string,message:string,source:string,extra:Record<string,unknown>={})=>{
+      const clean=String(message||"").replace(/\s+/g," ").trim().slice(0,160)||"(no message)";
+      const key=kind+"|"+clean+"|"+source;
+      if(seenErrors.has(key)||seenErrors.size>=25)return;
+      seenErrors.add(key);
+      track({name:"error",properties:{kind,message:clean,source:source.slice(0,120),...extra}});
+    };
+    const onWindowError=(event:ErrorEvent)=>{
+      if(!event.message||/ResizeObserver loop/i.test(event.message))return;
+      reportError("js_error",event.message,(event.filename||"").replace(location.origin,"")+":"+(event.lineno||0));
+    };
+    const onRejection=(event:PromiseRejectionEvent)=>{
+      const reason=event.reason as {message?:unknown}|string|undefined;
+      reportError("promise_rejection",typeof reason==="string"?reason:String(reason?.message||"Unhandled promise rejection"),"promise");
+    };
+    const nativeFetch=window.fetch.bind(window);
+    window.fetch=(async(...args:Parameters<typeof fetch>)=>{
+      const input=args[0];
+      const url=typeof input==="string"?input:input instanceof URL?input.href:(input as Request).url;
+      const apiPath=url.replace(location.origin,"").split("?")[0];
+      const tracked=apiPath.startsWith("/api/")&&!apiPath.startsWith("/api/analytics");
+      try{
+        const response=await nativeFetch(...args);
+        if(tracked&&response.status>=500)reportError("api_error","HTTP "+response.status,apiPath,{status:response.status});
+        return response;
+      }catch(error){
+        if(tracked&&!(error instanceof DOMException&&error.name==="AbortError"))reportError("network_error",error instanceof Error?error.message:"Network request failed",apiPath);
+        throw error;
+      }
+    }) as typeof window.fetch;
+    window.addEventListener("error",onWindowError);window.addEventListener("unhandledrejection",onRejection);
     window.addEventListener("popstate",page);document.addEventListener("click",click,true);document.addEventListener("input",input,true);document.addEventListener("change",input,true);document.addEventListener("visibilitychange",visibility);window.addEventListener("pagehide",end);
+    lastTick.current=Date.now();
     const flushTimer=window.setInterval(flush,4000);page();window.setTimeout(flush,300);
-    return()=>{window.clearInterval(timer);window.clearInterval(flushTimer);window.clearTimeout(searchTimer);window.removeEventListener("popstate",page);document.removeEventListener("click",click,true);document.removeEventListener("input",input,true);document.removeEventListener("change",input,true);document.removeEventListener("visibilitychange",visibility);window.removeEventListener("pagehide",end);history.pushState=originalPush;history.replaceState=originalReplace;flush();};
+    return()=>{window.fetch=nativeFetch;window.removeEventListener("error",onWindowError);window.removeEventListener("unhandledrejection",onRejection);window.clearInterval(timer);window.clearInterval(flushTimer);window.clearTimeout(searchTimer);window.removeEventListener("popstate",page);document.removeEventListener("click",click,true);document.removeEventListener("input",input,true);document.removeEventListener("change",input,true);document.removeEventListener("visibilitychange",visibility);window.removeEventListener("pagehide",end);history.pushState=originalPush;history.replaceState=originalReplace;flush();};
   },[]);
 
   return null;

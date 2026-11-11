@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {useState} from "react";
 import {APP_VERSION} from "../../version";
 
@@ -9,8 +10,10 @@ type TopPage={name:string;views:number;sessions:number;first_seen?:string;last_s
 type Visitor={session_id:string;first_seen:string;last_seen:string;country:string;city:string;device:string;browser:string;source:string;events:number;page_views:number;video_opens:number;watch_seconds:number;videos:string[];paths:string[];country_confirmed?:boolean};
 type VisitorVideoStat={session_id:string;video_id:string;views:number;watch_seconds:number;last_seen:string};
 type RecentEvent={created_at:string;session_id:string;event_name:string;path:string;video_id:string;referrer_host:string;country:string;city:string;device:string;browser:string;properties:Record<string,unknown>};
+type Bug={kind:string;message:string;source:string;count:number;sessions:number;first_seen:string;last_seen:string;last_session:string;last_path:string;last_video:string;device:string;browser:string};
+type Login={created_at:string;event_name:"login"|"login_failed";country:string;city:string;device:string;browser:string;ip:string};
 type VideoMeta={title:string;originalTitle:string;speakerName:string};
-type Report={days:number;summary:Summary;topVideos:TopVideo[];topPages:TopPage[];visitors:Visitor[];visitorVideoStats:VisitorVideoStat[];recent:RecentEvent[];videoTitles:Record<string,string>;videoMeta:Record<string,VideoMeta>};
+type Report={bugs:Bug[];logins:Login[];days:number;summary:Summary;topVideos:TopVideo[];topPages:TopPage[];visitors:Visitor[];visitorVideoStats:VisitorVideoStat[];recent:RecentEvent[];videoTitles:Record<string,string>;videoMeta:Record<string,VideoMeta>};
 
 function duration(value:number){const t=Math.max(0,Math.round(Number(value)||0));const h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;return h+"h "+String(m).padStart(2,"0")+"m "+String(s).padStart(2,"0")+"s";}
 function num(value:number|undefined){return new Intl.NumberFormat("en-US").format(Number(value)||0);}
@@ -27,23 +30,27 @@ export default function AnalyticsDetailClient({view,sessionId,report,days}:{view
   const meta=pageMeta(view,sessionId,report);
   return <main className="detail-page">
     <div className="detail-shell">
-      <header className="detail-header"><div><a className="back" href="/admin/analytics">← Analytics</a><span>{meta.kicker}</span><h1>{meta.title}</h1><p>{meta.subtitle}</p></div><a className="open-site" href="/">Open site ↗</a></header>
+      <header className="detail-header"><div><a className="back" href="/admin/analytics">← Analytics</a><span>{meta.kicker}</span><h1>{meta.title}</h1><p>{meta.subtitle}</p></div><Link className="open-site" href="/">Open site ↗</Link></header>
       <nav className="detail-nav">
         <a href={"/admin/analytics/details/visitors?days="+days} className={view==="visitors"?"active":""}>Visitors</a>
         <a href={"/admin/analytics/details/pages?days="+days} className={view==="pages"?"active":""}>Pages</a>
         <a href={"/admin/analytics/details/videos?days="+days} className={view==="videos"?"active":""}>Videos</a>
         <a href={"/admin/analytics/details/watch?days="+days} className={view==="watch"?"active":""}>Watch</a>
+        <a href={"/admin/analytics/details/bugs?days="+days} className={view==="bugs"?"active":""}>Bugs</a>
+        <a href={"/admin/analytics/details/logins?days="+days} className={view==="logins"?"active":""}>Logins</a>
       </nav>
       <section className="detail-toolbar"><div><small>PERIOD</small><strong>{days===1?"Today":"Last "+days+" days"}</strong></div><div className="periods">{[1,7,30,90].map(value=><a key={value} className={days===value?"active":""} href={"?days="+value}>{value===1?"Today":value+" days"}</a>)}</div></section>
       <DetailBody report={report} view={view} sessionId={sessionId} days={days}/>
     </div>
     <footer className="detail-footer"><div><div><strong>GreekTube <b>Subs</b></strong><span>Analytics · Version {APP_VERSION}</span></div><nav><a href="/admin/analytics">Overview</a><a href="/privacy">Privacy</a><a href="/contact">Contact</a></nav></div></footer>
-    <style>{css}</style>
+    <style>{css}</style><style>{bugCss}</style>
   </main>;
 }
 
 function pageMeta(view:string,sessionId:string|undefined,report:Report){
   if(sessionId){const v=report.visitors.find(x=>x.session_id===sessionId);return{kicker:"VISITOR DETAIL",title:v?((v.city&&v.city!=="Unknown"?v.city+", ":"")+country(v.country)):"Visitor session",subtitle:"Session activity, videos and viewing time."};}
+  if(view==="bugs")return{kicker:"RELIABILITY",title:"Bugs & errors",subtitle:"Errors seen by real visitors, grouped by message. Open a row to see the affected visitor."};
+  if(view==="logins")return{kicker:"SECURITY",title:"Admin logins",subtitle:"Every successful and failed admin sign-in with place, device and masked IP."};
   if(view==="pages")return{kicker:"PAGE ANALYTICS",title:"Page views",subtitle:"Clean page-level performance without duplicate time or speed query variants."};
   if(view==="videos")return{kicker:"VIDEO ANALYTICS",title:"Video views",subtitle:"Views, unique visitors and watch time for every video."};
   if(view==="watch")return{kicker:"VIEWING",title:"Watch time",subtitle:"Videos ranked by actual viewing time."};
@@ -53,6 +60,8 @@ function pageMeta(view:string,sessionId:string|undefined,report:Report){
 
 function DetailBody({report,view,sessionId,days}:{report:Report;view:string;sessionId?:string;days:number}){
   if(sessionId)return <VisitorDetail report={report} sessionId={sessionId}/>;
+  if(view==="bugs")return <BugsDetail report={report}/>;
+  if(view==="logins")return <LoginsDetail report={report}/>;
   if(view==="pages")return <PagesDetail report={report}/>;
   if(view==="videos"||view==="unique")return <VideosDetail report={report} unique={view==="unique"}/>;
   if(view==="watch")return <WatchDetail report={report}/>;
@@ -130,6 +139,27 @@ function VisitorDetail({report,sessionId}:{report:Report;sessionId:string}){
     <section className="table-card"><header><div><small>ACTIVITY</small><h2>Recent events</h2></div></header><div className="event-list">{events.length?events.map((e,i)=><div className="event-row" key={e.created_at+"-"+i}><i/><div><strong>{e.event_name}</strong><small>{e.video_id?title(report,e.video_id):e.path}</small></div><time>{when(e.created_at)}</time></div>):<p className="empty">No recent events in the retained feed.</p>}</div></section></>;
 }
 
+const KIND_LABEL:Record<string,string>={js_error:"JS error",promise_rejection:"Promise",api_error:"API 5xx",network_error:"Network"};
+function BugsDetail({report}:{report:Report}){
+  const bugs=report.bugs||[];
+  const total=bugs.reduce((sum,b)=>sum+Number(b.count||0),0);
+  const affected=bugs.reduce((max,b)=>Math.max(max,Number(b.sessions||0)),0);
+  return <><div className="summary-grid"><Stat label="ERRORS" value={num(total)} note="Total occurrences"/><Stat label="UNIQUE BUGS" value={num(bugs.length)} note="Distinct messages"/><Stat label="MOST AFFECTED" value={num(affected)} note="Visitors hit by one bug"/></div>
+    <section className="table-card"><header><div><small>ERROR LOG</small><h2>What is breaking</h2><p>Newest first. Click a row to open the last affected visitor.</p></div></header>
+      <div className="bug-list">{bugs.length?bugs.map((b,i)=><a className="bug-row" key={i} href={"/admin/analytics/visitor/"+encodeURIComponent(b.last_session)}><span className={"bug-kind "+b.kind}>{KIND_LABEL[b.kind]||b.kind}</span><div className="bug-main"><strong>{b.message}</strong><small>{[b.source,b.last_video?title(report,b.last_video):b.last_path,[b.device,b.browser].filter(Boolean).join(" · ")].filter(Boolean).join("  ·  ")}</small></div><span className="bug-num"><small>TIMES</small><b>{num(b.count)}</b></span><span className="bug-num"><small>VISITORS</small><b>{num(b.sessions)}</b></span><time>{when(b.last_seen)}</time><i aria-hidden="true">›</i></a>):<p className="empty">No errors recorded in this period. That is good news.</p>}</div>
+    </section></>;
+}
+
+function LoginsDetail({report}:{report:Report}){
+  const logins=report.logins||[];
+  const ok=logins.filter(l=>l.event_name==="login").length;
+  const failed=logins.length-ok;
+  return <><div className="summary-grid"><Stat label="SUCCESSFUL" value={num(ok)} note="Admin sign-ins"/><Stat label="FAILED" value={num(failed)} note="Wrong password attempts"/><Stat label="LAST LOGIN" value={logins[0]?when(logins[0].created_at):"—"} note={logins[0]?((logins[0].city?logins[0].city+", ":"")+country(logins[0].country)):"No logins yet"}/></div>
+    <section className="table-card"><header><div><small>SIGN-IN LOG</small><h2>Admin access</h2><p>Failed attempts from unknown places deserve attention.</p></div></header>
+      <div className="bug-list">{logins.length?logins.map((l,i)=><div className="bug-row static" key={i}><span className={"bug-kind "+(l.event_name==="login"?"ok":"fail")}>{l.event_name==="login"?"Signed in":"Failed"}</span><div className="bug-main"><strong>{flag(l.country)} {(l.city?l.city+", ":"")+country(l.country)}</strong><small>{[l.device,l.browser,l.ip&&"IP "+l.ip].filter(Boolean).join("  ·  ")}</small></div><time>{when(l.created_at)}</time></div>):<p className="empty">No logins recorded yet. Logging started with this version.</p>}</div>
+    </section></>;
+}
+
 function SortControl({value,onChange,dir,onDir,options}:{value:string;onChange:(value:string)=>void;dir:"asc"|"desc";onDir:()=>void;options:Array<[string,string]>}){
   return <div className="sort-control"><span>SORT BY</span><select value={value} onChange={event=>onChange(event.target.value)}>{options.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select><button type="button" onClick={onDir} title={dir==="desc"?"Descending":"Ascending"}>{dir==="desc"?"↓":"↑"}</button></div>;
 }
@@ -151,4 +181,12 @@ const css=`
 .detail-footer{border-top:1px solid #dfe2e8;background:#202532;color:#cbd0d8}.detail-footer>div{width:min(1360px,calc(100% - 56px));margin:0 auto;display:flex;justify-content:space-between;align-items:center;padding:24px 0}.detail-footer strong{font-size:12px}.detail-footer strong b{color:#a89df0}.detail-footer span{display:block;margin-top:4px;color:#7f8793;font-size:9px}.detail-footer nav{display:flex;gap:16px}.detail-footer a{color:#aeb5bf;text-decoration:none;font-size:10px}
 @media(max-width:900px){.summary-grid,.summary-grid.four{grid-template-columns:1fr 1fr}.session-row{grid-template-columns:1fr 1fr}.session-row>em,.session-row>i{display:none}.data-head{display:none}.data-row{grid-template-columns:1fr 1fr}.video-line{grid-template-columns:34px 1fr auto}.video-line>span:nth-of-type(n+3){display:none}.detail-header{align-items:flex-start}.open-site{display:none}}
 @media(max-width:620px){.detail-shell,.detail-footer>div{width:calc(100% - 28px)}.detail-shell{padding-top:18px}.detail-header h1{font-size:30px}.detail-nav{width:100%;overflow:auto}.detail-toolbar{align-items:flex-start;flex-wrap:wrap}.periods{width:100%;overflow:auto}.summary-grid,.summary-grid.four{grid-template-columns:1fr}.session-row{grid-template-columns:1fr}.session-row>span{display:none}.visitor-hero{align-items:flex-start}.visitor-hero>em{display:none}.video-line{grid-template-columns:34px 1fr}.video-line>a{grid-column:2}.detail-footer>div{align-items:flex-start;flex-direction:column;gap:14px}}
+`;
+
+const bugCss=`
+.bug-list{border-top:1px solid #eceef2}.bug-row{display:grid;grid-template-columns:96px minmax(0,1fr) 70px 78px 150px 14px;gap:12px;align-items:center;padding:13px 18px;border-bottom:1px solid #eceef2;color:inherit;text-decoration:none}.bug-row.static{grid-template-columns:96px minmax(0,1fr) 150px}.bug-row:last-child{border-bottom:0}a.bug-row:hover{background:#faf9ff}
+.bug-kind{justify-self:start;padding:5px 9px;border-radius:8px;background:#f0edff;color:#6c5ed0;font-size:11px;font-weight:750;white-space:nowrap}.bug-kind.js_error,.bug-kind.promise_rejection,.bug-kind.fail{background:#fdeceb;color:#c0392b}.bug-kind.api_error,.bug-kind.network_error{background:#fff4e0;color:#b4690e}.bug-kind.ok{background:#e6f6ec;color:#1f8a54}
+.bug-main{min-width:0}.bug-main strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.bug-main small{display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#7d8490;font-size:12px}
+.bug-num small{display:block;color:#9097a1;font-size:10px;font-weight:800;letter-spacing:.08em}.bug-num b{font-size:15px}.bug-row time{color:#6e7682;font-size:12px}.bug-row>i{color:#9a90e0;font-style:normal;font-size:18px}
+@media(max-width:900px){.bug-row,.bug-row.static{grid-template-columns:1fr auto}.bug-kind{grid-column:1}.bug-main{grid-column:1/-1;grid-row:2}.bug-num,.bug-row>i{display:none}.bug-row time{justify-self:end}}
 `;

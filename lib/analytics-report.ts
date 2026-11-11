@@ -4,6 +4,8 @@ const SHARED_LIBRARY_KEY="greektube-shared-library-v1";
 type Row=Record<string,unknown>;
 
 export type AnalyticsSummary={sessions?:number;page_views?:number;video_opens?:number;watch_seconds?:number;unique_videos?:number;latest_event?:string|null;recent_events?:number};
+export type AnalyticsBug={kind:string;message:string;source:string;count:number;sessions:number;first_seen:string;last_seen:string;last_session:string;last_path:string;last_video:string;device:string;browser:string};
+export type AnalyticsLogin={created_at:string;event_name:"login"|"login_failed";country:string;city:string;device:string;browser:string;ip:string};
 export type AnalyticsTopVideo={video_id:string;views:number;sessions:number;watch_seconds:number;last_seen:string};
 export type AnalyticsTopPage={name:string;views:number;sessions:number;first_seen?:string;last_seen?:string};
 export type AnalyticsCountRow={name:string;sessions:number;confirmed_sessions?:number};
@@ -15,7 +17,7 @@ export type AnalyticsRecentEvent={created_at:string;session_id:string;event_name
 export type AnalyticsVideoMeta={title:string;originalTitle:string;speakerName:string};
 export type AnalyticsReport={
   days:number;summary:AnalyticsSummary;topVideos:AnalyticsTopVideo[];topPages:AnalyticsTopPage[];sources:AnalyticsCountRow[];countries:AnalyticsCountRow[];cities:AnalyticsCityRow[];
-  devices:AnalyticsCountRow[];browsers:AnalyticsCountRow[];events:AnalyticsEventRow[];visitors:AnalyticsVisitor[];visitorVideoStats:AnalyticsVisitorVideoStat[];
+  devices:AnalyticsCountRow[];browsers:AnalyticsCountRow[];events:AnalyticsEventRow[];visitors:AnalyticsVisitor[];bugs:AnalyticsBug[];logins:AnalyticsLogin[];visitorVideoStats:AnalyticsVisitorVideoStat[];
   recent:AnalyticsRecentEvent[];videoTitles:Record<string,string>;videoMeta:Record<string,AnalyticsVideoMeta>;
 };
 
@@ -144,9 +146,26 @@ export async function loadAnalyticsReport(daysInput:unknown):Promise<AnalyticsRe
       ORDER BY created_at DESC LIMIT 500`,[days]),
 
     db.query(`SELECT value FROM app_state WHERE key=$1 LIMIT 1`,[SHARED_LIBRARY_KEY]),
+
+    db.query(`SELECT COALESCE(NULLIF(properties->>'kind',''),'error') AS kind,
+      COALESCE(NULLIF(properties->>'message',''),'(no message)') AS message,
+      COALESCE(NULLIF(properties->>'source',''),'') AS source,
+      COUNT(*)::int AS count,COUNT(DISTINCT session_id)::int AS sessions,
+      MIN(created_at) AS first_seen,MAX(created_at) AS last_seen,
+      (array_agg(session_id ORDER BY created_at DESC))[1] AS last_session,
+      (array_agg(path ORDER BY created_at DESC))[1] AS last_path,
+      COALESCE((array_agg(NULLIF(video_id,'') ORDER BY created_at DESC))[1],'') AS last_video,
+      COALESCE((array_agg(device ORDER BY created_at DESC))[1],'') AS device,
+      COALESCE((array_agg(browser ORDER BY created_at DESC))[1],'') AS browser
+      FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval AND event_name='error'
+      GROUP BY 1,2,3 ORDER BY last_seen DESC LIMIT 100`,[days]),
+
+    db.query(`SELECT created_at,event_name,country,city,device,browser,COALESCE(properties->>'ip','') AS ip
+      FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval AND event_name IN ('login','login_failed')
+      ORDER BY created_at DESC LIMIT 200`,[days]),
   ]);
 
-  const [summaryRows,topVideos,topPages,sources,countries,cities,devices,browsers,events,visitors,visitorVideoStats,recent,libraryRows]=results.map(result=>result as Row[]);
+  const [summaryRows,topVideos,topPages,sources,countries,cities,devices,browsers,events,visitors,visitorVideoStats,recent,libraryRows,bugs,logins]=results.map(result=>result as Row[]);
   const {titles:videoTitles,videoMeta}=libraryMeta(libraryRows[0]?.value);
   return {
     days,
@@ -162,6 +181,8 @@ export async function loadAnalyticsReport(daysInput:unknown):Promise<AnalyticsRe
     visitors:visitors as AnalyticsVisitor[],
     visitorVideoStats:visitorVideoStats as AnalyticsVisitorVideoStat[],
     recent:recent as AnalyticsRecentEvent[],
+    bugs:bugs as AnalyticsBug[],
+    logins:logins as AnalyticsLogin[],
     videoTitles,videoMeta,
   };
 }

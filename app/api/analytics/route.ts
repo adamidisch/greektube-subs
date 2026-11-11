@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 
 const MAX_BATCH=30;
 const ALLOWED_EVENTS=new Set([
-  "page_view","click","video_open","video_watch","video_progress","search","filter","share","favorite","fullscreen","speed","subtitle","editor_open","editor_save","session_end"
+  "page_view","click","video_open","video_watch","video_progress","search","filter","share","favorite","fullscreen","speed","subtitle","editor_open","editor_save","session_end","error"
 ]);
 
 type AnalyticsEvent={
