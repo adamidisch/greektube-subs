@@ -4,6 +4,7 @@ import {
   acquireProcessingLock,
   completeTranscript,
   getTranscript,
+  getTranscriptRowMeta,
   releaseProcessingLock,
   saveProcessingCheckpoint,
   type CachedCue,
@@ -71,8 +72,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Το αγγλικό και το ελληνικό SRT πρέπει να έχουν ακριβώς τον ίδιο αριθμό και τα ίδια timestamps." }, { status: 400 });
   }
 
-  const previous = await getTranscript(videoId);
-  if (!previous) return NextResponse.json({ error: "Δεν υπάρχει υπάρχον transcript record για αυτό το βίντεο." }, { status: 409 });
+  // A broken payload (missing Blob checkpoint) must not block a full clean-source replacement.
+  const previous = await getTranscript(videoId).catch(() => null);
+  const meta = previous ?? await getTranscriptRowMeta(videoId);
+  if (!meta) return NextResponse.json({ error: "Δεν υπάρχει υπάρχον transcript record για αυτό το βίντεο." }, { status: 409 });
 
   const token = crypto.randomUUID();
   let staged = false;
@@ -89,9 +92,9 @@ export async function POST(request: Request) {
       rawEnglishTranscript: english,
       englishTranscript: english,
       greekTranscript: [],
-      title: previous.title,
-      channel: previous.channel,
-      duration: Math.max(previous.duration, english.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0)),
+      title: meta.title,
+      channel: meta.channel,
+      duration: Math.max(meta.duration, english.reduce((max, cue) => Math.max(max, cue.start + cue.duration), 0)),
       originalLanguage: "en",
     });
     if (!saved) throw new Error("Δεν αποθηκεύτηκε το canonical source checkpoint.");
@@ -112,7 +115,7 @@ export async function POST(request: Request) {
       sourceRevisionCreated: frozen.created,
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    if (staged) {
+    if (staged && previous) {
       const rollbackToken = crypto.randomUUID();
       if (await acquireProcessingLock(videoId, rollbackToken, true)) {
         await completeTranscript(previous, rollbackToken).catch(() => undefined);

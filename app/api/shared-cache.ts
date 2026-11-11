@@ -195,6 +195,19 @@ function normalizeReadyTranscriptOrder(
   };
 }
 
+// Bare row metadata, readable even when the transcript payload (Blob checkpoint) is missing or broken.
+export async function getTranscriptRowMeta(videoId: string) {
+  await ensureTranscriptTable();
+  const db = database();
+  const rows = await db.query(
+    `SELECT title, channel, duration FROM video_transcripts WHERE video_id = $1 LIMIT 1`,
+    [videoId],
+  ) as { title: string | null; channel: string | null; duration: number | null }[];
+  const row = rows[0];
+  if (!row) return null;
+  return { title: row.title || "", channel: row.channel || "", duration: Number(row.duration) || 0 };
+}
+
 export async function getTranscript(videoId: string) {
   await ensureTranscriptTable();
   const db = database();
