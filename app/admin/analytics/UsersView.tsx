@@ -1,6 +1,8 @@
 "use client";
 
 import {useEffect,useMemo,useState} from "react";
+import {SortHead,sortRows} from "./sortable";
+import type {Sort} from "./sortable";
 
 type Row={public_id:string;username:string;created_at:string;last_saved:string|null;moments:number;watched:number;watch_seconds:number};
 type ListData={counts:{profiles:number;with_history:number;recently_saved:number};users:Row[]};
@@ -34,7 +36,11 @@ export default function UsersView({id,onOpen,onOpenVideo}:Props){
 function UserList({onOpen}:{onOpen:(id:string)=>void}){
   const {data,error,loading}=useFetched<ListData>("/api/analytics/users");
   const [query,setQuery]=useState("");
-  const rows=useMemo(()=>{const q=query.trim().toLowerCase();return (data?.users??[]).filter(u=>!q||u.username.toLowerCase().includes(q));},[data,query]);
+  const [sort,setSort]=useState<Sort>(null);
+  const rows=useMemo(()=>{
+    const q=query.trim().toLowerCase();
+    return sortRows((data?.users??[]).filter(u=>!q||u.username.toLowerCase().includes(q)),sort,{user:u=>u.username,created:u=>new Date(u.created_at).getTime()||0,saved:u=>u.last_saved?new Date(u.last_saved).getTime():0,videos:u=>Number(u.watched),watch:u=>Number(u.watch_seconds),moments:u=>Number(u.moments)});
+  },[data,query,sort]);
   if(error)return <section className="ad-message">Could not load users.</section>;
   if(loading||!data)return <div className="ad-skel"><div className="ad-kpis">{[0,1,2].map(i=><div key={i} className="ad-kpi sk"><i/><i/><i/></div>)}</div></div>;
   return <>
@@ -46,7 +52,7 @@ function UserList({onOpen}:{onOpen:(id:string)=>void}){
     <section className="ad-card flush">
       <header><div><small>{num(rows.length)} PROFILES</small><h2>Users</h2></div><div className="ad-filters"><input type="search" placeholder="Search username…" value={query} onChange={e=>setQuery(e.target.value)} aria-label="Search username"/></div></header>
       <div className="ad-table users">
-        <div className="ad-tr head" role="row"><span>User</span><span>Created</span><span>Last saved</span><span>Videos</span><span>Watch</span><span>Moments</span></div>
+        <SortHead cols={[{key:"user",label:"User"},{key:"created",label:"Created",numeric:true},{key:"saved",label:"Last saved",numeric:true},{key:"videos",label:"Videos",numeric:true},{key:"watch",label:"Watch",numeric:true},{key:"moments",label:"Moments",numeric:true}]} sort={sort} onSort={setSort}/>
         {rows.map(u=><button type="button" key={u.public_id} className="ad-tr" role="row" onClick={()=>onOpen(u.public_id)}>
           <span className="loc"><b className="ad-avatar" aria-hidden="true">{u.username.slice(0,1).toUpperCase()}</b><em>{u.username}</em></span>
           <span data-label="Created">{when(u.created_at)}</span><span data-label="Last saved">{when(u.last_saved)}</span>

@@ -6,6 +6,8 @@ import {useEffect,useMemo,useState} from "react";
 import type {AnalyticsDaily,AnalyticsReport,AnalyticsVisitor} from "@/lib/analytics-report";
 import AnalyticsLogo from "./AnalyticsLogo";
 import UsersView from "./UsersView";
+import {SortHead,sortRows} from "./sortable";
+import type {Sort,SortCol} from "./sortable";
 
 type MetricKey="sessions"|"page_views"|"video_opens"|"watch_seconds";
 type Nav={view:string;id:string;country:string;city:string;device:string;browser:string;source:string;bot:string};
@@ -131,6 +133,8 @@ export default function AnalyticsDashboard({report,loading,error,days,onDays,onR
   const [metric,setMetric]=useState<MetricKey>("sessions");
   const [query,setQuery]=useState("");
   const [page,setPage]=useState(0);
+  const [vSort,setVSort]=useState<Sort>(null);
+  const [rankSort,setRankSort]=useState<{videos:Sort;pages:Sort}>({videos:null,pages:null});
   const detailBase=nav.view;
 
   const visitors=useMemo(()=>report?.visitors??[],[report]);
@@ -152,9 +156,19 @@ export default function AnalyticsDashboard({report,loading,error,days,onDays,onR
       return !q||[place(v),v.device,v.browser,v.source,v.session_id].join(" ").toLowerCase().includes(q);
     });
   },[visitors,botIds,nav,query]);
-  const pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+  const visitorCols=(videoId?:string):SortCol[]=>[{key:"loc",label:"Location"},{key:"device",label:"Device"},{key:"source",label:"Source"},{key:"a",label:videoId?"Opens":"Pages",numeric:true},{key:"b",label:videoId?"Last":"Videos",numeric:!videoId},{key:"watch",label:"Watch",numeric:true},{key:"seen",label:"Last seen",numeric:true}];
+  const visitorAcc=(videoId?:string)=>{
+    const stats=videoId?new Map((report?.visitorVideoStats??[]).filter(x=>x.video_id===videoId).map(x=>[x.session_id,x])):null;
+    return {loc:(v:AnalyticsVisitor)=>place(v),device:(v:AnalyticsVisitor)=>`${v.device} ${v.browser}`,source:(v:AnalyticsVisitor)=>v.source||"direct",
+      a:(v:AnalyticsVisitor)=>Number(stats?stats.get(v.session_id)?.views:v.page_views)||0,
+      b:(v:AnalyticsVisitor)=>stats?String(stats.get(v.session_id)?.last_seen||""):Number(v.video_opens)||0,
+      watch:(v:AnalyticsVisitor)=>Number(stats?stats.get(v.session_id)?.watch_seconds:v.watch_seconds)||0,
+      seen:(v:AnalyticsVisitor)=>new Date(v.last_seen).getTime()||0};
+  };
+  const sortedFiltered=useMemo(()=>sortRows(filtered,vSort,visitorAcc()),[filtered,vSort,report]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pages=Math.max(1,Math.ceil(sortedFiltered.length/PAGE_SIZE));
   const cur=Math.min(page,pages-1);
-  const shown=filtered.slice(cur*PAGE_SIZE,(cur+1)*PAGE_SIZE);
+  const shown=sortedFiltered.slice(cur*PAGE_SIZE,(cur+1)*PAGE_SIZE);
 
   const daily=report?.daily??[];
   const prev=report?.previous;
@@ -185,8 +199,8 @@ export default function AnalyticsDashboard({report,loading,error,days,onDays,onR
   function renderTable({rows,videoId}:{rows:AnalyticsVisitor[];videoId?:string}){
     const stats=videoId?new Map((report?.visitorVideoStats??[]).filter(s=>s.video_id===videoId).map(s=>[s.session_id,s])):null;
     return <div className="ad-table" role="table">
-      <div className="ad-tr head" role="row"><span>Location</span><span>Device</span><span>Source</span><span>{videoId?"Opens":"Pages"}</span><span>{videoId?"Last":"Videos"}</span><span>Watch</span><span>Last seen</span></div>
-      {rows.map(v=>{const s=stats?.get(v.session_id);return <button type="button" key={v.session_id} className="ad-tr" role="row" onClick={()=>openVisitor(v.session_id)}>
+      <SortHead cols={visitorCols(videoId)} sort={vSort} onSort={next=>{setVSort(next);setPage(0);}}/>
+      {(videoId?sortRows(rows,vSort,visitorAcc(videoId)):rows).map(v=>{const s=stats?.get(v.session_id);return <button type="button" key={v.session_id} className="ad-tr" role="row" onClick={()=>openVisitor(v.session_id)}>
         <span className="loc"><b aria-hidden="true">{flag(v.country)}</b><em>{place(v)||"Unknown"}{botIds.has(v.session_id)&&<i className="ad-chip">automated</i>}</em></span>
         <span data-label="Device">{v.device||"—"} · {v.browser||"—"}</span><span data-label="Source">{v.source||"direct"}</span>
         <span data-label={videoId?"Opens":"Pages"}>{num(s?s.views:v.page_views)}</span><span data-label={videoId?"Last":"Videos"}>{s?when(s.last_seen):num(v.video_opens)}</span><span data-label="Watch">{dur(s?s.watch_seconds:v.watch_seconds)}</span><span data-label="Last seen">{when(v.last_seen)}</span>
@@ -233,11 +247,13 @@ export default function AnalyticsDashboard({report,loading,error,days,onDays,onR
     </div>;
     if(nav.view==="content")return <div className="ad-grid two even">
       <Card title="Videos" kicker="PERFORMANCE">
-        <ol className="ad-rank">{report.topVideos.slice(0,20).map((v,i)=><li key={v.video_id}><button type="button" onClick={()=>openVideo(v.video_id)}><b>{i+1}</b><div><strong>{title(v.video_id)}</strong><small>{report.videoMeta[v.video_id]?.speakerName||v.video_id}</small></div><span><small>VIEWS</small>{num(v.views)}</span><span><small>VISITORS</small>{num(v.sessions)}</span><span><small>WATCH</small>{dur(v.watch_seconds)}</span></button></li>)}</ol>
+        <SortHead className="rank" cols={[{key:"n",label:"Video"},{key:"views",label:"Views",numeric:true},{key:"sessions",label:"Visitors",numeric:true},{key:"watch",label:"Watch",numeric:true}]} sort={rankSort.videos} onSort={next=>setRankSort(r=>({...r,videos:next}))}/>
+        <ol className="ad-rank">{sortRows(report.topVideos,rankSort.videos,{n:v=>title(v.video_id),views:v=>Number(v.views),sessions:v=>Number(v.sessions),watch:v=>Number(v.watch_seconds)}).slice(0,20).map((v,i)=><li key={v.video_id}><button type="button" onClick={()=>openVideo(v.video_id)}><b>{i+1}</b><div><strong>{title(v.video_id)}</strong><small>{report.videoMeta[v.video_id]?.speakerName||v.video_id}</small></div><span><small>VIEWS</small>{num(v.views)}</span><span><small>VISITORS</small>{num(v.sessions)}</span><span><small>WATCH</small>{dur(v.watch_seconds)}</span></button></li>)}</ol>
         {!report.topVideos.length&&<p className="ad-empty">No video activity yet.</p>}
       </Card>
       <Card title="Pages" kicker="TRAFFIC">
-        <ol className="ad-rank">{report.topPages.slice(0,20).map((p,i)=>{const m=/video=([A-Za-z0-9_-]{11})/.exec(p.name);return <li key={p.name}><button type="button" disabled={!m} onClick={()=>m&&openVideo(m[1])}><b>{i+1}</b><div><strong>{m?title(m[1]):p.name==="/"?"Library / Home":p.name}</strong><small>{m?"Video page":"Site page"}</small></div><span><small>VIEWS</small>{num(p.views)}</span><span><small>VISITORS</small>{num(p.sessions)}</span></button></li>;})}</ol>
+        <SortHead className="rank pages" cols={[{key:"n",label:"Page"},{key:"views",label:"Views",numeric:true},{key:"sessions",label:"Visitors",numeric:true}]} sort={rankSort.pages} onSort={next=>setRankSort(r=>({...r,pages:next}))}/>
+        <ol className="ad-rank">{sortRows(report.topPages,rankSort.pages,{n:p=>p.name,views:p=>Number(p.views),sessions:p=>Number(p.sessions)}).slice(0,20).map((p,i)=>{const m=/video=([A-Za-z0-9_-]{11})/.exec(p.name);return <li key={p.name}><button type="button" disabled={!m} onClick={()=>m&&openVideo(m[1])}><b>{i+1}</b><div><strong>{m?title(m[1]):p.name==="/"?"Library / Home":p.name}</strong><small>{m?"Video page":"Site page"}</small></div><span><small>VIEWS</small>{num(p.views)}</span><span><small>VISITORS</small>{num(p.sessions)}</span></button></li>;})}</ol>
       </Card>
     </div>;
     if(nav.view==="visitors")return <Card title="Visitors" kicker={`${num(filtered.length)} SESSIONS`} className="flush" action={<div className="ad-filters">

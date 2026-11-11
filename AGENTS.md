@@ -42,6 +42,14 @@ These rules are the visual contract for every future change.
 - Do not create large empty panels around tiny labels.
 - Use consistent radii: 10–12px for controls and 12–16px for cards or popovers.
 
+## Tables and lists
+
+- Every table or data list with columns (analytics, users, visitors, videos, library, admin screens, and any future site or app we build) must have sortable columns: clicking a column header sorts by it.
+- First click gives the natural order (text A→Z, numbers and dates high→low), the second click reverses it, the third clears the sort. The header shows ↕ when inactive and ▲/▼ when active, with `aria-sort`.
+- Use the shared helper in `app/admin/analytics/sortable.tsx` (`SortHead`, `sortRows`, `nextSort`) instead of writing a new one. On mobile the sortable headers stay visible as a wrapping row of tappable labels.
+- Sort before paginating, and reset to the first page when the sort changes.
+- Clicking a row must open its details in the same page (no slow full page reload), with a loading indicator while data loads.
+
 ## Player
 
 - Keep the video as the visual priority.
