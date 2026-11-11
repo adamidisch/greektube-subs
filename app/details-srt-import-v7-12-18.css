@@ -1,0 +1,13 @@
+/* v7.12.18 — one-step SRT import on the video details screen */
+.details-srt-files{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+.details-srt-files button{display:flex!important;align-items:center;gap:10px;width:100%;min-height:44px;min-width:0;text-align:left;font-size:14px}
+.details-srt-files button b{flex:none;padding:3px 7px;border-radius:7px;background:rgba(142,124,255,.18);color:#c7beff;font-size:12px;font-weight:700;letter-spacing:.06em}
+.details-srt-files button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.details-srt-files button.picked{border-color:rgba(137,207,166,.55)!important}
+.details-srt-files button.picked b{background:rgba(137,207,166,.18);color:#89cfa6}
+.video-details-option .details-srt-publish{width:100%;min-height:44px;font-size:14px}
+.video-details-option .details-srt-ok{color:#89cfa6;font-weight:600}
+html[data-theme="light"] .details-srt-files button b{background:rgba(108,92,231,.12);color:#5b4bd6}
+html[data-theme="light"] .details-srt-files button.picked b{background:rgba(31,138,84,.12);color:#1f8a54}
+html[data-theme="light"] .video-details-option .details-srt-ok{color:#1f8a54}
+@media(max-width:620px){.details-srt-files{grid-template-columns:1fr}}

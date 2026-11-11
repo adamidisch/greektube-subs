@@ -1,5 +1,6 @@
 "use client";
 
+import DetailsSrtImport from "./DetailsSrtImport";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import AudioTimingCapturePanel from "./AudioTimingCapturePanel";
 import { APP_VERSION } from "./version";
@@ -1346,7 +1347,7 @@ export default function GreekTubePlayer() {
           </div>
           <div className="video-details-info">
             <h1>{appTitle(selected)}</h1>
-            {englishTitle(selected)&&<p className="video-details-original">{englishTitle(selected)}</p>}
+            {englishTitle(selected)&&englishTitle(selected)!==appTitle(selected)&&<p className="video-details-original">{englishTitle(selected)}</p>}
             <dl className="video-details-meta">
               <div><dt>{upperGreekLabel(tr("Ομιλητής"))}</dt><dd>{displaySpeakerName}</dd></div>
               {displaySpeakerRole&&<div><dt>{upperGreekLabel(tr("Ιδιότητα"))}</dt><dd>{displaySpeakerRole}</dd></div>}
@@ -1370,16 +1371,9 @@ export default function GreekTubePlayer() {
         <section className="video-details-translate">
           <h2>{upperGreekLabel(tr("Μετάφραση και υπότιτλοι"))}</h2>
           <p className="video-details-translate-intro">{tr("Δεν υπάρχουν ακόμη ελληνικοί υπότιτλοι για αυτό το βίντεο.")}</p>
-          <div className="video-details-option recommended">
-            <small>{upperGreekLabel(tr("Προτεινόμενη επιλογή"))}</small>
-            <p>{tr("Αντέγραψε τον σύνδεσμο και στείλε τον στο ChatGPT. Θα αναλάβει τη λήψη του αγγλικού SRT, την ελληνική μετάφραση και τον έλεγχο ορολογίας και timestamps.")}</p>
-            <div className="video-details-option-actions">
-              <button type="button" className="primary" onClick={()=>void handleCopyLink()}>{detailsCopyState==="copied"?tr("Αντιγράφηκε ✓"):tr("Αντιγραφή")}</button>
-              <button type="button" className="primary" onClick={()=>void requestManualImport(detailsVideo)}>{tr("Εισαγωγή ελληνικού SRT")}</button>
-            </div>
-            <button type="button" className="video-details-secondary-link" disabled={detailsSrtDownloading} onClick={()=>void handleDownloadSrt()}>{detailsSrtDownloading?tr("Λήψη…"):tr("Λήψη αγγλικού SRT")}</button>
-            {detailsSrtError&&<p className="form-error" role="alert">{detailsSrtError}</p>}
-          </div>
+<DetailsSrtImport key={detailsVideo.id} videoId={detailsVideo.id} onNeedLogin={()=>void requestEdit(detailsVideo)}/>
+          <button type="button" className="video-details-secondary-link" disabled={detailsSrtDownloading} onClick={()=>void handleDownloadSrt()}>{detailsSrtDownloading?tr("Λήψη…"):tr("Λήψη αγγλικού SRT")}</button>
+          {detailsSrtError&&<p className="form-error" role="alert">{detailsSrtError}</p>}
           <div className="video-details-option">
             <small>{upperGreekLabel(tr("Αυτόματη μετάφραση"))}</small>
             <p>{tr("Η αυτόματη μετάφραση ελέγχεται πριν από τη δημοσίευση. Ο ακουστικός έλεγχος εμφανίζεται ξεχωριστά.","Automatic translation is checked before publication. Audio review is reported separately.")}</p>
