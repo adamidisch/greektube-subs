@@ -155,3 +155,17 @@ html[data-theme="light"] .ad{--ad-bg:#f4f5f8;--ad-surface:#fff;--ad-surface2:#f7
   .ad-tr.head.rank{display:flex;padding:6px}
 }
 @media(max-width:720px){.ad-rank li>button{grid-template-columns:26px minmax(0,1fr) 62px 62px}.ad-rank li>button>span:nth-child(5){display:none}.ad-tr.head.rank>span:nth-child(5){display:none}}
+/* v7.13.5 compact colored KPI cards: icon tile, no sparkline */
+.ad-kpis{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.ad-kpi{--k:var(--ad-accent);flex-direction:row;align-items:center;gap:12px;min-height:0;padding:12px 14px;border:1px solid color-mix(in srgb,var(--k) 22%,var(--ad-line));background:color-mix(in srgb,var(--k) 9%,var(--ad-surface));box-shadow:none;color:var(--ad-text)}
+.ad-kpi:hover{border-color:var(--k);transform:translateY(-1px)}
+.ad-kpi.tone-violet{--k:#7c6cf0}.ad-kpi.tone-blue{--k:#3b82f6}.ad-kpi.tone-cyan{--k:#0ea5b7}.ad-kpi.tone-amber{--k:#e0911a}.ad-kpi.tone-rose{--k:#e5484d}.ad-kpi.tone-green{--k:#22a06b}
+.ad-kpi-icon{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--k) 18%,transparent);color:var(--k)}
+.ad-kpi-text{display:flex;flex-direction:column;min-width:0;flex:1}
+.ad-kpi small{color:var(--ad-muted);font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.ad-kpi strong{margin-top:2px;font-size:22px;line-height:1.15}
+.ad-kpi-foot{display:flex;align-items:center;gap:6px;margin-top:3px;color:var(--ad-muted);font-size:12px;min-width:0}.ad-kpi-foot>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ad-kpi.bad .ad-kpi-icon{animation:none}
+@media(max-width:1280px){.ad-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.ad-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ad-kpi{padding:10px;gap:9px}.ad-kpi-icon{width:34px;height:34px;border-radius:10px}.ad-kpi strong{font-size:19px}.ad-kpi-foot>span{display:none}.ad-kpi-foot{margin-top:0}}
+.ad-kpi-val{display:flex;align-items:center;gap:8px;min-width:0}.ad-kpi-val strong{margin-top:0}

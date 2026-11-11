@@ -25,6 +25,10 @@ const ICONS:Record<string,string>={
   visitors:"M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z",
   health:"M12 21s-7-4.4-9.3-9A5.4 5.4 0 0 1 12 6.2 5.4 5.4 0 0 1 21.3 12C19 16.6 12 21 12 21z",
   users:"M12 3 4 6v6c0 4.4 3.1 8.4 8 9 4.9-.6 8-4.6 8-9V6l-8-3z",
+  pages:"M6 3h8l5 5v13H6V3zm8 0v5h5",
+  clock:"M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zm0-13v5l3 2",
+  bug:"M9 9h6v8a3 3 0 0 1-6 0V9zm0 0V7a3 3 0 0 1 6 0v2M4 13h5m6 0h5M5 7l3 2m11-2-3 2",
+  lock:"M5 11h14v9H5v-9zm3 0V8a4 4 0 0 1 8 0v3",
   site:"M14 3v2h3.6l-9.3 9.3 1.4 1.4L19 6.4V10h2V3h-7zM5 5v14h14v-6h-2v4H7V7h4V5H5z",
 };
 function Icon({name}:{name:string}){return <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d={ICONS[name]} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round"/></svg>;}
@@ -69,13 +73,6 @@ function useNav(){
     window.scrollTo({top:0});
   };
   return [nav,go] as const;
-}
-
-function Sparkline({values}:{values:number[]}){
-  if(values.length<2)return <svg className="ad-spark" viewBox="0 0 100 28" aria-hidden="true"/>;
-  const max=Math.max(1,...values);
-  const pts=values.map((v,i)=>`${(i/(values.length-1)*100).toFixed(1)},${(26-(v/max)*24).toFixed(1)}`).join(" ");
-  return <svg className="ad-spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/></svg>;
 }
 
 function AreaChart({data,metric,hourly}:{data:AnalyticsDaily[];metric:MetricKey;hourly:boolean}){
@@ -186,12 +183,12 @@ export default function AnalyticsDashboard({report,loading,error,days,onDays,onR
   const drill=nav.view==="video"||nav.view==="visitor"||nav.view==="user";
 
   const kpis=report?[
-    {key:"visitors",label:"Visitors",value:num(humans),note:botIds.size?`${botIds.size} automated hidden`:"Unique sessions",open:()=>filterBy({}),series:daily.map(d=>d.sessions),d:delta(Number(report.summary.sessions),Number(prev?.sessions))},
-    {key:"pages",label:"Page views",value:num(report.summary.page_views),note:"All pages",open:()=>go({view:"content"}),series:daily.map(d=>d.page_views),d:delta(Number(report.summary.page_views),Number(prev?.page_views))},
-    {key:"videos",label:"Video views",value:num(report.summary.video_opens),note:`${num(report.summary.unique_videos)} videos watched`,open:()=>go({view:"content"}),series:daily.map(d=>d.video_opens),d:delta(Number(report.summary.video_opens),Number(prev?.video_opens))},
-    {key:"watch",label:"Watch time",value:dur(report.summary.watch_seconds||0),note:"Actual viewing",open:()=>go({view:"content"}),series:daily.map(d=>d.watch_seconds),d:delta(Number(report.summary.watch_seconds),Number(prev?.watch_seconds))},
-    {key:"bugs",label:"Bugs",value:num(bugsTotal),note:report.bugs.length?`${report.bugs.length} distinct errors`:"No errors seen",open:()=>go({view:"health"}),series:daily.map(d=>d.errors),d:null,bad:bugsTotal>0},
-    {key:"logins",label:"Admin logins",value:num(okLogins),note:`${failedLogins} failed attempts`,open:()=>go({view:"health"}),series:[] as number[],d:null,bad:failedLogins>0},
+    {key:"visitors",icon:"visitors",tone:"violet",label:"Visitors",value:num(humans),note:botIds.size?`${botIds.size} automated hidden`:"Unique sessions",open:()=>filterBy({}),d:delta(Number(report.summary.sessions),Number(prev?.sessions))},
+    {key:"pages",icon:"pages",tone:"blue",label:"Page views",value:num(report.summary.page_views),note:"All pages",open:()=>go({view:"content"}),d:delta(Number(report.summary.page_views),Number(prev?.page_views))},
+    {key:"videos",icon:"content",tone:"cyan",label:"Video views",value:num(report.summary.video_opens),note:`${num(report.summary.unique_videos)} videos watched`,open:()=>go({view:"content"}),d:delta(Number(report.summary.video_opens),Number(prev?.video_opens))},
+    {key:"watch",icon:"clock",tone:"amber",label:"Watch time",value:dur(report.summary.watch_seconds||0),note:"Actual viewing",open:()=>go({view:"content"}),d:delta(Number(report.summary.watch_seconds),Number(prev?.watch_seconds))},
+    {key:"bugs",icon:"bug",tone:"rose",label:"Bugs",value:num(bugsTotal),note:report.bugs.length?`${report.bugs.length} distinct errors`:"No errors seen",open:()=>go({view:"health"}),d:null,bad:bugsTotal>0},
+    {key:"logins",icon:"lock",tone:"green",label:"Admin logins",value:num(okLogins),note:`${failedLogins} failed attempts`,open:()=>go({view:"health"}),d:null,bad:failedLogins>0},
   ]:[];
 
   const activeFilters=([["country",nav.country?countryName(nav.country):""],["city",nav.city],["device",nav.device],["browser",nav.browser],["source",nav.source]] as const).filter(([,v])=>v);
@@ -275,10 +272,10 @@ export default function AnalyticsDashboard({report,loading,error,days,onDays,onR
       </Card>
     </div>;
     return <>
-      <section className="ad-kpis">{kpis.map(k=><button type="button" key={k.key} onClick={k.open} className={"ad-kpi"+(k.bad?" bad":"")}>
-        <small>{k.label}</small><strong>{k.value}</strong>
-        <div className="ad-kpi-foot"><span>{k.note}</span>{k.d&&<em className={"ad-delta "+k.d.tone}>{k.d.label}</em>}</div>
-        {k.series.length>1&&<Sparkline values={k.series}/>}
+      <section className="ad-kpis">{kpis.map(k=><button type="button" key={k.key} onClick={k.open} className={"ad-kpi tone-"+k.tone+(k.bad?" bad":"")}>
+        <span className="ad-kpi-icon"><Icon name={k.icon}/></span>
+        <span className="ad-kpi-text"><small>{k.label}</small><span className="ad-kpi-val"><strong>{k.value}</strong>{k.d&&<em className={"ad-delta "+k.d.tone}>{k.d.label}</em>}</span>
+        <span className="ad-kpi-foot"><span>{k.note}</span></span></span>
       </button>)}</section>
       <div className="ad-grid two">
         <Card title="Activity over time" kicker={days===1?"LAST 24 HOURS":`LAST ${days} DAYS`} className="wide" action={<div className="ad-seg" role="group" aria-label="Metric">{METRICS.map(([key,label])=><button type="button" key={key} className={metric===key?"active":""} onClick={()=>setMetric(key)}>{label}</button>)}</div>}>
