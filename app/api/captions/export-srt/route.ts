@@ -1,3 +1,4 @@
+import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { getTranscript, TRANSCRIPT_VERSION } from "../../shared-cache";
 import { fetchSupadataTranscript } from "../../supadata";
@@ -46,6 +47,8 @@ function toSrt(cues: { start: number; duration: number; text: string }[]) {
 }
 
 export async function GET(request: Request) {
+  const limited = await rateLimit(request, "export-srt");
+  if (limited) return limited;
   try {
     const url = new URL(request.url);
     const raw = url.searchParams.get("videoId") || url.searchParams.get("url") || "";

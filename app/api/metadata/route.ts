@@ -1,3 +1,4 @@
+import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { canonicalSpeakerForVideo } from "@/app/speaker-catalog";
 
@@ -238,6 +239,8 @@ function categoryFor(title: string, description: string, speakerName: string, ch
 }
 
 export async function POST(request: Request) {
+  const limited = await rateLimit(request, "metadata");
+  if (limited) return limited;
   try {
     const body = (await request.json()) as { url?: unknown };
     if (typeof body.url !== "string") throw new Error();

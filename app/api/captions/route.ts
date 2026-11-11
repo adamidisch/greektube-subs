@@ -1,3 +1,4 @@
+import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { GET as semanticGET, POST as semanticPOST } from "./semantic-route";
 import { getTranscript, getTranscriptStatus, TRANSCRIPT_VERSION } from "../shared-cache";
@@ -67,6 +68,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const limited = await rateLimit(request, "captions-post");
+  if (limited) return limited;
   const rawBody = await request.text();
   let body: TranslationRequestBody;
   try {
