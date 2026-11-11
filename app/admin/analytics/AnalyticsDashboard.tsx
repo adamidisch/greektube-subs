@@ -5,6 +5,7 @@ import Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
 import type {AnalyticsDaily,AnalyticsReport,AnalyticsVisitor} from "@/lib/analytics-report";
 import AnalyticsLogo from "./AnalyticsLogo";
+import UsersView from "./UsersView";
 
 type MetricKey="sessions"|"page_views"|"video_opens"|"watch_seconds";
 type Nav={view:string;id:string;country:string;city:string;device:string;browser:string;source:string;bot:string};
@@ -165,10 +166,10 @@ export default function AnalyticsDashboard({report,loading,error,days,onDays,onR
   const openVideo=(id:string)=>go({view:"video",id});
   const filterBy=(patch:Partial<Nav>)=>{setPage(0);setQuery("");go({view:"visitors",...patch});};
 
-  const NAV:Array<[string,string,number?]>=[["overview","Overview"],["audience","Audience"],["content","Content"],["visitors","Visitors"],["health","Health",report?.bugs.length||0]];
-  const section=["video"].includes(nav.view)?"content":nav.view==="visitor"?"visitors":nav.view;
-  const heading:Record<string,string>={overview:"Overview",audience:"Audience",content:"Content",visitors:"Visitors",health:"Health",video:"Video",visitor:"Visitor"};
-  const drill=nav.view==="video"||nav.view==="visitor";
+  const NAV:Array<[string,string,number?]>=[["overview","Overview"],["audience","Audience"],["content","Content"],["visitors","Visitors"],["health","Health",report?.bugs.length||0],["users","Users"]];
+  const section=nav.view==="video"?"content":nav.view==="visitor"?"visitors":nav.view==="user"?"users":nav.view;
+  const heading:Record<string,string>={overview:"Overview",audience:"Audience",content:"Content",visitors:"Visitors",health:"Health",users:"Users",user:"Profile",video:"Video",visitor:"Visitor"};
+  const drill=nav.view==="video"||nav.view==="visitor"||nav.view==="user";
 
   const kpis=report?[
     {key:"visitors",label:"Visitors",value:num(humans),note:botIds.size?`${botIds.size} automated hidden`:"Unique sessions",open:()=>filterBy({}),series:daily.map(d=>d.sessions),d:delta(Number(report.summary.sessions),Number(prev?.sessions))},
@@ -196,6 +197,7 @@ export default function AnalyticsDashboard({report,loading,error,days,onDays,onR
 
   function renderBody(){
     if(!report)return null;
+    if(nav.view==="users"||nav.view==="user")return <UsersView id={nav.view==="user"?nav.id:""} onOpen={id=>go({view:"user",id})} onOpenVideo={openVideo}/>;
     if(nav.view==="video"){
       const row=report.topVideos.find(v=>v.video_id===nav.id);
       const ids=new Set(report.visitorVideoStats.filter(s=>s.video_id===nav.id).map(s=>s.session_id));
@@ -296,7 +298,6 @@ export default function AnalyticsDashboard({report,loading,error,days,onDays,onR
       <nav aria-label="Analytics sections">
         {NAV.map(([key,label,badge])=><button type="button" key={key} className={section===key?"active":""} onClick={()=>{setPage(0);go({view:key});}}><Icon name={key}/><span>{label}</span>{badge?<em className="ad-badge">{badge}</em>:null}</button>)}
         <hr/>
-        <Link href="/admin/analytics/users"><Icon name="users"/><span>Users</span></Link>
         <Link href="/"><Icon name="site"/><span>Open site</span></Link>
       </nav>
       <div className="ad-side-foot"><div className={"ad-live "+(live?"on":"")}><i/>{live?"Live now":"Idle"}</div></div>
