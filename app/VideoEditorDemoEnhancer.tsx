@@ -125,6 +125,8 @@ export default function VideoEditorDemoEnhancer(){
   const [current,setCurrent]=useState(0);
   const [duration,setDuration]=useState(0);
   const [playing,setPlaying]=useState(false);
+  const [ownerPreview,setOwnerPreview]=useState<SubtitleTrack|null>(null);
+  const [playedOwnerPreview,setPlayedOwnerPreview]=useState<SubtitleTrack|null>(null);
   const [playerVisualReady,setPlayerVisualReady]=useState(false);
   const [previewIndex,setPreviewIndex]=useState<number|null>(null);
   const [timelinePreview,setTimelinePreview]=useState<number|null>(null);
@@ -154,7 +156,13 @@ export default function VideoEditorDemoEnhancer(){
   const totalSkipped=useMemo(()=>ranges.reduce((sum,item)=>sum+Math.max(0,item.end-item.start),0),[ranges]);
   const displayTrack=useMemo(()=>displaySubtitleTrack(captions?.cues||[],captions?.subtitleTrack),[captions]);
 
+  function changeOwnerPreview(track:SubtitleTrack|null){
+    setOwnerPreview(track);
+    setPlayedOwnerPreview(null);
+  }
+
   async function loadEditor(videoId:string){
+    changeOwnerPreview(null);
     captionsAbortController.current?.abort();
     captionsAbortController.current=null;
     const requestSequence=++captionsRequestSequence.current;
@@ -283,9 +291,19 @@ export default function VideoEditorDemoEnhancer(){
 
   useEffect(()=>{
     if(!open||!video||authRequired)return;
+    let previousPreviewTime:number|null=null;
+    let previewPlayed=false;
     const timer=window.setInterval(()=>{
       const target=player.current;if(!target)return;
       const now=target.getCurrentTime();if(Number.isFinite(now))setCurrent(now);
+      if(ownerPreview&&!previewPlayed){
+        const displaying=captionReadyPlayer.current===target&&target.getPlayerState()===1&&subtitleEventAt(ownerPreview.events,now)>=0;
+        if(displaying&&previousPreviewTime!==null&&now>previousPreviewTime&&now-previousPreviewTime<=.6){
+          previewPlayed=true;
+          setPlayedOwnerPreview(ownerPreview);
+        }
+        previousPreviewTime=displaying?now:null;
+      }
       const d=target.getDuration();if(d>0&&Math.abs(d-duration)>.5)setDuration(d);
       if(previewIndex!==null){
         const range=ranges[previewIndex];
@@ -297,7 +315,7 @@ export default function VideoEditorDemoEnhancer(){
       }
     },100);
     return()=>window.clearInterval(timer);
-  },[open,video?.id,authRequired,previewIndex,ranges,duration]);
+  },[open,video?.id,authRequired,previewIndex,ranges,duration,ownerPreview]);
 
   function closeEditor(){
     if((dirty||subtitleReviewDirty.current)&&!window.confirm(tr("Υπάρχουν μη αποθηκευμένες αλλαγές. Θέλεις να φύγεις χωρίς αποθήκευση;")))return;
@@ -306,6 +324,7 @@ export default function VideoEditorDemoEnhancer(){
       const params=new URLSearchParams(location.search);params.set("video",video.id);params.set("t",Math.max(0,current).toFixed(1));history.replaceState(null,"",`/?${params.toString()}`);
     }
     captionsRequestSequence.current+=1;captionsAbortController.current?.abort();captionsAbortController.current=null;currentEditorVideoId.current="";
+    changeOwnerPreview(null);
     setOpen(false);setAuthRequired(false);setLoading(false);setPlayerVisualReady(false);setVideo(null);setCaptions(null);setMetadata(null);setRanges([]);setTimecodeDrafts({});setInitialSnapshot("");setPreviewIndex(null);setTimelinePreview(null);setStatus("");
   }
   function seek(next:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));target.seekTo(safe,true);setCurrent(safe);}
@@ -383,7 +402,7 @@ export default function VideoEditorDemoEnhancer(){
         {loading?<div className="gts-editor-loading"><span className="gts-editor-player-spinner"/>{tr("Φόρτωση editor…")}</div>:video&&metadata?<main className="gts-editor-layout">
           <section className="gts-editor-stage">
 
-            <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>{tr("ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ")}</strong></div>{captions&&(()=>{const track=displayTrack;const index=subtitleEventAt(track.events,current);return index<0?null:<div className="gts-editor-subtitles" aria-live="off">{subtitleLines(track.events[index].text).map((line,i)=><span key={`${index}-${i}`}>{line}</span>)}</div>})()}<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div></div>
+            <div className="gts-editor-video"><div ref={host}/><div className={`gts-editor-player-loading ${playerVisualReady?"ready":""}`} aria-hidden={playerVisualReady}><span className="gts-editor-player-spinner"/><strong>{tr("ΦΟΡΤΩΣΗ ΒΙΝΤΕΟ")}</strong></div>{ownerPreview&&<div className="gts-editor-srt-preview">{tr("Προεπισκόπηση SRT","SRT preview")}</div>}{(captions||ownerPreview)&&(()=>{const track=ownerPreview??displayTrack;const index=subtitleEventAt(track.events,current);return index<0?null:<div className="gts-editor-subtitles" aria-live="off">{subtitleLines(track.events[index].text).map((line,i)=><span key={`${index}-${i}`}>{line}</span>)}</div>})()}<div className="gts-editor-timecode">{clock(current,true)} <span>/ {clock(duration)}</span></div></div>
 
             <div className="gts-editor-console">
               <div className="gts-editor-timeline-wrap"><div className="gts-editor-scrub-time" style={{"--editor-seek-progress":`${duration>0?Math.max(0,Math.min(100,current/duration*100)):0}%`} as CSSProperties}><span className="gts-editor-scrub-bubble" style={{left:`${duration>0?Math.max(4,Math.min(96,current/duration*100)):0}%`}}>{clock(current,true)}</span></div>
@@ -419,7 +438,7 @@ export default function VideoEditorDemoEnhancer(){
             <section className="gts-editor-card"><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VIDEO INFORMATION</span><h2>{tr("Πληροφορίες βίντεο")}</h2></div></div>
               <div className="gts-editor-fields"><EditableField label={tr("Ελληνικός τίτλος")} value={metadata.title} onCommit={next=>setMetadata({...metadata,title:next})}/><EditableField label={tr("Αγγλικός τίτλος")} value={metadata.originalTitle} onCommit={next=>setMetadata({...metadata,originalTitle:next})}/><div className="gts-editor-fields-row"><EditableField label={tr("Ομιλητής")} value={metadata.speakerName} onCommit={next=>setMetadata({...metadata,speakerName:next})}/><EditableField label={tr("Ιδιότητα")} value={metadata.speakerRole} onCommit={next=>setMetadata({...metadata,speakerRole:next})}/></div><div className="gts-editor-fields-row"><EditableField label={tr("Κανάλι")} value={metadata.channel} onCommit={next=>setMetadata({...metadata,channel:next})}/><EditableField label={tr("Κατηγορία")} value={metadata.category} options={CATEGORIES} onCommit={next=>setMetadata({...metadata,category:next})}/></div><EditableField label={tr("Link καναλιού")} value={metadata.channelUrl} onCommit={next=>setMetadata({...metadata,channelUrl:next})}/><EditableField label="Original video link" value={metadata.originalVideoUrl} onCommit={next=>setMetadata({...metadata,originalVideoUrl:next})}/><EditableField label={tr("Ετικέτες")} value={metadata.tags.join(", ")} onCommit={next=>setMetadata({...metadata,tags:next.split(",").map(item=>item.trim()).filter(Boolean)})}/><EditableField label={tr("Περιγραφή")} value={metadata.description} multiline onCommit={next=>setMetadata({...metadata,description:next})}/></div>
             </section>
-            <OwnerTranslationPanel key={video.id} videoId={video.id}/>
+            <OwnerTranslationPanel key={video.id} videoId={video.id} playedTrack={playedOwnerPreview} onPreviewChange={changeOwnerPreview}/>
             <SubtitleQualityPanel key={video.id} videoId={video.id} onSeek={seek} onDirtyChange={dirty=>{subtitleReviewDirty.current=dirty}}/>
             <section className={`gts-editor-card gts-editor-validation ${validationErrors.length?"has-errors":"ok"}`}><div className="gts-editor-section-head"><div><span className="gts-editor-kicker">VALIDATION</span><h2>{validationErrors.length?tr("Χρειάζεται διόρθωση"):tr("Όλα έτοιμα")}</h2></div><strong>{validationErrors.length?"!":"✓"}</strong></div>{validationErrors.length?<ul>{validationErrors.map((error,index)=><li key={`${error}-${index}`}>{error}</li>)}</ul>:<p>{tr("Δεν υπάρχουν επικαλύψεις ή λανθασμένα timestamps. Metadata και markers μπορούν να αποθηκευτούν μαζί.")}</p>}</section>
             {status&&<div className="gts-editor-status" role="status">{status}</div>}
@@ -606,6 +625,7 @@ const styles=`
 .gts-editor-auth-cancel{width:100%;margin-top:11px;padding:11px;border:0;background:transparent;color:var(--e-dim);font-size:13.5px;transition:color .15s}
 .gts-editor-auth-cancel:hover{color:#C7CDD8}
 
+.gts-editor-srt-preview{position:absolute;z-index:5;top:10px;left:10px;padding:5px 8px;border-radius:8px;background:rgba(0,0,0,.84);color:#f7d79c;font-size:13px;font-weight:650;pointer-events:none}
 .gts-editor-subtitles{box-sizing:border-box;position:absolute;z-index:4;left:50%;bottom:8%;width:min(88%,760px);transform:translateX(-50%);padding:10px 15px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(0,0,0,.84);color:#fff;font-family:var(--e-sans);font-size:clamp(15px,1.75vw,26px);font-weight:650;line-height:1.35;text-align:center;pointer-events:none}
 .gts-editor-subtitles span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gts-editor-player-loading{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(circle at 50% 45%,rgba(52,47,86,.44),rgba(10,12,16,.94) 72%);color:#DFDAFF;opacity:1;visibility:visible;pointer-events:none;transition:opacity .28s ease,visibility 0s linear 0s}
