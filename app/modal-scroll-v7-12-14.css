@@ -1,0 +1,49 @@
+/* v7.12.14 — dialogs scroll inside themselves and keep their actions reachable.
+   v7-8-15 put overflow:hidden on .modal for the rounded header wash. That removed the
+   scrolling the base rule (max-height + overflow:auto) relied on, so any dialog taller
+   than the viewport lost its bottom buttons. The header now stays fixed and the body
+   scrolls. */
+html body .app-shell.app-shell.app-shell .modal{
+  display:flex!important;
+  flex-direction:column!important;
+  max-height:calc(100dvh - 32px)!important;
+}
+html body .app-shell.app-shell.app-shell .modal>header{
+  flex:0 0 auto!important;
+}
+html body .app-shell.app-shell.app-shell .modal>:not(header){
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+}
+
+/* Add video: the save buttons stay pinned while the form scrolls. */
+html body .app-shell.app-shell.app-shell .add-video-v740 .modal-actions{
+  position:sticky;
+  bottom:0;
+  z-index:1;
+  padding:12px 0 18px;
+  background:#14161b;
+  box-shadow:0 -10px 10px -6px #14161b;
+}
+html body .app-shell.app-shell.app-shell .form.add-video-v740{
+  padding-bottom:0!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .add-video-v740 .modal-actions{
+  background:#fbfbf9;
+  box-shadow:0 -10px 10px -6px #fbfbf9;
+}
+html body .app-shell.app-shell.app-shell .add-video-v740 textarea{
+  min-height:64px;
+  height:72px;
+}
+
+@media(max-width:620px){
+  html body .app-shell.app-shell.app-shell .modal{
+    max-height:92dvh!important;
+  }
+  html body .app-shell.app-shell.app-shell .add-video-v740 .modal-actions{
+    padding-bottom:calc(20px + env(safe-area-inset-bottom));
+  }
+}

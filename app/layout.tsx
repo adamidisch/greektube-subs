@@ -51,6 +51,7 @@ import "./player-controls-gts31-v7-12-2.css";
 import "./home-loading-polish-v7-12-3.css";
 import "./premium-header-watch-rail-v7-12-5.css";
 import "./header-controls-v7-12-6.css";
+import "./modal-scroll-v7-12-14.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
