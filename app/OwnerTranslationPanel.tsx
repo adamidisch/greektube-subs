@@ -1,6 +1,7 @@
 "use client";
 
 import OwnerSourceImportPanel from "./OwnerSourceImportPanel";
+import type { SubtitleTrack } from "./subtitle-track";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -47,7 +48,13 @@ function shortHash(value?: string | null) {
   return value ? `${value.slice(0, 8)}…${value.slice(-6)}` : "—";
 }
 
-export default function OwnerTranslationPanel({ videoId }: { videoId: string }) {
+type Props = {
+  videoId: string;
+  playedTrack: SubtitleTrack | null;
+  onPreviewChange: (track: SubtitleTrack | null) => void;
+};
+
+export default function OwnerTranslationPanel({ videoId, playedTrack, onPreviewChange }: Props) {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [legacyOwner, setLegacyOwner] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -176,7 +183,7 @@ export default function OwnerTranslationPanel({ videoId }: { videoId: string }) 
     </>}
 
     {message && <div className="gts-owner-message" role="status">{message}</div>}
-    <OwnerSourceImportPanel videoId={videoId} onPublished={() => { void refresh(); }} />
+    <OwnerSourceImportPanel videoId={videoId} playedTrack={playedTrack} onPreviewChange={onPreviewChange} onPublished={() => { void refresh(); }} />
     <style>{styles}</style>
   </section>;
 }
