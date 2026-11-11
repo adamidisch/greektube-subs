@@ -1,8 +1,9 @@
 import { database } from "@/db/postgres";
 
-// Server-side analytics events (admin logins). Not accepted from clients, so they cannot be forged.
+// Admin login log. Written only by the server (never accepted from clients) into its own table,
+// so it cannot be forged and never mixes with visitor analytics.
 // Fails silently: analytics must never block a login.
-export async function recordServerEvent(request: Request, name: "login" | "login_failed", properties: Record<string, unknown> = {}) {
+export async function recordServerEvent(request: Request, name: "login" | "login_failed") {
   try {
     const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
     const ipMasked = forwarded.includes(":")
@@ -13,10 +14,11 @@ export async function recordServerEvent(request: Request, name: "login" | "login
     const browser = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "Other";
     let city = request.headers.get("x-vercel-ip-city") || "";
     try { city = decodeURIComponent(city); } catch {}
-    await database().query(
-      `INSERT INTO analytics_events (session_id,event_name,path,country,city,device,browser,properties)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)`,
-      ["admin", name, "/admin", (request.headers.get("x-vercel-ip-country") || "").toUpperCase().slice(0, 8), city.slice(0, 80), device, browser, JSON.stringify({ ip: ipMasked, ...properties })],
+    const db = database();
+    await db.query(`CREATE TABLE IF NOT EXISTS admin_login_log (id bigserial PRIMARY KEY,created_at timestamptz NOT NULL DEFAULT NOW(),event_name text NOT NULL,country text NOT NULL DEFAULT '',city text NOT NULL DEFAULT '',device text NOT NULL DEFAULT '',browser text NOT NULL DEFAULT '',ip text NOT NULL DEFAULT '')`);
+    await db.query(
+      `INSERT INTO admin_login_log (event_name,country,city,device,browser,ip) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [name, (request.headers.get("x-vercel-ip-country") || "").toUpperCase().slice(0, 8), city.slice(0, 80), device, browser, ipMasked],
     );
   } catch {}
 }

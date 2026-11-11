@@ -6,6 +6,8 @@ type Row=Record<string,unknown>;
 export type AnalyticsSummary={sessions?:number;page_views?:number;video_opens?:number;watch_seconds?:number;unique_videos?:number;latest_event?:string|null;recent_events?:number};
 export type AnalyticsBug={kind:string;message:string;source:string;count:number;sessions:number;first_seen:string;last_seen:string;last_session:string;last_path:string;last_video:string;device:string;browser:string};
 export type AnalyticsLogin={created_at:string;event_name:"login"|"login_failed";country:string;city:string;device:string;browser:string;ip:string};
+export type AnalyticsDaily={bucket:string;sessions:number;page_views:number;video_opens:number;watch_seconds:number;errors:number};
+export type AnalyticsPrevious={sessions:number;page_views:number;video_opens:number;watch_seconds:number;errors:number};
 export type AnalyticsTopVideo={video_id:string;views:number;sessions:number;watch_seconds:number;last_seen:string};
 export type AnalyticsTopPage={name:string;views:number;sessions:number;first_seen?:string;last_seen?:string};
 export type AnalyticsCountRow={name:string;sessions:number;confirmed_sessions?:number};
@@ -17,7 +19,7 @@ export type AnalyticsRecentEvent={created_at:string;session_id:string;event_name
 export type AnalyticsVideoMeta={title:string;originalTitle:string;speakerName:string};
 export type AnalyticsReport={
   days:number;summary:AnalyticsSummary;topVideos:AnalyticsTopVideo[];topPages:AnalyticsTopPage[];sources:AnalyticsCountRow[];countries:AnalyticsCountRow[];cities:AnalyticsCityRow[];
-  devices:AnalyticsCountRow[];browsers:AnalyticsCountRow[];events:AnalyticsEventRow[];visitors:AnalyticsVisitor[];bugs:AnalyticsBug[];logins:AnalyticsLogin[];visitorVideoStats:AnalyticsVisitorVideoStat[];
+  devices:AnalyticsCountRow[];browsers:AnalyticsCountRow[];events:AnalyticsEventRow[];visitors:AnalyticsVisitor[];bugs:AnalyticsBug[];logins:AnalyticsLogin[];daily:AnalyticsDaily[];previous:AnalyticsPrevious;visitorVideoStats:AnalyticsVisitorVideoStat[];
   recent:AnalyticsRecentEvent[];videoTitles:Record<string,string>;videoMeta:Record<string,AnalyticsVideoMeta>;
 };
 
@@ -56,6 +58,10 @@ export async function loadAnalyticsReport(daysInput:unknown):Promise<AnalyticsRe
   await ensureTable();
   const days=normalizeAnalyticsDays(daysInput);
   const db=database();
+  const unit=days===1?"hour":"day";
+  const step=days===1?"1 hour":"1 day";
+  const span=days===1?"INTERVAL '23 hours'":`INTERVAL '${Math.max(1,Math.round(days))-1} days'`;
+  await db.query(`CREATE TABLE IF NOT EXISTS admin_login_log (id bigserial PRIMARY KEY,created_at timestamptz NOT NULL DEFAULT NOW(),event_name text NOT NULL,country text NOT NULL DEFAULT '',city text NOT NULL DEFAULT '',device text NOT NULL DEFAULT '',browser text NOT NULL DEFAULT '',ip text NOT NULL DEFAULT '')`);
   const results=await Promise.all([
     db.query(`SELECT COUNT(DISTINCT session_id)::int AS sessions,
       COUNT(*) FILTER (WHERE event_name='page_view')::int AS page_views,
@@ -160,12 +166,30 @@ export async function loadAnalyticsReport(daysInput:unknown):Promise<AnalyticsRe
       FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval AND event_name='error'
       GROUP BY 1,2,3 ORDER BY last_seen DESC LIMIT 100`,[days]),
 
-    db.query(`SELECT created_at,event_name,country,city,device,browser,COALESCE(properties->>'ip','') AS ip
-      FROM analytics_events WHERE created_at >= NOW() - ($1 || ' days')::interval AND event_name IN ('login','login_failed')
+    db.query(`SELECT created_at,event_name,country,city,device,browser,ip
+      FROM admin_login_log WHERE created_at >= NOW() - ($1 || ' days')::interval
       ORDER BY created_at DESC LIMIT 200`,[days]),
+
+    db.query(`SELECT to_char(b,'YYYY-MM-DD"T"HH24:MI') AS bucket,
+      COUNT(DISTINCT e.session_id)::int AS sessions,
+      COUNT(*) FILTER (WHERE e.event_name='page_view')::int AS page_views,
+      COUNT(*) FILTER (WHERE e.event_name='video_open')::int AS video_opens,
+      COALESCE(SUM((e.properties->>'seconds')::numeric) FILTER (WHERE e.event_name='video_watch'),0)::float AS watch_seconds,
+      COUNT(*) FILTER (WHERE e.event_name='error')::int AS errors
+      FROM generate_series(date_trunc('${unit}',NOW()-${span}),date_trunc('${unit}',NOW()),'${step}'::interval) AS b
+      LEFT JOIN analytics_events e ON date_trunc('${unit}',e.created_at)=b
+      GROUP BY b ORDER BY b`),
+
+    db.query(`SELECT COUNT(DISTINCT session_id)::int AS sessions,
+      COUNT(*) FILTER (WHERE event_name='page_view')::int AS page_views,
+      COUNT(*) FILTER (WHERE event_name='video_open')::int AS video_opens,
+      COALESCE(SUM((properties->>'seconds')::numeric) FILTER (WHERE event_name='video_watch'),0)::float AS watch_seconds,
+      COUNT(*) FILTER (WHERE event_name='error')::int AS errors
+      FROM analytics_events
+      WHERE created_at >= NOW() - ($1 || ' days')::interval * 2 AND created_at < NOW() - ($1 || ' days')::interval`,[days]),
   ]);
 
-  const [summaryRows,topVideos,topPages,sources,countries,cities,devices,browsers,events,visitors,visitorVideoStats,recent,libraryRows,bugs,logins]=results.map(result=>result as Row[]);
+  const [summaryRows,topVideos,topPages,sources,countries,cities,devices,browsers,events,visitors,visitorVideoStats,recent,libraryRows,bugs,logins,daily,previousRows]=results.map(result=>result as Row[]);
   const {titles:videoTitles,videoMeta}=libraryMeta(libraryRows[0]?.value);
   return {
     days,
@@ -181,6 +205,8 @@ export async function loadAnalyticsReport(daysInput:unknown):Promise<AnalyticsRe
     visitors:visitors as AnalyticsVisitor[],
     visitorVideoStats:visitorVideoStats as AnalyticsVisitorVideoStat[],
     recent:recent as AnalyticsRecentEvent[],
+    daily:daily as AnalyticsDaily[],
+    previous:(previousRows[0]||{sessions:0,page_views:0,video_opens:0,watch_seconds:0,errors:0}) as AnalyticsPrevious,
     bugs:bugs as AnalyticsBug[],
     logins:logins as AnalyticsLogin[],
     videoTitles,videoMeta,
