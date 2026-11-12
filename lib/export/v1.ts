@@ -1,3 +1,4 @@
+import { canonicalSpeakerForVideo } from "@/app/speaker-catalog";
 import { timingSafeEqual } from "node:crypto";
 import { database } from "@/db/postgres";
 import { getTranscript, getTranscriptRowMeta, ensureTranscriptTable, TRANSCRIPT_VERSION } from "@/app/api/shared-cache";
@@ -52,6 +53,27 @@ async function publishedRevisions(videoIds?: string[]): Promise<Map<string, Publ
   return map;
 }
 
+
+/** Category and speaker as curated in the shared library (the owner sets "Medical" in the editor). */
+async function libraryMeta() {
+  const map = new Map<string, { category: string; speaker: string }>();
+  try {
+    const rows = await database().query("SELECT value FROM app_state WHERE key = $1 LIMIT 1", ["greektube-shared-library-v1"]) as { value: string }[];
+    const parsed = rows[0] ? JSON.parse(rows[0].value) as { videos?: Record<string, unknown>[] } : {};
+    for (const video of Array.isArray(parsed.videos) ? parsed.videos : []) {
+      const id = String(video.id || "");
+      if (!id) continue;
+      const speaker = video.speaker && typeof video.speaker === "object" ? String((video.speaker as { name?: unknown }).name || "") : "";
+      map.set(id, { category: typeof video.category === "string" ? video.category : "", speaker });
+    }
+  } catch { /* library not available */ }
+  return map;
+}
+
+function speakerName(videoId: string, fromLibrary: string, channel: string) {
+  return canonicalSpeakerForVideo(videoId, fromLibrary, channel)?.name || "";
+}
+
 export async function listExportVideos() {
   await ensureTranscriptTable();
   const rows = await database().query(
@@ -61,6 +83,7 @@ export async function listExportVideos() {
       ORDER BY updated_at DESC`,
   ) as { video_id: string; title: string; channel: string; duration: number; transcript_version: number; updated_at: string }[];
   const revisions = await publishedRevisions();
+  const library = await libraryMeta();
   // Rows saved without a title or channel: published transcript first, then YouTube oEmbed, and remember it.
   const fallbacks = new Map<string, { title: string; channel: string }>();
   await Promise.all(rows.filter(row => !row.title?.trim() || !row.channel?.trim()).map(async row => {
@@ -97,6 +120,8 @@ export async function listExportVideos() {
       channel: row.channel?.trim() || fallbacks.get(row.video_id)?.channel || "",
       durationSeconds: Number(row.duration) || 0,
       transcriptVersion: Number(row.transcript_version) || 0,
+      category: library.get(row.video_id)?.category || "",
+      speaker: speakerName(row.video_id, library.get(row.video_id)?.speaker || "", row.channel || ""),
       greekSource: published ? "owner_reviewed" : "automatic",
       publishedRevision: published?.revision ?? null,
       updatedAt: published?.publishedAt || row.updated_at,

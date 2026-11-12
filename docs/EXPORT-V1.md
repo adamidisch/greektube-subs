@@ -16,7 +16,7 @@ Every video with ready Greek subtitles.
 ```json
 { "schema": "greektube.export.v1", "count": 2, "videos": [
   { "youtubeId": "NDeaXZ5KpM4", "title": "…", "channel": "…", "durationSeconds": 812,
-    "transcriptVersion": 12, "greekSource": "owner_reviewed", "publishedRevision": 4,
+    "category": "Medical", "speaker": "Dr. Sarah Myhill", "transcriptVersion": 12, "greekSource": "owner_reviewed", "publishedRevision": 4,
     "updatedAt": "2026-11-12T16:58:03Z", "url": "https://greektubesubs.com/?video=NDeaXZ5KpM4" } ] }
 ```
 
@@ -29,6 +29,10 @@ Every video with ready Greek subtitles.
   "updatedAt": "…", "url": "…", "cueCount": 250, "englishAligned": true,
   "cues": [ { "index": 0, "start": 0.0, "end": 3.2, "en": "…", "el": "…" } ] }
 ```
+
+## Selection
+
+`category` is the owner's category from the shared library (`Medical`, `Other`, …). LOGI imports only `Medical`. A new video reaches LOGI only after the owner sets it to Medical in the editor. `speaker` is the verified speaker name, or empty.
 
 ## Rules for consumers
 
