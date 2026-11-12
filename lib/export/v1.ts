@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { database } from "@/db/postgres";
-import { getTranscript, ensureTranscriptTable, type CachedCue } from "@/app/api/shared-cache";
+import { getTranscript, getTranscriptRowMeta, ensureTranscriptTable, TRANSCRIPT_VERSION } from "@/app/api/shared-cache";
+import { readPublishedTranscript } from "@/app/api/transcript-blob";
 
 /**
  * GreekTube export contract v1 — read-only, one-way.
@@ -80,37 +81,79 @@ function round(value: number) {
   return Math.round(value * 1000) / 1000;
 }
 
-export async function exportVideo(videoId: string) {
+type TimedText = { start: number; duration: number; text: string };
+
+function timedList(value: unknown): TimedText[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap(item => {
+    if (!item || typeof item !== "object") return [];
+    const cue = item as Record<string, unknown>;
+    const start = Number(cue.start);
+    const end = Number(cue.end);
+    const duration = Number.isFinite(Number(cue.duration)) ? Number(cue.duration) : (Number.isFinite(end) ? end - start : 0);
+    if (!Number.isFinite(start)) return [];
+    return [{ start, duration: Math.max(0, duration), text: typeof cue.text === "string" ? cue.text : "" }];
+  });
+}
+
+/** Same source the player uses: the published Blob transcript, falling back to the transcript record. */
+async function loadSubtitles(videoId: string) {
+  const published = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION, true);
+  if (published) {
+    const greek = timedList(published.cues);
+    const english = timedList(published.englishCues);
+    if (greek.length) {
+      return {
+        greek,
+        english,
+        title: typeof published.title === "string" ? published.title : "",
+        channel: typeof published.channel === "string" ? published.channel : "",
+        duration: Number(published.duration) || 0,
+        originalLanguage: typeof published.sourceLanguage === "string" ? published.sourceLanguage : "en",
+        updatedAt: typeof published.updatedAt === "string" ? published.updatedAt : null,
+      };
+    }
+  }
   const record = await getTranscript(videoId);
   if (!record || record.status !== "ready" || record.greekTranscript.length === 0) return null;
-  const published = (await publishedRevisions([videoId])).get(videoId) || null;
-  const english: CachedCue[] = record.englishTranscript;
-  const greek: CachedCue[] = record.greekTranscript;
-  const timing = record.timestamps.length === greek.length ? record.timestamps : greek;
-  const cues = greek.map((cue, index) => {
-    const start = Number(timing[index]?.start ?? cue.start) || 0;
-    const duration = Number(timing[index]?.duration ?? cue.duration) || 0;
-    return {
-      index,
-      start: round(start),
-      end: round(start + duration),
-      en: english[index]?.text ?? "",
-      el: cue.text,
-    };
-  });
+  const timing = record.timestamps.length === record.greekTranscript.length ? record.timestamps : record.greekTranscript;
   return {
-    schema: EXPORT_SCHEMA,
-    youtubeId: record.videoId,
+    greek: record.greekTranscript.map((cue, index) => ({ start: timing[index].start, duration: timing[index].duration, text: cue.text })),
+    english: record.englishTranscript.map(cue => ({ start: cue.start, duration: cue.duration, text: cue.text })),
     title: record.title,
     channel: record.channel,
-    durationSeconds: Number(record.duration) || 0,
-    originalLanguage: record.originalLanguage,
-    transcriptVersion: record.transcriptVersion,
+    duration: Number(record.duration) || 0,
+    originalLanguage: record.originalLanguage || "en",
+    updatedAt: record.updatedAt,
+  };
+}
+
+export async function exportVideo(videoId: string) {
+  const loaded = await loadSubtitles(videoId);
+  if (!loaded) return null;
+  const meta = await getTranscriptRowMeta(videoId).catch(() => null);
+  const published = (await publishedRevisions([videoId])).get(videoId) || null;
+  const { greek, english } = loaded;
+  const cues = greek.map((cue, index) => ({
+    index,
+    start: round(cue.start),
+    end: round(cue.start + cue.duration),
+    en: english[index]?.text ?? "",
+    el: cue.text,
+  }));
+  return {
+    schema: EXPORT_SCHEMA,
+    youtubeId: videoId,
+    title: loaded.title || meta?.title || "",
+    channel: loaded.channel || meta?.channel || "",
+    durationSeconds: loaded.duration || meta?.duration || 0,
+    originalLanguage: loaded.originalLanguage,
+    transcriptVersion: TRANSCRIPT_VERSION,
     greekSource: published ? "owner_reviewed" : "automatic",
     publishedRevision: published?.revision ?? null,
     sourceHash: published?.sourceHash ?? null,
-    updatedAt: published?.publishedAt || record.updatedAt,
-    url: `https://greektubesubs.com/?video=${record.videoId}`,
+    updatedAt: published?.publishedAt || loaded.updatedAt,
+    url: `https://greektubesubs.com/?video=${videoId}`,
     cueCount: cues.length,
     englishAligned: english.length === greek.length,
     cues,
