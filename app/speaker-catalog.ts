@@ -129,7 +129,27 @@ const PHILIP_OVADIA: CanonicalSpeakerProfile = {
   },
 };
 
-const SPEAKER_PROFILES = [SARAH_MYHILL, NATASHA_CAMPBELL_MCBRIDE, DAVID_BROWNSTEIN, STASHA_GOMINAK, PHILIP_OVADIA];
+const RHONDA_PATRICK: CanonicalSpeakerProfile = {
+  name: "Dr. Rhonda Patrick",
+  role: "Βιοϊατρική ερευνήτρια",
+  importance: "Γνωστή για την επιστημονική ενημέρωση γύρω από τη διατροφή, την άσκηση και τη μακροζωία μέσω του FoundMyFitness.",
+  currentWork: "Παρουσιάζει επιστημονικό περιεχόμενο για τη διατροφή, τον ύπνο, την άσκηση και την πρόληψη στο FoundMyFitness.",
+  highlights: ["Σπλαγχνικό λίπος", "Άσκηση και ύπνος", "Διατροφή και μικροθρεπτικά", "Μακροζωία"],
+  biography: {
+    profileLabel: "Προφίλ ομιλήτριας",
+    introduction: "Ερευνήτρια με διδακτορικό στη βιοϊατρική επιστήμη και εστίαση στη διατροφή, τη γήρανση και την πρόληψη.",
+    facts: [
+      { label: "Αντικείμενο", text: "Ασχολείται με τη διατροφή, την άσκηση, τον ύπνο και τη μακροζωία." },
+      { label: "Εκπαιδευτικό έργο", text: "Είναι ιδρύτρια του FoundMyFitness, με επεισόδια, άρθρα και σύντομα clips βασισμένα σε μελέτες." },
+    ],
+    sources: [
+      { label: "FoundMyFitness — επίσημη ιστοσελίδα", url: "https://www.foundmyfitness.com/" },
+      { label: "FoundMyFitness — clip για το σπλαγχνικό λίπος", url: "https://www.foundmyfitness.com/episodes/the-most-effective-ways-to-reduce-visceral-fat" },
+    ],
+  },
+};
+
+const SPEAKER_PROFILES = [SARAH_MYHILL, NATASHA_CAMPBELL_MCBRIDE, DAVID_BROWNSTEIN, STASHA_GOMINAK, PHILIP_OVADIA, RHONDA_PATRICK];
 
 export const SPEAKER_CATALOG: Record<string, CanonicalSpeakerProfile> = {
   "Tk47F--QyY8": DAVID_BROWNSTEIN,
@@ -141,6 +161,7 @@ export const SPEAKER_CATALOG: Record<string, CanonicalSpeakerProfile> = {
   "fX2z-BF8Jac": NATASHA_CAMPBELL_MCBRIDE,
   NqLpQhii_fU: SARAH_MYHILL,
   ATKu1Cxs2Pc: PHILIP_OVADIA,
+  NDeaXZ5KpM4: RHONDA_PATRICK,
 };
 
 export function normalizedPersonName(value: string) {

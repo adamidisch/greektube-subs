@@ -61,11 +61,20 @@ export async function listExportVideos() {
       ORDER BY updated_at DESC`,
   ) as { video_id: string; title: string; channel: string; duration: number; transcript_version: number; updated_at: string }[];
   const revisions = await publishedRevisions();
+  // Rows saved without a title fall back to the published transcript, like the detail export.
+  const missing = rows.filter(row => !row.title?.trim());
+  const fallbackTitles = new Map<string, string>();
+  await Promise.all(missing.map(async row => {
+    try {
+      const loaded = await loadSubtitles(row.video_id);
+      if (loaded?.title) fallbackTitles.set(row.video_id, loaded.title);
+    } catch { /* keep the empty title */ }
+  }));
   return rows.map(row => {
     const published = revisions.get(row.video_id) || null;
     return {
       youtubeId: row.video_id,
-      title: row.title || "",
+      title: row.title?.trim() || fallbackTitles.get(row.video_id) || "",
       channel: row.channel || "",
       durationSeconds: Number(row.duration) || 0,
       transcriptVersion: Number(row.transcript_version) || 0,
