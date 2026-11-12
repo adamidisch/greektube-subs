@@ -19,6 +19,10 @@ type Cue={start:number;duration:number;text:string};
 type EditorCaptions={videoId:string;cues:Cue[];duration?:number;transcriptVersion?:number;subtitleTrack?:SubtitleTrack};
 type PlayerLike={destroy:()=>void;playVideo:()=>void;pauseVideo:()=>void;getPlayerState:()=>number;getCurrentTime:()=>number;getDuration:()=>number;seekTo:(seconds:number,allow:boolean)=>void;unloadModule?:(module:string)=>void};
 
+function isUsablePlayer(target:PlayerLike|null):target is PlayerLike{
+  return Boolean(target&&typeof target.destroy==="function"&&typeof target.getCurrentTime==="function"&&typeof target.getDuration==="function"&&typeof target.getPlayerState==="function"&&typeof target.seekTo==="function"&&typeof target.playVideo==="function"&&typeof target.pauseVideo==="function");
+}
+
 const CATEGORIES=[
   ["Medical",tr("Ιατρικά")],["Tech",tr("Τεχνολογία")],["Podcasts",tr("Συζητήσεις")],["Comedy",tr("Κωμωδία")],["Education",tr("Εκπαίδευση")],["Documentaries",tr("Ντοκιμαντέρ")],["Other",tr("Άλλα")],
 ] as const;
@@ -252,7 +256,7 @@ export default function VideoEditorDemoEnhancer(){
     if(!open||!video||authRequired)return;
     const key=(event:KeyboardEvent)=>{
       if(event.defaultPrevented||event.metaKey||event.ctrlKey||event.altKey||blocksEditorShortcut(event.target))return;
-      const target=player.current;if(!target)return;
+      const target=player.current;if(!isUsablePlayer(target))return;
       if(event.code==="Space"){
         if(event.repeat)return;
         event.preventDefault();
@@ -279,14 +283,14 @@ export default function VideoEditorDemoEnhancer(){
         const active=document.activeElement;
         if(active instanceof HTMLIFrameElement&&active.closest(".gts-editor-video"))keyboardTarget.current?.focus({preventScroll:true});
       },0);
-      player.current?.destroy();host.current.innerHTML="";
+      if(typeof player.current?.destroy==="function")player.current.destroy();host.current.innerHTML="";
       player.current=new YT.Player(host.current,{videoId:video.id,width:"100%",height:"100%",playerVars:{autoplay:0,controls:0,disablekb:1,playsinline:1,rel:0,modestbranding:1,start:Math.floor(current)},events:{
-        onReady:({target}:{target:PlayerLike})=>{const d=target.getDuration();if(d>0)setDuration(d);target.seekTo(current,true);captionReadyPlayer.current=target;setPlayerVisualReady(true);suppressNativeCaptions(target);window.setTimeout(()=>{if(captionReadyPlayer.current===target)suppressNativeCaptions(target);},350);},
+        onReady:({target}:{target:PlayerLike})=>{if(cancelled){if(typeof target.destroy==="function")target.destroy();return;}if(!isUsablePlayer(target)){setPlayerVisualReady(false);setStatus(tr("Δεν ήταν δυνατή η φόρτωση του YouTube player."));return;}player.current=target;const d=target.getDuration();if(d>0)setDuration(d);target.seekTo(current,true);captionReadyPlayer.current=target;setPlayerVisualReady(true);suppressNativeCaptions(target);window.setTimeout(()=>{if(captionReadyPlayer.current===target)suppressNativeCaptions(target);},350);},
         onApiChange:({target}:{target:PlayerLike})=>{if(captionReadyPlayer.current===target)suppressNativeCaptions(target);},
         onStateChange:({target,data}:{target:PlayerLike;data:number})=>{setPlaying(data===1);if(captionReadyPlayer.current===target)suppressNativeCaptions(target);restoreKeyboardFocus();},
       }});
     }).catch(()=>{setPlayerVisualReady(false);setStatus(tr("Δεν ήταν δυνατή η φόρτωση του YouTube player."));});
-    return()=>{cancelled=true;captionReadyPlayer.current=null;player.current?.destroy();player.current=null;};
+    return()=>{cancelled=true;captionReadyPlayer.current=null;if(typeof player.current?.destroy==="function")player.current.destroy();player.current=null;};
   },[open,video?.id,authRequired]);
 
   useEffect(()=>{
@@ -294,7 +298,7 @@ export default function VideoEditorDemoEnhancer(){
     let previousPreviewTime:number|null=null;
     let previewPlayed=false;
     const timer=window.setInterval(()=>{
-      const target=player.current;if(!target)return;
+      const target=player.current;if(!isUsablePlayer(target))return;
       const now=target.getCurrentTime();if(Number.isFinite(now))setCurrent(now);
       if(ownerPreview&&!previewPlayed){
         const displaying=captionReadyPlayer.current===target&&target.getPlayerState()===1&&subtitleEventAt(ownerPreview.events,now)>=0;
@@ -327,12 +331,12 @@ export default function VideoEditorDemoEnhancer(){
     changeOwnerPreview(null);
     setOpen(false);setAuthRequired(false);setLoading(false);setPlayerVisualReady(false);setVideo(null);setCaptions(null);setMetadata(null);setRanges([]);setTimecodeDrafts({});setInitialSnapshot("");setPreviewIndex(null);setTimelinePreview(null);setStatus("");
   }
-  function seek(next:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));target.seekTo(safe,true);setCurrent(safe);}
+  function seek(next:number){const target=player.current;if(!isUsablePlayer(target))return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));target.seekTo(safe,true);setCurrent(safe);}
   const scrubbing=useRef(false);const scrubRaf=useRef(0);
-  function scrubTo(value:number){const target=player.current;if(!target)return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,value));setCurrent(safe);if(scrubRaf.current)cancelAnimationFrame(scrubRaf.current);scrubRaf.current=requestAnimationFrame(()=>{try{target.seekTo(safe,false);}catch{}});}
+  function scrubTo(value:number){const target=player.current;if(!isUsablePlayer(target))return;const safe=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,value));setCurrent(safe);if(scrubRaf.current)cancelAnimationFrame(scrubRaf.current);scrubRaf.current=requestAnimationFrame(()=>{try{target.seekTo(safe,false);}catch{}});}
   function commitScrub(value:number){scrubbing.current=false;if(scrubRaf.current){cancelAnimationFrame(scrubRaf.current);scrubRaf.current=0;}seek(value);}
   function updateTimelinePreview(event:React.PointerEvent<HTMLInputElement>){if(duration<=0)return;const rect=event.currentTarget.getBoundingClientRect();const ratio=Math.max(0,Math.min(1,(event.clientX-rect.left)/Math.max(1,rect.width)));setTimelinePreview(ratio*duration);}
-  function toggle(){const target=player.current;if(!target)return;if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();}
+  function toggle(){const target=player.current;if(!isUsablePlayer(target))return;if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();}
   function markStart(){setDraftStart(current);setStatus(`Αρχή range: ${clock(current,true)}`);}
   function markEnd(){
     if(draftStart===null){setStatus("Όρισε πρώτα την αρχή του range.");return;}
