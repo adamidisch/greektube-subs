@@ -389,3 +389,54 @@ html[data-theme="light"] body .user-profile-menu .user-guest-card p { color: #4a
 html[data-theme="light"] .gts-login-card { border-color: rgba(95, 86, 207, .35); }
 .gts-login-card { width: min(420px, 100%); }
 .gts-login-tabs button { white-space: nowrap; font-size: 14px; }
+
+/* v7.15.5 — same look as the MIE Intelligence card: deep indigo gradient, soft grid, glow top-right. Dark card in both themes. */
+.gts-login {
+  --lg-ink: #fff;
+  --lg-muted: #d0d2e7;
+  --lg-soft: #a9acd0;
+  --lg-accent: #b9b0ff;
+  --lg-field: rgba(255, 255, 255, .07);
+  --lg-field-line: rgba(255, 255, 255, .16);
+  background:
+    radial-gradient(60% 45% at 50% 0%, rgba(120, 112, 255, .22), transparent 70%),
+    linear-gradient(180deg, #12131f, #0c0d16);
+}
+html[data-theme="light"] .gts-login {
+  background:
+    radial-gradient(60% 45% at 50% 0%, rgba(120, 112, 255, .16), transparent 70%),
+    linear-gradient(180deg, #eeeef6, #e4e4f0);
+}
+.gts-login-card, html[data-theme="light"] .gts-login-card {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 24px;
+  background: linear-gradient(145deg, #222541 0%, #303262 52%, #454692 100%);
+  color: #fff;
+  box-shadow: 0 30px 70px rgba(20, 20, 60, .35);
+}
+.gts-login-card::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(to bottom, black, transparent 75%);
+}
+.gts-login-card::after {
+  content: ""; position: absolute; z-index: -1; pointer-events: none; width: 260px; height: 260px; right: -80px; top: -110px;
+  border-radius: 50%; background: rgba(130, 125, 255, .5); filter: blur(45px);
+}
+.gts-login-brand, .gts-login-brand em { color: #fff; }
+.gts-login-brand em, html[data-theme="light"] .gts-login-brand em { color: #cfc9ff; }
+.gts-login-tabs { border-bottom-color: rgba(255, 255, 255, .16); }
+.gts-login-tabs button { color: #c2c5e0; }
+.gts-login-tabs button.is-active { color: #fff; border-bottom-color: #a99dff; }
+.gts-login-form label { color: #d0d2e7; }
+.gts-login-field input { background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .16); color: #fff; }
+.gts-login-field input::placeholder { color: #9fa3c8; }
+.gts-login-or { color: #b4b7d8; }
+.gts-login-or::before, .gts-login-or::after { background: rgba(255, 255, 255, .16); }
+.gts-login-primary { background: #fff; color: #23254a; box-shadow: none; }
+.gts-login-primary:disabled { background: rgba(255, 255, 255, .22); color: rgba(255, 255, 255, .6); }
+.gts-login-otp .gts-login-cell { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .18); color: #fff; }
+.gts-login-quiet, .gts-login-head p, .gts-login-note { color: #d0d2e7; }
