@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { database } from "@/db/postgres";
 import { automaticUsername, profileOwnerKey, usernameKey, validateUsername } from "@/app/profile-domain";
+import { accountEmailForOwner } from "@/lib/login-auth";
 
 type ProfileRow = {
   public_id: string | number;
@@ -43,10 +44,12 @@ async function getOrCreateProfile(owner: string) {
   return profile;
 }
 
-function publicProfile(profile: ProfileRow) {
+function publicProfile(profile: ProfileRow, email: string | null = null) {
   return {
     username: profile.username,
-    anonymous: profile.owner_key.startsWith("anon:"),
+    anonymous: !email && profile.owner_key.startsWith("anon:"),
+    signedIn: Boolean(email),
+    email,
     createdAt: profile.created_at,
   };
 }
@@ -81,7 +84,7 @@ export async function GET(request: Request) {
       const available = !rows[0] || rows[0].owner_key === owner;
       return NextResponse.json({ available, valid: true });
     }
-    return NextResponse.json({ profile: publicProfile(profile) }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
+    return NextResponse.json({ profile: publicProfile(profile, await accountEmailForOwner(owner)) }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
   } catch {
     return NextResponse.json({ error: "Δεν ήταν δυνατή η φόρτωση του προφίλ." }, { status: 500 });
   }
@@ -99,7 +102,7 @@ export async function PATCH(request: Request) {
     const expectedUsernameKey = typeof body.currentUsername === "string" ? usernameKey(body.currentUsername) : profile.username_key;
     if (expectedUsernameKey !== profile.username_key) {
       return NextResponse.json(
-        { error: "Το προφίλ άλλαξε σε άλλη καρτέλα. Έγινε επαναφόρτωση του τρέχοντος ονόματος.", code: "profile_changed", profile: publicProfile(profile) },
+        { error: "Το προφίλ άλλαξε σε άλλη καρτέλα. Έγινε επαναφόρτωση του τρέχοντος ονόματος.", code: "profile_changed", profile: publicProfile(profile, await accountEmailForOwner(owner)) },
         { status: 409 },
       );
     }
@@ -124,11 +127,11 @@ export async function PATCH(request: Request) {
         ) as ProfileRow[];
         const current = currentRows[0];
         return NextResponse.json(
-          { error: "Το προφίλ άλλαξε σε άλλη καρτέλα. Έγινε επαναφόρτωση του τρέχοντος ονόματος.", code: "profile_changed", profile: current ? publicProfile(current) : undefined },
+          { error: "Το προφίλ άλλαξε σε άλλη καρτέλα. Έγινε επαναφόρτωση του τρέχοντος ονόματος.", code: "profile_changed", profile: current ? publicProfile(current, await accountEmailForOwner(owner)) : undefined },
           { status: 409 },
         );
       }
-      return NextResponse.json({ profile: publicProfile(updated) });
+      return NextResponse.json({ profile: publicProfile(updated, await accountEmailForOwner(owner)) });
     } catch (error) {
       if (isUniqueViolation(error)) return NextResponse.json({ error: "Το όνομα χρησιμοποιείται ήδη." }, { status: 409 });
       throw error;

@@ -3,6 +3,7 @@ export const SESSION_ENDING_EVENT="greektube:session-ending";
 export const SESSION_ENDED_KEY="greektube-session-ended:v1";
 export async function logoutProfile(){
   window.dispatchEvent(new Event(SESSION_ENDING_EVENT));
+  try{const {authClient}=await import("@/lib/pro-auth/client");await authClient.signOut()}catch{}
   try{
     const response=await fetch("/api/logout",{method:"POST",credentials:"same-origin",cache:"no-store"});
     if(!response.ok){const data=await response.json().catch(()=>null);throw new Error(data?.error||"Δεν ολοκληρώθηκε η αποσύνδεση.");}

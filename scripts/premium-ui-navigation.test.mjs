@@ -62,7 +62,9 @@ const profileMenuSource=profile.slice(profile.indexOf('const profileUi ='),profi
 assert.equal((profileMenuSource.match(/href="\/account"/g)||[]).length,1,"Profile dropdown must expose exactly one account navigation link");
 assert.ok(profile.includes('className="user-profile-summary user-profile-summary-link"'),"The named profile summary is the clickable account link");
 assert.ok(!profile.includes('tr("Ανώνυμο προφίλ")'),"A named device profile must not be labelled anonymous in the menu");
-assert.ok(profile.includes('profile.anonymous ? tr("Προφίλ συσκευής") : tr("Προσωπικό προφίλ")'),"Display accurate device-profile and personal-profile labels");
+assert.ok(profile.includes('profile.signedIn && profile.email ? profile.email : tr("Επισκέπτης · μόνο σε αυτή τη συσκευή"'),"Signed-in profiles show their email; guests are told data stays on this device");
+assert.ok(profile.includes('{!profile.signedIn && <div className="user-guest-card">'),"Guests see the optional sign-in card instead of a forced login");
+assert.ok(profile.includes('{profile.signedIn && <button type="button" className="user-menu-row user-menu-logout"'),"Only signed-in profiles can log out, so guests never lose their profile by accident");
 assert.ok(headerCss.includes('.user-profile-summary-link:focus-visible'),"Clickable profile summary remains keyboard accessible");
 assert.ok(headerCss.includes('.user-profile-summary-link:hover'),"Clickable profile summary provides a hover state");
 

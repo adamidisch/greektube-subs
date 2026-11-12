@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import {tr,useAppLanguage} from "./app-language";
 import {logoutProfile,SESSION_ENDED_KEY} from "./session-client";
 
-type Profile = { username: string; anonymous: boolean; createdAt?: string };
+type Profile = { username: string; anonymous: boolean; signedIn?: boolean; email?: string | null; createdAt?: string };
 type Availability = "idle" | "checking" | "available" | "taken" | "invalid";
 type ProfileLoad = "loading" | "ready" | "error";
 
@@ -295,11 +295,15 @@ export default function UserProfileEnhancer() {
     {menuOpen && <div className="user-profile-menu" role="menu">
       <Link prefetch={false} href="/account" onClick={()=>setMenuOpen(false)} className="user-profile-summary user-profile-summary-link" role="menuitem" aria-label={tr("Άνοιγμα λογαριασμού")}>
         <span className="user-avatar user-avatar-large"><UserIcon/></span>
-        <span className="user-profile-summary-text"><strong>{profile.username}</strong><small>{profile.anonymous ? tr("Προφίλ συσκευής") : tr("Προσωπικό προφίλ")}</small></span>
+        <span className="user-profile-summary-text"><strong>{profile.username}</strong><small>{profile.signedIn && profile.email ? profile.email : tr("Επισκέπτης · μόνο σε αυτή τη συσκευή","Guest · this device only")}</small></span>
       </Link>
+      {!profile.signedIn && <div className="user-guest-card">
+        <p>{tr("Τα αγαπημένα, οι στιγμές και οι ρυθμίσεις σου είναι αποθηκευμένα μόνο σε αυτόν τον browser. Σε άλλη συσκευή δεν θα τα βρεις.","Your favorites, moments and settings live only in this browser. They won't follow you to another device.")}</p>
+        <Link prefetch={false} href="/login" className="user-guest-login" role="menuitem" onClick={()=>setMenuOpen(false)}>{tr("Σύνδεση","Sign in")}</Link>
+      </div>}
       <Link prefetch={false} href="/?action=add" className="user-menu-row" role="menuitem" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"&&!new URLSearchParams(location.search).has("video")){event.preventDefault();setMenuOpen(false);window.dispatchEvent(new Event("greektube:add-video"))}}}><span className="user-menu-icon"><MenuIcon kind="add"/></span><span><strong>{tr("Προσθήκη βίντεο")}</strong></span></Link>
       <Link prefetch={false} href="/?view=settings" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"){event.preventDefault();window.dispatchEvent(new Event("greektube:open-settings"));}}} className="user-menu-row" role="menuitem"><span className="user-menu-icon"><MenuIcon kind="settings"/></span><span><strong>{tr("Ρυθμίσεις")}</strong></span></Link>
-      <button type="button" className="user-menu-row user-menu-logout" role="menuitem" onClick={()=>{setMenuOpen(false);setMessage("");setLogoutOpen(true)}}><span className="user-menu-icon"><MenuIcon kind="logout"/></span><span><strong>{tr("Αποσύνδεση")}</strong></span></button>
+      {profile.signedIn && <button type="button" className="user-menu-row user-menu-logout" role="menuitem" onClick={()=>{setMenuOpen(false);setMessage("");setLogoutOpen(true)}}><span className="user-menu-icon"><MenuIcon kind="logout"/></span><span><strong>{tr("Αποσύνδεση")}</strong></span></button>}
       
     </div>}
   </div>;
@@ -320,6 +324,6 @@ export default function UserProfileEnhancer() {
     </section>
   </div>, document.body) : null;
 
-  const logoutDialog=logoutOpen?createPortal(<div className="profile-editor-backdrop"><section className="profile-editor" role="dialog" aria-modal="true" aria-labelledby="logout-title"><header><h2 id="logout-title">{tr("Αποσύνδεση")}</h2><button type="button" disabled={logoutBusy} aria-label={tr("Κλείσιμο")} onClick={()=>setLogoutOpen(false)}>×</button></header><div className="profile-logout-body"><p>{tr("Αυτό είναι προφίλ συσκευής χωρίς στοιχεία σύνδεσης. Η αποσύνδεση αφαιρεί την πρόσβαση αυτού του browser στην πρόοδο, στα αγαπημένα και στις αποθηκευμένες στιγμές. Το όνομα από μόνο του δεν αρκεί για επανασύνδεση.","This device profile has no sign-in credentials. Logging out removes this browser’s access to its progress, favorites and saved moments. Your username alone cannot restore access.")}</p><Link href="/account" onClick={()=>setLogoutOpen(false)}>{tr("Εξαγωγή δεδομένων πριν από την αποσύνδεση","Export data before logging out")}</Link>{message&&<p role="alert">{message}</p>}<div className="profile-editor-actions"><button type="button" className="secondary" disabled={logoutBusy} onClick={()=>setLogoutOpen(false)}>{tr("Ακύρωση")}</button><button type="button" className="primary" disabled={logoutBusy} onClick={()=>{setLogoutBusy(true);void logoutProfile().catch(error=>{setMessage(error.message);setLogoutBusy(false)})}}>{logoutBusy?tr("Αποσύνδεση…","Logging out…"):tr("Αποσύνδεση")}</button></div></div></section></div>,document.body):null;
+  const logoutDialog=logoutOpen?createPortal(<div className="profile-editor-backdrop"><section className="profile-editor" role="dialog" aria-modal="true" aria-labelledby="logout-title"><header><h2 id="logout-title">{tr("Αποσύνδεση")}</h2><button type="button" disabled={logoutBusy} aria-label={tr("Κλείσιμο")} onClick={()=>setLogoutOpen(false)}>×</button></header><div className="profile-logout-body"><p>{tr("Θα αποσυνδεθείς από αυτή τη συσκευή. Τα αγαπημένα, οι στιγμές και οι ρυθμίσεις σου μένουν στον λογαριασμό σου και τα βρίσκεις ξανά όταν συνδεθείς με το email σου.","You will be signed out on this device. Your favorites, moments and settings stay in your account and come back when you sign in with your email.")}</p>{message&&<p role="alert">{message}</p>}<div className="profile-editor-actions"><button type="button" className="secondary" disabled={logoutBusy} onClick={()=>setLogoutOpen(false)}>{tr("Ακύρωση")}</button><button type="button" className="primary" disabled={logoutBusy} onClick={()=>{setLogoutBusy(true);void logoutProfile().catch(error=>{setMessage(error.message);setLogoutBusy(false)})}}>{logoutBusy?tr("Αποσύνδεση…","Logging out…"):tr("Αποσύνδεση")}</button></div></div></section></div>,document.body):null;
   return <>{createPortal(profileUi, target)}{editor}{logoutDialog}</>;
 }
