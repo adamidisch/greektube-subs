@@ -61,21 +61,40 @@ export async function listExportVideos() {
       ORDER BY updated_at DESC`,
   ) as { video_id: string; title: string; channel: string; duration: number; transcript_version: number; updated_at: string }[];
   const revisions = await publishedRevisions();
-  // Rows saved without a title fall back to the published transcript, like the detail export.
-  const missing = rows.filter(row => !row.title?.trim());
-  const fallbackTitles = new Map<string, string>();
-  await Promise.all(missing.map(async row => {
+  // Rows saved without a title or channel: published transcript first, then YouTube oEmbed, and remember it.
+  const fallbacks = new Map<string, { title: string; channel: string }>();
+  await Promise.all(rows.filter(row => !row.title?.trim() || !row.channel?.trim()).map(async row => {
+    let title = row.title?.trim() || "";
+    let channel = row.channel?.trim() || "";
     try {
-      const loaded = await loadSubtitles(row.video_id);
-      if (loaded?.title) fallbackTitles.set(row.video_id, loaded.title);
-    } catch { /* keep the empty title */ }
+      if (!title) title = (await loadSubtitles(row.video_id))?.title || "";
+    } catch { /* continue */ }
+    if (!title || !channel) {
+      try {
+        const response = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${row.video_id}`)}`, { cache: "no-store" });
+        if (response.ok) {
+          const meta = await response.json() as { title?: string; author_name?: string };
+          title = title || meta.title || "";
+          channel = channel || meta.author_name || "";
+        }
+      } catch { /* keep what we have */ }
+    }
+    if (title || channel) {
+      fallbacks.set(row.video_id, { title, channel });
+      try {
+        await database().query(
+          `UPDATE video_transcripts SET title = CASE WHEN COALESCE(title,'')='' THEN $2 ELSE title END, channel = CASE WHEN COALESCE(channel,'')='' THEN $3 ELSE channel END WHERE video_id = $1`,
+          [row.video_id, title, channel],
+        );
+      } catch { /* best effort */ }
+    }
   }));
   return rows.map(row => {
     const published = revisions.get(row.video_id) || null;
     return {
       youtubeId: row.video_id,
-      title: row.title?.trim() || fallbackTitles.get(row.video_id) || "",
-      channel: row.channel || "",
+      title: row.title?.trim() || fallbacks.get(row.video_id)?.title || "",
+      channel: row.channel?.trim() || fallbacks.get(row.video_id)?.channel || "",
       durationSeconds: Number(row.duration) || 0,
       transcriptVersion: Number(row.transcript_version) || 0,
       greekSource: published ? "owner_reviewed" : "automatic",
