@@ -74,8 +74,8 @@ export async function POST(request: Request) {
 
   // A broken payload (missing Blob checkpoint) must not block a full clean-source replacement.
   const previous = await getTranscript(videoId).catch(() => null);
-  const meta = previous ?? await getTranscriptRowMeta(videoId);
-  if (!meta) return NextResponse.json({ error: "Δεν υπάρχει υπάρχον transcript record για αυτό το βίντεο." }, { status: 409 });
+  // A video that was only added to the library has no transcript row yet: the lock below creates it.
+  const meta = previous ?? await getTranscriptRowMeta(videoId) ?? { title: "", channel: "", duration: 0 };
 
   const token = crypto.randomUUID();
   let staged = false;
