@@ -46,7 +46,7 @@
 .gts-login-brand img { width: 30px; height: 30px; border-radius: 8px; }
 .gts-login-brand em { font-style: normal; color: var(--lg-accent); }
 
-.gts-login-body { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+.gts-login-body { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
 
 .gts-login-head h1 {
   margin: 0;
@@ -276,9 +276,9 @@ html[data-theme="light"] .gts-login-form input::placeholder { color: #9aa0aa; }
 .gts-login-form.gts-login-section input { background: var(--lg-field); }
 .gts-login-guest {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   margin: 6px -24px 0;
   padding: 16px 24px 18px;
   border-top: 1px solid var(--line);
@@ -313,7 +313,7 @@ html[data-theme="light"] .gts-login-guest { background: #f7f7fa; }
   .gts-login-form input { min-height: 44px; }
 }
 @media (max-width: 420px) {
-  .gts-login-guest { flex-direction: column; align-items: stretch; margin: 6px -18px 0; padding: 16px 18px 18px; }
+  .gts-login-guest { margin: 6px -18px 0; padding: 16px 18px 18px; }
   .gts-login-form.gts-login-section { padding: 12px; }
 }
 

@@ -189,7 +189,7 @@ export default function LoginPage() {
           <button type="submit" className="gts-login-primary" disabled={disabled || busy !== null || !/^\S+@\S+\.\S+$/.test(email.trim())}>
             {busy === "send" ? tr("Αποστολή…", "Sending…") : tr("Αποστολή κωδικού", "Send code")}
           </button>
-          <p className="gts-login-hint">{tr("Θα σταλεί κωδικός 6 ψηφίων στη διεύθυνση email. Ελέγξτε τα εισερχόμενα και εισαγάγετε τον κωδικό στο επόμενο βήμα. Δεν απαιτείται κωδικός πρόσβασης.", "A 6-digit code will be sent to the email address. Check your inbox and enter the code in the next step. No password is required.")}</p>
+          <p className="gts-login-hint">{tr("Θα σταλεί κωδικός 6 ψηφίων. Ελέγξτε τα εισερχόμενα και εισαγάγετε τον κωδικό στο επόμενο βήμα.", "A 6-digit code will be sent. Check your inbox and enter the code in the next step.")}</p>
         </form>
 
         <footer className="gts-login-guest">
