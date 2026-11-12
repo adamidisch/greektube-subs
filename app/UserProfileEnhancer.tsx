@@ -298,7 +298,7 @@ export default function UserProfileEnhancer() {
         <span className="user-profile-summary-text"><strong>{profile.username}</strong><small>{profile.signedIn && profile.email ? profile.email : tr("Επισκέπτης · μόνο σε αυτή τη συσκευή","Guest · this device only")}</small></span>
       </Link>
       {!profile.signedIn && <div className="user-guest-card">
-        <p>{tr("Τα αγαπημένα, οι στιγμές και οι ρυθμίσεις σου είναι αποθηκευμένα μόνο σε αυτόν τον browser. Σε άλλη συσκευή δεν θα τα βρεις.","Your favorites, moments and settings live only in this browser. They won't follow you to another device.")}</p>
+        <p>{tr("Τα αγαπημένα, οι στιγμές και οι ρυθμίσεις αποθηκεύονται μόνο σε αυτόν τον browser και δεν είναι διαθέσιμα σε άλλη συσκευή.","Favorites, moments and settings are stored only in this browser and are not available on other devices.")}</p>
         <Link prefetch={false} href="/login" className="user-guest-login" role="menuitem" onClick={()=>setMenuOpen(false)}>{tr("Σύνδεση","Sign in")}</Link>
       </div>}
       <Link prefetch={false} href="/?action=add" className="user-menu-row" role="menuitem" onClick={event=>{setMenuOpen(false);if(location.pathname==="/"&&!new URLSearchParams(location.search).has("video")){event.preventDefault();setMenuOpen(false);window.dispatchEvent(new Event("greektube:add-video"))}}}><span className="user-menu-icon"><MenuIcon kind="add"/></span><span><strong>{tr("Προσθήκη βίντεο")}</strong></span></Link>
