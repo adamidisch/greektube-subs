@@ -80,8 +80,8 @@ export default function LoginPage() {
     try {
       const result = await authClient.signIn.social({ provider: "google", callbackURL: "/login?done=1" });
       if (result?.error) throw new Error(result.error.message || tr("Δεν ξεκίνησε η σύνδεση με Google."));
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : tr("Δεν ξεκίνησε η σύνδεση με Google."));
+    } catch {
+      setError(tr("Δεν ξεκίνησε η σύνδεση με Google. Δοκίμασε ξανά."));
       setBusy(false);
     }
   }
@@ -98,8 +98,8 @@ export default function LoginPage() {
       submittedCode.current = "";
       setCooldown(30);
       setStep("code");
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : tr("Δεν στάλθηκε ο κωδικός."));
+    } catch {
+      setError(tr("Δεν στάλθηκε ο κωδικός. Έλεγξε το email και δοκίμασε ξανά."));
     } finally {
       setBusy(false);
     }
@@ -114,8 +114,8 @@ export default function LoginPage() {
       const result = await authClient.signIn.emailOtp({ email: email.trim().toLowerCase(), otp: value });
       if (result.error) throw new Error(result.error.message || tr("Λάθος κωδικός."));
       await finish();
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : tr("Λάθος κωδικός."));
+    } catch {
+      setError(tr("Ο κωδικός είναι λάθος ή έχει λήξει. Δοκίμασε ξανά."));
       setBusy(false);
     }
   }
@@ -139,7 +139,7 @@ export default function LoginPage() {
 
       {step === "choose" && <div className="gts-login-form">
         <h1 id="gts-login-title">{tr("Σύνδεση", "Sign in")}</h1>
-        <p className="gts-login-lead">{tr("Κράτα τα αγαπημένα, τις στιγμές και τις ρυθμίσεις σου σε κάθε συσκευή.", "Keep your favorites, moments and settings on every device.")}</p>
+        <p className="gts-login-lead">{tr("Αποθήκευσε τα αγαπημένα και τις ρυθμίσεις σου και βρες τα σε κάθε συσκευή.", "Save your favorites and settings and find them on every device.")}</p>
         {unavailable && <p className="gts-login-note" role="status">{tr("Η σύνδεση ενεργοποιείται σύντομα. Μέχρι τότε συνεχίζεις κανονικά ως επισκέπτης.", "Sign-in is coming soon. Until then you can keep using the site as a guest.")}</p>}
         <button type="button" className="gts-login-google" onClick={() => void google()} disabled={busy || configured !== true}>
           <GoogleMark/>{tr("Συνέχεια με Google", "Continue with Google")}
@@ -149,14 +149,14 @@ export default function LoginPage() {
           <label htmlFor="gts-login-email">Email</label>
           <input id="gts-login-email" type="email" inputMode="email" autoComplete="email" required placeholder="name@email.com" value={email} onChange={event => setEmail(event.target.value)} disabled={configured !== true}/>
           {error && <p className="gts-login-error" role="alert">{error}</p>}
-          <button type="submit" className="gts-login-primary" disabled={busy || configured !== true || !email.includes("@")}>{busy ? tr("Αποστολή…", "Sending…") : tr("Στείλε μου κωδικό", "Email me a code")}</button>
+          <button type="submit" className="gts-login-primary" disabled={busy || configured !== true || !email.includes("@")}>{busy ? tr("Ένα λεπτό…", "One moment…") : tr("Συνέχεια", "Continue")}</button>
         </form>
-        <p className="gts-login-hint">{tr("Χωρίς κωδικό πρόσβασης: σου στέλνουμε έναν 6ψήφιο κωδικό κάθε φορά.", "No password: we email you a 6-digit code each time.")}</p>
+        <p className="gts-login-hint">{tr("Θα σου στείλουμε έναν 6ψήφιο κωδικό στο email. Δεν χρειάζεται κωδικός πρόσβασης.", "We will email you a 6-digit code. No password needed.")}</p>
         <Link href="/" className="gts-login-guest">{tr("Συνέχεια ως επισκέπτης", "Continue as guest")}</Link>
       </div>}
 
       {step === "code" && <form onSubmit={event => { event.preventDefault(); void verifyCode(code); }} className="gts-login-form">
-        <h1 id="gts-login-title">{tr("Έλεγξε το email σου", "Check your email")}</h1>
+        <h1 id="gts-login-title">{tr("Βάλε τον κωδικό", "Enter the code")}</h1>
         <p className="gts-login-lead">{tr("Στείλαμε έναν 6ψήφιο κωδικό στο", "We sent a 6-digit code to")} <strong>{email}</strong></p>
         <label htmlFor="gts-login-code" className="sr-only">{tr("Κωδικός", "Code")}</label>
         <input id="gts-login-code" ref={codeRef} className="gts-login-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} placeholder="••••••" value={code} onChange={event => updateCode(event.target.value)}/>
@@ -164,7 +164,7 @@ export default function LoginPage() {
         <button type="submit" className="gts-login-primary" disabled={busy || code.length !== 6}>{busy ? tr("Έλεγχος…", "Checking…") : tr("Σύνδεση", "Sign in")}</button>
         <div className="gts-login-row">
           <button type="button" className="gts-login-link" onClick={() => { setStep("choose"); setError(""); }}>{tr("Άλλο email", "Different email")}</button>
-          <button type="button" className="gts-login-link" disabled={cooldown > 0 || busy} onClick={() => void requestCode()}>{cooldown > 0 ? tr(`Νέος κωδικός σε ${cooldown}″`, `Resend in ${cooldown}s`) : tr("Δεν ήρθε; Στείλε ξανά", "Didn't arrive? Resend")}</button>
+          <button type="button" className="gts-login-link" disabled={cooldown > 0 || busy} onClick={() => void requestCode()}>{cooldown > 0 ? tr(`Νέος κωδικός σε ${cooldown}″`, `Resend in ${cooldown}s`) : tr("Δεν ήρθε; Νέος κωδικός", "Didn't arrive? New code")}</button>
         </div>
       </form>}
 
