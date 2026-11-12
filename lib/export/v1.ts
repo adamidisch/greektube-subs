@@ -149,12 +149,26 @@ function timedList(value: unknown): TimedText[] {
   });
 }
 
+/** Published payloads without English cues: take the source English from the transcript record, aligned to each Greek cue by time. */
+async function englishFromRecord(videoId: string, greek: TimedText[]): Promise<TimedText[]> {
+  const record = await getTranscript(videoId).catch(() => null);
+  const source = record?.englishTranscript?.map(cue => ({ start: Number(cue.start), duration: Number(cue.duration) || 0, text: cue.text })) || [];
+  if (!source.length) return [];
+  if (source.length === greek.length) return source;
+  return greek.map(cue => {
+    const end = cue.start + cue.duration;
+    const text = source.filter(item => item.start < end && item.start + item.duration > cue.start).map(item => item.text).join(" ").trim();
+    return { start: cue.start, duration: cue.duration, text };
+  });
+}
+
 /** Same source the player uses: the published Blob transcript, falling back to the transcript record. */
 async function loadSubtitles(videoId: string) {
   const published = await readPublishedTranscript(videoId, TRANSCRIPT_VERSION, true);
   if (published) {
     const greek = timedList(published.cues);
-    const english = timedList(published.englishCues);
+    let english = timedList(published.englishCues);
+    if (greek.length && english.length === 0) english = await englishFromRecord(videoId, greek);
     if (greek.length) {
       return {
         greek,
