@@ -21,8 +21,9 @@
 .gts-login button, .gts-login input { font-family: inherit; }
 
 .gts-login-card {
-  width: min(380px, 100%);
-  padding: 24px 24px 20px;
+  width: min(384px, 100%);
+  overflow: hidden;
+  padding: 24px 24px 0;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--panel);
@@ -70,20 +71,20 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  min-height: 44px;
+  min-height: 40px;
   padding: 0 16px;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color .15s ease, border-color .15s ease, opacity .15s ease, transform .1s ease;
 }
 .gts-login-google {
-  border: 1px solid var(--lg-field-line);
-  background: var(--raised);
-  color: var(--lg-ink);
+  border: 1px solid #fff;
+  background: #fff;
+  color: #1f1f1f;
 }
-.gts-login-google:hover:not(:disabled) { border-color: rgba(255, 255, 255, .22); background: #1d2028; }
+.gts-login-google:hover:not(:disabled) { background: #f1f1f4; border-color: #f1f1f4; }
 .gts-login-primary {
   border: 0;
   background: var(--lg-accent-strong);
@@ -120,8 +121,8 @@
 .gts-login-form label { color: var(--lg-muted); font-size: 13px; font-weight: 500; }
 .gts-login-form input {
   width: 100%;
-  min-height: 46px;
-  padding: 0 14px;
+  min-height: 42px;
+  padding: 0 13px;
   border: 1px solid var(--lg-field-line);
   border-radius: 10px;
   background: var(--lg-field);
@@ -236,7 +237,7 @@ html[data-theme="light"] .gts-login {
   background: radial-gradient(70% 50% at 50% -10%, rgba(143, 127, 240, .12), transparent 70%), var(--bg);
 }
 html[data-theme="light"] .gts-login-card { box-shadow: 0 18px 48px rgba(30, 30, 60, .10); }
-html[data-theme="light"] .gts-login-google { background: #fff; }
+html[data-theme="light"] .gts-login-google { border-color: #d6d8e0; }
 html[data-theme="light"] .gts-login-google:hover:not(:disabled) { background: #f6f6f9; border-color: #c4c7d2; }
 html[data-theme="light"] .gts-login-brand em { color: #5f56cf; }
 html[data-theme="light"] .gts-login-alert { color: #a23a31; background: #fdf1f0; }
@@ -244,8 +245,93 @@ html[data-theme="light"] .gts-login-alert.is-info { color: #4a40b5; background: 
 html[data-theme="light"] .gts-login-form input::placeholder { color: #9aa0aa; }
 @media (prefers-color-scheme: light) {
   html[data-theme="system"] .gts-login { --lg-field: #fff; --lg-field-line: #d6d8e0; --lg-ink: #15161a; --lg-muted: #555b66; --lg-soft: #6c727c; }
-  html[data-theme="system"] .gts-login-google { background: #fff; }
+  html[data-theme="system"] .gts-login-google { border-color: #d6d8e0; }
 }
+
+/* v7.14.4 — three clear sections: Google, email, guest */
+.gts-login-head .gts-login-keep {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 10px;
+  color: var(--lg-ink);
+  font-size: 13px;
+}
+.gts-login-head .gts-login-keep::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: #42ce93;
+}
+.gts-login-section { display: flex; flex-direction: column; gap: 8px; }
+.gts-login-form.gts-login-section {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+}
+.gts-login-form.gts-login-section input { background: var(--lg-field); }
+.gts-login-guest {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px -24px 0;
+  padding: 16px 24px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.gts-login-guest strong { display: block; font-size: 14px; font-weight: 600; }
+.gts-login-guest p { margin: 2px 0 0; color: var(--lg-soft); font-size: 13px; line-height: 1.45; }
+.gts-login-secondary {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--lg-field-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--lg-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.gts-login-secondary:hover { border-color: var(--lg-accent); background: rgba(143, 127, 240, .08); }
+.gts-login-body > form.gts-login-body, .gts-login-finishing { padding-bottom: 20px; }
+.gts-login-card > form.gts-login-body, .gts-login-card > .gts-login-finishing { padding-bottom: 20px; }
+html[data-theme="light"] .gts-login-guest { background: #f7f7fa; }
+
+@media (max-width: 640px) {
+  .gts-login-google, .gts-login-primary, .gts-login-secondary { min-height: 44px; }
+  .gts-login-form input { min-height: 44px; }
+}
+@media (max-width: 420px) {
+  .gts-login-guest { flex-direction: column; align-items: stretch; margin: 6px -18px 0; padding: 16px 18px 18px; }
+  .gts-login-form.gts-login-section { padding: 12px; }
+}
+
+/* Dialog buttons (logout, profile name): slim and consistent */
+html body .profile-editor-actions { gap: 8px; }
+html body .profile-editor-actions button {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+html body .profile-editor-actions button.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); box-shadow: none; }
+html body .profile-editor-actions button.secondary:hover:not(:disabled) { border-color: rgba(143, 127, 240, .6); }
+html body .profile-editor-actions button.primary { background: linear-gradient(135deg, #8174df, #6358b5); color: #fff; border: 0; box-shadow: 0 8px 20px rgba(112, 99, 201, .2); }
+@media (max-width: 640px) { html body .profile-editor-actions button { min-height: 44px; } }
 
 /* Guest card inside the user menu */
 html body .user-profile-menu .user-guest-card {

@@ -169,28 +169,35 @@ export default function LoginPage() {
         <header className="gts-login-head">
           <h1 id="gts-login-title">{tr("Σύνδεση", "Sign in")}</h1>
           <p>{tr("Με τη σύνδεση, τα αγαπημένα, οι στιγμές και οι ρυθμίσεις αποθηκεύονται στον λογαριασμό και είναι διαθέσιμα σε κάθε συσκευή.", "Signing in stores favorites, moments and settings in your account, so they are available on every device.")}</p>
+          <p className="gts-login-keep">{tr("Η σύνδεση παραμένει ενεργή σε αυτόν τον browser μέχρι την αποσύνδεση.", "You stay signed in on this browser until you sign out.")}</p>
         </header>
 
         {alert}
 
+        <div className="gts-login-section">
         <button type="button" className="gts-login-google" onClick={() => void google()} disabled={disabled || busy !== null} aria-busy={busy === "google"}>
           <GoogleMark/><span>{busy === "google" ? tr("Μετάβαση στη Google…", "Opening Google…") : tr("Συνέχεια με Google", "Continue with Google")}</span>
         </button>
 
+        </div>
+
         <div className="gts-login-or" role="separator"><span>{tr("ή με email", "or with email")}</span></div>
 
-        <form onSubmit={requestCode} className="gts-login-form">
+        <form onSubmit={requestCode} className="gts-login-form gts-login-section">
           <label htmlFor="gts-login-email">{tr("Διεύθυνση email", "Email address")}</label>
           <input id="gts-login-email" type="email" inputMode="email" autoComplete="email" enterKeyHint="send" required placeholder="name@example.com" value={email} onChange={event => setEmail(event.target.value)} disabled={disabled}/>
           <button type="submit" className="gts-login-primary" disabled={disabled || busy !== null || !/^\S+@\S+\.\S+$/.test(email.trim())}>
             {busy === "send" ? tr("Αποστολή…", "Sending…") : tr("Αποστολή κωδικού", "Send code")}
           </button>
-          <p className="gts-login-hint">{tr("Αποστέλλεται κωδικός μίας χρήσης 6 ψηφίων. Δεν απαιτείται κωδικός πρόσβασης.", "A 6-digit one-time code is sent. No password is required.")}</p>
+          <p className="gts-login-hint">{tr("Θα σταλεί κωδικός 6 ψηφίων στη διεύθυνση email. Ελέγξτε τα εισερχόμενα και εισαγάγετε τον κωδικό στο επόμενο βήμα. Δεν απαιτείται κωδικός πρόσβασης.", "A 6-digit code will be sent to the email address. Check your inbox and enter the code in the next step. No password is required.")}</p>
         </form>
 
-        <footer className="gts-login-foot">
-          <Link href="/" className="gts-login-quiet">{tr("Συνέχεια χωρίς σύνδεση", "Continue without signing in")}</Link>
-          <p>{tr("Χωρίς σύνδεση, τα δεδομένα παραμένουν μόνο σε αυτόν τον browser.", "Without signing in, data stays in this browser only.")}</p>
+        <footer className="gts-login-guest">
+          <div>
+            <strong>{tr("Χωρίς λογαριασμό", "Without an account")}</strong>
+            <p>{tr("Τα δεδομένα αποθηκεύονται μόνο σε αυτόν τον browser.", "Data is stored in this browser only.")}</p>
+          </div>
+          <Link href="/" className="gts-login-secondary">{tr("Συνέχεια χωρίς σύνδεση", "Continue without signing in")}</Link>
         </footer>
       </div>}
 
@@ -224,7 +231,7 @@ export default function LoginPage() {
           {busy === "verify" ? tr("Επαλήθευση…", "Verifying…") : tr("Σύνδεση", "Sign in")}
         </button>
 
-        <p className="gts-login-note">{tr("Αν το email δεν εμφανίζεται στα εισερχόμενα, ελέγξτε τον φάκελο Ανεπιθύμητα (Spam).", "If the email is not in your inbox, check the Spam/Junk folder.")}</p>
+        <p className="gts-login-note">{tr("Ελέγξτε τα εισερχόμενα του email. Αν το μήνυμα δεν εμφανίζεται, ελέγξτε τον φάκελο Ανεπιθύμητα (Spam).", "Check your email inbox. If the message is not there, check the Spam/Junk folder.")}</p>
 
         <footer className="gts-login-row">
           <button type="button" className="gts-login-quiet" onClick={() => { setStep("choose"); setProblem(null); setCode(""); }}>{tr("Αλλαγή email", "Change email")}</button>
