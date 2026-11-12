@@ -387,3 +387,5 @@ html[data-theme="light"] body .user-profile-menu .user-guest-card p { color: #4a
 .gts-login-field svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--lg-soft); pointer-events: none; }
 .gts-login-field input { width: 100%; padding-left: 42px; font-size: 16px; }
 html[data-theme="light"] .gts-login-card { border-color: rgba(95, 86, 207, .35); }
+.gts-login-card { width: min(420px, 100%); }
+.gts-login-tabs button { white-space: nowrap; font-size: 14px; }
