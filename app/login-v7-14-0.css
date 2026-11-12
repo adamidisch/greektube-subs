@@ -366,3 +366,24 @@ html[data-theme="light"] body .user-profile-menu .user-guest-card p { color: #4a
   html body .user-profile-menu .user-guest-card p { font-size: 13px; }
   html body .user-profile-menu .user-guest-login { min-height: 44px; }
 }
+
+/* v7.15.3 — simple sign-in card: logo + close, tabs, Google, divider, email, one button. */
+.gts-login-card { padding: 20px 24px 28px; border-color: rgba(143, 127, 240, .45); }
+.gts-login-top { display: flex; align-items: center; justify-content: space-between; }
+.gts-login-top .gts-login-brand { margin: 0; }
+.gts-login-close {
+  display: inline-grid; place-items: center; width: 44px; height: 44px; margin-right: -10px;
+  color: var(--lg-muted); border-radius: 10px; text-decoration: none;
+}
+.gts-login-close:hover { color: var(--lg-ink); }
+.gts-login-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.gts-login-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.gts-login-tabs button {
+  min-height: 44px; padding: 0 4px; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  color: var(--lg-muted); font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.gts-login-tabs button.is-active { color: var(--lg-ink); border-bottom-color: var(--lg-accent); }
+.gts-login-field { position: relative; display: block; }
+.gts-login-field svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--lg-soft); pointer-events: none; }
+.gts-login-field input { width: 100%; padding-left: 42px; font-size: 16px; }
+html[data-theme="light"] .gts-login-card { border-color: rgba(95, 86, 207, .35); }

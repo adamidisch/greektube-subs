@@ -51,6 +51,7 @@ function announceSignedIn() {
 export default function LoginPage() {
   useAppLanguage();
   const [step, setStep] = useState<Step>("choose");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -159,46 +160,43 @@ export default function LoginPage() {
 
   return <main className="gts-login">
     <section className="gts-login-card" aria-labelledby="gts-login-title">
-      <Link href="/" className="gts-login-brand" aria-label={tr("GreekTube Subs, αρχική σελίδα", "GreekTube Subs, home")}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/gtslogo.svg" alt="" width={30} height={30}/>
-        <span>GreekTube <em>Subs</em></span>
-      </Link>
+      <header className="gts-login-top">
+        <Link href="/" className="gts-login-brand" aria-label={tr("GreekTube Subs, αρχική σελίδα", "GreekTube Subs, home")}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/gtslogo.svg" alt="" width={30} height={30}/>
+          <span>GreekTube <em>Subs</em></span>
+        </Link>
+        <Link href="/" className="gts-login-close" aria-label={tr("Κλείσιμο", "Close")}>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+        </Link>
+      </header>
 
       {step === "choose" && <div className="gts-login-body">
-        <header className="gts-login-head">
-          <h1 id="gts-login-title">{tr("Σύνδεση", "Sign in")}</h1>
-          <p>{tr("Με τη σύνδεση, τα αγαπημένα, οι στιγμές και οι ρυθμίσεις αποθηκεύονται στον λογαριασμό και είναι διαθέσιμα σε κάθε συσκευή.", "Signing in stores favorites, moments and settings in your account, so they are available on every device.")}</p>
-          <p className="gts-login-keep">{tr("Η σύνδεση παραμένει ενεργή σε αυτόν τον browser μέχρι την αποσύνδεση.", "You stay signed in on this browser until you sign out.")}</p>
-        </header>
+        <div className="gts-login-tabs" role="tablist" aria-label={tr("Τρόπος σύνδεσης", "Sign-in mode")}>
+          <button type="button" role="tab" aria-selected={mode === "signin"} className={mode === "signin" ? "is-active" : ""} onClick={() => setMode("signin")}>{tr("Σύνδεση", "Sign in")}</button>
+          <button type="button" role="tab" aria-selected={mode === "signup"} className={mode === "signup" ? "is-active" : ""} onClick={() => setMode("signup")}>{tr("Δημιουργία Λογαριασμού", "Create account")}</button>
+        </div>
+
+        <h1 id="gts-login-title" className="gts-login-sr">{mode === "signin" ? tr("Σύνδεση", "Sign in") : tr("Δημιουργία Λογαριασμού", "Create account")}</h1>
 
         {alert}
 
-        <div className="gts-login-section">
         <button type="button" className="gts-login-google" onClick={() => void google()} disabled={disabled || busy !== null} aria-busy={busy === "google"}>
           <GoogleMark/><span>{busy === "google" ? tr("Μετάβαση στη Google…", "Opening Google…") : tr("Συνέχεια με Google", "Continue with Google")}</span>
         </button>
 
-        </div>
+        <div className="gts-login-or" role="separator"><span>{tr("ή", "or")}</span></div>
 
-        <div className="gts-login-or" role="separator"><span>{tr("ή με email", "or with email")}</span></div>
-
-        <form onSubmit={requestCode} className="gts-login-form gts-login-section">
-          <label htmlFor="gts-login-email">{tr("Διεύθυνση email", "Email address")}</label>
-          <input id="gts-login-email" type="email" inputMode="email" autoComplete="email" enterKeyHint="send" required placeholder="name@example.com" value={email} onChange={event => setEmail(event.target.value)} disabled={disabled}/>
-          <button type="submit" className="gts-login-primary" disabled={disabled || busy !== null || !/^\S+@\S+\.\S+$/.test(email.trim())}>
-            {busy === "send" ? tr("Αποστολή…", "Sending…") : tr("Αποστολή κωδικού", "Send code")}
-          </button>
-          <p className="gts-login-hint">{tr("Θα σταλεί κωδικός 6 ψηφίων. Ελέγξτε τα εισερχόμενα και εισαγάγετε τον κωδικό στο επόμενο βήμα.", "A 6-digit code will be sent. Check your inbox and enter the code in the next step.")}</p>
-        </form>
-
-        <footer className="gts-login-guest">
-          <div>
-            <strong>{tr("Χωρίς λογαριασμό", "Without an account")}</strong>
-            <p>{tr("Τα δεδομένα αποθηκεύονται μόνο σε αυτόν τον browser.", "Data is stored in this browser only.")}</p>
+        <form onSubmit={requestCode} className="gts-login-form">
+          <label htmlFor="gts-login-email">Email</label>
+          <div className="gts-login-field">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.7"/><path d="M4 7.5l8 6 8-6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <input id="gts-login-email" type="email" inputMode="email" autoComplete="email" enterKeyHint="send" required placeholder="name@example.com" value={email} onChange={event => setEmail(event.target.value)} disabled={disabled}/>
           </div>
-          <Link href="/" className="gts-login-secondary">{tr("Συνέχεια χωρίς σύνδεση", "Continue without signing in")}</Link>
-        </footer>
+          <button type="submit" className="gts-login-primary" disabled={disabled || busy !== null || !/^\S+@\S+\.\S+$/.test(email.trim())}>
+            {busy === "send" ? tr("Αποστολή…", "Sending…") : <>{tr("Αποστολή Κωδικού", "Send code")} <span aria-hidden="true">→</span></>}
+          </button>
+        </form>
       </div>}
 
       {step === "code" && <form className="gts-login-body" onSubmit={event => { event.preventDefault(); void verifyCode(code); }}>
