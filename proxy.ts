@@ -4,11 +4,12 @@ import { PROFILE_COOKIE, validAnonymousId } from "@/app/profile-domain";
 import { getAuth } from "@/lib/pro-auth/server";
 
 export async function proxy(request: NextRequest) {
-  // Returning from Google: exchange Neon's one-time verifier for a session cookie, then clean the URL.
-  if (request.nextUrl.pathname === "/login") {
+  // Returning from Google: exchange Neon's one-time verifier for the session cookie.
+  // The return path must differ from loginUrl, otherwise the library skips the exchange.
+  if (request.nextUrl.pathname === "/auth/callback") {
     const auth = getAuth();
     if (auth && request.nextUrl.searchParams.has("neon_auth_session_verifier")) {
-      return auth.middleware({ loginUrl: "/login" })(request);
+      return auth.middleware({ loginUrl: "/login?error=google" })(request);
     }
     return NextResponse.next();
   }
@@ -28,5 +29,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login"],
+  matcher: ["/", "/auth/callback"],
 };
