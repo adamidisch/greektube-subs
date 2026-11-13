@@ -168,7 +168,8 @@ async function loadSubtitles(videoId: string) {
   if (published) {
     const greek = timedList(published.cues);
     let english = timedList(published.englishCues);
-    if (greek.length && english.length === 0) english = await englishFromRecord(videoId, greek);
+    // Published payloads may carry English cues with empty text; treat those as missing too.
+    if (greek.length && !english.some(cue => cue.text.trim())) english = await englishFromRecord(videoId, greek);
     if (greek.length) {
       return {
         greek,
