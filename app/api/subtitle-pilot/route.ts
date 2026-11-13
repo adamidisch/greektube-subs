@@ -49,12 +49,52 @@ export async function POST(request: Request) {
   catch (error) {
     return json({ error: "Ο πάροχος δεν απάντησε.", providerStatus: error instanceof WordAuthoringProviderError ? error.status : 502, model }, 502);
   }
-  const seconds = (Date.now() - started) / 1000;
-  try {
-    const phrases = parseWordPhrases(proposed, packet);
-    const events = authorWordPhrases(packet, phrases);
-    return json({ ok: true, model, seconds, phrases, events });
-  } catch (error) {
-    return json({ ok: false, model, seconds, issue: error instanceof Error ? error.message : "Αποτυχία", proposed });
+  const rounds: { issue: string; overBudget: number }[] = [];
+  for (let round = 0; ; round++) {
+    let issue = "";
+    try {
+      const phrases = parseWordPhrases(proposed, packet);
+      const events = authorWordPhrases(packet, phrases);
+      return json({ ok: true, model, seconds: (Date.now() - started) / 1000, repairRounds: round, rounds, phrases, events });
+    } catch (error) { issue = error instanceof Error ? error.message : "Αποτυχία"; }
+    const repairs = phraseBudgets(packet, proposed);
+    rounds.push({ issue, overBudget: repairs.filter(r => r.overBy > 0).length });
+    if (round >= MAX_REPAIR_ROUNDS || Date.now() - started > 40_000)
+      return json({ ok: false, model, seconds: (Date.now() - started) / 1000, repairRounds: round, rounds, issue, proposed });
+    try {
+      proposed = await foundationSubtitleJson(BUDGET_REPAIR_PROMPT, { globalBrief: packet.globalBrief, issue,
+        phrases: repairs.map(({ firstWordId, lastWordId, english, text, maxChars, hardBreakBefore }) => ({ firstWordId, lastWordId, english, text, maxChars, hardBreakBefore })) },
+        { maxTokens: 4000, model });
+    } catch (error) {
+      return json({ error: "Ο πάροχος δεν απάντησε.", providerStatus: error instanceof WordAuthoringProviderError ? error.status : 502, model, rounds }, 502);
+    }
   }
+}
+
+const MAX_REPAIR_ROUNDS = 2;
+/** Reading-speed target used for per-phrase budgets; the hard gate stays at 17 CPS. */
+const BUDGET_CPS = 15.5;
+const BUDGET_REPAIR_PROMPT = `You are the GreekTube subtitle editor. Each item is one Greek subtitle phrase mapped to fixed
+English source words (firstWordId..lastWordId) with a hard maximum length maxChars derived from the real speech timing.
+Rewrite every phrase whose text is longer than maxChars so it fits, and also fix any listed issue. Keep the complete
+meaning: negation, hedging, numbers, units, names, attribution and causality. Never strengthen medical claims.
+Prefer natural spoken modern Greek, drop filler and repetition, use shorter synonyms and approved glossary
+alternates. Keep firstWordId, lastWordId and hardBreakBefore exactly as given and keep the same order; do not merge
+or split items. Phrases already within maxChars may stay unchanged. No comma before και or ή. All-uppercase Greek has no tonos.
+Return JSON only: {"phrases":[{"firstWordId":"...","lastWordId":"...","text":"...","hardBreakBefore":false}]}.`;
+
+type Proposed = { phrases?: { firstWordId?: unknown; lastWordId?: unknown; text?: unknown; hardBreakBefore?: unknown }[] };
+function phraseBudgets(packet: WordAuthoringPacket, proposed: unknown) {
+  const index = new Map(packet.words.map((word, i) => [word.wordId, i]));
+  const phrases = Array.isArray((proposed as Proposed)?.phrases) ? (proposed as Proposed).phrases! : [];
+  return phrases.flatMap(item => {
+    const first = index.get(String(item?.firstWordId)), last = index.get(String(item?.lastWordId));
+    if (first === undefined || last === undefined || last < first) return [];
+    const nextStart = packet.words[last + 1]?.startMs ?? packet.nextWordStartMs;
+    const seconds = Math.max(0.5, (Math.min(packet.words[last].endMs + 250, nextStart) - packet.words[first].startMs) / 1000);
+    const text = String(item.text || "");
+    const maxChars = Math.max(8, Math.floor(seconds * BUDGET_CPS));
+    return [{ firstWordId: String(item.firstWordId), lastWordId: String(item.lastWordId), hardBreakBefore: item.hardBreakBefore === true,
+      english: packet.words.slice(first, last + 1).map(word => word.text).join(" "), text, maxChars, overBy: Array.from(text).length - maxChars }];
+  });
 }
