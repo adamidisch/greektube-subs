@@ -1,4 +1,6 @@
 import { FINAL_SUBTITLE_REVIEW_PROMPT, finalReviewEvents, finalCandidateHash, validateFinalReview, assertFinalReviewBinding, type FinalSemanticReview } from "./final-subtitle-review.ts";
+import { glossaryViolations, withApprovedEquivalents } from "./glossary-terms.ts";
+import type { TranslationGlossaryEntry } from "./translation-understanding.ts";
 import { createHash } from "node:crypto";
 import { validateAudioEvidence, type SubtitleAudioEvidence } from "../../subtitle-audio-evidence.ts";
 import { subtitleLines } from "../../subtitle-display.ts";
@@ -10,7 +12,9 @@ export function wordEvidenceKey(evidence: SubtitleAudioEvidence) {
   return createHash("sha256").update(JSON.stringify(evidence)).digest("hex");
 }
 export const WORD_TRANSLATION_PROMPT = `You are the GreekTube professional English-to-Greek audiovisual translator.
-Read the whole-video brief, locked glossary and read-only neighbouring context. Translate the complete meaning
+Read the whole-video brief, locked glossary and read-only neighbouring context. Every glossary term mentioned
+in the selected source must appear as its greek rendering or one of its alternates (any inflection); alternates
+are equally correct, so prefer the shorter one when space is tight. Translate the complete meaning
 of the selected source into concise natural Greek. Reconstruct sentences across cue boundaries. Preserve
 negation, hedging, uncertainty, attribution, causality, chronology, names, numbers and units. Never strengthen
 medical claims. Existing Greek is an editable reference, not authoritative evidence. Do not omit meaningful
@@ -64,6 +68,7 @@ export function buildWordAuthoringPacket(source: TimedCue[], translation: TimedC
   if (typeof brief.mainTopic !== "string" || !brief.mainTopic.trim() || !Array.isArray(brief.glossary)) fail("Whole-video brief and glossary are required");
   // A bad boundary elsewhere must not prevent targeted work on a healthy scope.
   // Full assembly/publication still calls the strict whole-video validator.
+  brief = { ...brief, glossary: withApprovedEquivalents(brief.glossary as TranslationGlossaryEntry[]) };
   const { tokens, evidence: validated } = validateAudioEvidence(evidence, source, { overlapScope: range });
   const indices = tokens.flatMap((token, index) => token.cueIndex >= range[0] && token.cueIndex <= range[1] ? [index] : []);
   if (!indices.length || indices.length > 200) fail("Select a semantic scope of at most 200 words");
@@ -110,6 +115,9 @@ export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): P
   });
   if (cursor !== packet.words.length) fail("Greek phrase word coverage is incomplete");
   if (JSON.stringify(numbers(packet.sourceText)) !== JSON.stringify(numbers(phrases.map(p => p.text).join(" ")))) fail("Numeric content changed during translation");
+  const glossary = Array.isArray(packet.globalBrief.glossary) ? packet.globalBrief.glossary as TranslationGlossaryEntry[] : [];
+  const missing = glossaryViolations(packet.sourceText, phrases.map(p => p.text).join(" "), glossary);
+  if (missing.length) fail(`Glossary term not rendered with an approved Greek term: ${missing.map(m => `${m.source} → ${m.accepted.join(" / ")}`).join("; ")}`);
   return phrases;
 }
 

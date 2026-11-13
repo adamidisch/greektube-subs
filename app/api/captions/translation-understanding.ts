@@ -6,6 +6,8 @@ export type UnderstandingCue = { start: number; duration: number; text: string }
 export type TranslationGlossaryEntry = {
   source: string;
   greek: string;
+  /** Other approved renderings; any of them is correct (owner rule: alternate equivalent terms). */
+  alternates?: string[];
   note?: string;
 };
 
@@ -109,7 +111,8 @@ function glossaryList(value: unknown, max = 80) {
     const source = normalizeText(row.source);
     const greek = normalizeText(row.greek);
     const note = normalizeText(row.note);
-    return source && greek ? [{ source, greek, ...(note ? { note } : {}) }] : [];
+    const alternates = stringList(row.alternates, 4).filter(item => item !== greek);
+    return source && greek ? [{ source, greek, ...(alternates.length ? { alternates } : {}), ...(note ? { note } : {}) }] : [];
   }).slice(0, max);
 }
 
@@ -436,6 +439,7 @@ function buildUnderstanding(
     glossary: glossaryList(result.glossary, 24).map(term => ({
       source: truncate(term.source, 160),
       greek: truncate(term.greek, 160),
+      ...(term.alternates ? { alternates: term.alternates.map(item => truncate(item, 160)) } : {}),
       ...(term.note ? { note: truncate(term.note, 220) } : {}),
     })),
     ambiguities: stringList(result.ambiguities, 10).map(item => truncate(item, 280)),

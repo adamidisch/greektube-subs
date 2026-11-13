@@ -155,6 +155,21 @@ Long videos may be analyzed hierarchically but the final brief must represent th
 
 ---
 
+### Approved equivalent terms (owner rule, 13/11/2026)
+
+A glossary entry may list several approved Greek renderings (`greek` plus `alternates`). All are correct.
+Alternate them so viewers who know either term are covered: prefer the shorter rendering when the
+character budget is tight and the fuller one at first mention when it fits. QA must never flag the choice
+between approved renderings, but any other rendering of an enforced term is a `term_error`.
+
+The deterministic gate (`app/api/captions/glossary-terms.ts`) blocks a scope when a glossary term of at most
+three words appears in the English but none of its approved renderings appears in the Greek (any inflection).
+Owner-approved pairs live in `APPROVED_TERM_EQUIVALENTS` and are added to every video's glossary:
+
+| English | Approved Greek |
+|---|---|
+| underactive thyroid / hypothyroidism | υποθυρεοειδισμός · υπολειτουργικός θυρεοειδής |
+
 ## 6. Stage D — Semantic span construction
 
 A semantic span contains enough context to express one coherent meaning.
