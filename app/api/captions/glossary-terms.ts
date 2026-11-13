@@ -26,7 +26,7 @@ function greekFold(text: string) {
 function greekStem(word: string) {
   const folded = greekFold(word);
   const stem = folded.replace(/[αεηιουωσ]+$/u, "");
-  return stem.length >= 4 ? stem : folded;
+  return stem.length >= 2 ? stem : folded;
 }
 
 function greekTokens(text: string) {

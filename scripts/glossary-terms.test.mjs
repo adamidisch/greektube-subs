@@ -14,6 +14,8 @@ assert.deepEqual(glossaryViolations(source, "Όποιος κάνει δίαιτ�
 assert.deepEqual(glossaryViolations("Diagnosing hypothyroidism is not just blood tests.", "Ο υποθυρεοειδισμός δεν διαγιγνώσκεται μόνο από εξετάσεις.", glossary), [], "overlapping source spellings share one rendering");
 assert.deepEqual(glossaryViolations("We talk about energy.", "Μιλάμε για ενέργεια.", glossary), [], "absent terms are not required");
 
+assert.deepEqual(glossaryViolations("lactic acid burn", "την καύση γαλακτικού οξέος", [{ source: "lactic acid", greek: "γαλακτικό οξύ" }]), [], "short words inflect too (οξύ ~ οξέος)");
+
 const long = [{ source: "wired but tired", greek: "κουρασμένος αλλά σε διαρκή υπερένταση" }];
 assert.deepEqual(glossaryViolations("the wired but tired feeling", "νιώθουμε εξαντλημένοι", long), [], "explanatory phrases longer than three words are not enforced");
 
