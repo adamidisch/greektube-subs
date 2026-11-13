@@ -9,6 +9,8 @@ import {
   routeWithoutView,
   sameVideoContext,
   shouldBackOnVideoClose,
+  videoCloseSteps,
+  videoPushDepth,
   shouldPromoteVideoReplaceToPush,
   withNavigationMarker,
   type AppRoute,
@@ -25,8 +27,8 @@ const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const HOLD_SPEED_DELAY_MS = 420;
 const HOLD_SPEED_MOVE_THRESHOLD_PX = 16;
 
-function markerFor(route: AppRoute, inApp: boolean, direct: boolean): NavigationMarker {
-  return { kind: route.kind, videoId: route.videoId, inApp, direct };
+function markerFor(route: AppRoute, inApp: boolean, direct: boolean, depth: number): NavigationMarker {
+  return { kind: route.kind, videoId: route.videoId, inApp, direct, depth };
 }
 
 function videoIdFromEditButton(button: HTMLElement): string {
@@ -100,8 +102,9 @@ export default function NavigationAwareGreekTubePlayer() {
       direct: boolean,
       state: unknown = historyObject.state,
       title = "",
+      depth = videoCloseSteps(readNavigationMarker(historyObject.state)),
     ) => {
-      const nextState = withNavigationMarker(state, markerFor(route, inApp, direct));
+      const nextState = withNavigationMarker(state, markerFor(route, inApp, direct, depth));
       if (mode === "push") nativePushState(nextState, title, url);
       else nativeReplaceState(nextState, title, url);
       routeRef.current = route;
@@ -162,12 +165,14 @@ export default function NavigationAwareGreekTubePlayer() {
       }
 
       if (shouldPromoteVideoReplaceToPush(current, next)) {
-        writeState("push", nextUrl, next, true, false, state, title);
+        writeState("push", nextUrl, next, true, false, state, title, videoPushDepth(current, currentMarker));
         return;
       }
 
       if (shouldBackOnVideoClose(current, next, currentMarker)) {
-        queueMicrotask(() => historyObject.back());
+        // After video → video, the previous entry is a video; go back to the library itself.
+        const steps = videoCloseSteps(currentMarker);
+        queueMicrotask(() => historyObject.go(-steps));
         return;
       }
 

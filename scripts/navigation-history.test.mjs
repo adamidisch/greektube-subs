@@ -5,6 +5,8 @@ import {
   routeWithoutView,
   shouldBackOnVideoClose,
   shouldPromoteVideoReplaceToPush,
+  videoCloseSteps,
+  videoPushDepth,
   withNavigationMarker,
 } from "../app/navigation-history.ts";
 
@@ -36,5 +38,16 @@ assert.equal(shouldBackOnVideoClose(videoA, home, { ...marker, direct: true }), 
 
 assert.equal(routeWithoutView("https://greektubesubs.com/?video=KkBy__7d9Fs&view=editor&t=18").toString(), "https://greektubesubs.com/?video=KkBy__7d9Fs&t=18");
 assert.equal(parseAppRoute("/?video=bad").kind, "home", "Invalid video IDs must not become video routes");
+
+// Library after video → video must return to the library, not the previous video.
+const fromHome = videoPushDepth(home, null);
+assert.equal(fromHome, 1);
+const markerA = { kind: "video", videoId: videoA.videoId, inApp: true, direct: false, depth: fromHome };
+const fromA = videoPushDepth(videoA, markerA);
+assert.equal(fromA, 2);
+assert.equal(videoCloseSteps({ ...markerA, depth: fromA }), 2, "Closing B opened from A goes back two entries");
+assert.equal(videoCloseSteps(markerA), 1);
+assert.equal(videoCloseSteps(null), 1, "Old entries without depth keep the previous one-step behaviour");
+assert.equal(readNavigationMarker(withNavigationMarker({}, { ...markerA, depth: 3 })).depth, 3);
 
 console.log("navigation-history tests passed");

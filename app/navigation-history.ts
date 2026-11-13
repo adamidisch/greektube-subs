@@ -10,6 +10,8 @@ export type NavigationMarker = {
   videoId: string;
   inApp: boolean;
   direct: boolean;
+  /** Video entries pushed since the library; "Library" goes back this many steps. */
+  depth?: number;
 };
 
 export const NAVIGATION_STATE_KEY = "__gtsNavigation";
@@ -53,6 +55,17 @@ export function shouldBackOnVideoClose(
     && marker?.direct !== true;
 }
 
+/** Depth of a new in-app video entry: 1 from the library, one more for each video opened from a video. */
+export function videoPushDepth(current: AppRoute, marker: NavigationMarker | null): number {
+  return current.kind === "video" ? videoCloseSteps(marker) + 1 : 1;
+}
+
+/** History steps back to the library when a video closes. */
+export function videoCloseSteps(marker: NavigationMarker | null): number {
+  const depth = marker?.depth;
+  return typeof depth === "number" && Number.isInteger(depth) && depth > 0 ? depth : 1;
+}
+
 export function readNavigationMarker(state: unknown): NavigationMarker | null {
   if (!state || typeof state !== "object") return null;
   const marker = (state as Record<string, unknown>)[NAVIGATION_STATE_KEY];
@@ -65,6 +78,7 @@ export function readNavigationMarker(state: unknown): NavigationMarker | null {
     videoId: typeof value.videoId === "string" ? value.videoId : "",
     inApp: value.inApp === true,
     direct: value.direct === true,
+    ...(typeof value.depth === "number" ? { depth: value.depth } : {}),
   };
 }
 
