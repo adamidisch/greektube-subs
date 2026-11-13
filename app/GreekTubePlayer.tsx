@@ -362,6 +362,7 @@ const INITIAL_LIBRARY_SIZE=5;
 const LIBRARY_PAGE_SIZE=10;
 
 
+const PREVIEW_REQUESTED=typeof location!=="undefined"&&new URLSearchParams(location.search).get("preview")==="1";
 export default function GreekTubePlayer() {
   useAppLanguage();
   const [state,setState]=useState<AppState>({videos:[],moments:[],settings:DEFAULT_SETTINGS});
@@ -371,7 +372,7 @@ export default function GreekTubePlayer() {
   const [selectedId,setSelectedId]=useState<string|null>(null);
   const [captions,setCaptions]=useState<Captions|null>(null);
   const [previewEvents,setPreviewEvents]=useState<SubtitleTrack["events"]|null>(null);
-  useEffect(()=>{const id=captions?.videoId;setPreviewEvents(null);if(!id||new URLSearchParams(location.search).get("preview")!=="1")return;let live=true;
+  useEffect(()=>{const id=captions?.videoId;setPreviewEvents(null);if(!id||!PREVIEW_REQUESTED)return;let live=true;
     fetch(`/previews/${id}.json`,{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(live&&d?.videoId===id&&Array.isArray(d.events)&&d.events.length)setPreviewEvents(d.events)}).catch(()=>undefined);return()=>{live=false}},[captions?.videoId]);
   const displayTrack=useMemo(()=>{const base=displaySubtitleTrack(captions?.cues||[],captions?.subtitleTrack);return previewEvents?{...base,origin:"authored" as const,events:previewEvents,audit:auditSubtitleEvents(previewEvents)}:base},[captions,previewEvents]);
   const englishTrack=useMemo(()=>legacySubtitleTrack(captions?.englishCues||[]),[captions?.englishCues]);
