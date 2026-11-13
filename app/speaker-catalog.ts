@@ -149,7 +149,88 @@ const RHONDA_PATRICK: CanonicalSpeakerProfile = {
   },
 };
 
-const SPEAKER_PROFILES = [SARAH_MYHILL, NATASHA_CAMPBELL_MCBRIDE, DAVID_BROWNSTEIN, STASHA_GOMINAK, PHILIP_OVADIA, RHONDA_PATRICK];
+const BEN_BIKMAN: CanonicalSpeakerProfile = {
+  name: "Dr. Ben Bikman",
+  role: "Μεταβολικός επιστήμονας",
+  importance: "Γνωστός για την έρευνά του γύρω από την αντίσταση στην ινσουλίνη και τον ρόλο της στις χρόνιες παθήσεις.",
+  currentWork: "Είναι καθηγητής στο Brigham Young University όπου μελετά την ινσουλίνη και τα κετονοσώματα.",
+  highlights: ["Αντίσταση στην ινσουλίνη", "Μεταβολισμός", "Κετονοσώματα", "Παχυσαρκία και διαβήτης"],
+  biography: {
+    profileLabel: "Προφίλ ομιλητή",
+    introduction: "Ερευνητής του μεταβολισμού με διδακτορικό στη βιοενεργητική και εστίαση στην αντίσταση στην ινσουλίνη.",
+    facts: [
+      { label: "Σπουδές", text: "Πτυχίο και μεταπτυχιακό στην επιστήμη της άσκησης από το BYU. Διδακτορικό στη βιοενεργητική από το East Carolina University." },
+      { label: "Πορεία", text: "Μεταδιδακτορική έρευνα στη Σιγκαπούρη με το Duke-NUS Medical School. Διδάσκει στο BYU από το 2011." },
+      { label: "Αντικείμενο", text: "Μελετά τις αιτίες και τις συνέπειες της αντίστασης στην ινσουλίνη και τη σχέση της με τη μιτοχονδριακή λειτουργία." },
+      { label: "Εκπαιδευτικό έργο", text: "Συγγραφέας του βιβλίου Why We Get Sick (2020)." },
+    ],
+    sources: [
+      { label: "BYU — ερευνητικό εργαστήριο", url: "https://cell.byu.edu/bikman-lab/principal-investigator" },
+      { label: "BYU — σελίδα καθηγητή", url: "https://cell.byu.edu/directory/benjamin-bikman" },
+    ],
+  },
+};
+
+const JESSIE_INCHAUSPE: CanonicalSpeakerProfile = {
+  name: "Jessie Inchauspé",
+  role: "Βιοχημικός · Συγγραφέας",
+  importance: "Γνωστή ως Glucose Goddess για τις πρακτικές συμβουλές της γύρω από τις διακυμάνσεις της γλυκόζης.",
+  currentWork: "Γράφει βιβλία και δημιουργεί εκπαιδευτικό περιεχόμενο για τη γλυκόζη και τη διατροφή.",
+  highlights: ["Γλυκόζη και σάκχαρο", "Διατροφικές συνήθειες", "Ενέργεια και λιγούρες", "Εκλαΐκευση"],
+  biography: {
+    profileLabel: "Προφίλ ομιλήτριας",
+    introduction: "Γαλλίδα βιοχημικός και συγγραφέας με εστίαση στην ισορροπία του σακχάρου στο αίμα.",
+    facts: [
+      { label: "Σπουδές", text: "Πτυχίο στα μαθηματικά από το King's College London και μεταπτυχιακό στη βιοχημεία από το Georgetown University." },
+      { label: "Εκπαιδευτικό έργο", text: "Συγγραφέας των βιβλίων Glucose Revolution (2022) και The Glucose Goddess Method (2023)." },
+    ],
+    infoNote: "Δεν είναι ιατρός. Ορισμένοι ειδικοί διατροφής έχουν εκφράσει επιφυλάξεις για την έμφαση στις αιχμές γλυκόζης.",
+    sources: [
+      { label: "Επίσημη ιστοσελίδα", url: "https://www.glucosegoddess.com/" },
+      { label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Jessie_Inchausp%C3%A9" },
+    ],
+  },
+};
+
+const ELIZABETH_BRIGHT: CanonicalSpeakerProfile = {
+  name: "Dr. Elizabeth Bright",
+  role: "Οστεοπαθής · Φυσιοπαθητικός",
+  importance: "Γνωστή για τη χρήση διατροφής με λίπος και ζωικές τροφές ως θεραπευτικής προσέγγισης.",
+  currentWork: "Ζει και εργάζεται στην Ιταλία και γράφει για τη διατροφή και την υγεία των γυναικών.",
+  highlights: ["Φλεγμονή", "Κρεατοφαγική διατροφή", "Υγεία των γυναικών", "Φυσιοπαθητική"],
+  biography: {
+    profileLabel: "Προφίλ ομιλήτριας",
+    introduction: "Αμερικανίδα οστεοπαθής και φυσιοπαθητικός (DO, ND) απόφοιτος του Columbia University.",
+    facts: [
+      { label: "Αντικείμενο", text: "Χρησιμοποιεί τη διατροφή με πολλά λιπαρά και ζωικές τροφές ως θεραπευτική προσέγγιση από το 2016." },
+      { label: "Εκπαιδευτικό έργο", text: "Συγγραφέας του βιβλίου Good Fat is Good for Women: Menopause." },
+    ],
+    sources: [
+      { label: "Βιογραφικό συγγραφέα", url: "https://www.abebooks.co.uk/author/b074shbrpk/elizabeth-bright" },
+    ],
+  },
+};
+
+const DAVID_FRIEDBERG: CanonicalSpeakerProfile = {
+  name: "David Friedberg",
+  role: "Επιστήμονας · Επιχειρηματίας",
+  importance: "Γνωστός για τις επενδύσεις του στη βιοτεχνολογία και στη γεωργία και για τη δημόσια συζήτηση γύρω από την τεχνολογία.",
+  currentWork: "Είναι ιδρυτής και CEO της The Production Board και μέλος του PCAST, του συμβουλίου επιστήμης και τεχνολογίας του Αμερικανού προέδρου.",
+  highlights: ["Βιοτεχνολογία", "Επιγενετική και γήρανση", "Τεχνητή νοημοσύνη", "Γεωργία"],
+  biography: {
+    profileLabel: "Προφίλ ομιλητή",
+    introduction: "Επιχειρηματίας με επιστημονικό υπόβαθρο. Δεν είναι ιατρός.",
+    facts: [
+      { label: "Πορεία", text: "Ιδρυτής και CEO της The Production Board, που δημιουργεί εταιρείες βιοτεχνολογίας και τροφίμων." },
+      { label: "Δημόσιος ρόλος", text: "Μέλος του President's Council of Advisors on Science and Technology (PCAST)." },
+    ],
+    sources: [
+      { label: "The Diary Of A CEO — επεισόδιο", url: "https://www.blackcountryradio.co.uk/podcasts/the-diary-of-a-ceo-with-steven-bartlett/episode/top-white-house-advisor-the-us-empire-is-dying-and-socialism-is-coming-next-david-friedberg/" },
+    ],
+  },
+};
+
+const SPEAKER_PROFILES = [SARAH_MYHILL, NATASHA_CAMPBELL_MCBRIDE, DAVID_BROWNSTEIN, STASHA_GOMINAK, PHILIP_OVADIA, RHONDA_PATRICK, BEN_BIKMAN, JESSIE_INCHAUSPE, ELIZABETH_BRIGHT, DAVID_FRIEDBERG];
 
 export const SPEAKER_CATALOG: Record<string, CanonicalSpeakerProfile> = {
   "Tk47F--QyY8": DAVID_BROWNSTEIN,
@@ -162,6 +243,11 @@ export const SPEAKER_CATALOG: Record<string, CanonicalSpeakerProfile> = {
   NqLpQhii_fU: SARAH_MYHILL,
   ATKu1Cxs2Pc: PHILIP_OVADIA,
   NDeaXZ5KpM4: RHONDA_PATRICK,
+  xYB6uYyRjCA: SARAH_MYHILL,
+  grW_S9zcHdg: BEN_BIKMAN,
+  h2Pf6xO_NVM: JESSIE_INCHAUSPE,
+  WQCO8wlldAQ: ELIZABETH_BRIGHT,
+  n1G3xqgzB2c: DAVID_FRIEDBERG,
 };
 
 export function normalizedPersonName(value: string) {
