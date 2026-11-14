@@ -108,3 +108,16 @@ html body .viewer.viewer.viewer .gts31-segment>span:not(.gts31-moment-count){fon
   html body .viewer.viewer.viewer .gts31-subtitles>.gts31-segment>span{display:none!important}
   html body .viewer.viewer.viewer .gts31-subtitles>.gts31-segment{width:44px!important;padding:0!important}
 }
+
+/* Skip buttons: the "10" sits inline beside the chevrons instead of hanging below. */
+html body .viewer.viewer.viewer .gts31-skip{
+  position:relative!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:1px!important;
+  width:48px!important;min-width:48px!important;flex:0 0 48px!important;
+}
+html body .viewer.viewer.viewer .gts31-skip>small{
+  position:static!important;font-size:12px!important;font-weight:650!important;line-height:1!important;
+  font-variant-numeric:tabular-nums;opacity:.85;
+}
+@media (max-width:720px){
+  html body .viewer.viewer.viewer .gts31-skip{width:48px!important;min-width:48px!important;flex:0 0 48px!important}
+}
