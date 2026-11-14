@@ -433,6 +433,8 @@ export default function GreekTubePlayer() {
   const volumeDragging=useRef(false);
   const keyboardSeekTarget=useRef<number|null>(null);
   const lastKnownTime=useRef(0);
+  /** After a seek YouTube keeps reporting the OLD time for a while (always when the target is not buffered yet). Until it catches up we hold the requested time, so the timer and subtitles never jump back. */
+  const pendingSeek=useRef<{target:number;at:number;retried:boolean}|null>(null);
   const scrubbing=useRef(false);
   const scrubSeekAt=useRef(0);
   const [scrubValue,setScrubValue]=useState<number|null>(null);
@@ -1064,7 +1066,8 @@ export default function GreekTubePlayer() {
     const selectedDuration=selected?.duration||0;
     const timer=window.setInterval(()=>{
       const target=currentPlayer();if(!target)return;
-      const now=target.getCurrentTime();if(!Number.isFinite(now))return;
+      const rawNow=target.getCurrentTime();if(!Number.isFinite(rawNow))return;
+      const now=resolveSeekTime(target,rawNow);
       const duration=target.getDuration()||selectedDuration;
       const skipTarget=activeSkipTarget(selected?.skipRanges,now,duration);
       if(skipTarget===null)return;
@@ -1073,15 +1076,16 @@ export default function GreekTubePlayer() {
       if(recent&&recent.videoId===selectedId&&Math.abs(recent.target-skipTarget)<.01&&timestamp-recent.at<1200)return;
       lastSkipJump.current={videoId:selectedId,target:skipTarget,at:timestamp};
       target.seekTo(skipTarget,true);
+      pendingSeek.current={target:skipTarget,at:performance.now(),retried:false};
       lastKnownTime.current=skipTarget;
       setPlayhead(skipTarget+state.settings.delay);
     },100);
     return()=>window.clearInterval(timer);
   },[selectedId,playerReady,selected?.skipRanges,selected?.duration,state.settings.delay]);
-  useEffect(()=>{if(!captions||!selectedId)return;lastProgressSave.current=0;const selectedDuration=selected?.duration||0;const timer=window.setInterval(()=>{const target=currentPlayer();if(!target)return;const now=target.getCurrentTime();if(!Number.isFinite(now))return;if(now>0.25||lastKnownTime.current<2)lastKnownTime.current=now;if(keyboardSeekTarget.current===null)setPlayhead(lastKnownTime.current+state.settings.delay);const nextActive=activeIndex(captions.cues,now+state.settings.delay);if(nextActive!==activeRef.current){activeRef.current=nextActive;setActive(nextActive);}const duration=target.getDuration()||selectedDuration;if(duration>0&&now-lastProgressSave.current>=5){lastProgressSave.current=now;patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});}},250);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay,selected?.duration]);
+  useEffect(()=>{if(!captions||!selectedId)return;lastProgressSave.current=0;pendingSeek.current=null;const selectedDuration=selected?.duration||0;const timer=window.setInterval(()=>{const target=currentPlayer();if(!target)return;const rawNow=target.getCurrentTime();if(!Number.isFinite(rawNow))return;const now=resolveSeekTime(target,rawNow);if(now>0.25||lastKnownTime.current<2)lastKnownTime.current=now;if(keyboardSeekTarget.current===null)setPlayhead(lastKnownTime.current+state.settings.delay);const nextActive=activeIndex(captions.cues,now+state.settings.delay);if(nextActive!==activeRef.current){activeRef.current=nextActive;setActive(nextActive);}const duration=target.getDuration()||selectedDuration;if(duration>0&&now-lastProgressSave.current>=5){lastProgressSave.current=now;patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});}},250);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay,selected?.duration]);
   useEffect(()=>{
     if(!transcriptOpen||!state.settings.autoScroll||!transcript.current||!captions)return;
-    const currentTime=currentPlayer()?.getCurrentTime();
+    const currentTime=currentPlayer()?reliableTime():null;
     const cueIndex=typeof currentTime==="number"?activeIndex(captions.cues,currentTime+state.settings.delay):active;
     if(cueIndex<0)return;
     if(cueIndex!==activeRef.current){activeRef.current=cueIndex;setActive(cueIndex);}
@@ -1158,20 +1162,35 @@ export default function GreekTubePlayer() {
       keyboardSeekTimer.current=setTimeout(()=>{keyboardSeekTarget.current=null;},700);
     };
     addEventListener("keydown",key);
-    return()=>{removeEventListener("keydown",key);if(keyboardSeekTimer.current)clearTimeout(keyboardSeekTimer.current);};
+    return()=>{removeEventListener("keydown",key);};
   },[selected,active,captions,state.settings.delay]);
+  useEffect(()=>()=>{if(keyboardSeekTimer.current)clearTimeout(keyboardSeekTimer.current);keyboardSeekTarget.current=null;},[]);
 
   /** YouTube can briefly report 0 while buffering after a seek; never let that send the viewer to the start. */
   function reliableTime(){
-    const now=currentPlayer()?.getCurrentTime();
-    if(typeof now==="number"&&Number.isFinite(now)&&(now>0.25||lastKnownTime.current<2))return now;
+    const target=currentPlayer();
+    const raw=target?.getCurrentTime();
+    if(target&&typeof raw==="number"&&Number.isFinite(raw)){
+      const now=resolveSeekTime(target,raw);
+      if(now>0.25||lastKnownTime.current<2)return now;
+    }
     return lastKnownTime.current;
+  }
+  /** While a seek is pending, return the requested time. Done when YouTube reaches it (±2.5s) or after 8s; one retry of the seek after 2.5s in case YouTube dropped it. */
+  function resolveSeekTime(target:Player,raw:number){
+    const pending=pendingSeek.current;
+    if(!pending)return raw;
+    const waited=performance.now()-pending.at;
+    if(Math.abs(raw-pending.target)<=2.5||waited>8000){pendingSeek.current=null;return raw;}
+    if(!pending.retried&&waited>2500){pending.retried=true;target.seekTo(pending.target,true);}
+    return pending.target;
   }
   function seekPlayer(time:number,allowSeekAhead=true){
     const target=currentPlayer();if(!target)return;
     const duration=target.getDuration()||selected?.duration||0;
     const next=Math.max(0,Math.min(duration>0?duration-0.25:Number.MAX_SAFE_INTEGER,time));
     target.seekTo(next,allowSeekAhead);
+    pendingSeek.current={target:next,at:performance.now(),retried:false};
     lastKnownTime.current=next;
     setPlayhead(next+state.settings.delay);
     revealPlayerUi();
@@ -1266,7 +1285,7 @@ export default function GreekTubePlayer() {
     if(navigator.share){try{await navigator.share({title:m.note,url});return;}catch{}}
     await copyText(url);
   }
-  function close(){if(selectedId){const time=player.current?.getCurrentTime();const duration=player.current?.getDuration()||selected?.duration||0;if(typeof time==="number"&&Number.isFinite(time)&&time>0){patchVideo(selectedId,{lastPosition:time,duration:duration||0,progress:duration>0?Math.min(100,(time/duration)*100):selected?.progress||0,lastWatched:new Date().toISOString()});}}if(playerReadyTimer.current)clearTimeout(playerReadyTimer.current);if(videoTapTimer.current)clearTimeout(videoTapTimer.current);lastVideoTap.current=0;lastVideoTapZone.current=null;player.current?.destroy();player.current=null;setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);setIsPseudoFullscreen(false);setCheckingReady(false);setSpeakerBioOpen(false);setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
+  function close(){pendingSeek.current=null;keyboardSeekTarget.current=null;if(selectedId){const time=player.current?.getCurrentTime();const duration=player.current?.getDuration()||selected?.duration||0;if(typeof time==="number"&&Number.isFinite(time)&&time>0){patchVideo(selectedId,{lastPosition:time,duration:duration||0,progress:duration>0?Math.min(100,(time/duration)*100):selected?.progress||0,lastWatched:new Date().toISOString()});}}if(playerReadyTimer.current)clearTimeout(playerReadyTimer.current);if(videoTapTimer.current)clearTimeout(videoTapTimer.current);lastVideoTap.current=0;lastVideoTapZone.current=null;player.current?.destroy();player.current=null;setPlayerReady(false);setPlayerLoadFailed(false);setIsPlaying(false);setPlayhead(0);setActive(-1);setIsPseudoFullscreen(false);setCheckingReady(false);setSpeakerBioOpen(false);setSelectedId(null);setCaptions(null);setTranscriptOpen(false);setError("");history.replaceState(null,"","/");}
   function goToSettings(){
     playerScrollPosition.current=window.scrollY;
     const time=currentPlayer()?.getCurrentTime()||selected?.lastPosition||0;
