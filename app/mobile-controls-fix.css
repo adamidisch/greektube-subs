@@ -16,12 +16,6 @@ html body .viewer .brand-version{display:inline-flex!important;align-items:cente
 html body .viewer .video-frame .subtitles.bottom{bottom:4.5%!important}
 html body .settings-page{padding-top:28px!important} html body .settings-page-header{padding-right:46px!important}
 html body .player-seek-bar{height:24px} html body .player-seek-bar::-webkit-slider-thumb{width:15px;height:15px;margin-top:-6px} html body .player-seek-bar::-moz-range-thumb{width:13px;height:13px}
-html body .viewer .player-actions.player-tools{height:auto!important;min-height:0!important;display:block!important;margin:0!important;padding:18px 16px 20px!important;border-top:1px solid #2b313b!important;background:#12151a!important;overflow:visible!important}
-html body .viewer .player-tools-label{display:flex!important;align-items:center!important;gap:8px!important;margin:0 0 14px!important;color:#8b9099!important;font-size:12px!important;font-weight:700!important;line-height:1!important;letter-spacing:1.4px!important;text-transform:uppercase!important}
-html body .viewer .player-tools-label::before{content:"";width:3px;height:15px;border-radius:2px;background:#7c74e0}
-html body .viewer .controls-position-row{display:flex!important;align-items:center!important;justify-content:space-between!important;margin:-4px 0 14px!important}
-html body .viewer .position-time{font-family:var(--font-geist-mono),monospace!important;font-size:12.5px!important;color:#8b9099!important} html body .viewer .position-time b{color:#f6f3ec!important;font-weight:500!important}
-html body .viewer .speed-chip{font-family:var(--font-geist-mono),monospace!important;font-size:11.5px!important;color:#7c74e0!important;background:#1b1930!important;border:1px solid rgba(124,116,224,.35)!important;padding:3px 9px!important;border-radius:7px!important}
 /* Control-layout rules (top row, secondary actions, subtitle toggle) now live
    exclusively in mobile-controls-final.css, which loads last. Removed here to
    stop the two files fighting over the same selectors. */

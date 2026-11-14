@@ -1,6 +1,6 @@
 {
   "name": "greektube-subs",
-  "version": "7.20.2",
+  "version": "7.21.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -31,7 +31,8 @@
     "test:subtitle-understanding-progress": "node --experimental-strip-types scripts/subtitle-understanding-progress.test.mjs",
     "test:player-shell": "node --experimental-strip-types scripts/player-shell-layout.test.mjs",
     "test:home-history": "node --experimental-strip-types scripts/home-history-regression.test.mjs",
-    "test:premium-ui": "node --experimental-strip-types scripts/premium-ui-navigation.test.mjs"
+    "test:premium-ui": "node --experimental-strip-types scripts/premium-ui-navigation.test.mjs",
+    "test:sarah-pilot": "node --experimental-strip-types scripts/sarah-stable-pilot.test.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.7.0-beta",

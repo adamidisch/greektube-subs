@@ -88,7 +88,6 @@ html body footer.app-footer{
 .gts-standard-footer-admin{color:inherit;text-decoration:none;transition:color .15s ease}
 .gts-standard-footer-admin:hover,.gts-standard-footer-admin:focus-visible{color:#a49aeb}
 .contact-page>.gts-standard-footer,.legal-page>.gts-standard-footer{margin-top:0}
-.analytics-page>.gts-standard-footer{margin-top:38px;margin-bottom:0}
 .gts-editor-screen>.gts-standard-footer{flex:0 0 auto}
 
 @media(max-width:760px){

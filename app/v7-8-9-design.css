@@ -51,41 +51,5 @@
 /* ---------- Header icons: Subs / edit / favorite ----------
    Soft purple tint tied to the brand accent (dark mode), kept quiet —
    these are secondary utility actions, not primary CTAs. */
-.heading-actions .subtitle-manage,
-.heading-actions .edit-video,
-.heading-actions .favorite{
-  background:#191b22;
-  border-color:rgba(143,127,240,.2);
-  color:#a79cf0;
-}
-.heading-actions .subtitle-manage:hover,
-.heading-actions .edit-video:hover,
-.heading-actions .favorite:hover{
-  border-color:rgba(143,127,240,.36);
-  background:#1e2029;
-}
-.heading-actions .favorite.active{
-  background:rgba(220,102,92,.12);
-  border-color:transparent;
-  color:var(--accent);
-}
 
 /* Light-mode counterpart — do not leave the dark #191b22/#1e2029 active. */
-:root[data-theme="light"] .heading-actions .subtitle-manage,
-:root[data-theme="light"] .heading-actions .edit-video,
-:root[data-theme="light"] .heading-actions .favorite{
-  background:#f2effc;
-  border-color:rgba(111,97,224,.28);
-  color:#6c5ce7;
-}
-:root[data-theme="light"] .heading-actions .subtitle-manage:hover,
-:root[data-theme="light"] .heading-actions .edit-video:hover,
-:root[data-theme="light"] .heading-actions .favorite:hover{
-  background:#e9e4fa;
-  border-color:rgba(111,97,224,.42);
-}
-:root[data-theme="light"] .heading-actions .favorite.active{
-  background:rgba(220,102,92,.12);
-  border-color:transparent;
-  color:var(--accent);
-}

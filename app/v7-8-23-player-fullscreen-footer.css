@@ -2,11 +2,6 @@
 
 /* The exit control is conditionally mounted by React. This rule protects the
    hidden state from older pseudo-fullscreen declarations that force opacity. */
-html body .app-shell.app-shell.app-shell .video-frame .custom-fullscreen.fs-exit-hidden{
-  display:none!important;
-  opacity:0!important;
-  pointer-events:none!important;
-}
 
 /* Fullscreen restore belongs roughly one third down from the top on both
    desktop native fullscreen and the iPhone pseudo-fullscreen surface. */

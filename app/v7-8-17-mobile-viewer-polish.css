@@ -94,102 +94,6 @@
   }
 
   /* ---------- Mobile controls: stop squeezing four playback actions ---------- */
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools{
-    padding:11px 11px 13px!important;
-    border-radius:16px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row{
-    display:grid!important;
-    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
-    grid-template-rows:auto auto!important;
-    grid-auto-flow:row!important;
-    gap:8px!important;
-    margin:0 0 8px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.player-toolbar{
-    grid-column:1/-1!important;
-    grid-row:1!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.fullscreen-primary{
-    grid-column:1!important;
-    grid-row:2!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .controls-top-row>.speed-control{
-    grid-column:2!important;
-    grid-row:2!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{
-    min-height:56px!important;
-    width:100%!important;
-    display:flex!important;
-    align-items:center!important;
-    justify-content:center!important;
-    gap:12px!important;
-    padding:6px 10px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button{
-    width:44px!important;
-    min-width:44px!important;
-    height:44px!important;
-    min-height:44px!important;
-    flex:0 0 44px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .play-toggle{
-    width:46px!important;
-    min-width:46px!important;
-    height:46px!important;
-    min-height:46px!important;
-    flex:0 0 46px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-control{
-    flex:0 0 44px!important;
-    width:44px!important;
-    min-width:44px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-toggle{
-    width:44px!important;
-    min-width:44px!important;
-    height:44px!important;
-    min-height:44px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary,
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control{
-    width:100%!important;
-    min-width:0!important;
-    height:48px!important;
-    min-height:48px!important;
-    margin:0!important;
-    border:1px solid #2b313b!important;
-    border-radius:12px!important;
-    background:#1b1f26!important;
-    color:#f6f3ec!important;
-    box-shadow:none!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control{
-    display:flex!important;
-    align-items:center!important;
-    justify-content:space-between!important;
-    gap:8px!important;
-    padding:0 9px 0 12px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>span{
-    display:block!important;
-    color:#aeb3bd!important;
-    font-size:11px!important;
-    font-weight:600!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>select{
-    min-width:58px!important;
-    height:34px!important;
-    padding:0 8px!important;
-    border:1px solid #343a44!important;
-    border-radius:9px!important;
-    background:#252a32!important;
-    color:#f6f3ec!important;
-    font-size:12px!important;
-    font-weight:650!important;
-    outline:0!important;
-  }
 
   html body .viewer.viewer.viewer .video-heading{
     margin-top:18px!important;
@@ -244,69 +148,6 @@ html[data-theme="light"] body .viewer.viewer.viewer>.app-header>.theme-quick-tog
   color:#5c51be!important;
 }
 
-html[data-theme="light"] body .viewer.viewer.viewer .speaker-row{
-  border-color:#dbe2e5!important;
-  background:transparent!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .speaker-row strong,
-html[data-theme="light"] body .viewer.viewer.viewer .speaker-row span,
-html[data-theme="light"] body .viewer.viewer.viewer .speaker-row small{
-  color:#26363e!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .speaker-row:before{
-  background:#68a879!important;
-}
-
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools{
-  border-color:#d8e0e4!important;
-  border-top-color:#d8e0e4!important;
-  background:#ffffff!important;
-  box-shadow:0 8px 26px rgba(28,50,60,.055)!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls,
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary,
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control{
-  border-color:#dbe2e5!important;
-  background:#f6f8f9!important;
-  color:#25353d!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button,
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .volume-toggle{
-  color:#66777f!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls .skip-button small{
-  color:#75858d!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .fullscreen-primary span{
-  color:#25353d!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>span{
-  color:#687880!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>select{
-  border-color:#d5dde1!important;
-  background:#fff!important;
-  color:#223139!important;
-}
-
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save,
-html[data-theme="light"] body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions.player-secondary-actions>button.transcript-toggle,
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .subtitle-cc-control>.cc-toggle{
-  border-color:rgba(101,88,222,.28)!important;
-  background:#f5f3ff!important;
-  color:#5d52bd!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions>.moment-save>span:not(.moment-count),
-html[data-theme="light"] body .viewer.viewer.viewer .watch-layout.watch-layout .player-actions.player-actions.player-tools.player-tools.player-tools .player-secondary-actions.player-secondary-actions>button.transcript-toggle>span:not(.moment-count):not(.cc-active-tag),
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-label,
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-card-icon{
-  color:#5d52bd!important;
-  stroke:#5d52bd!important;
-}
-html[data-theme="light"] body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .cc-toggle>small{
-  color:#4e866c!important;
-}
-
 html[data-theme="light"] body .viewer.viewer.viewer .video-heading,
 html[data-theme="light"] body .viewer.viewer.viewer .video-heading h1,
 html[data-theme="light"] body .viewer.viewer.viewer .player-greek-title,
@@ -323,8 +164,7 @@ html[data-theme="light"] body .viewer.viewer.viewer .guide-intro,
 html[data-theme="light"] body .viewer.viewer.viewer .muted{
   color:#61717a!important;
 }
-html[data-theme="light"] body .viewer.viewer.viewer .video-heading a,
-html[data-theme="light"] body .viewer.viewer.viewer .speaker-row a{
+html[data-theme="light"] body .viewer.viewer.viewer .video-heading a{
   color:#397b98!important;
 }
 
@@ -372,17 +212,6 @@ html[data-theme="light"] body .viewer.viewer.viewer .next-video-row small{color:
   html body .viewer.viewer.viewer>.app-header>.back-to-video{
     padding-inline:8px!important;
     font-size:12.5px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .playback-controls{
-    gap:7px!important;
-    padding-inline:6px!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control>span{
-    display:none!important;
-  }
-  html body .viewer.viewer.viewer .player-actions.player-actions.player-tools.player-tools.player-tools .speed-control{
-    justify-content:center!important;
-    padding:0 7px!important;
   }
 }
 

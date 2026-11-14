@@ -3,50 +3,6 @@
    Visual-only: no player, translation or state behavior changes. */
 
 /* ---------- Premium Add Video CTA ---------- */
-html body .app-shell.app-shell.app-shell .app-header .add-top{
-  min-height:40px!important;
-  height:40px!important;
-  display:inline-flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:7px!important;
-  padding:0 15px!important;
-  border:1px solid rgba(255,255,255,.12)!important;
-  border-radius:12px!important;
-  background:linear-gradient(180deg,#242833 0%,#1a1e27 100%)!important;
-  color:#f4f5f8!important;
-  box-shadow:0 5px 16px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.055)!important;
-  font-size:12.5px!important;
-  font-weight:680!important;
-  letter-spacing:-.012em!important;
-  white-space:nowrap!important;
-  transform:none!important;
-  transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease,color .16s ease!important;
-}
-html body .app-shell.app-shell.app-shell .app-header .add-top:hover{
-  transform:translateY(-1px)!important;
-  border-color:rgba(151,139,238,.34)!important;
-  background:linear-gradient(180deg,#2a2e3a 0%,#1e222c 100%)!important;
-  box-shadow:0 8px 22px rgba(0,0,0,.22),0 0 0 1px rgba(124,116,224,.06)!important;
-}
-html body .app-shell.app-shell.app-shell .app-header .add-top:active{transform:translateY(0) scale(.985)!important}
-html body .app-shell.app-shell.app-shell .app-header .add-top:focus-visible{
-  outline:2px solid rgba(151,139,238,.5)!important;
-  outline-offset:2px!important;
-}
-
-html[data-theme="light"] body .app-shell.app-shell.app-shell .app-header .add-top{
-  border-color:rgba(35,43,48,.17)!important;
-  background:linear-gradient(180deg,#ffffff 0%,#f2f4f2 100%)!important;
-  color:#20262a!important;
-  box-shadow:0 3px 10px rgba(30,40,44,.06),inset 0 1px 0 rgba(255,255,255,.95)!important;
-}
-html[data-theme="light"] body .app-shell.app-shell.app-shell .app-header .add-top:hover{
-  border-color:rgba(100,87,205,.31)!important;
-  background:linear-gradient(180deg,#fff 0%,#f2effb 100%)!important;
-  color:#4f45a3!important;
-  box-shadow:0 6px 17px rgba(57,49,124,.09),0 0 0 1px rgba(100,87,205,.035)!important;
-}
 
 /* Mobile add action uses the same product language while keeping a full touch target. */
 html body .app-shell.app-shell.app-shell .mobile-menu .mobile-add{
@@ -180,11 +136,9 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer-note{co
     padding:19px 16px 17px!important;
     border-radius:16px!important;
   }
-  html body .app-shell.app-shell.app-shell .app-header .add-top{display:none!important}
 }
 
 @media(prefers-reduced-motion:reduce){
-  html body .app-shell.app-shell.app-shell .app-header .add-top,
   html body .app-shell.app-shell.app-shell .secondary,
   html body .app-shell.app-shell.app-shell .ghost,
   html body .app-shell.app-shell.app-shell .icon-button,

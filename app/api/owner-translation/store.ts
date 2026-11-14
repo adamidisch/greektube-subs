@@ -195,16 +195,6 @@ export async function getOwnerTranslationManifest(videoId: string) {
   return rows[0] ? rowToManifest(rows[0]) : null;
 }
 
-export async function hasOwnerTranslationLock(videoId: string) {
-  try {
-    const manifest = await getOwnerTranslationManifest(videoId);
-    return Boolean(manifest);
-  } catch (error) {
-    if ((error as { code?: string } | null)?.code === "42P01") return false;
-    throw error;
-  }
-}
-
 function sourcePath(videoId: string, revision: number, sourceHash: string) {
   return `owner-translations/v${TRANSCRIPT_VERSION}/${videoId}/r${revision}/source-${sourceHash}.json`;
 }

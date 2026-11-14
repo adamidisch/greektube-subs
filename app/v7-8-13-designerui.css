@@ -98,7 +98,6 @@ html body .app-shell.app-shell.app-shell .app-header .theme-quick-toggle:active{
   main.app-shell:not(.viewer)>.app-header>.desktop-nav{order:2}
   main.app-shell:not(.viewer)>.app-header>.theme-quick-toggle{order:3}
   main.app-shell:not(.viewer)>.app-header>.user-profile-shell{order:4}
-  main.app-shell:not(.viewer)>.app-header>.add-top{order:5}
   main.app-shell:not(.viewer)>.app-header>.mobile-menu-toggle{order:6}
 }
 

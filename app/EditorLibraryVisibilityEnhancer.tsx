@@ -72,12 +72,11 @@ export default function EditorLibraryVisibilityEnhancer(){
   useEffect(()=>{
     if(!target||!videoId)return;
     let active=true;
-    setStatus("");
     void fetch(`/api/video-editor?videoId=${encodeURIComponent(videoId)}`,{cache:"no-store",credentials:"same-origin"})
       .then(async response=>({response,data:await response.json() as {video?:EditorVideo}}))
       .then(({response,data})=>{if(active&&response.ok&&data.video)setVisible(data.video.libraryVisible!==false);})
       .catch(()=>undefined);
-    return()=>{active=false;};
+    return()=>{active=false;setStatus("");};
   },[target,videoId]);
 
   useEffect(()=>{

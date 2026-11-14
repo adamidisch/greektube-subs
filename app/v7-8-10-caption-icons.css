@@ -7,8 +7,7 @@
 }
 
 .mobile-video-byline button[aria-label="Διαχείριση υποτίτλων"]::before,
-.mobile-watch-summary button[aria-label="Διαχείριση υποτίτλων"]::before,
-.heading-actions .subtitle-manage>span[aria-hidden="true"]::before{
+.mobile-watch-summary button[aria-label="Διαχείριση υποτίτλων"]::before{
   content:"";
   display:block;
   width:14px;

@@ -68,6 +68,3 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-version{colo
   html body .app-shell.app-shell.app-shell.viewer .brand{display:flex!important}
   html body .app-shell.app-shell.app-shell.viewer .brand-version{display:inline-flex!important;min-width:58px!important;min-height:21px!important;padding:0 7px!important;font-size:9px!important}
 }
-
-@media(prefers-reduced-motion:reduce){
-}

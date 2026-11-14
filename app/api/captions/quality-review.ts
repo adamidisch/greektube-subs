@@ -1,4 +1,4 @@
-import { canonicalNumberTokens } from "./numeric-integrity";
+import { canonicalNumberTokens } from "./numeric-integrity.ts";
 
 export type TimedTextCue = {
   start: number;
@@ -36,9 +36,10 @@ export function obviousGreekFluencyIssue(text: string) {
   // Flag, do not auto-rewrite. These patterns are strong indicators that a
   // translation needs contextual review, while still leaving the final edit to
   // a meaning-aware pass.
-  return /\b(?:σε|με|για|από|προς)\s+(?:αυτοί|αυτές)\b/iu.test(normalized) ||
-    /\b(?:σε|με|για|από|προς)\s+αυτά\s+(?:ο|η|οι|τους|τις)\b/iu.test(normalized) ||
-    /\b(?:είναι|ήταν|ήταν)\s+καλά\s+σε\s*$/iu.test(normalized) ||
+  // \b only understands ASCII letters, so Greek word edges use Unicode lookarounds.
+  return /(?<!\p{L})(?:σε|με|για|από|προς)\s+(?:αυτοί|αυτές)(?!\p{L})/iu.test(normalized) ||
+    /(?<!\p{L})(?:σε|με|για|από|προς)\s+αυτά\s+(?:ο|η|οι|τους|τις)(?!\p{L})/iu.test(normalized) ||
+    /(?<!\p{L})(?:είναι|ήταν)\s+καλά\s+σε\s*$/iu.test(normalized) ||
     /\s+[aα]\s*$/u.test(normalized);
 }
 

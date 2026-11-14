@@ -539,21 +539,6 @@ export async function recordGroqProviderSuccess(videoId: string, token: string) 
   return rows.length === 1;
 }
 
-export async function recordTransientProcessingFailure(videoId: string, token: string, message: string) {
-  const db = database();
-  const now = new Date();
-  const retryAfter = new Date(now.getTime()+2_000).toISOString();
-  const rows = await db.query(
-    `UPDATE video_transcripts SET retry_count=retry_count+1, retry_after=$1, error=$2,
-      lock_token=NULL, lock_expires_at=NULL, updated_at=$3,
-      status=CASE WHEN retry_count+1 >= $4 THEN 'failed' ELSE 'processing' END
-     WHERE video_id=$5 AND lock_token=$6 RETURNING status, retry_count, retry_after`,
-    [retryAfter, message.slice(0,500), now.toISOString(), MAX_TRANSIENT_RETRIES, videoId, token],
-  ) as { status: TranscriptRecord["status"]; retry_count: number; retry_after: string | null }[];
-  if (rows[0]?.status === "failed") await upsertTranscriptCheckpoint(videoId, TRANSCRIPT_VERSION, { status: "failed", updatedAt: now.toISOString() });
-  return rows[0] || null;
-}
-
 export async function recordRecoverableProcessingFailure(videoId: string, token: string, message: string, retryAfterSeconds = 5) {
   const db = database();
   const now = new Date();

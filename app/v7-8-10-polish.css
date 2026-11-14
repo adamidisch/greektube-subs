@@ -3,17 +3,12 @@
    refinement. No JS/timing/observer changes — purely visual. */
 
 /* ---------- 1. Transcript past cues ---------- */
-.transcript>button.past span{color:var(--muted)}
-.transcript>button.past time{color:var(--soft)}
-.transcript>button.past i{opacity:.45}
 /* Light mode has a boosted-specificity rule elsewhere
    (html[data-theme="light"] body .app-shell.app-shell.app-shell
    .transcript span/time, both !important) that would otherwise silently
    win over the plain rules above. Matching that exact specificity +
    !important here, scoped only to .past, so it never affects the
    active/future cue colors those rules are responsible for. */
-html[data-theme="light"] body .app-shell.app-shell.app-shell .transcript>button.past span{color:var(--muted)!important}
-html[data-theme="light"] body .app-shell.app-shell.app-shell .transcript>button.past time{color:var(--soft)!important}
 
 /* ---------- 2. Source / original-title editorial card ---------- */
 .video-source-row{

@@ -210,14 +210,6 @@ export async function upsertTranscriptCheckpoint(
   return await publishTranscriptCheckpoint(videoId, transcriptVersion, next) ? next : null;
 }
 
-export async function mergeTranscriptCheckpoint(
-  videoId: string,
-  transcriptVersion: number,
-  patch: Partial<Omit<TranscriptCheckpointPayload, "videoId" | "transcriptVersion">>,
-) {
-  return Boolean(await upsertTranscriptCheckpoint(videoId, transcriptVersion, patch));
-}
-
 export async function readPublishedTranscript(videoId: string, transcriptVersion: number, includeEnglish = false) {
   if (!configured()) return null;
   try {

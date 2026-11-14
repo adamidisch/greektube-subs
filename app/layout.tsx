@@ -5,8 +5,6 @@ import UserProfileEnhancer from "./UserProfileEnhancer";
 import "./globals.css";
 import "./mobile-controls-fix.css";
 import "./ui-651.css";
-import "./ui-653.css";
-import "./ui-654.css";
 import "./desktop-controls-final.css";
 import "./content-areas-final.css";
 import "./release-6.6.15.css";
