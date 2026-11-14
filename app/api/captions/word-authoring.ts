@@ -122,7 +122,7 @@ export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): P
 }
 
 /** Dynamic programming over whole semantic phrases; English anchors determine every boundary. */
-export function authorWordPhrases(packet: WordAuthoringPacket, phrases: Phrase[]): SubtitleEvent[] {
+export function authorWordPhrases(packet: WordAuthoringPacket, phrases: Phrase[], holdMs = 250): SubtitleEvent[] {
   const indexes = new Map(packet.words.map((word, index) => [word.wordId, index]));
   const costs = Array(phrases.length + 1).fill(Infinity) as number[];
   const paths: ({ previous: number; event: SubtitleEvent } | undefined)[] = Array(phrases.length + 1);
@@ -142,7 +142,7 @@ export function authorWordPhrases(packet: WordAuthoringPacket, phrases: Phrase[]
       if (lines.length > 2 || lines.some(line => Array.from(line).length > 42)) continue;
       const start = packet.words[first].startMs, speechEnd = packet.words[last].endMs;
       const nextStart = packet.words[last + 1]?.startMs ?? packet.nextWordStartMs;
-      const end = Math.min(speechEnd + 250, nextStart), duration = (end - start) / 1000;
+      const end = Math.min(speechEnd + holdMs, nextStart), duration = (end - start) / 1000;
       if (duration < 1 || duration > 7 || Array.from(text).length / duration > 17) continue;
       const score = costs[a] + 10 + Math.abs(Array.from(text).length - 62) / 50 - (/[.;!?]$/u.test(text) ? 2 : 0)
         + (lines.length === 2 ? Math.abs(Array.from(lines[0]).length - Array.from(lines[1]).length) / 100 : 0);
