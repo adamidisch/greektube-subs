@@ -225,8 +225,12 @@ function isAllowedShareSpeed(value:number):boolean{
 function normalizedPlaybackSpeed(value:number|undefined):number{
   return typeof value==="number"&&isAllowedShareSpeed(value)?value:1;
 }
-function blocksPlayerShortcut(target:EventTarget|null):boolean{
-  return target instanceof HTMLElement&&Boolean(target.closest('input,textarea,select,button,a,[contenteditable="true"],[role="textbox"]'));
+/** Only real text entry should swallow player keys; buttons and the seek bar keep the player in control. */
+function isTypingTarget(target:EventTarget|null):boolean{
+  if(!(target instanceof HTMLElement))return false;
+  if(target.closest('textarea,select,[contenteditable="true"],[role="textbox"],[role="dialog"]'))return true;
+  const input=target.closest("input");
+  return Boolean(input&&!["range","button","checkbox","radio"].includes(input.type));
 }
 function buildMomentShareUrl(videoId:string,time:number,speed:number){
   const safeTime=Number.isFinite(time)&&time>=0?Math.floor(time):0;
@@ -371,9 +375,10 @@ export default function GreekTubePlayer() {
   const [view,setView]=useState<"library"|"settings">("library");
   const [selectedId,setSelectedId]=useState<string|null>(null);
   const [captions,setCaptions]=useState<Captions|null>(null);
-  const [previewEvents,setPreviewEvents]=useState<SubtitleTrack["events"]|null>(null);
-  useEffect(()=>{const id=captions?.videoId;setPreviewEvents(null);if(!id||!PREVIEW_REQUESTED)return;let live=true;
-    fetch(`/previews/${id}.json`,{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(live&&d?.videoId===id&&Array.isArray(d.events)&&d.events.length)setPreviewEvents(d.events)}).catch(()=>undefined);return()=>{live=false}},[captions?.videoId]);
+  const [previewTrack,setPreviewTrack]=useState<{id:string;events:SubtitleTrack["events"]}|null>(null);
+  const previewEvents=previewTrack&&previewTrack.id===captions?.videoId?previewTrack.events:null;
+  useEffect(()=>{const id=captions?.videoId;if(!id||!PREVIEW_REQUESTED)return;let live=true;
+    fetch(`/previews/${id}.json`,{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(live&&d?.videoId===id&&Array.isArray(d.events)&&d.events.length)setPreviewTrack({id,events:d.events})}).catch(()=>undefined);return()=>{live=false}},[captions?.videoId]);
   const displayTrack=useMemo(()=>{const base=displaySubtitleTrack(captions?.cues||[],captions?.subtitleTrack);return previewEvents?{...base,origin:"authored" as const,events:previewEvents,audit:auditSubtitleEvents(previewEvents)}:base},[captions,previewEvents]);
   const englishTrack=useMemo(()=>legacySubtitleTrack(captions?.englishCues||[]),[captions?.englishCues]);
   const [loading,setLoading]=useState(false);
@@ -427,6 +432,10 @@ export default function GreekTubePlayer() {
   const lastVideoTapZone=useRef<VideoTapZone|null>(null);
   const volumeDragging=useRef(false);
   const keyboardSeekTarget=useRef<number|null>(null);
+  const lastKnownTime=useRef(0);
+  const scrubbing=useRef(false);
+  const scrubSeekAt=useRef(0);
+  const [scrubValue,setScrubValue]=useState<number|null>(null);
   const keyboardSeekTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const playerScrollPosition=useRef(0);
   const [subtitleMenuOpen,setSubtitleMenuOpen]=useState(false);
@@ -1064,11 +1073,12 @@ export default function GreekTubePlayer() {
       if(recent&&recent.videoId===selectedId&&Math.abs(recent.target-skipTarget)<.01&&timestamp-recent.at<1200)return;
       lastSkipJump.current={videoId:selectedId,target:skipTarget,at:timestamp};
       target.seekTo(skipTarget,true);
+      lastKnownTime.current=skipTarget;
       setPlayhead(skipTarget+state.settings.delay);
     },100);
     return()=>window.clearInterval(timer);
   },[selectedId,playerReady,selected?.skipRanges,selected?.duration,state.settings.delay]);
-  useEffect(()=>{if(!captions||!selectedId)return;lastProgressSave.current=0;const selectedDuration=selected?.duration||0;const timer=window.setInterval(()=>{const target=currentPlayer();if(!target)return;const now=target.getCurrentTime();if(!Number.isFinite(now))return;setPlayhead(now+state.settings.delay);const nextActive=activeIndex(captions.cues,now+state.settings.delay);if(nextActive!==activeRef.current){activeRef.current=nextActive;setActive(nextActive);}const duration=target.getDuration()||selectedDuration;if(duration>0&&now-lastProgressSave.current>=5){lastProgressSave.current=now;patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});}},250);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay,selected?.duration]);
+  useEffect(()=>{if(!captions||!selectedId)return;lastProgressSave.current=0;const selectedDuration=selected?.duration||0;const timer=window.setInterval(()=>{const target=currentPlayer();if(!target)return;const now=target.getCurrentTime();if(!Number.isFinite(now))return;if(now>0.25||lastKnownTime.current<2)lastKnownTime.current=now;if(!scrubbing.current&&keyboardSeekTarget.current===null)setPlayhead(lastKnownTime.current+state.settings.delay);const nextActive=activeIndex(captions.cues,now+state.settings.delay);if(nextActive!==activeRef.current){activeRef.current=nextActive;setActive(nextActive);}const duration=target.getDuration()||selectedDuration;if(duration>0&&now-lastProgressSave.current>=5){lastProgressSave.current=now;patchVideo(selectedId,{lastPosition:now,duration,progress:Math.min(100,(now/duration)*100)});}},250);return()=>clearInterval(timer);},[captions,selectedId,state.settings.delay,selected?.duration]);
   useEffect(()=>{
     if(!transcriptOpen||!state.settings.autoScroll||!transcript.current||!captions)return;
     const currentTime=currentPlayer()?.getCurrentTime();
@@ -1116,43 +1126,63 @@ export default function GreekTubePlayer() {
   },[hydrated]);
   useEffect(()=>{
     const key=(event:KeyboardEvent)=>{
-      if(event.defaultPrevented||event.metaKey||event.ctrlKey||event.altKey||blocksPlayerShortcut(event.target))return;
+      if(event.defaultPrevented||event.metaKey||event.ctrlKey||event.altKey||isTypingTarget(event.target)||document.querySelector('[role="dialog"],.modal-backdrop'))return;
       if(event.code==="KeyM"&&selected){
         if(event.repeat)return;
         event.preventDefault();
-        const time=player.current?.getCurrentTime()||0;
-        setMomentModal({time,excerpt:captions?.cues[active]?.text||""});
+        setMomentModal({time:reliableTime(),excerpt:captions?.cues[active]?.text||""});
         return;
       }
       const target=player.current;
       if(!captions||!target||typeof target.getCurrentTime!=="function")return;
-      if(event.code==="Space"){
-        if(event.repeat)return;
+      if(event.code==="Space"||event.code==="KeyK"){
         event.preventDefault();
+        if(event.repeat)return;
         if(target.getPlayerState()===1)target.pauseVideo();else target.playVideo();
-        setShowFsExit(true);
+        setShowFsExit(true);revealPlayerUi();
         return;
       }
-      if(event.code!=="ArrowLeft"&&event.code!=="ArrowRight")return;
+      const duration=target.getDuration()||selected?.duration||0;
+      let next:number|null=null;
+      const base=keyboardSeekTarget.current??reliableTime();
+      if(event.code==="ArrowLeft"||event.code==="ArrowRight")next=base+(event.code==="ArrowLeft"?-1:1)*(event.shiftKey?1:5);
+      else if(event.code==="KeyJ"||event.code==="KeyL")next=base+(event.code==="KeyJ"?-10:10);
+      else if(event.code==="Home")next=0;
+      else if(event.code==="End"&&duration>0)next=duration-1;
+      else if(/^Digit[0-9]$/.test(event.code)&&duration>0&&!event.shiftKey)next=duration*Number(event.code.slice(5))/10;
+      if(next===null)return;
       event.preventDefault();
-      const direction=event.code==="ArrowLeft"?-5:5;
-      const duration=target.getDuration()||Number.MAX_SAFE_INTEGER;
-      const base=keyboardSeekTarget.current??target.getCurrentTime();
-      const next=Math.max(0,Math.min(duration,base+direction));
-      keyboardSeekTarget.current=next;
-      target.seekTo(next,true);
+      keyboardSeekTarget.current=Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,next));
+      seekPlayer(keyboardSeekTarget.current);
       if(keyboardSeekTimer.current)clearTimeout(keyboardSeekTimer.current);
-      keyboardSeekTimer.current=setTimeout(()=>{keyboardSeekTarget.current=null;},350);
+      keyboardSeekTimer.current=setTimeout(()=>{keyboardSeekTarget.current=null;},700);
     };
     addEventListener("keydown",key);
     return()=>{removeEventListener("keydown",key);if(keyboardSeekTimer.current)clearTimeout(keyboardSeekTimer.current);};
-  },[selected,active,captions]);
+  },[selected,active,captions,state.settings.delay]);
 
-  function seek(time:number){const target=currentPlayer();target?.seekTo(time,true);target?.playVideo();}
-  function skip(seconds:number){
+  /** YouTube can briefly report 0 while buffering after a seek; never let that send the viewer to the start. */
+  function reliableTime(){
+    const now=currentPlayer()?.getCurrentTime();
+    if(typeof now==="number"&&Number.isFinite(now)&&(now>0.25||lastKnownTime.current<2))return now;
+    return lastKnownTime.current;
+  }
+  function seekPlayer(time:number,allowSeekAhead=true){
     const target=currentPlayer();if(!target)return;
-    const duration=target.getDuration()||0;
-    target.seekTo(Math.max(0,Math.min(duration||Number.MAX_SAFE_INTEGER,target.getCurrentTime()+seconds)),true);
+    const duration=target.getDuration()||selected?.duration||0;
+    const next=Math.max(0,Math.min(duration>0?duration-0.25:Number.MAX_SAFE_INTEGER,time));
+    target.seekTo(next,allowSeekAhead);
+    lastKnownTime.current=next;
+    setPlayhead(next+state.settings.delay);
+    revealPlayerUi();
+  }
+  function seek(time:number){seekPlayer(time);currentPlayer()?.playVideo();}
+  function skip(seconds:number){
+    const base=keyboardSeekTarget.current??reliableTime();
+    keyboardSeekTarget.current=base+seconds;
+    seekPlayer(keyboardSeekTarget.current);
+    if(keyboardSeekTimer.current)clearTimeout(keyboardSeekTimer.current);
+    keyboardSeekTimer.current=setTimeout(()=>{keyboardSeekTarget.current=null;},700);
   }
   function revealPlayerUi(){
     setControlsVisible(true);
@@ -1403,9 +1433,9 @@ export default function GreekTubePlayer() {
                 {/* The title is shown only once in the details card below the player. */}
                 <div className="player-cover-badges" aria-hidden="true"><span>{upperGreekLabel(CATEGORY_LABELS[selected.category])}</span>{selected.duration>0&&<time>{clock(selected.duration)}</time>}</div>
                 <div className={`player-seek-ui ${controlsVisible||!isPlaying?"visible":"hidden"}`} onPointerDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()}>
-                  <span className="player-time-label">{clock(Math.max(0,playhead))} / {clock(Math.max(0,seekDuration))}</span>
+                  <span className="player-time-label">{clock(Math.max(0,scrubValue??playhead-state.settings.delay))} / {clock(Math.max(0,seekDuration))}</span>
                   {seekPreview!==null&&seekDuration>0&&<output className="seek-preview" style={{"--seek-preview-position":`${Math.min(100,Math.max(0,(seekPreview/seekDuration)*100))}%`} as CSSProperties}>{clock(seekPreview)}</output>}
-                  <input className="player-seek-bar" type="range" min={0} max={Math.max(1,seekDuration)} step="0.1" value={Math.min(playhead,Math.max(1,seekDuration))} disabled={seekDuration<=0} aria-label="Μετακίνηση στο βίντεο" style={{"--seek-progress":`${seekDuration>0?Math.min(100,(playhead/seekDuration)*100):0}%`} as CSSProperties} onPointerDown={event=>{event.stopPropagation();updateSeekPreview(event,seekDuration);}} onPointerMove={event=>updateSeekPreview(event,seekDuration)} onPointerUp={()=>{setSeekPreview(null);revealPlayerUi();}} onPointerCancel={()=>setSeekPreview(null)} onPointerLeave={()=>setSeekPreview(null)} onClick={event=>event.stopPropagation()} onChange={event=>{const nextTime=Number(event.currentTarget.value);setPlayhead(nextTime);currentPlayer()?.seekTo(nextTime,true);revealPlayerUi();}}/>
+                  <input className="player-seek-bar" type="range" min={0} max={Math.max(1,seekDuration)} step="0.1" value={Math.min(scrubValue??Math.max(0,playhead-state.settings.delay),Math.max(1,seekDuration))} disabled={seekDuration<=0} aria-label="Μετακίνηση στο βίντεο" aria-valuetext={clock(Math.max(0,(scrubValue??playhead-state.settings.delay)))} style={{"--seek-progress":`${seekDuration>0?Math.min(100,((scrubValue??Math.max(0,playhead-state.settings.delay))/seekDuration)*100):0}%`} as CSSProperties} onPointerDown={event=>{event.stopPropagation();scrubbing.current=true;try{event.currentTarget.setPointerCapture(event.pointerId)}catch{}updateSeekPreview(event,seekDuration);}} onPointerMove={event=>updateSeekPreview(event,seekDuration)} onPointerUp={event=>{const value=Number(event.currentTarget.value);scrubbing.current=false;setScrubValue(null);setSeekPreview(null);seekPlayer(value);}} onPointerCancel={()=>{scrubbing.current=false;setScrubValue(null);setSeekPreview(null);}} onPointerLeave={()=>{if(!scrubbing.current)setSeekPreview(null)}} onKeyDown={event=>event.preventDefault()} onClick={event=>event.stopPropagation()} onChange={event=>{const value=Number(event.currentTarget.value);if(!scrubbing.current){seekPlayer(value);return;}setScrubValue(value);const now=performance.now();if(now-scrubSeekAt.current>180){scrubSeekAt.current=now;currentPlayer()?.seekTo(value,false);}}}/>
                 </div>
                 {state.settings.subtitles&&(()=>{const gi=subtitleEventAt(displayTrack.events,playhead),ei=subtitleEventAt(englishTrack.events,playhead);const greek=subtitleLines(displayTrack.events[gi]?.text||"").join("\n"),english=subtitleLines(englishTrack.events[ei]?.text||"").join("\n");if(!greek&&!english)return null;return <div className={`subtitles ${state.settings.subtitlePosition}`} style={{"--subtitle-size":`${state.settings.subtitleSize}px`,background:`rgba(0,0,0,${state.settings.opacity})`} as CSSProperties}>{state.settings.subtitleMode==="en"?english:state.settings.subtitleMode==="dual"?<><span>{greek}</span>{english&&<small>{english}</small>}</>:greek}</div>;})()}
                 <button className="video-tap-toggle" aria-label={isPlaying?tr("Παύση βίντεο"):tr("Αναπαραγωγή βίντεο")} onClick={handleVideoTap}/>

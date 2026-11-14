@@ -54,6 +54,7 @@ import "./header-controls-v7-12-6.css";
 import "./modal-scroll-v7-12-14.css";
 import "./details-srt-import-v7-12-18.css";
 import "./login-v7-14-0.css";
+import "./player-pro-v7-20.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
