@@ -11,6 +11,7 @@ export type SubtitleAudioEvidence = {
   method: string;
   words: AudioWord[];
 };
+const SOURCE_CONTEXT_MS = 4500;
 export type SourceWord = { cueIndex: number; text: string };
 
 /** Matches the worker's lexical tokens, including contractions and hyphenated subwords. */
@@ -40,7 +41,9 @@ export function validateAudioEvidence(value: unknown, source: TimedCue[], option
     const relevantOverlap = start < previousEnd && (inScope(tokens[index].cueIndex) || inScope(tokens[index - 1]?.cueIndex ?? -1));
     if (start < 0 || end <= start || relevantOverlap || confidence < 0 || confidence > 1000 || (direct !== 0 && direct !== 1))
       throw Error(`Invalid or overlapping audio word ${index + 1}`);
-    if (start < Math.max(0, Math.round(cue.start * 1000) - 750) || end > Math.round((cue.start + cue.duration) * 1000) + 750)
+    // Transcript-panel cue windows drift up to ~4 s from the spoken words (measured on xYB6uYyRjCA
+    // against YouTube's own word timings). Approved by Adam 2026-11-22: allow 4.5 s either side.
+    if (start < Math.max(0, Math.round(cue.start * 1000) - SOURCE_CONTEXT_MS) || end > Math.round((cue.start + cue.duration) * 1000) + SOURCE_CONTEXT_MS)
       throw Error(`Audio word outside source context ${index + 1}`);
     if (direct && (confidence < 500 || end - start > 2000)) throw Error(`Unsupported direct audio word ${index + 1}`);
     previousEnd = end;
