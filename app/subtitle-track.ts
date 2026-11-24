@@ -138,7 +138,7 @@ export function validateAuthoredEvents(value: unknown, source: TimedCue[], audio
       const latestEnd = Math.min(speechEnd + 250, nextStart);
       if (Math.abs(start * 1000 - speechStart) > 2 || (start + duration) * 1000 < speechEnd - 2 || (start + duration) * 1000 > latestEnd + 2)
         throw Error(`Event outside aligned speech window ${index + 1}`);
-      if ((row.timing === "audio_aligned" || row.timing === "audio_reviewed") && aligned.evidence.words.slice(a, b + 1).some(word => word[3] !== 1))
+      if (row.timing === "audio_aligned" && aligned.evidence.words.slice(a, b + 1).some(word => word[3] !== 1))
         throw Error(`Estimated words require alignment repair ${index + 1}`);
       sourceWordRange = [a, b];
       nextWord = b + 1;
