@@ -5,16 +5,29 @@ export function subtitleContentHash(cues: TimedCue[]) {
   return createHash("sha256").update(JSON.stringify(cues.map(c => [Math.round(c.start * 1000), Math.round(c.duration * 1000), c.text.replace(/\s+/gu," ").trim()]))).digest("hex");
 }
 
-export type ReviewedSubtitleTrack = SubtitleTrack & { sourceHash: string; translationHash: string; reviewedAt: string; bilingualReview: "approved"; reviewNote:string };
+export type ApprovalLevel = "audio_reviewed" | "owner_approved";
+export type ReviewedSubtitleTrack = SubtitleTrack & { sourceHash: string; translationHash: string; reviewedAt: string; bilingualReview: "approved"; reviewNote:string; approvalLevel?: ApprovalLevel };
 
-export function reviewedTrack(source:TimedCue[],translation:TimedCue[],events:unknown,bilingualReview:unknown,reviewNote:unknown,audioEvidence?:unknown):ReviewedSubtitleTrack {
+/** audio_reviewed: every event was heard by a person. owner_approved: the owner approved the translation and readability; timing stays as the alignment recorded it (audio_aligned/estimated) and is never relabelled as heard. */
+export function publishableTrack(track: SubtitleTrack, level: ApprovalLevel = "audio_reviewed") {
+  if (track.origin !== "authored") return false;
+  if (level === "owner_approved") return track.audit.readable && track.events.length > 0;
+  return track.audit.professionalReady && track.events.every(event => event.timing === "audio_reviewed");
+}
+
+export function reviewedTrack(source:TimedCue[],translation:TimedCue[],events:unknown,bilingualReview:unknown,reviewNote:unknown,audioEvidence?:unknown,approvalLevel:unknown="audio_reviewed"):ReviewedSubtitleTrack {
+  if(approvalLevel!=="audio_reviewed"&&approvalLevel!=="owner_approved")throw new Error("Μη έγκυρο επίπεδο έγκρισης.");
   if(audioEvidence && (audioEvidence as {sourceHash?:unknown}).sourceHash!==subtitleContentHash(source))throw Error("Audio source changed");
   const track=validateAuthoredEvents(events,translation,audioEvidence?{source,evidence:audioEvidence}:undefined);
   if(bilingualReview!=="approved")throw new Error("Απαιτείται εγκεκριμένος έλεγχος μετάφρασης.");
   if(typeof reviewNote!=="string"||reviewNote.trim().length<20||reviewNote.length>2000)throw new Error("Κατάγραψε πώς ελέγχθηκαν το νόημα και ο συγχρονισμός με τον ήχο.");
-  if(track.events.some(event=>event.timing!=="audio_reviewed"))throw new Error("Η χειροκίνητη δημοσίευση χρειάζεται ακουστικό έλεγχο κάθε εμφάνισης.");
-  if(!track.audit.professionalReady)throw new Error(`Οι υπότιτλοι χρειάζονται έλεγχο: ${track.audit.issues.length} προβλήματα αναγνωσιμότητας. Επιβεβαίωση ήχου: ${track.audit.speechVerified?"ναι":"όχι"}.`);
-  return {...track,sourceHash:subtitleContentHash(source),translationHash:subtitleContentHash(translation),reviewedAt:new Date().toISOString(),bilingualReview:"approved",reviewNote:reviewNote.trim()};
+  if(approvalLevel==="owner_approved"){
+    if(!track.audit.readable)throw new Error(`Οι υπότιτλοι χρειάζονται έλεγχο: ${track.audit.issues.length} προβλήματα αναγνωσιμότητας.`);
+  }else{
+    if(track.events.some(event=>event.timing!=="audio_reviewed"))throw new Error("Η χειροκίνητη δημοσίευση χρειάζεται ακουστικό έλεγχο κάθε εμφάνισης.");
+    if(!track.audit.professionalReady)throw new Error(`Οι υπότιτλοι χρειάζονται έλεγχο: ${track.audit.issues.length} προβλήματα αναγνωσιμότητας. Επιβεβαίωση ήχου: ${track.audit.speechVerified?"ναι":"όχι"}.`);
+  }
+  return {...track,sourceHash:subtitleContentHash(source),translationHash:subtitleContentHash(translation),reviewedAt:new Date().toISOString(),bilingualReview:"approved",reviewNote:reviewNote.trim(),approvalLevel};
 }
 
 
@@ -26,7 +39,8 @@ export function subtitleTrackForPayload(payload: { cues?: unknown; englishCues?:
     try {
       if (candidate.audioEvidence && candidate.audioEvidence.sourceHash !== candidate.sourceHash) throw Error("Audio source changed");
       const track = validateAuthoredEvents(candidate.events, cues, candidate.audioEvidence ? { source: english, evidence: candidate.audioEvidence } : undefined);
-      if (track.audit.professionalReady && track.events.every(event => event.timing === "audio_reviewed")) return { ...candidate, ...track } as ReviewedSubtitleTrack;
+      const level: ApprovalLevel = candidate.approvalLevel === "owner_approved" ? "owner_approved" : "audio_reviewed";
+      if (publishableTrack(track, level)) return { ...candidate, ...track, approvalLevel: level } as ReviewedSubtitleTrack;
     } catch { /* A stale or malformed artifact cannot replace the source. */ }
   }
   return legacySubtitleTrack(cues);

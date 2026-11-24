@@ -1,5 +1,5 @@
 import { get, list, put } from "@vercel/blob";
-import { subtitleContentHash, subtitleTrackForPayload, type ReviewedSubtitleTrack } from "./subtitle-track";
+import { publishableTrack, subtitleContentHash, subtitleTrackForPayload, type ReviewedSubtitleTrack } from "./subtitle-track";
 import { legacySubtitleTrack, validateAuthoredEvents, type SubtitleEvent, type TimedCue } from "../subtitle-track";
 
 export async function saveSubtitleDraft(videoId: string, source: TimedCue[], translation: TimedCue[], events?: SubtitleEvent[], audioEvidence?: unknown) {
@@ -30,7 +30,8 @@ export async function approvedSubtitleTrack(videoId:string,source:TimedCue[],tra
   const candidate=await readSubtitleDraft(`subtitle-review/v1/${videoId}/${subtitleContentHash(source)}/${subtitleContentHash(translation)}.approved.json`).catch(()=>null);
   if(!candidate)return null;
   const track=subtitleTrackForPayload({cues:translation,englishCues:source,subtitleTrack:candidate});
-  return track.origin==="authored"&&track.audit.professionalReady?track as ReviewedSubtitleTrack:null;
+  const reviewed=track as ReviewedSubtitleTrack;
+  return publishableTrack(track,reviewed.approvalLevel==="owner_approved"?"owner_approved":"audio_reviewed")?reviewed:null;
 }
 
 export async function readSubtitleDraft(path:string) {

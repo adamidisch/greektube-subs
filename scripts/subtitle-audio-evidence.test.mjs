@@ -59,6 +59,18 @@ assert.equal(subtitleTrackForPayload(payload({ ...approved, events: track.events
 assert.equal(subtitleTrackForPayload(payload({ ...approved, sourceHash: "0".repeat(64) })).origin, "legacy");
 assert.equal(subtitleTrackForPayload(payload({ ...approved, audioEvidence: { ...approved.audioEvidence, sourceHash: "0".repeat(64) } })).origin, "legacy");
 assert.equal(subtitleTrackForPayload({ ...payload(approved), cues: translation.map((c, i) => i ? c : { ...c, text: "Άλλαξε." }) }).origin, "legacy");
+const note = "Owner approved the translation; timing from automatic audio alignment.";
+const owner = reviewedTrack(source, translation, track.events, "approved", note, track.audioEvidence, "owner_approved");
+assert.equal(owner.approvalLevel, "owner_approved");
+assert.ok(owner.events.every((e, i) => e.timing === track.events[i].timing), "owner approval never relabels timing as heard");
+assert.equal(owner.audit.speechVerified, false, "owner approval is not acoustic proof");
+assert.equal(subtitleTrackForPayload(payload(owner)).origin, "authored", "owner-approved readable track is published");
+assert.equal(subtitleTrackForPayload(payload({ ...owner, approvalLevel: undefined })).origin, "legacy", "without the owner level the audio gate still applies");
+assert.throws(() => reviewedTrack(source, translation, track.events, null, note, track.audioEvidence, "owner_approved"), /μετάφρασης/);
+assert.throws(() => reviewedTrack(source, translation, track.events, "approved", "ok", track.audioEvidence, "owner_approved"), /Κατάγραψε/);
+assert.throws(() => reviewedTrack(source, translation, track.events, "approved", note, track.audioEvidence, "anything"), /επίπεδο/);
+const unreadable = track.events.map((e, i) => i ? e : { ...e, duration: 0.5 });
+assert.throws(() => reviewedTrack(source, translation, unreadable, "approved", note, track.audioEvidence, "owner_approved"), /αναγνωσιμότητας|Event outside/);
 assert.throws(() => validateAudioEvidence({ ...review.audioEvidence, words: [[1, 2, 900, 1]] }, source), /coverage/);
 console.log("audio evidence import, source binding, full word coverage, drift, publication, playback and SRT checks passed");
 

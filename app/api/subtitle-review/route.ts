@@ -44,7 +44,7 @@ export async function POST(request:Request){
   try{
     const rawBody=await request.text();
     if(new TextEncoder().encode(rawBody).byteLength>4_000_000)return NextResponse.json({error:"Το αρχείο ελέγχου είναι πολύ μεγάλο."},{status:413});
-    const body=JSON.parse(rawBody) as {videoId?:string;action?:string;sourceHash?:string;translationHash?:string;events?:SubtitleEvent[];bilingualReview?:unknown;reviewNote?:unknown;pending?:boolean;audioEvidence?:unknown};
+    const body=JSON.parse(rawBody) as {videoId?:string;action?:string;sourceHash?:string;translationHash?:string;events?:SubtitleEvent[];bilingualReview?:unknown;reviewNote?:unknown;pending?:boolean;audioEvidence?:unknown;approvalLevel?:unknown};
     const videoId=body.videoId||"";
     if(!/^[\w-]{11}$/.test(videoId)||!["draft","publish"].includes(body.action||""))return NextResponse.json({error:"Μη έγκυρη ενέργεια."},{status:400});
     token=randomUUID();
@@ -62,7 +62,7 @@ export async function POST(request:Request){
     if(body.sourceHash!==subtitleContentHash(source)||body.translationHash!==subtitleContentHash(translation))return NextResponse.json({error:"Η πηγή ή η μετάφραση άλλαξε. Φόρτωσε ξανά πριν συνεχίσεις."},{status:409});
     const draft=await saveSubtitleDraft(videoId,source,translation,body.events,body.audioEvidence);
     if(body.action==="draft")return NextResponse.json(draft,{headers:{"Cache-Control":"no-store"}});
-    const subtitleTrack=reviewedTrack(source,translation,body.events,body.bilingualReview,body.reviewNote,body.audioEvidence);
+    const subtitleTrack=reviewedTrack(source,translation,body.events,body.bilingualReview,body.reviewNote,body.audioEvidence,body.approvalLevel??"audio_reviewed");
     if(pending){await saveReviewedTrack(videoId,subtitleTrack);return NextResponse.json({ok:true,pending:true,message:"Το timeline εγκρίθηκε. Ολοκλήρωσε την εισαγωγή του ίδιου SRT για δημοσίευση."},{headers:{"Cache-Control":"no-store"}});}
     // Re-read after draft storage: do not apply a review to a concurrently edited translation.
     const latest=await currentTranscript(videoId);
