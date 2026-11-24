@@ -48,6 +48,7 @@ function makeProvider(options = {}) {
     if (label === 'brief') return { mainTopic: 'Η Sarah Myhill για την κόπωση', glossary: [] };
     if (label === 'translate') calls.translatedIds.push(...input.items.map(i => i.id));
     if (label === 'translate') return { items: input.items.map(item => ({ id: item.id, texts: options.overBudget ? item.slots.map(slot => 'α'.repeat(slot.hardChars + 10)) : greekItem(item) })) };
+    if (label === 'repair' && options.stubbornRepair && calls.by.repair === 1) return { items: input.items.map(item => ({ id: item.id, texts: item.slots.map(slot => 'α'.repeat(slot.hardChars + 8)) })) };
     if (label === 'repair' || label === 'review-repair') return { items: input.items.map(item => ({ id: item.id, texts: greekItem(item) })) };
     if (label === 'review') return { items: input.items.map(item => {
       const firstTime = options.findings && !reviewed.has(item.id); reviewed.add(item.id);
@@ -169,6 +170,24 @@ let readyA;
   assert.equal(saved.measurement.calls, saved.usage.calls);
   assert.ok(saved.measurement.events > 0 && saved.measurement.readable !== undefined);
   assert.equal(published.length, 0, 'a sample is never published');
+}
+
+// G2. The model cannot count characters: a second, freshly measured repair round fixes what the first left over.
+{
+  await sql('DELETE FROM usage_budget');
+  const p = makeProvider({ overBudget: true, stubbornRepair: true }), d = deps(p);
+  const state = await startRun(d, 'FFFFFFFFFFF', 'full', { ...short, videoId: 'FFFFFFFFFFF' });
+  await drive(d, state.runId);
+  const saved = await dbState(state.runId);
+  assert.equal(p.calls.by.repair, 2, 'two measured repair rounds');
+  assert.ok(saved.scopes.every(s => s.status === 'ready'), 'the second round fixed every scope');
+  // Sample: the fresh brief leaves no spare call, so the second round is skipped and the review call stays reserved.
+  const q = makeProvider({ overBudget: true, stubbornRepair: true }), e = deps(q);
+  const sample = await startRun(e, 'GGGGGGGGGGG', 'sample', { ...short, videoId: 'GGGGGGGGGGG' });
+  await drive(e, sample.runId);
+  const sampled = await dbState(sample.runId);
+  assert.ok(q.calls.total <= 4 && q.calls.by.repair === 1);
+  assert.ok(sampled.scopes.some(s => s.status === 'flagged' && /υπέρβαση χαρακτήρων/u.test(s.issue)), 'the flag names the slots that are over');
 }
 
 // H. A short full run completes and hands a verified auto_checked track to the publisher.

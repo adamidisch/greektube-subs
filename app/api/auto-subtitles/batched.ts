@@ -24,6 +24,7 @@ export const RUN_LIMITS = {
   sample: { calls: 4, writes: 3, seconds: 120 },
 } as const;
 export const BATCH_SCOPES = 10;
+const BUDGET_REPAIR_ROUNDS = 2;
 const BATCH_WORDS = 1100;
 const CALL_TIME_RESERVE_MS = 65_000;
 const SLOT_CPS = 15.5;
@@ -116,8 +117,10 @@ export const BATCH_TRANSLATE_PROMPT = `${WORD_TRANSLATION_PROMPT}
 BATCH FORMAT (overrides the return format above). The input has globalBrief and items[]. Each item is one
 continuous stretch of speech cut into slots in spoken order. Each slot has the English words spoken in it and maxChars,
 the target length in Greek characters (spaces and punctuation included) for its real speech time; hardChars is the most
-the slot can ever show. Adjacent slots are later joined into one subtitle when time allows, so a slightly longer text is
-fine if a neighbour is shorter, but aim at maxChars and never exceed hardChars.
+the slot can ever show. Greek runs longer than English, so condense like a professional subtitler: drop fillers, repeated
+words and asides that carry no claim, choose the shorter natural word, keep negation, hedging, numbers and the claim itself.
+Aim at maxChars. hardChars is a ceiling that is checked by machine: a text above it is rejected and costs a repair call.
+Count characters before you answer; if a text is above hardChars, shorten it. Never exceed hardChars.
 Translate every item completely and faithfully. Write exactly one Greek text per slot, in order: meaning may flow from
 one slot into the next, but each text must render the words of its own slot. Never leave a slot empty. Use precedingEnglish/followingEnglish only as context.
 Return JSON only: {"items":[{"id":"S001","texts":["...","..."]}]}.`;
@@ -126,7 +129,9 @@ export const BATCH_BUDGET_REPAIR_PROMPT = `You are the GreekTube subtitle editor
 subtitle slots with the English words of each slot, maxChars (target), hardChars (absolute maximum), overBy (characters
 above hardChars, when present) and the issue found when the slots were joined into on-screen subtitles (17 characters per
 second, at most two lines of 42 characters, 1–7 seconds). Shorten first every text with overBy, by at least overBy
-characters; then, if the issue remains, bring the texts near maxChars. Change nothing that already fits. Keep the complete meaning: negation, hedging,
+characters (wordsToCut is a rough guide: about 7 characters per word); then, if the issue remains, bring the texts near
+maxChars. If an approved glossary term is missing, use it in the slot that renders those English words and shorten another
+word of that slot to make room. Change nothing that already fits. Count characters of every changed text before you answer. Keep the complete meaning: negation, hedging,
 numbers (as digits when the English uses digits), units, names in Latin script, attribution and causality. Never strengthen
 medical claims. Prefer shorter natural spoken Greek, drop fillers and repetition, use approved glossary alternates.
 No comma before και or ή. All-uppercase Greek has no tonos. Return the same number of texts per item, in order.
@@ -156,7 +161,7 @@ export function sampleRange(source: TimedCue[], seconds: number): [number, numbe
   return [0, last];
 }
 
-/** Estimate shown once before a run starts. Repairs are assumed for 60% of batches until a sample measures them. */
+/** Estimate shown once before a run starts. Repairs are assumed at 1 call (sample) or 1.5 calls (full run) per batch until a sample measures them. */
 export function estimateRun(run: RunSource, kind: RunState["kind"], range: [number, number], measured?: { repairCallsPerBatch?: number }): RunEstimate {
   const limits = { calls: RUN_LIMITS[kind].calls, writes: RUN_LIMITS[kind].writes };
   const source = run.source.slice(range[0], range[1] + 1);
@@ -165,7 +170,7 @@ export function estimateRun(run: RunSource, kind: RunState["kind"], range: [numb
   const empty = run.source.map(cue => ({ ...cue, text: "" }));
   const scopes = planWordAuthoring(run.source, empty, run.evidence, placeholderBrief).filter(s => s.range[0] >= range[0] && s.range[1] <= range[1]).length;
   const batches = Math.ceil(scopes / BATCH_SCOPES);
-  const repairs = Math.ceil(batches * (measured?.repairCallsPerBatch ?? 0.6));
+  const repairs = Math.ceil(batches * (measured?.repairCallsPerBatch ?? (kind === "sample" ? 1 : 1.5)));
   const calls = 1 + batches * 2 + repairs;
   const englishChars = source.reduce((n, cue) => n + cue.text.length + 1, 0);
   const tokensIn = tokensForInput(Math.min(englishChars, 14_000) + 1500) + tokensForInput(englishChars * 2.2 + batches * 9000) + tokensForInput(englishChars * 3.4 + batches * 11000);
@@ -274,7 +279,7 @@ function textsFrom(response: Record<string, unknown>, id: string, count: number)
 
 const slotView = (slots: Slot[], texts?: string[]) => slots.map((slot, i) => {
   const overBy = texts ? Array.from(texts[i] || "").length - slot.hardChars : 0;
-  return { english: slot.english, maxChars: slot.maxChars, hardChars: slot.hardChars, ...(texts ? { text: texts[i] } : {}), ...(overBy > 0 ? { overBy } : {}) };
+  return { english: slot.english, maxChars: slot.maxChars, hardChars: slot.hardChars, ...(texts ? { text: texts[i] } : {}), ...(overBy > 0 ? { overBy, wordsToCut: Math.ceil(overBy / 7) } : {}) };
 });
 
 function reviewItem(id: string, built: Built) {
@@ -345,8 +350,12 @@ export async function advanceBatch(state: RunState, ctx: Ctx) {
 
   // 2. One budget/validation repair call for every translated scope that does not fit yet.
   let built = new Map(batch.filter(s => s.texts && s.status === "pending").map(scope => [scope.id, build(ctx, state, scope)]));
-  const broken = batch.filter(scope => built.get(scope.id)?.problem && (scope.budgetRepairs ?? 0) < 1);
-  if (broken.length) {
+  // The model cannot count characters reliably, so each repair round is measured again by the machine (at most two rounds).
+  let noRoom = false;
+  for (let round = 0; round < BUDGET_REPAIR_ROUNDS; round++) {
+    const broken = batch.filter(scope => built.get(scope.id)?.problem && (scope.budgetRepairs ?? 0) < BUDGET_REPAIR_ROUNDS);
+    if (!broken.length) break;
+    if (round && state.usage.calls + 2 > state.limits.calls) { noRoom = true; break; } // keep one call for the meaning review
     const response = await ai(state, ctx, "repair", BATCH_BUDGET_REPAIR_PROMPT, { globalBrief, items: broken.map(scope => {
       const b = built.get(scope.id)!; return { id: scope.id, issue: b.problem, slots: slotView(b.slots, scope.texts) }; }) }, 6000);
     for (const scope of broken) {
@@ -357,7 +366,8 @@ export async function advanceBatch(state: RunState, ctx: Ctx) {
   }
   for (const scope of batch) {
     const b = built.get(scope.id);
-    if (b?.problem && (scope.budgetRepairs ?? 0) >= 1) { scope.status = "flagged"; scope.issue = `Χρειάζεται διόρθωση: ${b.problem}`.slice(0, 300); }
+    if (b?.problem && ((scope.budgetRepairs ?? 0) >= BUDGET_REPAIR_ROUNDS || (noRoom && (scope.budgetRepairs ?? 0) >= 1))) { scope.status = "flagged"; const over = slotView(b.slots, scope.texts).flatMap((view, i) => view.overBy ? [`#${i + 1} +${view.overBy}`] : []);
+    scope.issue = `Χρειάζεται διόρθωση: ${b.problem}${over.length ? ` (υπέρβαση χαρακτήρων: ${over.join(", ")})` : ""}`.slice(0, 300); }
   }
 
   // 3. Independent meaning review of every candidate, then one repair round for findings.
