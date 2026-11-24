@@ -3,6 +3,7 @@ import { withSubtitleTrack } from "../subtitle-track";
 import {requireReadableImport,SubtitleReviewRequired} from "../subtitle-track-store";
 import { canonicalSpeakerForVideo } from "@/app/speaker-catalog";
 import { publishTranscript, readPublishedTranscript, transcriptBlobConfigured } from "../transcript-blob";
+import { publishedFromNeon } from "../published-subtitles";
 import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
 import { splitSubtitleSentences } from "./sentence-split";
 import { groupEnglishCuesForContext, hasTranslatableWordTokens, stripEnglishSpeechFillers } from "./translation-text";
@@ -1422,13 +1423,14 @@ export async function GET(request: Request) {
       const publishedDuration = typeof published.duration === "number" ? published.duration : 0;
       validateCompleteGreekTranscript(publishedCues, publishedDuration);
       const candidate=published.subtitleTrack as {origin?:unknown}|undefined;
-      const verified=candidate?.origin==="authored"&&!includeEnglish?await readPublishedTranscript(videoId,TRANSCRIPT_VERSION,true)||published:published;
+      const fromNeon=publishedFromNeon(published);
+      // A Neon snapshot was verified when published; only Blob-era tracks need the English cues to re-verify.
+      const verified=candidate?.origin==="authored"&&!includeEnglish&&!fromNeon?await readPublishedTranscript(videoId,TRANSCRIPT_VERSION,true)||published:published;
       const display=withSubtitleTrack({...verified,speaker:normalizedPublishedSpeaker(videoId,verified)});
       return NextResponse.json(includeEnglish?display:{...display,englishCues:undefined}, {
         headers: {
           "Cache-Control": "no-cache, must-revalidate",
-          "X-GreekTube-Transcript-Source": "blob",
-          "X-GreekTube-Blob-Configured": "1",
+          "X-GreekTube-Transcript-Source": fromNeon ? "neon" : "blob",
         },
       });
     }

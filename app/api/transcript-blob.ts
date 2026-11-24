@@ -1,5 +1,7 @@
 import { get, list, put } from "@vercel/blob";
 import {approvedSubtitleTrack} from "./subtitle-track-store";
+import {readNeonPublished, writeNeonPublished} from "./published-subtitles";
+import {subtitleTrackForPayload} from "./subtitle-track";
 import type {TimedCue} from "../subtitle-track";
 
 type PublishedTranscript = {
@@ -210,7 +212,24 @@ export async function upsertTranscriptCheckpoint(
   return await publishTranscriptCheckpoint(videoId, transcriptVersion, next) ? next : null;
 }
 
+/** Neon first (hash-verified); the suspended Blob store is only a read fallback for older publications. */
 export async function readPublishedTranscript(videoId: string, transcriptVersion: number, includeEnglish = false) {
+  try {
+    const stored = await readNeonPublished(videoId, transcriptVersion, includeEnglish);
+    if (stored && validPayload(stored.payload, videoId, transcriptVersion)) {
+      if (!includeEnglish) return stored.payload;
+      if (Array.isArray(stored.englishCues) && stored.englishCues.length) {
+        stored.payload.englishCues = stored.englishCues;
+        return stored.payload;
+      }
+    }
+  } catch (error) {
+    console.warn("[published-subtitles:read-failed]", JSON.stringify({ videoId, error: error instanceof Error ? error.message : "unknown" }));
+  }
+  return readBlobPublishedTranscript(videoId, transcriptVersion, includeEnglish);
+}
+
+async function readBlobPublishedTranscript(videoId: string, transcriptVersion: number, includeEnglish: boolean) {
   if (!configured()) return null;
   try {
     let greekValue = await readJson(greekPathname(videoId, transcriptVersion));
@@ -247,36 +266,24 @@ export async function readPublishedTranscript(videoId: string, transcriptVersion
   }
 }
 
+/**
+ * Publishes to Neon only. The stored subtitle track is the one verified now (hashes, word timing
+ * evidence, approval level); a track that does not verify is dropped and readers use the legacy track.
+ */
 export async function publishTranscript(videoId: string, transcriptVersion: number, payload: unknown) {
-  if (!configured() || !validPayload(payload, videoId, transcriptVersion)) return false;
+  if (!validPayload(payload, videoId, transcriptVersion)) return false;
   try {
-    const approved=Array.isArray(payload.englishCues)?await approvedSubtitleTrack(videoId,payload.englishCues as TimedCue[],payload.cues as TimedCue[]):null;
-    const greekPayload = greekOnly(approved?{...payload,subtitleTrack:approved}:payload);
-    const writes = [
-      put(greekPathname(videoId, transcriptVersion), JSON.stringify(greekPayload), {
-        access: "public" as const,
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        cacheControlMaxAge: 60,
-        contentType: "application/json; charset=utf-8",
-      }),
-    ];
-
-    if (Array.isArray(payload.englishCues) && payload.englishCues.length) {
-      const englishPayload = { videoId, transcriptVersion, englishCues: payload.englishCues };
-      writes.push(put(englishPathname(videoId, transcriptVersion), JSON.stringify(englishPayload), {
-        access: "public" as const,
-        addRandomSuffix: false,
-        allowOverwrite: true,
-        cacheControlMaxAge: 60,
-        contentType: "application/json; charset=utf-8",
-      }));
-    }
-
-    await Promise.all(writes);
+    const english = Array.isArray(payload.englishCues) ? payload.englishCues as TimedCue[] : [];
+    const approved = english.length ? await approvedSubtitleTrack(videoId, english, payload.cues as TimedCue[]).catch(() => null) : null;
+    const candidate = approved ? { ...payload, subtitleTrack: approved } : payload;
+    const track = english.length ? subtitleTrackForPayload(candidate) : null;
+    const { englishCues: _english, subtitleTrack: _track, ...rest } = candidate;
+    void _english; void _track;
+    const greekPayload = greekOnly(track?.origin === "authored" ? { ...rest, subtitleTrack: track } : rest);
+    await writeNeonPublished(videoId, transcriptVersion, greekPayload, english, "publish");
     return true;
   } catch (error) {
-    console.warn("[transcript-blob:publish-failed]", JSON.stringify({
+    console.warn("[published-subtitles:publish-failed]", JSON.stringify({
       videoId,
       error: error instanceof Error ? error.message : "unknown",
     }));

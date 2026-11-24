@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { legacySubtitleTrack, validateAuthoredEvents, type SubtitleTrack, type TimedCue } from "../subtitle-track.ts";
+import { legacySubtitleTrack, subtitleInputKey, validateAuthoredEvents, type SubtitleTrack, type TimedCue } from "../subtitle-track.ts";
 
 export function subtitleContentHash(cues: TimedCue[]) {
   return createHash("sha256").update(JSON.stringify(cues.map(c => [Math.round(c.start * 1000), Math.round(c.duration * 1000), c.text.replace(/\s+/gu," ").trim()]))).digest("hex");
@@ -38,10 +38,20 @@ export function reviewedTrack(source:TimedCue[],translation:TimedCue[],events:un
 }
 
 
+const verifiedSnapshotTracks = new WeakSet<object>();
+/** Called only by the published-subtitles reader after its SHA-256 check. */
+export function markVerifiedSnapshotTrack(track: unknown) {
+  if (track && typeof track === "object") verifiedSnapshotTracks.add(track);
+}
+
 export function subtitleTrackForPayload(payload: { cues?: unknown; englishCues?: unknown; subtitleTrack?: unknown }): SubtitleTrack {
   const cues = Array.isArray(payload.cues) ? payload.cues as TimedCue[] : [];
   const english = Array.isArray(payload.englishCues) ? payload.englishCues as TimedCue[] : [];
   const candidate = payload.subtitleTrack as Partial<ReviewedSubtitleTrack> | null;
+  // A track read back from hash-verified published storage was verified when it was published.
+  // Membership cannot come from JSON or a request body, only from the storage reader.
+  if (candidate && verifiedSnapshotTracks.has(candidate) && candidate.origin === "authored" && Array.isArray(candidate.events) && candidate.events.length && candidate.inputKey === subtitleInputKey(cues))
+    return candidate as ReviewedSubtitleTrack;
   if (candidate?.origin === "authored" && candidate.translationHash === subtitleContentHash(cues) && english.length>0 && candidate.sourceHash === subtitleContentHash(english) && candidate.bilingualReview === "approved" && typeof candidate.reviewNote==="string" && candidate.reviewNote.trim().length>=20) {
     try {
       if (candidate.audioEvidence && candidate.audioEvidence.sourceHash !== candidate.sourceHash) throw Error("Audio source changed");
