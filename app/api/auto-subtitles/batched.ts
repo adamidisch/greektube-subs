@@ -187,7 +187,9 @@ export function newRun(videoId: string, kind: RunState["kind"], run: RunSource, 
   // Reuse: same capture → same brief → same scope keys → finished scopes need no new calls.
   if (previous && previous.captureHash === captureHash && previous.brief) {
     state.brief = previous.brief;
-    state.scopes = previous.scopes?.filter(s => s.range[0] >= range[0] && s.range[1] <= range[1]).map(s => ({ ...s, attempts: 0, budgetRepairs: 0, reviewRepairs: 0, reviewRetries: 0 }));
+    // Only finished scopes carry over; anything flagged or unfinished is translated again under the current rules.
+    state.scopes = previous.scopes?.filter(s => s.range[0] >= range[0] && s.range[1] <= range[1])
+      .map(s => s.status === "ready" && s.result ? { ...s } : { id: s.id, range: s.range, status: "pending" as const });
   }
   return state;
 }
