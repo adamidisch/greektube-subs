@@ -4,7 +4,7 @@ import type { TranslationGlossaryEntry } from "./translation-understanding.ts";
 import { createHash } from "node:crypto";
 import { validateAudioEvidence, type SubtitleAudioEvidence } from "../../subtitle-audio-evidence.ts";
 import { subtitleLines } from "../../subtitle-display.ts";
-import { auditSubtitleEvents, validateAuthoredEvents, type SubtitleEvent, type TimedCue } from "../../subtitle-track.ts";
+import { auditSubtitleEvents, PAUSE_BORROW_MS, validateAuthoredEvents, type SubtitleEvent, type TimedCue } from "../../subtitle-track.ts";
 import { subtitleContentHash } from "../subtitle-track.ts";
 
 export const WORD_AUTHORING_MODEL = "openai/gpt-oss-120b";
@@ -142,7 +142,9 @@ export function authorWordPhrases(packet: WordAuthoringPacket, phrases: Phrase[]
       if (lines.length > 2 || lines.some(line => Array.from(line).length > 42)) continue;
       const start = packet.words[first].startMs, speechEnd = packet.words[last].endMs;
       const nextStart = packet.words[last + 1]?.startMs ?? packet.nextWordStartMs;
-      const end = Math.min(speechEnd + holdMs, nextStart), duration = (end - start) / 1000;
+      // Short or dense lines borrow time from the pause that follows, never past the next spoken word.
+      const needMs = Math.max(1000, Math.ceil(Array.from(text).length / 16.8 * 1000));
+      const end = Math.min(nextStart, speechEnd + PAUSE_BORROW_MS, Math.max(speechEnd + holdMs, start + needMs)), duration = (end - start) / 1000;
       if (duration < 1 || duration > 7 || Array.from(text).length / duration > 17) continue;
       const score = costs[a] + 10 + Math.abs(Array.from(text).length - 62) / 50 - (/[.;!?]$/u.test(text) ? 2 : 0)
         + (lines.length === 2 ? Math.abs(Array.from(lines[0]).length - Array.from(lines[1]).length) / 100 : 0);
@@ -271,6 +273,11 @@ export async function advanceWordAuthoring(packet: WordAuthoringPacket, cache: W
     try { finalReview = validateFinalReview(cache.reviewed, contextKey, events, packet.words.map(w => w.wordId)); }
     catch (error) {
       const findings = (cache.reviewed as { findings?: unknown })?.findings;
+      if (repairRounds && (cache.reviewRepairs ?? 0) < repairRounds && error instanceof Error && /malformed|stale content/u.test(error.message)) {
+        // The reviewer's answer was unusable: ask for a fresh review of the same candidate.
+        cache.reviewRepairs = (cache.reviewRepairs ?? 0) + 1; cache.reviewed = undefined; await checkpoint();
+        return { status: "translation_ready" as const, key, humanAudioReview: false as const };
+      }
       if (repairRounds && Array.isArray(findings) && findings.length && (cache.reviewRepairs ?? 0) < repairRounds
         && error instanceof Error && /targeted repair/u.test(error.message)) {
         // One bounded repair call on the reviewer's findings, then a fresh independent review.

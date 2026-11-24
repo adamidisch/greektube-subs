@@ -104,6 +104,9 @@ export function legacySubtitleTrack(cues: TimedCue[]): SubtitleTrack {
 }
 
 /** Explicit authored events may resegment a translation but must remain tied to source speech windows. */
+/** How far an event may extend into the silence after its last word (approved rule: borrow time from pauses). */
+export const PAUSE_BORROW_MS = 1500;
+
 /** `numbers: false` is only for automatic authoring without a cue-level Greek reference: there numbers are
  *  checked against the English words per scope and again per published event. */
 export function validateAuthoredEvents(value: unknown, source: TimedCue[], audio?: { source: TimedCue[]; evidence: unknown }, options: { numbers?: boolean } = {}): SubtitleTrack {
@@ -137,7 +140,8 @@ export function validateAuthoredEvents(value: unknown, source: TimedCue[], audio
       if (JSON.stringify(mapped) !== JSON.stringify(indices)) throw Error(`Audio source mapping differs ${index + 1}`);
       const speechStart = aligned.evidence.words[a][0], speechEnd = aligned.evidence.words[b][1];
       const nextStart = aligned.evidence.words[b + 1]?.[0] ?? speechEnd;
-      const latestEnd = Math.min(speechEnd + 250, nextStart);
+      // A subtitle may stay on into the following pause (never past the next spoken word) so short lines stay readable.
+      const latestEnd = Math.min(speechEnd + PAUSE_BORROW_MS, nextStart);
       if (Math.abs(start * 1000 - speechStart) > 2 || (start + duration) * 1000 < speechEnd - 2 || (start + duration) * 1000 > latestEnd + 2)
         throw Error(`Event outside aligned speech window ${index + 1}`);
       if (row.timing === "audio_aligned" && aligned.evidence.words.slice(a, b + 1).some(word => word[3] !== 1))

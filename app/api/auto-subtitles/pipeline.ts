@@ -21,7 +21,7 @@ import { buildPublication, type AutoIssue } from "./publication";
  * Anything that fails a gate is held unpublished with the exact lines that need attention.
  */
 
-export type AutoScope = { range: [number, number]; key: string; status: "pending" | "ready" | "flagged"; issue?: string; providerErrors?: number };
+export type AutoScope = { range: [number, number]; key: string; status: "pending" | "ready" | "flagged"; issue?: string; providerErrors?: number; retry?: boolean };
 export type AutoJob = {
   schema: 1; videoId: string; runId: string;
   status: "running" | "held" | "published" | "failed";
@@ -39,7 +39,7 @@ const STEP_MS = 200_000;
 const CALL_RESERVE_MS = 62_000;
 const CONCURRENCY = 10;
 const MAX_PROVIDER_ERRORS = 4;
-const REPAIR_ROUNDS = 2;
+const REPAIR_ROUNDS = 3;
 const LEASE_MS = 295_000;
 const stateKey = (videoId: string) => `auto-subtitles:${videoId}`;
 const dataPrefix = (job: Pick<AutoJob, "videoId" | "runId">) => `auto-subtitles/v1/${job.videoId}/${job.runId}`;
@@ -101,7 +101,10 @@ export async function resumeJob(videoId: string) {
   if (job.status === "published") return job;
   job.status = "running"; job.lastError = undefined; job.issues = undefined; job.leaseUntil = undefined;
   if (job.stage === "done") job.stage = job.scopes ? "authoring" : "understanding";
-  for (const scope of job.scopes ?? []) if (scope.status === "flagged" && scope.issue?.startsWith("provider:")) { scope.status = "pending"; scope.issue = undefined; scope.providerErrors = 0; }
+  // Every flagged scope gets a fresh, bounded set of repair rounds; finished scopes are kept as they are.
+  for (const scope of job.scopes ?? []) if (scope.status === "flagged" && scope.key) {
+    scope.status = "pending"; scope.issue = undefined; scope.providerErrors = 0; scope.retry = true;
+  }
   if (job.scopes?.every(scope => scope.status === "ready")) job.stage = "publishing";
   if (!await writeJob(job, current.version)) throw Error("Η κατάσταση άλλαξε. Δοκίμασε ξανά.");
   return job;
@@ -124,7 +127,9 @@ function cleanPhrases(value: unknown) {
   // House rule, mechanical: no comma before «και» / «ή».
   const row = value as { phrases?: { text?: unknown }[] } | null;
   if (row && Array.isArray(row.phrases)) for (const phrase of row.phrases)
-    if (phrase && typeof phrase.text === "string") phrase.text = phrase.text.replace(/,\s+(και|ή)(?=\s|$)/gu, " $1");
+    if (phrase && typeof phrase.text === "string") phrase.text = phrase.text.replace(/,\s+(και|ή)(?=\s|$)/gu, " $1")
+      // All-uppercase Greek words carry no tonos.
+      .replace(/[\p{Lu}\u0386-\u038F]{2,}/gu, word => word === word.toUpperCase() ? word.normalize("NFD").replace(/\u0301/gu, "").normalize("NFC") : word);
   return value;
 }
 
@@ -216,6 +221,11 @@ async function advanceScope(job: AutoJob, scope: AutoScope, source: TimedCue[], 
   if (wordAuthoringKey(packet) !== scope.key) { scope.status = "flagged"; scope.issue = "Το τμήμα άλλαξε."; return; }
   const path = `${dataPrefix(job)}/scopes/${scope.key}.json`;
   const cache = (await readSubtitleDraft(path).catch(() => null) as WordAuthoringCheckpoint | null) ?? {};
+  if (scope.retry && cache.status === "manual_review_required") {
+    // Keep the paid translation and review; only the repair budget and the verdict start again.
+    cache.status = "translation_ready"; cache.issue = undefined; cache.repairRounds = 0; cache.reviewRepairs = 0;
+  }
+  scope.retry = undefined;
   const checkpoint = async () => { await put(path, JSON.stringify(cache), { access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true }); };
   while (Date.now() < deadline - CALL_RESERVE_MS) {
     try {
