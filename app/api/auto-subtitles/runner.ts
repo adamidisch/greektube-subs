@@ -28,5 +28,7 @@ export async function runSummary(videoId: string, kind?: RunState["kind"]) {
   void brief;
   return { ...rest, scopes: { total: scopes?.length ?? 0, ready: scopes?.filter(s => s.status === "ready").length ?? 0,
     flagged: scopes?.filter(s => s.status === "flagged").length ?? 0, pending: scopes?.filter(s => s.status === "pending").length ?? 0 },
+    // Owner-only diagnostics: the Greek texts of scopes that did not pass, so the failing slots can be inspected.
+    flaggedTexts: scopes?.filter(s => s.status === "flagged" && s.texts).map(s => ({ id: s.id, issue: s.issue, texts: s.texts })) ?? [],
     ...(latest.state.kind === "sample" ? { sampleEvents: scopes?.flatMap(s => s.result?.events.map(e => ({ start: e.start, duration: e.duration, text: e.text })) ?? []) } : {}) };
 }
