@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { TRANSCRIPT_VERSION } from "../../shared-cache";
 import { restoredSnapshot } from "../../published-subtitles-core";
-import { writeNeonPublished } from "../../published-subtitles";
+import { publishVerified } from "../../published-subtitles";
 import sarahPreview from "../../../../public/previews/xYB6uYyRjCA.json";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const preview = PREVIEWS[videoId];
     if (!preview) return NextResponse.json({ error: "Δεν υπάρχει εγκεκριμένη έκδοση για επαναφορά." }, { status: 404 });
     const snapshot = restoredSnapshot(videoId, TRANSCRIPT_VERSION, preview.events, body.englishCues, body);
-    const contentHash = await writeNeonPublished(videoId, TRANSCRIPT_VERSION, snapshot.payload, snapshot.englishCues, "restore");
+    const contentHash = await publishVerified(videoId, TRANSCRIPT_VERSION, snapshot.payload, snapshot.englishCues, "restore");
     return NextResponse.json({ ok: true, videoId, contentHash, events: snapshot.payload.subtitleTrack.events.length, englishCues: snapshot.englishCues.length }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Η επαναφορά απέτυχε." }, { status: 422 });

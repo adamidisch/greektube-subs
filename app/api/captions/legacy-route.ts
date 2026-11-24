@@ -3,7 +3,7 @@ import { withSubtitleTrack } from "../subtitle-track";
 import {requireReadableImport,SubtitleReviewRequired} from "../subtitle-track-store";
 import { canonicalSpeakerForVideo } from "@/app/speaker-catalog";
 import { publishTranscript, readPublishedTranscript, transcriptBlobConfigured } from "../transcript-blob";
-import { publishedFromNeon } from "../published-subtitles";
+import { publishedSource, SubtitlesUnavailable } from "../published-subtitles";
 import { canonicalNumberTokens, numberTokensMatch } from "@/app/api/captions/numeric-integrity";
 import { splitSubtitleSentences } from "./sentence-split";
 import { groupEnglishCuesForContext, hasTranslatableWordTokens, stripEnglishSpeechFillers } from "./translation-text";
@@ -1423,14 +1423,14 @@ export async function GET(request: Request) {
       const publishedDuration = typeof published.duration === "number" ? published.duration : 0;
       validateCompleteGreekTranscript(publishedCues, publishedDuration);
       const candidate=published.subtitleTrack as {origin?:unknown}|undefined;
-      const fromNeon=publishedFromNeon(published);
-      // A Neon snapshot was verified when published; only Blob-era tracks need the English cues to re-verify.
-      const verified=candidate?.origin==="authored"&&!includeEnglish&&!fromNeon?await readPublishedTranscript(videoId,TRANSCRIPT_VERSION,true)||published:published;
+      const storedIn=publishedSource(published);
+      // A Neon/mirror publication was verified when published; only Blob-era tracks need the English cues to re-verify.
+      const verified=candidate?.origin==="authored"&&!includeEnglish&&!storedIn?await readPublishedTranscript(videoId,TRANSCRIPT_VERSION,true)||published:published;
       const display=withSubtitleTrack({...verified,speaker:normalizedPublishedSpeaker(videoId,verified)});
       return NextResponse.json(includeEnglish?display:{...display,englishCues:undefined}, {
         headers: {
           "Cache-Control": "no-cache, must-revalidate",
-          "X-GreekTube-Transcript-Source": fromNeon ? "neon" : "blob",
+          "X-GreekTube-Transcript-Source": storedIn ?? "blob",
         },
       });
     }
@@ -1466,7 +1466,8 @@ export async function GET(request: Request) {
         "X-GreekTube-Blob-Configured": transcriptBlobConfigured() ? "1" : "0",
       },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof SubtitlesUnavailable) return NextResponse.json({ ready: false, error: error.message }, { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "30" } });
     return NextResponse.json({ ready: false }, { status: 404, headers: { "Cache-Control": "no-store" } });
   }
 }

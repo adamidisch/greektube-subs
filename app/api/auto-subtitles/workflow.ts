@@ -1,24 +1,24 @@
 import { sleep } from "workflow";
 
 /**
- * Durable driver of one automatic-subtitles job (Vercel Workflow). Each step is a separate, bounded
- * invocation of runStep; the platform schedules the next one, so there is no self-invocation chain.
+ * Durable driver of one automatic-subtitles run (Vercel Workflow). Each step is a bounded invocation of runStep,
+ * which saves progress once per batch; caps on AI calls and writes live in the run itself.
  */
-export async function autoSubtitlesWorkflow(videoId: string, runId: string) {
+export async function autoSubtitlesWorkflow(runId: string) {
   "use workflow";
-  for (let step = 0; step < 300; step++) {
-    const result = await autoSubtitlesStep(videoId, runId);
+  for (let step = 0; step < 40; step++) {
+    const result = await autoSubtitlesStep(runId);
     if (!result.continue) return result.status;
-    if (result.backoff) await sleep("30s");
+    await sleep("5s");
   }
   return "step-limit";
 }
 
-async function autoSubtitlesStep(videoId: string, runId: string) {
+async function autoSubtitlesStep(runId: string) {
   "use step";
-  const { runStep } = await import("./pipeline");
-  const result = await runStep(videoId, runId);
-  return { continue: result.continue, backoff: Boolean(result.backoff), status: result.job?.status ?? null };
+  const { runStep } = await import("./runner");
+  const result = await runStep(runId);
+  return { continue: result.continue, status: result.state?.status ?? null };
 }
-// runStep keeps its own checkpoints and lease; a platform retry must not double-count provider failures.
-autoSubtitlesStep.maxRetries = 2;
+// A platform retry would repeat paid calls: the run's own caps and per-batch saves handle failures instead.
+autoSubtitlesStep.maxRetries = 0;

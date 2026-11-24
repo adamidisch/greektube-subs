@@ -1,6 +1,6 @@
 {
   "name": "greektube-subs",
-  "version": "7.26.0",
+  "version": "7.27.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -34,7 +34,9 @@
     "test:premium-ui": "node --experimental-strip-types scripts/premium-ui-navigation.test.mjs",
     "test:sarah-pilot": "node --experimental-strip-types scripts/sarah-stable-pilot.test.mjs",
     "test:auto-subtitles": "node --experimental-strip-types scripts/auto-subtitles.test.mjs",
-    "test:published-subtitles": "node --experimental-strip-types scripts/published-subtitles.test.mjs"
+    "test:published-subtitles": "node --experimental-strip-types scripts/published-subtitles.test.mjs",
+    "test:published-store": "scripts/with-local-postgres.sh scripts/published-store.test.mjs",
+    "test:auto-batched": "scripts/with-local-postgres.sh scripts/auto-batched.test.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.7.0-beta",
@@ -52,6 +54,7 @@
     "@types/react-dom": "19.2.3",
     "eslint": "9.39.4",
     "eslint-config-next": "16.4.6",
+    "pg": "^8.23.1",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
   },

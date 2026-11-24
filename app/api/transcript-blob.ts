@@ -1,6 +1,6 @@
 import { get, list, put } from "@vercel/blob";
 import {approvedSubtitleTrack} from "./subtitle-track-store";
-import {readNeonPublished, writeNeonPublished} from "./published-subtitles";
+import {readPublished, publishVerified, SubtitlesUnavailable} from "./published-subtitles";
 import {subtitleTrackForPayload} from "./subtitle-track";
 import type {TimedCue} from "../subtitle-track";
 
@@ -212,10 +212,11 @@ export async function upsertTranscriptCheckpoint(
   return await publishTranscriptCheckpoint(videoId, transcriptVersion, next) ? next : null;
 }
 
-/** Neon first (hash-verified); the suspended Blob store is only a read fallback for older publications. */
+/** Neon, then the GitHub mirror (both hash-verified); the suspended Blob store only for older publications.
+ *  Throws SubtitlesUnavailable when the published copies cannot be read at all. */
 export async function readPublishedTranscript(videoId: string, transcriptVersion: number, includeEnglish = false) {
   try {
-    const stored = await readNeonPublished(videoId, transcriptVersion, includeEnglish);
+    const stored = await readPublished(videoId, transcriptVersion, includeEnglish);
     if (stored && validPayload(stored.payload, videoId, transcriptVersion)) {
       if (!includeEnglish) return stored.payload;
       if (Array.isArray(stored.englishCues) && stored.englishCues.length) {
@@ -224,6 +225,7 @@ export async function readPublishedTranscript(videoId: string, transcriptVersion
       }
     }
   } catch (error) {
+    if (error instanceof SubtitlesUnavailable) throw error;
     console.warn("[published-subtitles:read-failed]", JSON.stringify({ videoId, error: error instanceof Error ? error.message : "unknown" }));
   }
   return readBlobPublishedTranscript(videoId, transcriptVersion, includeEnglish);
@@ -267,7 +269,7 @@ async function readBlobPublishedTranscript(videoId: string, transcriptVersion: n
 }
 
 /**
- * Publishes to Neon only. The stored subtitle track is the one verified now (hashes, word timing
+ * Publishes to Neon and the GitHub mirror (never Blob). The stored subtitle track is the one verified now (hashes, word timing
  * evidence, approval level); a track that does not verify is dropped and readers use the legacy track.
  */
 export async function publishTranscript(videoId: string, transcriptVersion: number, payload: unknown) {
@@ -280,7 +282,7 @@ export async function publishTranscript(videoId: string, transcriptVersion: numb
     const { englishCues: _english, subtitleTrack: _track, ...rest } = candidate;
     void _english; void _track;
     const greekPayload = greekOnly(track?.origin === "authored" ? { ...rest, subtitleTrack: track } : rest);
-    await writeNeonPublished(videoId, transcriptVersion, greekPayload, english, "publish");
+    await publishVerified(videoId, transcriptVersion, greekPayload, english, "publish");
     return true;
   } catch (error) {
     console.warn("[published-subtitles:publish-failed]", JSON.stringify({
