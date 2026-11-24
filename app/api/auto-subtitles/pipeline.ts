@@ -30,7 +30,7 @@ export type AutoJob = {
   words: number; sourceCues: number; captureHash: string;
   scopes?: AutoScope[]; providerCalls: number; steps: number;
   startedAt: string; updatedAt: string; finishedAt?: string;
-  leaseUntil?: number; leaseToken?: string; lastError?: string; providerFailures?: number;
+  leaseUntil?: number; leaseToken?: string; lastError?: string; providerFailures?: number; fallbackScopes?: number;
   issues?: AutoIssue[]; published?: { events: number; fastPages: number; shortPages: number };
 };
 type StoredSource = { source: TimedCue[]; evidence: SubtitleAudioEvidence; tokens: [string, number, number, number, 0 | 1][] };
@@ -38,15 +38,17 @@ type StoredSource = { source: TimedCue[]; evidence: SubtitleAudioEvidence; token
 const STEP_MS = 200_000;
 const CALL_RESERVE_MS = 62_000;
 const CONCURRENCY = 10;
-const MAX_PROVIDER_ERRORS = 4;
+const MAX_PROVIDER_ERRORS = 5;
 const REPAIR_ROUNDS = 3;
 const LEASE_MS = 295_000;
 const stateKey = (videoId: string) => `auto-subtitles:${videoId}`;
 const dataPrefix = (job: Pick<AutoJob, "videoId" | "runId">) => `auto-subtitles/v1/${job.videoId}/${job.runId}`;
 
-/** Translation model. deepseek-v4-pro is slower and timed out on the whole-video analysis (Foundation allows ~55 s per call). */
+/** Translation model for the per-scope phrases. The whole-video analysis always runs on deepseek-flash, because
+ *  deepseek-v4-pro timed out on long sections within Foundation's ~55 s per call. deepseek-flash left ~70% of a
+ *  fast podcast over the 17 CPS budget even after repair, so phrases default to deepseek-v4-pro. */
 export function autoModel(): SubtitleModel {
-  return process.env.AUTO_SUBTITLE_MODEL === "deepseek-v4-pro" ? "deepseek-v4-pro" : "deepseek-flash";
+  return process.env.AUTO_SUBTITLE_MODEL === "deepseek-flash" ? "deepseek-flash" : "deepseek-v4-pro";
 }
 
 /* ---------- state (Neon app_state: small JSON with optimistic concurrency) ---------- */
@@ -227,10 +229,14 @@ async function advanceScope(job: AutoJob, scope: AutoScope, source: TimedCue[], 
   }
   scope.retry = undefined;
   const checkpoint = async () => { await put(path, JSON.stringify(cache), { access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true }); };
+  // A scope whose calls keep timing out on the slower model finishes on deepseek-flash (counted in the review note).
+  const fallback = job.model !== "deepseek-flash" && (scope.providerErrors ?? 0) >= 2;
+  const scopeCall = fallback ? provider(job, "deepseek-flash") : call;
+  if (fallback && !scope.issue?.includes("fallback")) { job.fallbackScopes = (job.fallbackScopes ?? 0) + 1; scope.issue = "fallback"; }
   while (Date.now() < deadline - CALL_RESERVE_MS) {
     try {
-      const result = await advanceWordAuthoring(packet, cache, (system, input) => call(system, input, 4000), checkpoint, { repairRounds: REPAIR_ROUNDS });
-      if (result.status === "draft_ready") { scope.status = "ready"; return; }
+      const result = await advanceWordAuthoring(packet, cache, (system, input) => scopeCall(system, input, 4000), checkpoint, { repairRounds: REPAIR_ROUNDS });
+      if (result.status === "draft_ready") { scope.status = "ready"; scope.issue = undefined; return; }
     } catch (error) {
       if (error instanceof WordAuthoringProviderError) {
         scope.providerErrors = (scope.providerErrors ?? 0) + 1;
@@ -268,7 +274,8 @@ async function publish(job: AutoJob, source: TimedCue[], translation: TimedCue[]
     return;
   }
 
-  const built = buildPublication(track.events, tokens, job.captureHash, job.model);
+  const models = job.fallbackScopes ? `${job.model} (deepseek-flash σε ${job.fallbackScopes} τμήματα)` : job.model;
+  const built = buildPublication(track.events, tokens, job.captureHash, models);
   if (built.issues) { hold(job, built.issues); return; }
   const { reviewed, englishSrt, greekSrt } = built as Required<typeof built>;
   await saveReviewedTrack(job.videoId, reviewed);

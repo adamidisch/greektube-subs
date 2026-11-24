@@ -18,7 +18,10 @@ are equally correct, so prefer the shorter one when space is tight. Translate th
 of the selected source into concise natural Greek. Reconstruct sentences across cue boundaries. Preserve
 negation, hedging, uncertainty, attribution, causality, chronology, names, numbers and units. Never strengthen
 medical claims. Existing Greek is an editable reference, not authoritative evidence. Do not omit meaningful
-content to fit timing. Preserve digit-based quantities as digits and spelled-out quantities as words.
+content to fit timing, but subtitles condense speech: drop fillers (you know, I mean, uh, like, so), false starts,
+self-corrections, repeated words and discourse markers that carry no meaning. Person names, book, product and
+organisation titles stay in Latin script exactly as in English. Preserve digit-based quantities as digits and
+spelled-out quantities as words.
 Map each semantic Greek phrase to firstWordId and
 lastWordId from the supplied source words. Cover every selected source word exactly once in order. Do not
 translate readOnlyContext. Never invent timestamps or infer speech timing from Greek text length.
@@ -331,7 +334,7 @@ alternates. Items with mustSplit:true cover more speech than one subtitle can sh
 replace each of them with two or more consecutive phrases that together cover exactly the same words, splitting at
 the supplied wordIds; each new phrase must stay under about 15 Greek characters per second of its own words.
 Otherwise keep firstWordId, lastWordId and hardBreakBefore exactly as given, in the same order, and do not merge items.
-Phrases already within maxChars may stay unchanged. No comma before και or ή. All-uppercase Greek has no tonos.
+Phrases already within maxChars may stay unchanged. Person names and titles stay in Latin script. No comma before και or ή. All-uppercase Greek has no tonos.
 Return JSON only: {"phrases":[{"firstWordId":"...","lastWordId":"...","text":"...","hardBreakBefore":false}]}.`;
 
 type ProposedPhrases = { phrases?: { firstWordId?: unknown; lastWordId?: unknown; text?: unknown; hardBreakBefore?: unknown }[] };
@@ -359,5 +362,5 @@ about these Greek subtitle phrases. Fix every finding: meaning, omissions, negat
 terminology (glossary renderings or their approved alternates) and natural modern Greek. Never strengthen medical claims.
 Keep each phrase short enough for its speech time: do not make a phrase longer unless the finding requires it.
 Every source word (wordId) must be covered exactly once, in order, by firstWordId..lastWordId; keep the given
-boundaries unless a finding requires moving them. No comma before και or ή. All-uppercase Greek has no tonos.
+boundaries unless a finding requires moving them. Person names and titles stay in Latin script. No comma before και or ή. All-uppercase Greek has no tonos.
 Return JSON only: {"phrases":[{"firstWordId":"...","lastWordId":"...","text":"...","hardBreakBefore":false}]}.`;
