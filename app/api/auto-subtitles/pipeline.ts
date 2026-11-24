@@ -44,8 +44,9 @@ const LEASE_MS = 295_000;
 const stateKey = (videoId: string) => `auto-subtitles:${videoId}`;
 const dataPrefix = (job: Pick<AutoJob, "videoId" | "runId">) => `auto-subtitles/v1/${job.videoId}/${job.runId}`;
 
+/** Translation model. deepseek-v4-pro is slower and timed out on the whole-video analysis (Foundation allows ~55 s per call). */
 export function autoModel(): SubtitleModel {
-  return process.env.AUTO_SUBTITLE_MODEL === "deepseek-flash" ? "deepseek-flash" : "deepseek-v4-pro";
+  return process.env.AUTO_SUBTITLE_MODEL === "deepseek-v4-pro" ? "deepseek-v4-pro" : "deepseek-flash";
 }
 
 /* ---------- state (Neon app_state: small JSON with optimistic concurrency) ---------- */
@@ -152,11 +153,11 @@ function cleanPhrases(value: unknown) {
   return value;
 }
 
-function provider(job: AutoJob) {
+function provider(job: AutoJob, model: SubtitleModel = job.model) {
   return async (system: string, input: unknown, maxTokens = 4000) => {
     const allowed = ([900, 1600, 4000, 6000] as const).find(limit => limit >= maxTokens) ?? 6000;
     job.providerCalls += 1;
-    return cleanPhrases(await foundationSubtitleJson(system, input, { maxTokens: allowed, model: job.model }));
+    return cleanPhrases(await foundationSubtitleJson(system, input, { maxTokens: allowed, model }));
   };
 }
 
@@ -182,8 +183,10 @@ export async function runStep(videoId: string, runId: string) {
 
     if (job.stage === "understanding") {
       while (Date.now() < deadline - CALL_RESERVE_MS) {
+        // The whole-video analysis always uses the fast model: long sections must answer within Foundation's time limit.
+        const analyse = provider(job, "deepseek-flash");
         const result = await advanceTranslationUnderstanding(videoId, TRANSCRIPT_VERSION, source, {
-          send: async (system, user, maxTokens) => await call(system, user, maxTokens) as Record<string, unknown>,
+          send: async (system, user, maxTokens) => await analyse(system, user, maxTokens) as Record<string, unknown>,
         });
         if (result.status === "analysis_ready") { job.stage = "authoring"; break; }
       }
