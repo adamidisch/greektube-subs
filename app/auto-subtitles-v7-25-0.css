@@ -1,0 +1,17 @@
+/* GreekTube 7.25.0: automatic subtitles flow (Add video + editor status). */
+.auto-subtitles-hint{margin:10px 0 0;color:#AEB3BD;font-size:13px;line-height:1.45}
+.auto-subtitles-hint.ready{color:#cfe8d6}
+.auto-subtitles-flow{display:grid;gap:10px;margin-top:12px;color:#F2F3F6}
+.gts-owner-card .auto-subtitles-flow{padding:12px 0 2px;border-top:1px solid rgba(255,255,255,.07)}
+.auto-subtitles-headline{margin:0;font-size:15px;font-weight:650;line-height:1.4}
+.auto-subtitles-detail{margin:0;color:#AEB3BD;font-size:13px;line-height:1.5}
+.auto-subtitles-progress{height:6px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.08)}
+.auto-subtitles-progress>span{display:block;height:100%;border-radius:inherit;background:#7c74e0;transition:width .6s ease}
+.auto-subtitles-issues{display:grid;gap:8px;max-height:min(52vh,420px);margin:0;padding:0;overflow:auto;list-style:none}
+.auto-subtitles-issues li{display:grid;gap:4px;padding:10px 12px;border:1px solid rgba(199,154,93,.28);border-radius:12px;background:rgba(199,154,93,.07)}
+.auto-subtitles-issues b{color:#C79A5D;font:600 13px var(--font-geist-mono),ui-monospace,monospace}
+.auto-subtitles-issues span{color:#F2F3F6;font-size:13px;line-height:1.45}
+.auto-subtitles-issues small{color:#AEB3BD;font-size:12px;line-height:1.4}
+.auto-subtitles-actions{margin-top:2px}
+.auto-subtitles-actions:empty{display:none}
+@media(max-width:720px){.auto-subtitles-hint,.auto-subtitles-detail,.auto-subtitles-issues span{font-size:14px}.auto-subtitles-actions button{min-height:44px}}

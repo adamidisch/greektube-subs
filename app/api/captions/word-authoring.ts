@@ -52,7 +52,7 @@ export type WordAuthoringResult = {
 };
 export type WordAuthoringCheckpoint = {
   key?: string; proposed?: unknown; reviewed?: unknown; result?: WordAuthoringResult;
-  status?: "translation_ready" | "draft_ready" | "manual_review_required"; issue?: string;
+  status?: "translation_ready" | "draft_ready" | "manual_review_required"; issue?: string; repairRounds?: number; reviewRepairs?: number;
 };
 export class WordAuthoringNeedsReview extends Error {}
 const fail = (message: string): never => { throw new WordAuthoringNeedsReview(message); };
@@ -231,7 +231,9 @@ export function planWordAuthoring(source: TimedCue[], translation: TimedCue[], e
 
 /** At most ONE provider call per invocation. Exceptions propagate; no retry loop. */
 export async function advanceWordAuthoring(packet: WordAuthoringPacket, cache: WordAuthoringCheckpoint,
-  callJson: (system: string, input: unknown) => Promise<unknown>, checkpoint: () => Promise<void>) {
+  callJson: (system: string, input: unknown) => Promise<unknown>, checkpoint: () => Promise<void>,
+  options: { repairRounds?: number } = {}) {
+  const repairRounds = options.repairRounds ?? 0;
   const key = wordAuthoringKey(packet);
   if (cache.key && cache.key !== key) fail("Stale semantic checkpoint");
   cache.key = key;
@@ -240,11 +242,22 @@ export async function advanceWordAuthoring(packet: WordAuthoringPacket, cache: W
   try {
     if (cache.proposed === undefined) {
       cache.proposed = await callJson(WORD_TRANSLATION_PROMPT, packet);
-      parseWordPhrases(cache.proposed, packet);
+      // With repair enabled the paid proposal is kept even when it does not fit yet.
+      if (!repairRounds) parseWordPhrases(cache.proposed, packet);
       cache.status = "translation_ready"; await checkpoint();
       return { status: "translation_ready" as const, key, humanAudioReview: false as const };
     }
-    const phrases = parseWordPhrases(cache.proposed, packet), events = authorWordPhrases(packet, phrases);
+    let phrases: Phrase[], events: SubtitleEvent[];
+    try { phrases = parseWordPhrases(cache.proposed, packet); events = authorWordPhrases(packet, phrases); }
+    catch (error) {
+      const repairs = error instanceof WordAuthoringNeedsReview && (cache.repairRounds ?? 0) < repairRounds ? phraseBudgets(packet, cache.proposed) : [];
+      if (!repairs.length) throw error;
+      // One bounded budget-repair call: same word mapping, shorter Greek where the real speech time is short.
+      cache.proposed = await callJson(BUDGET_REPAIR_PROMPT, { globalBrief: packet.globalBrief, issue: error instanceof Error ? error.message : "",
+        phrases: repairs.map(({ firstWordId, lastWordId, english, text, maxChars, hardBreakBefore }) => ({ firstWordId, lastWordId, english, text, maxChars, hardBreakBefore })) });
+      cache.repairRounds = (cache.repairRounds ?? 0) + 1; cache.status = "translation_ready"; await checkpoint();
+      return { status: "translation_ready" as const, key, humanAudioReview: false as const };
+    }
     const contextKey = wordSemanticKey(packet), candidateHash = finalCandidateHash(contextKey, events);
     // Reuse cached meaning review only for the exact same final text, grouping and source mapping.
     if (cache.reviewed !== undefined && (cache.reviewed as {candidateHash?: unknown})?.candidateHash !== candidateHash) {
@@ -256,7 +269,20 @@ export async function advanceWordAuthoring(packet: WordAuthoringPacket, cache: W
     }
     let finalReview: FinalSemanticReview;
     try { finalReview = validateFinalReview(cache.reviewed, contextKey, events, packet.words.map(w => w.wordId)); }
-    catch (error) { fail(error instanceof Error ? error.message : "Independent final review failed"); }
+    catch (error) {
+      const findings = (cache.reviewed as { findings?: unknown })?.findings;
+      if (repairRounds && Array.isArray(findings) && findings.length && (cache.reviewRepairs ?? 0) < repairRounds
+        && error instanceof Error && /targeted repair/u.test(error.message)) {
+        // One bounded repair call on the reviewer's findings, then a fresh independent review.
+        cache.proposed = await callJson(REVIEW_REPAIR_PROMPT, { globalBrief: packet.globalBrief,
+          words: packet.words.map(word => ({ wordId: word.wordId, text: word.text })),
+          phrases: phrases.map(({ firstWordId, lastWordId, text, hardBreakBefore }) => ({ firstWordId, lastWordId, text, hardBreakBefore })),
+          findings: findings.slice(0, 40) });
+        cache.reviewRepairs = (cache.reviewRepairs ?? 0) + 1; cache.reviewed = undefined; cache.status = "translation_ready"; await checkpoint();
+        return { status: "translation_ready" as const, key, humanAudioReview: false as const };
+      }
+      fail(error instanceof Error ? error.message : "Independent final review failed");
+    }
     const result: WordAuthoringResult = { status: "draft_ready", sourceHash: packet.sourceHash, translationHash: packet.translationHash,
       audioSha256: packet.audioSha256, wordTimelineHash: packet.wordTimelineHash, sourceCueRange: packet.sourceCueRange,
       modelBilingualQa: "approved", humanAudioReview: false, phrases, events, finalReview: finalReview! };
@@ -270,7 +296,7 @@ export async function advanceWordAuthoring(packet: WordAuthoringPacket, cache: W
 }
 
 export function assembleWordAuthoring(source: TimedCue[], translation: TimedCue[], evidence: SubtitleAudioEvidence,
-  results: WordAuthoringResult[]) {
+  results: WordAuthoringResult[], options: { numbers?: boolean } = {}) {
   const sourceHash = subtitleContentHash(source), translationHash = subtitleContentHash(translation);
   let nextCue = 0;
   for (const result of results) {
@@ -282,7 +308,43 @@ export function assembleWordAuthoring(source: TimedCue[], translation: TimedCue[
     nextCue = result.sourceCueRange[1] + 1;
   }
   if (nextCue !== source.length) fail("Full-video semantic coverage is incomplete");
-  const track = validateAuthoredEvents(results.flatMap(result => result.events), translation, { source, evidence });
+  const track = validateAuthoredEvents(results.flatMap(result => result.events), translation, { source, evidence }, options);
   if (!track.audit.readable || track.events.some(event => event.timing !== "audio_aligned")) fail("Full-video authoring requires repair");
   return track;
 }
+
+/** Reading-speed target used for per-phrase budgets; the hard gate stays at 17 CPS. */
+const BUDGET_CPS = 15.5;
+export const BUDGET_REPAIR_PROMPT = `You are the GreekTube subtitle editor. Each item is one Greek subtitle phrase mapped to fixed
+English source words (firstWordId..lastWordId) with a hard maximum length maxChars derived from the real speech timing.
+Rewrite every phrase whose text is longer than maxChars so it fits, and also fix any listed issue. Keep the complete
+meaning: negation, hedging, numbers, units, names, attribution and causality. Never strengthen medical claims.
+Prefer natural spoken modern Greek, drop filler and repetition, use shorter synonyms and approved glossary
+alternates. Keep firstWordId, lastWordId and hardBreakBefore exactly as given and keep the same order; do not merge
+or split items. Phrases already within maxChars may stay unchanged. No comma before και or ή. All-uppercase Greek has no tonos.
+Return JSON only: {"phrases":[{"firstWordId":"...","lastWordId":"...","text":"...","hardBreakBefore":false}]}.`;
+
+type ProposedPhrases = { phrases?: { firstWordId?: unknown; lastWordId?: unknown; text?: unknown; hardBreakBefore?: unknown }[] };
+/** Per-phrase character budget from the real word timings of the phrase. */
+export function phraseBudgets(packet: WordAuthoringPacket, proposed: unknown) {
+  const index = new Map(packet.words.map((word, i) => [word.wordId, i]));
+  const phrases = Array.isArray((proposed as ProposedPhrases)?.phrases) ? (proposed as ProposedPhrases).phrases! : [];
+  return phrases.flatMap(item => {
+    const first = index.get(String(item?.firstWordId)), last = index.get(String(item?.lastWordId));
+    if (first === undefined || last === undefined || last < first) return [];
+    const nextStart = packet.words[last + 1]?.startMs ?? packet.nextWordStartMs;
+    const seconds = Math.max(0.5, (Math.min(packet.words[last].endMs + 250, nextStart) - packet.words[first].startMs) / 1000);
+    const text = String(item.text || "");
+    const maxChars = Math.max(8, Math.floor(seconds * BUDGET_CPS));
+    return [{ firstWordId: String(item.firstWordId), lastWordId: String(item.lastWordId), hardBreakBefore: item.hardBreakBefore === true,
+      english: packet.words.slice(first, last + 1).map(word => word.text).join(" "), text, maxChars, overBy: Array.from(text).length - maxChars }];
+  });
+}
+
+export const REVIEW_REPAIR_PROMPT = `You are the GreekTube subtitle editor. An independent bilingual reviewer listed findings
+about these Greek subtitle phrases. Fix every finding: meaning, omissions, negation, hedging, numbers, units, names,
+terminology (glossary renderings or their approved alternates) and natural modern Greek. Never strengthen medical claims.
+Keep each phrase short enough for its speech time: do not make a phrase longer unless the finding requires it.
+Every source word (wordId) must be covered exactly once, in order, by firstWordId..lastWordId; keep the given
+boundaries unless a finding requires moving them. No comma before και or ή. All-uppercase Greek has no tonos.
+Return JSON only: {"phrases":[{"firstWordId":"...","lastWordId":"...","text":"...","hardBreakBefore":false}]}.`;

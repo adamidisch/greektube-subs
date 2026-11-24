@@ -62,6 +62,7 @@ export async function POST(request:Request){
     if(body.sourceHash!==subtitleContentHash(source)||body.translationHash!==subtitleContentHash(translation))return NextResponse.json({error:"Η πηγή ή η μετάφραση άλλαξε. Φόρτωσε ξανά πριν συνεχίσεις."},{status:409});
     const draft=await saveSubtitleDraft(videoId,source,translation,body.events,body.audioEvidence);
     if(body.action==="draft")return NextResponse.json(draft,{headers:{"Cache-Control":"no-store"}});
+    if(body.approvalLevel==="auto_checked")throw new Error("Το επίπεδο auto_checked δίνεται μόνο από την αυτόματη ροή.");
     const subtitleTrack=reviewedTrack(source,translation,body.events,body.bilingualReview,body.reviewNote,body.audioEvidence,body.approvalLevel??"audio_reviewed");
     if(pending){await saveReviewedTrack(videoId,subtitleTrack);return NextResponse.json({ok:true,pending:true,message:"Το timeline εγκρίθηκε. Ολοκλήρωσε την εισαγωγή του ίδιου SRT για δημοσίευση."},{headers:{"Cache-Control":"no-store"}});}
     // Re-read after draft storage: do not apply a review to a concurrently edited translation.

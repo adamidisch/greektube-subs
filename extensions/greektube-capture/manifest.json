@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "GreekTube Capture",
+  "version": "1.0.0",
+  "description": "Παίρνει τους χρόνους ανά λέξη από τους αυτόματους αγγλικούς υπότιτλους του YouTube για τη διαχείριση του GreekTube.",
+  "permissions": ["scripting"],
+  "host_permissions": ["https://www.youtube.com/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    { "matches": ["https://greektubesubs.com/*", "https://www.greektubesubs.com/*"], "js": ["greektube.js"], "run_at": "document_start" }
+  ]
+}

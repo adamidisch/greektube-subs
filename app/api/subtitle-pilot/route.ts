@@ -1,5 +1,5 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
-import { WORD_TRANSLATION_PROMPT, parseWordPhrases, authorWordPhrases, type WordAuthoringPacket } from "../captions/word-authoring";
+import { WORD_TRANSLATION_PROMPT, BUDGET_REPAIR_PROMPT, parseWordPhrases, phraseBudgets, authorWordPhrases, type WordAuthoringPacket } from "../captions/word-authoring";
 import { withApprovedEquivalents } from "../captions/glossary-terms";
 import type { TranslationGlossaryEntry } from "../captions/translation-understanding";
 import { foundationSubtitleJson, WordAuthoringProviderError, type SubtitleModel } from "../captions/word-authoring-provider";
@@ -72,29 +72,3 @@ export async function POST(request: Request) {
 }
 
 const MAX_REPAIR_ROUNDS = 2;
-/** Reading-speed target used for per-phrase budgets; the hard gate stays at 17 CPS. */
-const BUDGET_CPS = 15.5;
-const BUDGET_REPAIR_PROMPT = `You are the GreekTube subtitle editor. Each item is one Greek subtitle phrase mapped to fixed
-English source words (firstWordId..lastWordId) with a hard maximum length maxChars derived from the real speech timing.
-Rewrite every phrase whose text is longer than maxChars so it fits, and also fix any listed issue. Keep the complete
-meaning: negation, hedging, numbers, units, names, attribution and causality. Never strengthen medical claims.
-Prefer natural spoken modern Greek, drop filler and repetition, use shorter synonyms and approved glossary
-alternates. Keep firstWordId, lastWordId and hardBreakBefore exactly as given and keep the same order; do not merge
-or split items. Phrases already within maxChars may stay unchanged. No comma before και or ή. All-uppercase Greek has no tonos.
-Return JSON only: {"phrases":[{"firstWordId":"...","lastWordId":"...","text":"...","hardBreakBefore":false}]}.`;
-
-type Proposed = { phrases?: { firstWordId?: unknown; lastWordId?: unknown; text?: unknown; hardBreakBefore?: unknown }[] };
-function phraseBudgets(packet: WordAuthoringPacket, proposed: unknown) {
-  const index = new Map(packet.words.map((word, i) => [word.wordId, i]));
-  const phrases = Array.isArray((proposed as Proposed)?.phrases) ? (proposed as Proposed).phrases! : [];
-  return phrases.flatMap(item => {
-    const first = index.get(String(item?.firstWordId)), last = index.get(String(item?.lastWordId));
-    if (first === undefined || last === undefined || last < first) return [];
-    const nextStart = packet.words[last + 1]?.startMs ?? packet.nextWordStartMs;
-    const seconds = Math.max(0.5, (Math.min(packet.words[last].endMs + 250, nextStart) - packet.words[first].startMs) / 1000);
-    const text = String(item.text || "");
-    const maxChars = Math.max(8, Math.floor(seconds * BUDGET_CPS));
-    return [{ firstWordId: String(item.firstWordId), lastWordId: String(item.lastWordId), hardBreakBefore: item.hardBreakBefore === true,
-      english: packet.words.slice(first, last + 1).map(word => word.text).join(" "), text, maxChars, overBy: Array.from(text).length - maxChars }];
-  });
-}

@@ -1,6 +1,7 @@
 "use client";
 
 import OwnerSourceImportPanel from "./OwnerSourceImportPanel";
+import AutoSubtitlesFlow from "./AutoSubtitlesFlow";
 import type { SubtitleTrack } from "./subtitle-track";
 
 import { useEffect, useRef, useState } from "react";
@@ -183,6 +184,7 @@ export default function OwnerTranslationPanel({ videoId, playedTrack, onPreviewC
     </>}
 
     {message && <div className="gts-owner-message" role="status">{message}</div>}
+    <AutoSubtitlesFlow videoId={videoId} start={false} />
     <OwnerSourceImportPanel videoId={videoId} playedTrack={playedTrack} onPreviewChange={onPreviewChange} onPublished={() => { void refresh(); }} />
     <style>{styles}</style>
   </section>;

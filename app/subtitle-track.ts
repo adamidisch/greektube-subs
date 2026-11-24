@@ -104,7 +104,9 @@ export function legacySubtitleTrack(cues: TimedCue[]): SubtitleTrack {
 }
 
 /** Explicit authored events may resegment a translation but must remain tied to source speech windows. */
-export function validateAuthoredEvents(value: unknown, source: TimedCue[], audio?: { source: TimedCue[]; evidence: unknown }): SubtitleTrack {
+/** `numbers: false` is only for automatic authoring without a cue-level Greek reference: there numbers are
+ *  checked against the English words per scope and again per published event. */
+export function validateAuthoredEvents(value: unknown, source: TimedCue[], audio?: { source: TimedCue[]; evidence: unknown }, options: { numbers?: boolean } = {}): SubtitleTrack {
   if (!Array.isArray(value) || !value.length || value.length > 30_000) throw new Error("Invalid subtitle event list");
   const allowed = new Set<TimingEvidence>(["source_cue", "estimated", "audio_aligned", "audio_reviewed"]);
   const aligned = audio ? validateAudioEvidence(audio.evidence, audio.source) : null;
@@ -155,7 +157,7 @@ export function validateAuthoredEvents(value: unknown, source: TimedCue[], audio
   if (covered.size !== source.length) throw new Error("Source coverage is incomplete");
   // Every numeric expression in the approved translation must survive resegmentation.
   const numbers=(text:string)=>text.match(/(?<![\p{L}\p{N}])[−-]?\d+(?:[.,:/–-]\d+)*\s*%?/gu)?.map(n=>n.replace(/\s/gu,"" ).replace(/−/gu,"-")).sort()||[];
-  if(JSON.stringify(numbers(source.map(c=>c.text).join(" ")))!==JSON.stringify(numbers(events.map(c=>c.text).join(" "))))throw new Error("Numeric content changed during subtitle authoring");
+  if(options.numbers!==false&&JSON.stringify(numbers(source.map(c=>c.text).join(" ")))!==JSON.stringify(numbers(events.map(c=>c.text).join(" "))))throw new Error("Numeric content changed during subtitle authoring");
   return { schemaVersion: 1, inputKey:subtitleInputKey(source), origin: "authored", events, audit: auditSubtitleEvents(events), ...(aligned ? { audioEvidence: aligned.evidence } : {}) };
 }
 
