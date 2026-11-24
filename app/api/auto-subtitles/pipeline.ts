@@ -6,7 +6,7 @@ import type { TimedCue } from "@/app/subtitle-track";
 import { TRANSCRIPT_VERSION } from "../shared-cache";
 import { readSubtitleDraft, saveReviewedTrack } from "../subtitle-track-store";
 import { advanceTranslationUnderstanding, compactUnderstandingForPrompt, readTranslationUnderstanding } from "../captions/translation-understanding";
-import { advanceWordAuthoring, assembleWordAuthoring, buildWordAuthoringPacket, planWordAuthoring, wordAuthoringKey,
+import { advanceWordAuthoring, assembleWordAuthoring, buildWordAuthoringPacket, phraseBudgets, planWordAuthoring, wordAuthoringKey,
   WordAuthoringNeedsReview, type WordAuthoringCheckpoint, type WordAuthoringResult } from "../captions/word-authoring";
 import { foundationSubtitleJson, WordAuthoringProviderError, type SubtitleModel } from "../captions/word-authoring-provider";
 import { importOwnerSourceSrt } from "../owner-translation/import-source";
@@ -239,6 +239,9 @@ async function advanceScope(job: AutoJob, scope: AutoScope, source: TimedCue[], 
       }
       scope.status = "flagged";
       scope.issue = error instanceof WordAuthoringNeedsReview || error instanceof Error ? error.message : "Χρειάζεται έλεγχο.";
+      // Name the worst phrase so the held list says exactly what did not fit.
+      const worst = phraseBudgets(packet, cache.proposed).sort((a, b) => b.overBy - a.overBy)[0];
+      if (worst && /fit/u.test(scope.issue)) scope.issue += ` · «${worst.text}» ${Array.from(worst.text).length}/${worst.maxChars} χαρ.${"mustSplit" in worst ? " (πολύ μεγάλο τμήμα ομιλίας)" : ""}`;
       return;
     }
   }

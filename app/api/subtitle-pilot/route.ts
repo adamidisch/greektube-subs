@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       return json({ ok: false, model, seconds: (Date.now() - started) / 1000, repairRounds: round, rounds, issue, proposed });
     try {
       proposed = await foundationSubtitleJson(BUDGET_REPAIR_PROMPT, { globalBrief: packet.globalBrief, issue,
-        phrases: repairs.map(({ firstWordId, lastWordId, english, text, maxChars, hardBreakBefore }) => ({ firstWordId, lastWordId, english, text, maxChars, hardBreakBefore })) },
+        phrases: repairs.map(item => ({ ...item, overBy: undefined })) },
         { maxTokens: 4000, model });
     } catch (error) {
       return json({ error: "Ο πάροχος δεν απάντησε.", providerStatus: error instanceof WordAuthoringProviderError ? error.status : 502, model, rounds }, 502);

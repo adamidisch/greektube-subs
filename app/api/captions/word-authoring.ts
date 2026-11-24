@@ -256,7 +256,7 @@ export async function advanceWordAuthoring(packet: WordAuthoringPacket, cache: W
       if (!repairs.length) throw error;
       // One bounded budget-repair call: same word mapping, shorter Greek where the real speech time is short.
       cache.proposed = await callJson(BUDGET_REPAIR_PROMPT, { globalBrief: packet.globalBrief, issue: error instanceof Error ? error.message : "",
-        phrases: repairs.map(({ firstWordId, lastWordId, english, text, maxChars, hardBreakBefore }) => ({ firstWordId, lastWordId, english, text, maxChars, hardBreakBefore })) });
+        phrases: repairs.map(item => ({ ...item, overBy: undefined })) });
       cache.repairRounds = (cache.repairRounds ?? 0) + 1; cache.status = "translation_ready"; await checkpoint();
       return { status: "translation_ready" as const, key, humanAudioReview: false as const };
     }
@@ -326,9 +326,12 @@ export const BUDGET_REPAIR_PROMPT = `You are the GreekTube subtitle editor. Each
 English source words (firstWordId..lastWordId) with a hard maximum length maxChars derived from the real speech timing.
 Rewrite every phrase whose text is longer than maxChars so it fits, and also fix any listed issue. Keep the complete
 meaning: negation, hedging, numbers, units, names, attribution and causality. Never strengthen medical claims.
-Prefer natural spoken modern Greek, drop filler and repetition, use shorter synonyms and approved glossary
-alternates. Keep firstWordId, lastWordId and hardBreakBefore exactly as given and keep the same order; do not merge
-or split items. Phrases already within maxChars may stay unchanged. No comma before και or ή. All-uppercase Greek has no tonos.
+Prefer natural spoken modern Greek, drop filler, false starts and repetition, use shorter synonyms and approved glossary
+alternates. Items with mustSplit:true cover more speech than one subtitle can show (over 7 seconds or 84 characters):
+replace each of them with two or more consecutive phrases that together cover exactly the same words, splitting at
+the supplied wordIds; each new phrase must stay under about 15 Greek characters per second of its own words.
+Otherwise keep firstWordId, lastWordId and hardBreakBefore exactly as given, in the same order, and do not merge items.
+Phrases already within maxChars may stay unchanged. No comma before και or ή. All-uppercase Greek has no tonos.
 Return JSON only: {"phrases":[{"firstWordId":"...","lastWordId":"...","text":"...","hardBreakBefore":false}]}.`;
 
 type ProposedPhrases = { phrases?: { firstWordId?: unknown; lastWordId?: unknown; text?: unknown; hardBreakBefore?: unknown }[] };
@@ -343,8 +346,11 @@ export function phraseBudgets(packet: WordAuthoringPacket, proposed: unknown) {
     const seconds = Math.max(0.5, (Math.min(packet.words[last].endMs + 250, nextStart) - packet.words[first].startMs) / 1000);
     const text = String(item.text || "");
     const maxChars = Math.max(8, Math.floor(seconds * BUDGET_CPS));
+    const mustSplit = seconds > 6.5 || Math.min(maxChars, Array.from(text).length) > 84;
     return [{ firstWordId: String(item.firstWordId), lastWordId: String(item.lastWordId), hardBreakBefore: item.hardBreakBefore === true,
-      english: packet.words.slice(first, last + 1).map(word => word.text).join(" "), text, maxChars, overBy: Array.from(text).length - maxChars }];
+      english: packet.words.slice(first, last + 1).map(word => word.text).join(" "), text, maxChars, overBy: Array.from(text).length - maxChars,
+      ...(mustSplit ? { mustSplit: true, seconds: Math.round(seconds * 10) / 10,
+        words: packet.words.slice(first, last + 1).map(word => ({ wordId: word.wordId, text: word.text, startMs: word.startMs })) } : {}) }];
   });
 }
 
