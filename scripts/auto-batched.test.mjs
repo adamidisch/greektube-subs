@@ -47,7 +47,7 @@ function makeProvider(options = {}) {
     if (options.failFirst === label && calls.by[label] === 1) throw new WordAuthoringProviderError(502, 30);
     if (label === 'brief') return { mainTopic: 'Η Sarah Myhill για την κόπωση', glossary: [] };
     if (label === 'translate') calls.translatedIds.push(...input.items.map(i => i.id));
-    if (label === 'translate') return { items: input.items.map(item => ({ id: item.id, texts: options.overBudget ? item.slots.map(slot => 'α'.repeat(slot.maxChars + 5)) : greekItem(item) })) };
+    if (label === 'translate') return { items: input.items.map(item => ({ id: item.id, texts: options.overBudget ? item.slots.map(slot => 'α'.repeat(slot.hardChars + 10)) : greekItem(item) })) };
     if (label === 'repair' || label === 'review-repair') return { items: input.items.map(item => ({ id: item.id, texts: greekItem(item) })) };
     if (label === 'review') return { items: input.items.map(item => {
       const firstTime = options.findings && !reviewed.has(item.id); reviewed.add(item.id);

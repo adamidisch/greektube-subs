@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { SubtitleAudioEvidence } from "../../subtitle-audio-evidence.ts";
-import { auditSubtitleEvents, type SubtitleEvent, type TimedCue } from "../../subtitle-track.ts";
+import { auditSubtitleEvents, PAUSE_BORROW_MS, type SubtitleEvent, type TimedCue } from "../../subtitle-track.ts";
 import { FINAL_SUBTITLE_REVIEW_PROMPT, finalCandidateHash, finalReviewEvents, validateFinalReview } from "../captions/final-subtitle-review.ts";
 import { assembleWordAuthoring, authorWordPhrases, buildWordAuthoringPacket, parseWordPhrases, planWordAuthoring, wordSemanticKey,
   WORD_TRANSLATION_PROMPT, type WordAuthoringPacket, type WordAuthoringResult } from "../captions/word-authoring.ts";
@@ -35,7 +35,9 @@ export const MONTHLY_LIMITS = {
 };
 export type UsageMetric = keyof typeof MONTHLY_LIMITS;
 
-export type Slot = { firstWordId: string; lastWordId: string; english: string; seconds: number; maxChars: number };
+/** maxChars: target (15.5 CPS of the speech). hardChars: what the slot alone can show (16.8 CPS, pause borrowed) — the
+ *  real gate is the final display event after slots are joined (17 CPS, 2×42, 1–7 s). */
+export type Slot = { firstWordId: string; lastWordId: string; english: string; seconds: number; maxChars: number; hardChars: number };
 export type ScopeState = {
   id: string; range: [number, number]; status: "pending" | "ready" | "flagged"; issue?: string; attempts?: number;
   texts?: string[]; budgetRepairs?: number; reviewRepairs?: number; reviewRetries?: number; result?: WordAuthoringResult;
@@ -81,8 +83,9 @@ export function slotsFor(packet: WordAuthoringPacket): Slot[] {
     const words = packet.words.slice(first, last + 1);
     const nextStart = packet.words[last + 1]?.startMs ?? packet.nextWordStartMs;
     const seconds = Math.max(0.5, (Math.min(packet.words[last].endMs + 250, nextStart) - packet.words[first].startMs) / 1000);
+    const shown = Math.max(1, (Math.min(nextStart, packet.words[last].endMs + PAUSE_BORROW_MS) - packet.words[first].startMs) / 1000);
     slots.push({ firstWordId: words[0].wordId, lastWordId: words.at(-1)!.wordId, english: words.map(w => w.text).join(" "),
-      seconds: Math.round(seconds * 100) / 100, maxChars: Math.max(8, Math.floor(seconds * SLOT_CPS)) });
+      seconds: Math.round(seconds * 100) / 100, maxChars: Math.max(8, Math.floor(seconds * SLOT_CPS)), hardChars: Math.max(10, Math.floor(shown * 16.8)) });
     first = last + 1;
   };
   for (let i = 0; i < packet.words.length; i++) {
@@ -92,7 +95,8 @@ export function slotsFor(packet: WordAuthoringPacket): Slot[] {
     const gap = next.startMs - word.endMs;
     const english = packet.words.slice(first, i + 2).map(w => w.text).join(" ").length;
     const nextSpan = (next.endMs - packet.words[first].startMs) / 1000;
-    if ((gap >= 300 && span >= 1.2) || nextSpan > 5 || english > 72) close(i);
+    // Slots of about 2 s or more: natural pauses, never across a long pause (events cannot span > 600 ms gaps).
+    if ((gap >= 300 && span >= 2) || gap >= 600 || nextSpan > 5 || english > 72) close(i);
   }
   return slots;
 }
@@ -111,15 +115,18 @@ export const BATCH_TRANSLATE_PROMPT = `${WORD_TRANSLATION_PROMPT}
 
 BATCH FORMAT (overrides the return format above). The input has globalBrief and items[]. Each item is one
 continuous stretch of speech cut into slots in spoken order. Each slot has the English words spoken in it and maxChars,
-the hard maximum number of Greek characters (including spaces and punctuation) that fit its real speech time.
+the target length in Greek characters (spaces and punctuation included) for its real speech time; hardChars is the most
+the slot can ever show. Adjacent slots are later joined into one subtitle when time allows, so a slightly longer text is
+fine if a neighbour is shorter, but aim at maxChars and never exceed hardChars.
 Translate every item completely and faithfully. Write exactly one Greek text per slot, in order: meaning may flow from
-one slot into the next, but each text must render the words of its own slot and stay within its maxChars. Never leave a
-slot empty. Use precedingEnglish/followingEnglish only as context.
+one slot into the next, but each text must render the words of its own slot. Never leave a slot empty. Use precedingEnglish/followingEnglish only as context.
 Return JSON only: {"items":[{"id":"S001","texts":["...","..."]}]}.`;
 
 export const BATCH_BUDGET_REPAIR_PROMPT = `You are the GreekTube subtitle editor. Each item lists the Greek texts of consecutive
-subtitle slots with the English words of each slot, its hard maxChars and, where present, an issue. Rewrite only what is
-needed so that every text is at most its maxChars and every issue is fixed. Keep the complete meaning: negation, hedging,
+subtitle slots with the English words of each slot, maxChars (target), hardChars (absolute maximum), overBy (characters
+above hardChars, when present) and the issue found when the slots were joined into on-screen subtitles (17 characters per
+second, at most two lines of 42 characters, 1–7 seconds). Shorten first every text with overBy, by at least overBy
+characters; then, if the issue remains, bring the texts near maxChars. Change nothing that already fits. Keep the complete meaning: negation, hedging,
 numbers (as digits when the English uses digits), units, names in Latin script, attribution and causality. Never strengthen
 medical claims. Prefer shorter natural spoken Greek, drop fillers and repetition, use approved glossary alternates.
 No comma before και or ή. All-uppercase Greek has no tonos. Return the same number of texts per item, in order.
@@ -135,7 +142,7 @@ Return JSON only: {"items":[{"id":"S001","status":"approved"|"manual_review_requ
 
 export const BATCH_REVIEW_REPAIR_PROMPT = `You are the GreekTube subtitle editor. An independent bilingual reviewer listed findings for these
 Greek subtitle slots. Fix every finding (meaning, omissions, negation, hedging, numbers, units, names, terminology, natural
-Greek) while keeping each text within its maxChars. Never strengthen medical claims. Return the same number of texts per
+Greek) while keeping each text near its maxChars and never above hardChars. Never strengthen medical claims. Return the same number of texts per
 item, in order. No comma before και or ή. All-uppercase Greek has no tonos.
 Return JSON only: {"items":[{"id":"S001","texts":["..."]}]}.`;
 
@@ -248,8 +255,6 @@ type Built = { packet: WordAuthoringPacket; slots: Slot[]; events?: SubtitleEven
 function build(ctx: Ctx, state: RunState, scope: ScopeState): Built {
   const packet = packetFor(ctx, state, scope), slots = slotsFor(packet);
   if (!scope.texts || scope.texts.length !== slots.length) return { packet, slots, problem: "missing translation" };
-  const over = slots.map((slot, i) => Array.from(scope.texts![i] || "").length - slot.maxChars);
-  if (over.some(n => n > 0)) return { packet, slots, problem: `${over.filter(n => n > 0).length} texts over maxChars` };
   try {
     const phrases = parseWordPhrases({ phrases: slots.map((slot, i) => ({ firstWordId: slot.firstWordId, lastWordId: slot.lastWordId, text: scope.texts![i] })) }, packet);
     return { packet, slots, events: authorWordPhrases(packet, phrases) };
@@ -265,7 +270,10 @@ function textsFrom(response: Record<string, unknown>, id: string, count: number)
       .replace(/[\p{Lu}\u0386-\u038F]{2,}/gu, word => word === word.toUpperCase() ? word.normalize("NFD").replace(/\u0301/gu, "").normalize("NFC") : word)) : null;
 }
 
-const slotView = (slots: Slot[], texts?: string[]) => slots.map((slot, i) => ({ english: slot.english, maxChars: slot.maxChars, ...(texts ? { text: texts[i] } : {}) }));
+const slotView = (slots: Slot[], texts?: string[]) => slots.map((slot, i) => {
+  const overBy = texts ? Array.from(texts[i] || "").length - slot.hardChars : 0;
+  return { english: slot.english, maxChars: slot.maxChars, hardChars: slot.hardChars, ...(texts ? { text: texts[i] } : {}), ...(overBy > 0 ? { overBy } : {}) };
+});
 
 function reviewItem(id: string, built: Built) {
   const contextKey = wordSemanticKey(built.packet), events = built.events!;
