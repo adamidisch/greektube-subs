@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { put } from "@vercel/blob";
 import { database } from "@/db/postgres";
 import type { SubtitleAudioEvidence } from "@/app/subtitle-audio-evidence";
@@ -35,7 +35,7 @@ export type AutoJob = {
 };
 type StoredSource = { source: TimedCue[]; evidence: SubtitleAudioEvidence; tokens: [string, number, number, number, 0 | 1][] };
 
-const STEP_MS = 210_000;
+const STEP_MS = 200_000;
 const CALL_RESERVE_MS = 62_000;
 const CONCURRENCY = 10;
 const MAX_PROVIDER_ERRORS = 4;
@@ -66,31 +66,6 @@ async function writeJob(job: AutoJob, version: string | null) {
         ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value, updated_at=EXCLUDED.updated_at RETURNING updated_at`, [stateKey(job.videoId), value, now])
     : await database().query("UPDATE app_state SET value=$2, updated_at=$3 WHERE key=$1 AND updated_at=$4 RETURNING updated_at", [stateKey(job.videoId), value, now, version]);
   return (rows as { updated_at: string }[])[0] ? String((rows as { updated_at: string }[])[0].updated_at) : null;
-}
-
-/* ---------- step signing: only this server can continue its own jobs ---------- */
-
-function stepSecret() {
-  const secret = process.env.FOUNDATION_SEARCHAI_HMAC_SECRET;
-  if (!secret || secret.length < 32) throw Error("Λείπει το μυστικό της αυτόματης ροής.");
-  return secret;
-}
-export function stepSignature(videoId: string, runId: string) {
-  return createHmac("sha256", stepSecret()).update(`greektube-auto-subtitles:${videoId}:${runId}`).digest("hex");
-}
-export function validStepSignature(videoId: string, runId: string, signature: string) {
-  const expected = Buffer.from(stepSignature(videoId, runId)), given = Buffer.from(signature);
-  return expected.length === given.length && timingSafeEqual(expected, given);
-}
-export async function kickStep(origin: string, videoId: string, runId: string) {
-  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15_000);
-  try {
-    await fetch(new URL("/api/auto-subtitles/step", origin), { method: "POST", signal: controller.signal, cache: "no-store",
-      headers: { "Content-Type": "application/json", "x-auto-subtitles-signature": stepSignature(videoId, runId) },
-      body: JSON.stringify({ videoId, runId }) });
-  } catch (error) {
-    console.warn("[auto-subtitles:kick-failed]", JSON.stringify({ videoId, error: error instanceof Error ? error.message : "unknown" }));
-  } finally { clearTimeout(timer); }
 }
 
 /* ---------- start ---------- */
@@ -170,12 +145,13 @@ function scopeIssue(source: TimedCue[], range: [number, number], issue: string):
 export async function runStep(videoId: string, runId: string) {
   const started = Date.now(), deadline = started + STEP_MS;
   const current = await readJob(videoId);
-  if (!current || current.job.runId !== runId || current.job.status !== "running") return { continue: false, job: current?.job ?? null };
-  if ((current.job.leaseUntil ?? 0) > Date.now()) return { continue: false, job: current.job };
+  if (!current || current.job.runId !== runId || current.job.status !== "running") return { continue: false, backoff: false, job: current?.job ?? null };
+  // Another step still holds the lease (e.g. an invocation that timed out): wait for it to expire.
+  if ((current.job.leaseUntil ?? 0) > Date.now()) return { continue: true, backoff: true, job: current.job };
   const job = current.job, leaseToken = randomUUID();
   job.leaseUntil = Date.now() + LEASE_MS; job.leaseToken = leaseToken; job.steps += 1;
   let version = await writeJob(job, current.version);
-  if (!version) return { continue: false, job: null };
+  if (!version) return { continue: true, backoff: true, job: null };
   try {
     const { source, evidence } = await loadSource(job);
     const translation = source.map(cue => ({ ...cue, text: "" }));
@@ -297,8 +273,9 @@ export function jobSummary(job: AutoJob) {
     running: (job.leaseUntil ?? 0) > Date.now(), lastError: job.lastError, issues: job.issues, published: job.published };
 }
 
+/** No step has written for 6 minutes although the job is running: its workflow run is gone. */
 export function isStalled(job: AutoJob) {
-  return job.status === "running" && (job.leaseUntil ?? 0) < Date.now() && Date.now() - Date.parse(job.updatedAt) > 90_000;
+  return job.status === "running" && (job.leaseUntil ?? 0) < Date.now() && Date.now() - Date.parse(job.updatedAt) > 360_000;
 }
 
 export type { YoutubeAsrCapture };

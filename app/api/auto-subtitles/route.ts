@@ -1,6 +1,8 @@
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { start } from "workflow/api";
 import { verifyAdminSession } from "@/lib/admin-auth";
-import { isStalled, jobSummary, kickStep, readJob, resumeJob, startJob } from "./pipeline";
+import { isStalled, jobSummary, readJob, resumeJob, startJob } from "./pipeline";
+import { autoSubtitlesWorkflow } from "./workflow";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -15,10 +17,7 @@ export async function GET(request: Request) {
   if (!videoId) return json({ error: "Μη έγκυρο βίντεο." }, 400);
   const current = await readJob(videoId);
   if (!current) return json({ status: "none", videoId });
-  if (isStalled(current.job)) {
-    const origin = new URL(request.url).origin, { runId } = current.job;
-    after(() => kickStep(origin, videoId, runId));
-  }
+  if (isStalled(current.job)) await start(autoSubtitlesWorkflow, [videoId, current.job.runId]).catch(() => undefined);
   return json(jobSummary(current.job));
 }
 
@@ -35,8 +34,7 @@ export async function POST(request: Request) {
   if (!videoId) return json({ error: "Μη έγκυρο βίντεο." }, 400);
   try {
     const job = body.action === "resume" ? await resumeJob(videoId) : await startJob(videoId, body.capture);
-    const origin = new URL(request.url).origin;
-    if (job.status === "running") after(() => kickStep(origin, videoId, job.runId));
+    if (job.status === "running") await start(autoSubtitlesWorkflow, [videoId, job.runId]);
     return json(jobSummary(job), 202);
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Δεν ξεκίνησε η αυτόματη επεξεργασία." }, 409);
