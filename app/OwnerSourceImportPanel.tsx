@@ -30,7 +30,8 @@ export default function OwnerSourceImportPanel({ videoId, playedTrack, onPreview
   const [published, setPublished] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const played = Boolean(candidate && candidate.track === playedTrack);
-  const canPublish = Boolean(candidate?.track.audit.readable && played && !busy && !published);
+  // The server publishes an unreadable SRT only when an approved timeline exists for these exact files (requireReadableImport).
+  const canPublish = Boolean(candidate && played && !busy && !published);
 
   useEffect(() => () => { previewRequest.current += 1; }, []);
 
@@ -139,7 +140,7 @@ export default function OwnerSourceImportPanel({ videoId, playedTrack, onPreview
       </div>
       {candidate && !published ? <p className="result" role="status">
         {!candidate.track.audit.readable
-          ? tr("Η προεπισκόπηση είναι ενεργή. Οι υπότιτλοι χρειάζονται έλεγχο αναγνωσιμότητας πριν από τη δημοσίευση.", "Preview is active. The subtitles need a readability review before publishing.")
+          ? tr("Η προεπισκόπηση είναι ενεργή. Δημοσιεύονται μόνο αν υπάρχει εγκεκριμένο timeline για αυτά τα SRT.", "Preview is active. They publish only if an approved timeline exists for these SRTs.")
           : played
             ? tr(`Εμφανίστηκαν υπότιτλοι στην αναπαραγωγή. Το ζεύγος περιέχει ${candidate.sourceCueCount} υποτίτλους.`, `Subtitles appeared during playback. This pair contains ${candidate.sourceCueCount} subtitles.`)
             : tr("Η προεπισκόπηση είναι ενεργή. Πάτησε Αναπαραγωγή για να δεις τους υπότιτλους στο βίντεο.", "Preview is active. Press Play to see the subtitles on the video.")}
