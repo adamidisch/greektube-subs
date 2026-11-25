@@ -48,7 +48,7 @@ function makeProvider(options = {}) {
     if (label === 'brief') return { mainTopic: 'Η Sarah Myhill για την κόπωση', glossary: [] };
     if (label === 'translate') calls.translatedIds.push(...input.items.map(i => i.id));
     if (label === 'translate') return { items: input.items.map(item => ({ id: item.id, texts: options.overBudget ? item.slots.map(slot => 'α'.repeat(slot.hardChars + 10)) : greekItem(item) })) };
-    if (label === 'repair' && options.stubbornRepair && calls.by.repair === 1) return { items: input.items.map(item => ({ id: item.id, texts: item.slots.map(slot => 'α'.repeat(slot.hardChars + 8)) })) };
+    if (label === 'repair' && options.stubbornRepair && calls.by.repair <= (options.stubbornRounds ?? 1)) return { items: input.items.map(item => ({ id: item.id, texts: item.slots.map(slot => 'α'.repeat(slot.hardChars + 8)) })) };
     if (label === 'repair' || label === 'review-repair') return { items: input.items.map(item => ({ id: item.id, texts: greekItem(item) })) };
     if (label === 'review') return { items: input.items.map(item => {
       const firstTime = options.findings && !reviewed.has(item.id); reviewed.add(item.id);
@@ -203,6 +203,26 @@ let readyA;
   assert.equal(published.length, 1);
   assert.equal(published[0].built.reviewed.approvalLevel, 'auto_checked');
   assert.ok(saved.usage.writes <= 10 && saved.usage.calls <= 30);
+}
+
+// I. Self-healing: scopes that stay over budget after both measured rounds get another pass inside the same run and the video publishes without anyone checking flagged parts.
+{
+  await sql('DELETE FROM usage_budget');
+  published.length = 0;
+  const p = makeProvider({ overBudget: true, stubbornRepair: true, stubbornRounds: 2 }), d = deps(p);
+  const state = await startRun(d, 'HHHHHHHHHHH', 'full', { ...short, videoId: 'HHHHHHHHHHH' });
+  await drive(d, state.runId);
+  const saved = await dbState(state.runId);
+  assert.equal(saved.status, 'published', saved.stopReason || saved.lastError);
+  assert.equal(saved.heals, 1, 'one healing pass was enough');
+  assert.ok(saved.scopes.every(s => s.status === 'ready'));
+  assert.ok(saved.usage.calls <= 30 && saved.usage.writes <= 10 && p.calls.total === saved.usage.calls);
+  assert.equal(published.length, 1);
+  // A sample never heals: its measurement must show the real first-pass result.
+  const q = makeProvider({ overBudget: true, stubbornRepair: true, stubbornRounds: 5 }), e = deps(q);
+  const sample = await startRun(e, 'JJJJJJJJJJJ', 'sample', { ...short, videoId: 'JJJJJJJJJJJ' });
+  await drive(e, sample.runId);
+  assert.equal((await dbState(sample.runId)).heals ?? 0, 0);
 }
 
 // G. Monthly budgets: at 50% of a provider limit no new automatic run starts.

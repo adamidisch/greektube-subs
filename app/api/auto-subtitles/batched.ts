@@ -25,6 +25,9 @@ export const RUN_LIMITS = {
 } as const;
 export const BATCH_SCOPES = 10;
 const BUDGET_REPAIR_ROUNDS = 2;
+/** Self-healing: flagged scopes that already have texts get up to this many extra passes inside the same run (same call/write caps). */
+export const MAX_HEALS = 2;
+const HEAL_MARGIN_CHARS = 12;
 const BATCH_WORDS = 1100;
 const CALL_TIME_RESERVE_MS = 65_000;
 const SLOT_CPS = 15.5;
@@ -41,7 +44,7 @@ export type UsageMetric = keyof typeof MONTHLY_LIMITS;
 export type Slot = { firstWordId: string; lastWordId: string; english: string; seconds: number; maxChars: number; hardChars: number };
 export type ScopeState = {
   id: string; range: [number, number]; status: "pending" | "ready" | "flagged"; issue?: string; attempts?: number;
-  texts?: string[]; budgetRepairs?: number; reviewRepairs?: number; reviewRetries?: number; result?: WordAuthoringResult;
+  texts?: string[]; healed?: number; budgetRepairs?: number; reviewRepairs?: number; reviewRetries?: number; result?: WordAuthoringResult;
 };
 export type CallLog = { label: string; ok: boolean; ms: number; inChars: number; outChars: number; retry?: boolean };
 export type RunUsage = { calls: number; retries: number; failedCalls: number; writes: number; tokensIn: number; tokensOut: number; aiMs: number; log: CallLog[] };
@@ -51,7 +54,7 @@ export type RunEstimate = {
   limits: { calls: number; writes: number }; fitsLimits: boolean; batchesWithinLimits: number; coverageWithinLimits: number;
 };
 export type RunState = {
-  schema: 2; kind: "full" | "sample"; videoId: string; runId: string; captureHash: string;
+  schema: 2; heals?: number; kind: "full" | "sample"; videoId: string; runId: string; captureHash: string;
   status: "running" | "complete" | "held" | "budget_exhausted" | "published" | "failed";
   meta: { title: string; channel: string; duration: number };
   sourceRange: [number, number]; limits: { calls: number; writes: number };
@@ -277,9 +280,10 @@ function textsFrom(response: Record<string, unknown>, id: string, count: number)
       .replace(/[\p{Lu}\u0386-\u038F]{2,}/gu, word => word === word.toUpperCase() ? word.normalize("NFD").replace(/\u0301/gu, "").normalize("NFC") : word)) : null;
 }
 
-const slotView = (slots: Slot[], texts?: string[]) => slots.map((slot, i) => {
-  const overBy = texts ? Array.from(texts[i] || "").length - slot.hardChars : 0;
-  return { english: slot.english, maxChars: slot.maxChars, hardChars: slot.hardChars, ...(texts ? { text: texts[i] } : {}), ...(overBy > 0 ? { overBy, wordsToCut: Math.ceil(overBy / 7) } : {}) };
+/** margin: on healing passes the model is shown a slightly lower ceiling, because it overshoots by a few characters (the machine still gates on the real hardChars). */
+const slotView = (slots: Slot[], texts?: string[], margin = 0) => slots.map((slot, i) => {
+  const shown = Math.max(8, slot.hardChars - margin), overBy = texts ? Array.from(texts[i] || "").length - shown : 0;
+  return { english: slot.english, maxChars: Math.min(slot.maxChars, shown), hardChars: shown, ...(texts ? { text: texts[i] } : {}), ...(overBy > 0 ? { overBy, wordsToCut: Math.ceil(overBy / 7) } : {}) };
 });
 
 function reviewItem(id: string, built: Built) {
@@ -357,7 +361,7 @@ export async function advanceBatch(state: RunState, ctx: Ctx) {
     if (!broken.length) break;
     if (round && state.usage.calls + 2 > state.limits.calls) { noRoom = true; break; } // keep one call for the meaning review
     const response = await ai(state, ctx, "repair", BATCH_BUDGET_REPAIR_PROMPT, { globalBrief, items: broken.map(scope => {
-      const b = built.get(scope.id)!; return { id: scope.id, issue: b.problem, slots: slotView(b.slots, scope.texts) }; }) }, 6000);
+      const b = built.get(scope.id)!; return { id: scope.id, issue: b.problem, slots: slotView(b.slots, scope.texts, (scope.healed ?? 0) * HEAL_MARGIN_CHARS) }; }) }, 6000);
     for (const scope of broken) {
       scope.budgetRepairs = (scope.budgetRepairs ?? 0) + 1;
       const texts = textsFrom(response, scope.id, built.get(scope.id)!.slots.length);
@@ -392,7 +396,7 @@ export async function advanceBatch(state: RunState, ctx: Ctx) {
       break;
     }
     const repair = await ai(state, ctx, "review-repair", BATCH_REVIEW_REPAIR_PROMPT, { globalBrief, items: findings.map(({ scope, findings: list }) => ({
-      id: scope.id, findings: list, slots: slotView(built.get(scope.id)!.slots, scope.texts) })) }, 6000);
+      id: scope.id, findings: list, slots: slotView(built.get(scope.id)!.slots, scope.texts, (scope.healed ?? 0) * HEAL_MARGIN_CHARS) })) }, 6000);
     for (const { scope } of findings) {
       scope.reviewRepairs = (scope.reviewRepairs ?? 0) + 1;
       const texts = textsFrom(repair, scope.id, built.get(scope.id)!.slots.length);
@@ -402,6 +406,20 @@ export async function advanceBatch(state: RunState, ctx: Ctx) {
     }
     built = new Map(built);
   }
+}
+
+/** Gives scopes that failed (but have work to improve) another pass inside the same run. Never exceeds the run's call/write caps:
+ *  needs room for a repair, a review and a final save. Scopes flagged for timing before any translation are left alone. */
+export function healFlagged(state: RunState): number {
+  if (state.kind !== "full" || (state.heals ?? 0) >= MAX_HEALS || !state.scopes) return 0;
+  if (state.limits.calls - state.usage.calls < 3 || !canStartBatch(state)) return 0;
+  const healable = state.scopes.filter(scope => scope.status === "flagged" && (scope.texts || (scope.attempts ?? 0) > 0));
+  for (const scope of healable) {
+    scope.status = "pending"; scope.healed = (scope.healed ?? 0) + 1;
+    scope.budgetRepairs = 0; scope.reviewRepairs = 0; scope.reviewRetries = 0; scope.attempts = 0; scope.issue = undefined;
+  }
+  if (healable.length) state.heals = (state.heals ?? 0) + 1;
+  return healable.length;
 }
 
 export function remainingIssues(state: RunState, source: TimedCue[]): AutoIssue[] {

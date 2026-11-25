@@ -1,5 +1,5 @@
 import { captureHashOf, captureTokens, evidenceFor, sourceCuesFromTokens, validateCapture, type YoutubeAsrCapture } from "./youtube-words.ts";
-import { advanceBatch, canStartBatch, measure, monthlyStop, newRun, publicationPackage, remainingIssues, RUN_LIMITS, RunStop,
+import { advanceBatch, canStartBatch, healFlagged, measure, monthlyStop, newRun, publicationPackage, remainingIssues, RUN_LIMITS, RunStop,
   type AiCall, type RunSource, type RunState } from "./batched.ts";
 import type { createRunStore } from "./run-store.ts";
 
@@ -67,7 +67,11 @@ export async function runStep(deps: DriveDeps, runId: string) {
       if (!canStartBatch(state)) { await finish("budget_exhausted", `Εξαντλήθηκε το όριο των ${state.limits.writes} εγγραφών· η τελευταία κρατήθηκε για αυτή την αποθήκευση.`); break; }
       await advanceBatch(state, ctx);
       if (state.scopes && state.scopes.every(scope => scope.status !== "pending")) {
-        if (state.scopes.some(scope => scope.status === "flagged")) { await finish("held", "Κάποια τμήματα χρειάζονται έλεγχο."); break; }
+        if (state.scopes.some(scope => scope.status === "flagged")) {
+          // Self-healing: flagged scopes get another measured pass inside the same caps before anyone is asked to look.
+          if (healFlagged(state)) { await save(); continue; }
+          await finish("held", "Κάποια τμήματα χρειάζονται έλεγχο."); break;
+        }
         if (state.kind === "sample") { await finish("complete"); break; }
         try {
           const built = publicationPackage(state, run, "deepseek-v4-pro");
