@@ -1,0 +1,86 @@
+/* v7.29.0 — Light theme, designed on its own (not an inverted dark theme).
+   Warm ivory page with a soft indigo/amber glow, white cards that clearly stand off it, one indigo accent for actions,
+   amber for "continue watching". Scoped to html[data-theme="light"]; loaded last. */
+html[data-theme="light"]{
+  --l-bg:#F6F3EC; --l-ink:#1C1E23; --l-muted:#5E6470; --l-line:#E7E2D8; --l-card:#FFFFFF;
+  --l-indigo:#6B62D6; --l-indigo-ink:#4F46B8; --l-indigo-soft:#EEEDFB; --l-amber:#B7843F; --l-amber-soft:#FBF5EA;
+  --l-shadow:0 1px 2px rgba(40,32,20,.05),0 10px 28px rgba(40,32,20,.06);
+  --l-shadow-hover:0 2px 6px rgba(40,32,20,.06),0 16px 36px rgba(40,32,20,.10);
+}
+html[data-theme="light"] body,
+html[data-theme="light"] body.antialiased{
+  background:
+    radial-gradient(1100px 520px at 88% -12%,rgba(124,116,224,.11),transparent 62%),
+    radial-gradient(900px 480px at -6% 8%,rgba(199,154,93,.10),transparent 60%),
+    var(--l-bg)!important;
+  background-attachment:fixed!important;color:var(--l-ink)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell{color:var(--l-ink)!important}
+
+/* Header: frosted ivory */
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .app-header{
+  background:rgba(252,250,246,.82)!important;border-bottom:1px solid var(--l-line)!important;box-shadow:0 6px 20px rgba(40,32,20,.04)!important;
+  backdrop-filter:blur(14px) saturate(1.2)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .app-header nav button.active{background:var(--l-card)!important;color:var(--l-indigo-ink)!important;box-shadow:0 1px 3px rgba(40,32,20,.1)!important}
+
+/* Intro */
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .home-intro>span{color:var(--l-indigo-ink)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .home-intro h1{color:var(--l-ink)!important}
+
+/* Featured (last watched) */
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .featured{
+  background:var(--l-card)!important;border:1px solid var(--l-line)!important;box-shadow:var(--l-shadow)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .featured-panel{
+  background:radial-gradient(420px 260px at 105% -8%,rgba(124,116,224,.13),transparent 70%),linear-gradient(165deg,#FFFFFF,#FBF9F4)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .featured-panel .primary,
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .featured-resume{
+  background:linear-gradient(180deg,#7A72E2,var(--l-indigo))!important;color:#fff!important;border:0!important;
+  box-shadow:0 8px 20px rgba(107,98,214,.28)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .featured-panel .primary:hover{background:linear-gradient(180deg,#6F67DC,#5F56CC)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .featured-favorite{background:var(--l-card)!important;border:1px solid var(--l-line)!important}
+
+/* Continue watching: warm amber panel */
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .continue-section{
+  background:linear-gradient(120deg,var(--l-amber-soft),#FFFFFF 72%)!important;border:1px solid #EEDFC6!important;box-shadow:var(--l-shadow)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .continue-header>div>span{color:var(--l-amber)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .continue-header h2{color:var(--l-ink)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .continue-header p{color:var(--l-muted)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .continue-header button,
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .load-more-wrap button{
+  background:var(--l-card)!important;border:1px solid var(--l-line)!important;color:var(--l-ink)!important;box-shadow:0 1px 2px rgba(40,32,20,.06)!important;
+}
+
+/* Search and filters */
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .library-tools{
+  background:rgba(255,255,255,.92)!important;border:1px solid var(--l-line)!important;box-shadow:var(--l-shadow)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .library-tools button{color:var(--l-muted)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .library-tools button.active{
+  background:var(--l-indigo-soft)!important;color:var(--l-indigo-ink)!important;border-color:rgba(107,98,214,.28)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .library-sort{background-color:var(--l-indigo-soft)!important}
+
+/* Category chips */
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .category-row button{
+  background:var(--l-card)!important;border:1px solid var(--l-line)!important;color:#4A4F59!important;box-shadow:0 1px 2px rgba(40,32,20,.05)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .category-row button:hover{border-color:rgba(107,98,214,.35)!important;color:var(--l-ink)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .category-row button.active{
+  background:var(--l-indigo)!important;border-color:var(--l-indigo)!important;color:#fff!important;box-shadow:0 6px 16px rgba(107,98,214,.25)!important;
+}
+
+/* Video cards */
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .video-card{
+  background:var(--l-card)!important;border:1px solid #E9E4DA!important;box-shadow:var(--l-shadow)!important;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .video-card:hover{transform:translateY(-2px);box-shadow:var(--l-shadow-hover)!important;border-color:rgba(107,98,214,.3)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .video-card .card-info h3,
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .video-card h3{color:var(--l-ink)!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .video-card .card-original-title{color:var(--l-muted)!important}
+@media (prefers-reduced-motion:reduce){html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .video-card:hover{transform:none}}

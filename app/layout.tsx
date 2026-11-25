@@ -56,6 +56,7 @@ import "./player-pro-v7-20.css";
 import "./auto-subtitles-v7-25-0.css";
 import "./player-controls-v7-27-7.css";
 import "./settings-v7-28-0.css";
+import "./light-home-v7-29-0.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
