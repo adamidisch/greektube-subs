@@ -69,7 +69,7 @@ function videoTapButton(target: EventTarget | null): HTMLButtonElement | null {
 }
 
 function playbackRateFromUi(): number {
-  const value = Number(document.querySelector<HTMLSelectElement>(".gts31-speed select")?.value);
+  const value = Number(document.querySelector<HTMLSelectElement>(".gtp-speed select, .gts31-speed select")?.value);
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
 

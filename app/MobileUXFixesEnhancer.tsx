@@ -82,7 +82,7 @@ export default function MobileUXFixesEnhancer(){
       if(fullscreenFallbackBypass)return;
       const appleTouch=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
       if(!appleTouch)return;
-      const button=event.target instanceof Element?event.target.closest<HTMLButtonElement>(".gts31-fullscreen"):null;
+      const button=event.target instanceof Element?event.target.closest<HTMLButtonElement>(".gts31-fullscreen,.gtp-fullscreen"):null;
       if(!button)return;
       const fullscreenDocument=document as WebkitFullscreenDocument;
       if(document.fullscreenElement||fullscreenDocument.webkitFullscreenElement)return;

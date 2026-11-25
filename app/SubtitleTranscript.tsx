@@ -6,7 +6,7 @@ import {tr,useAppLanguage} from "./app-language";
 
 const clock = (t:number) => `${t>=3600?`${Math.floor(t/3600)}:`:""}${String(Math.floor(t / 60)%60).padStart(t>=3600?2:1,"0")}:${String(Math.floor(t % 60)).padStart(2,"0")}`;
 
-export default function SubtitleTranscript({track,time,follow,highlight,seek,moment,close}:{track:SubtitleTrack;time:number;follow:boolean;highlight:boolean;seek:(time:number)=>void;moment:(time:number,text:string)=>void;close:()=>void}) {
+export default function SubtitleTranscript({track,time,follow,highlight,seek,moment,savedTimes=[],close}:{track:SubtitleTrack;time:number;follow:boolean;highlight:boolean;seek:(time:number)=>void;moment:(time:number,text:string)=>void;savedTimes?:number[];close:()=>void}) {
   const root=useRef<HTMLDivElement>(null);
   const language=useAppLanguage();
   const active=subtitleEventAt(track.events,time);
@@ -15,7 +15,7 @@ export default function SubtitleTranscript({track,time,follow,highlight,seek,mom
     if(highlight&&active>=0)root.current?.querySelector(`[data-event="${active}"]`)?.classList.add("active");
     if(follow&&active>=0)root.current?.querySelector(`[data-event="${active}"]`)?.scrollIntoView({block:"nearest",behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
   },[active,follow,highlight,track]);
-  const rows=useMemo(()=>track.events.map((event,index)=><div className="transcript-event" key={`${event.start}-${index}`} data-event={index}><button data-seek={index}><time>{clock(event.start)}</time><span>{event.text}</span></button><button className="transcript-moment" data-moment={index} aria-label={tr("Αποθήκευση στιγμής")}>＋</button></div>),[track,language]);
+  const rows=useMemo(()=>track.events.map((event,index)=><div className="transcript-event" key={`${event.start}-${index}`} data-event={index}><button data-seek={index}><time>{clock(event.start)}</time><span>{event.text}</span></button>{(()=>{const end=track.events[index+1]?.start??Infinity;const saved=savedTimes.some(t=>t>=event.start-0.5&&t<end-0.5);return <button className={`transcript-moment ${saved?"saved":""}`} data-moment={index} aria-label={saved?tr("Κρατημένη φράση"):tr("Κράτα τη φράση")}><svg viewBox="0 0 24 24" fill={saved?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>{!saved&&<span>{tr("Κράτα")}</span>}</button>;})()}</div>),[track,language,savedTimes.join(",")]);
   return <aside className="side-panel transcript-drawer" data-gts-shared-transcript="1">
     <div className="drawer-header transcript-header"><div><small>{tr("ΕΛΛΗΝΙΚΟΙ ΥΠΟΤΙΤΛΟΙ")}</small><strong>{tr("Μεταγραφή")}</strong><span>{track.events.length} {tr("σημεία ·")}{clock(Math.max(0,time))}</span></div><button aria-label="Κλείσιμο μεταγραφής" onClick={close}>×</button></div>
     {!track.audit.professionalReady&&<p className="subtitle-review-note" role="note">{tr("Η μεταγραφή ακολουθεί τους υπότιτλους. Ο συγχρονισμός χρειάζεται έλεγχο.")}</p>}
