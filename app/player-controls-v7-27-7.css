@@ -1,0 +1,54 @@
+/* v7.27.7 — Player control bar.
+   Speed and Volume sit right beside the playback cluster, set apart by a small gap and labelled ("Ταχύτητα", "Ένταση").
+   Subtitles stay alone at the far right. Loaded after player-pro-v7-20.css; same selector weight, so order decides. */
+html body .viewer.viewer.viewer.viewer.viewer .gts31-settings-cluster{
+  order:2!important;margin-left:14px!important;gap:8px!important;align-items:center!important;
+}
+html body .viewer.viewer.viewer.viewer.viewer .gts31-subtitles{order:3!important;margin-left:auto!important}
+
+html body .viewer.viewer.viewer.viewer.viewer .gts31-cap{
+  font-size:12px;font-weight:600;line-height:1;letter-spacing:.01em;white-space:nowrap;
+  color:var(--g31-muted,#AEB3BD);pointer-events:none;
+}
+
+/* Both are real, bordered controls (shape + fill + border), like the segment buttons. */
+html body .viewer.viewer.viewer.viewer.viewer .gts31-speed,
+html body .viewer.viewer.viewer.viewer.viewer .gts31-volume>.gts31-volume-toggle{
+  background:var(--g31-surface-2,rgba(255,255,255,.05))!important;border:1px solid var(--g31-line,rgba(255,255,255,.1))!important;border-radius:10px!important;
+  box-sizing:border-box!important;
+}
+html body .viewer.viewer.viewer.viewer.viewer .gts31-speed:focus-within,
+html body .viewer.viewer.viewer.viewer.viewer .gts31-volume>.gts31-volume-toggle:hover{border-color:var(--g31-line-strong,rgba(255,255,255,.2))!important}
+html body .viewer.viewer.viewer.viewer.viewer .gts31-speed>select{background:transparent!important;border:0!important}
+
+/* Speed: the whole 44px box is the select; the caption floats above the value. */
+html body .viewer.viewer.viewer.viewer.viewer .gts31-speed{
+  position:relative!important;width:72px!important;min-width:72px!important;height:44px!important;flex:0 0 72px!important;
+}
+html body .viewer.viewer.viewer.viewer.viewer .gts31-speed>.gts31-cap{position:absolute;top:6px;left:0;right:0;text-align:center;z-index:2}
+html body .viewer.viewer.viewer.viewer.viewer .gts31-speed>select{
+  position:absolute!important;inset:0!important;width:100%!important;height:44px!important;
+  padding:17px 4px 0!important;text-align:center!important;text-align-last:center!important;font-size:15px!important;
+}
+
+/* Volume: icon over caption, same 44px box. */
+html body .viewer.viewer.viewer.viewer.viewer .gts31-volume{position:relative;width:60px!important;min-width:60px!important;height:44px!important;flex:0 0 60px!important}
+html body .viewer.viewer.viewer.viewer.viewer .gts31-volume>.gts31-volume-toggle{
+  width:100%!important;min-width:0!important;height:44px!important;min-height:44px!important;flex:0 0 auto!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;padding:0!important;
+}
+html body .viewer.viewer.viewer.viewer.viewer .gts31-volume-toggle>svg{width:18px!important;height:18px!important;flex:0 0 18px}
+
+@media (max-width:720px){
+  /* Mobile text floor is 13px (AGENTS.md); the group stays on row 1 down to 360px phones. */
+  html body .viewer.viewer.viewer.viewer.viewer .gts31-cap{font-size:13px;letter-spacing:-.015em}
+  html body .viewer.viewer.viewer.viewer.viewer .gts31-settings-cluster{margin-left:2px!important;gap:4px!important}
+  html body .viewer.viewer.viewer.viewer.viewer .gts31-skip{width:42px!important;min-width:42px!important;flex:0 0 42px!important}
+  html body .viewer.viewer.viewer.viewer.viewer .gts31-speed{width:70px!important;min-width:70px!important;flex:0 0 70px!important}
+  html body .viewer.viewer.viewer.viewer.viewer .gts31-speed>select{font-size:16px!important}
+  html body .viewer.viewer.viewer.viewer.viewer .gts31-volume{width:54px!important;min-width:54px!important;flex:0 0 54px!important}
+}
+@media (max-width:340px){
+  /* Very narrow phones: Subtitles joins the end of the second row instead of dropping alone onto a third line. */
+  html body .viewer.viewer.viewer.viewer.viewer .gts31-subtitles{order:5!important;margin-left:0!important;flex:0 0 44px!important}
+}

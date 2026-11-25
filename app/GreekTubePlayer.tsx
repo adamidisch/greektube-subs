@@ -1470,10 +1470,10 @@ export default function GreekTubePlayer() {
                     <button className="gts31-control gts31-skip" aria-label="Μπροστά 10 δευτερόλεπτα" onClick={()=>skip(10)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path d="M7 5l7 7-7 7M14 5l7 7-7 7"/></svg><small>10</small></button>
                   </div>
                   <div className="gts31-settings-cluster">
-                    <label className="gts31-speed" aria-label="Ταχύτητα αναπαραγωγής"><span className="sr-only">{tr("Ταχύτητα")}</span><select value={normalizedPlaybackSpeed(state.settings.speed)} onChange={event=>{const next=Number(event.target.value);setState(current=>({...current,settings:{...current.settings,speed:next}}));currentPlayer()?.setPlaybackRate(next);}}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>
+                    <label className="gts31-speed" aria-label="Ταχύτητα αναπαραγωγής"><span className="gts31-cap">{tr("Ταχύτητα")}</span><select value={normalizedPlaybackSpeed(state.settings.speed)} onChange={event=>{const next=Number(event.target.value);setState(current=>({...current,settings:{...current.settings,speed:next}}));currentPlayer()?.setPlaybackRate(next);}}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>
                     <div className="gts31-volume">
                       <button className="gts31-control gts31-volume-toggle" aria-label={isMuted||volume===0?tr("Ενεργοποίηση ήχου"):tr("Ρύθμιση ή σίγαση ήχου")} aria-expanded={volumeSliderOpen} onClick={()=>setVolumeSliderOpen(open=>!open)}>
-                        <VolumeIcon muted={isMuted||volume===0}/>
+                        <VolumeIcon muted={isMuted||volume===0}/><span className="gts31-cap">{tr("Ένταση")}</span>
                       </button>
                       {volumeSliderOpen&&<div className="gts31-volume-popup">
                         <button className="gts31-volume-mute" aria-label={isMuted?tr("Ενεργοποίηση ήχου"):tr("Σίγαση")} onClick={toggleMute}><VolumeIcon muted={isMuted||volume===0}/></button>
