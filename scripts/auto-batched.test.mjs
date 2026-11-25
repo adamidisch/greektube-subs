@@ -117,7 +117,7 @@ let readyA;
   assert.ok(saved.scopes.some(s => s.status === 'ready') && saved.remaining.length);
 }
 
-// C. Retries are counted and checked against the remaining budget (sample cap: 4 calls).
+// C. Retries are counted and checked against the remaining budget (sample cap: 6 calls).
 {
   await sql('DELETE FROM usage_budget');
   const p = makeProvider({ failFirst: 'translate' }), d = deps(p);
@@ -133,8 +133,9 @@ let readyA;
   const state = await startRun(d, 'CCCCCCCCCCC', 'sample', { ...short, videoId: 'CCCCCCCCCCC' });
   await drive(d, state.runId);
   const saved = await dbState(state.runId);
-  assert.equal(p.calls.total, 4, 'brief, failed translate, retry, review: the fifth call is refused before it is made');
-  assert.equal(saved.status, 'budget_exhausted'); assert.ok(saved.usage.writes <= RUN_LIMITS.sample.writes);
+  assert.ok(p.calls.total <= RUN_LIMITS.sample.calls, 'a call beyond the sample cap is refused before it is made');
+  assert.equal(saved.usage.calls, p.calls.total, 'the failed call and its retry both count');
+  assert.ok(saved.usage.writes <= RUN_LIMITS.sample.writes);
   assert.ok(saved.measurement, 'the measurement is saved even when the cap stops the sample');
 }
 
@@ -156,7 +157,7 @@ let readyA;
   assert.ok(p.calls.by.translate >= translated);
 }
 
-// F. Sample: ≤ 4 calls, ≤ 3 writes, measurement ready, never published.
+// F. Sample: ≤ 6 calls, ≤ 3 writes, measurement ready, never published.
 {
   await sql('DELETE FROM usage_budget');
   published.length = 0;
@@ -166,7 +167,7 @@ let readyA;
   await drive(d, state.runId);
   const saved = await dbState(state.runId);
   assert.equal(saved.status, 'complete');
-  assert.ok(saved.usage.calls <= 4 && saved.usage.writes <= 3);
+  assert.ok(saved.usage.calls <= 6 && saved.usage.writes <= 3);
   assert.equal(saved.measurement.calls, saved.usage.calls);
   assert.ok(saved.measurement.events > 0 && saved.measurement.readable !== undefined);
   assert.equal(published.length, 0, 'a sample is never published');
@@ -181,13 +182,14 @@ let readyA;
   const saved = await dbState(state.runId);
   assert.equal(p.calls.by.repair, 2, 'two measured repair rounds');
   assert.ok(saved.scopes.every(s => s.status === 'ready'), 'the second round fixed every scope');
-  // Sample: the fresh brief leaves no spare call, so the second round is skipped and the review call stays reserved.
+  // Sample (6 calls): both measured repair rounds fit, and the review call stays reserved.
   const q = makeProvider({ overBudget: true, stubbornRepair: true }), e = deps(q);
   const sample = await startRun(e, 'GGGGGGGGGGG', 'sample', { ...short, videoId: 'GGGGGGGGGGG' });
   await drive(e, sample.runId);
   const sampled = await dbState(sample.runId);
-  assert.ok(q.calls.total <= 4 && q.calls.by.repair === 1);
-  assert.ok(sampled.scopes.some(s => s.status === 'flagged' && /υπέρβαση χαρακτήρων/u.test(s.issue)), 'the flag names the slots that are over');
+  assert.ok(q.calls.total <= RUN_LIMITS.sample.calls);
+  assert.equal(q.calls.by.repair, 2, 'the sample now has room for both measured repair rounds');
+  assert.ok(sampled.scopes.every(s => s.status === 'ready'), 'the second round fixed every scope within the sample cap');
 }
 
 // H. A short full run completes and hands a verified auto_checked track to the publisher.

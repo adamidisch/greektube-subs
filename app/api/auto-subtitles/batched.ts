@@ -21,7 +21,7 @@ import type { CapturedToken } from "./youtube-words.ts";
 
 export const RUN_LIMITS = {
   full: { calls: 30, writes: 10 },
-  sample: { calls: 4, writes: 3, seconds: 120 },
+  sample: { calls: 6, writes: 3, seconds: 120 },
 } as const;
 export const BATCH_SCOPES = 10;
 const BUDGET_REPAIR_ROUNDS = 2;
