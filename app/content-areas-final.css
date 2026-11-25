@@ -84,9 +84,10 @@ html body .app-shell.app-shell.app-shell .card-info>p:not(.card-original-title){
    between 3/4/5/6/8 across breakpoints — could hide behind other elements) ---- */
 html body .app-shell.app-shell.app-shell .subtitles{
   z-index:6!important;
-  border:1px solid rgba(255,255,255,.14)!important;
+  /* 7.27.9: the outline is almost invisible again — a hairline at 5% and a soft shadow, no inner highlight. */
+  border:1px solid rgba(255,255,255,.05)!important;
   border-radius:10px!important;
-  box-shadow:0 10px 30px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.22)!important;
   background:rgba(8,9,13,.55)!important;
   backdrop-filter:blur(10px) saturate(1.15)!important;
   font-family:inherit!important;
