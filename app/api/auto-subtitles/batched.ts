@@ -105,6 +105,25 @@ export function slotsFor(packet: WordAuthoringPacket): Slot[] {
   return slots;
 }
 
+/* ---------------- references: a subtitle is read alone, a few seconds after the sentence that named its subject ---------------- */
+
+/** Pronoun-like words in a slot's English ("both", "them", "they", "these"/"those", "neither"/"either", a leading it/this/that).
+ *  Sent to the model as `refs`, so it checks what each one stands for before it writes «και τα δύο», «τους», «αυτά». */
+export function referenceWords(english: string): string[] {
+  const found = new Set<string>();
+  for (const match of english.toLowerCase().matchAll(/\b(both|them|they|these|those|neither|either)\b/gu)) found.add(match[1]);
+  const lead = english.trim().toLowerCase().match(/^(it|this|that)\b/u);
+  if (lead) found.add(lead[1]);
+  return [...found];
+}
+
+export const REFERENCE_RULES = `REFERENCES. Each subtitle is read on its own, often a few seconds after the sentence that introduced its subject.
+When the English names the subject or object (vitamin C and iodine, the thyroid, glyphosate), keep that name in the Greek
+instead of collapsing it into «και τα δύο», «αυτά», «τους», «το». A slot with refs (both, them, they, these, those, it, this,
+that) uses a pronoun in English: look at precedingEnglish and the neighbouring slots, and if a Greek-only viewer could not tell
+at once what it stands for, name the referent in the shortest natural Greek («Βιταμίνη C και ιώδιο», «Ο θυρεοειδής»), dropping
+a filler word to make room. Use only referents that the supplied English names; never add a fact or strengthen a claim.`;
+
 /* ---------------- prompts (batched wrappers around the existing rules) ---------------- */
 
 export const BRIEF_PROMPT = `You are the senior source analyst for a professional English-to-Greek subtitle translator.
@@ -126,6 +145,7 @@ Aim at maxChars. hardChars is a ceiling that is checked by machine: a text above
 Count characters before you answer; if a text is above hardChars, shorten it. Never exceed hardChars.
 Translate every item completely and faithfully. Write exactly one Greek text per slot, in order: meaning may flow from
 one slot into the next, but each text must render the words of its own slot. Never leave a slot empty. Use precedingEnglish/followingEnglish only as context.
+${REFERENCE_RULES}
 Return JSON only: {"items":[{"id":"S001","texts":["...","..."]}]}.`;
 
 export const BATCH_BUDGET_REPAIR_PROMPT = `You are the GreekTube subtitle editor. Each item lists the Greek texts of consecutive
@@ -138,6 +158,7 @@ word of that slot to make room. Change nothing that already fits. Count characte
 numbers (as digits when the English uses digits), units, names in Latin script, attribution and causality. Never strengthen
 medical claims. Prefer shorter natural spoken Greek, drop fillers and repetition, use approved glossary alternates.
 No comma before και or ή. All-uppercase Greek has no tonos. Return the same number of texts per item, in order.
+Keep every pronoun-like slot (refs) clear: name its referent when a Greek-only viewer could not tell what «και τα δύο», «τους», «αυτά» mean.
 Return JSON only: {"items":[{"id":"S001","texts":["..."]}]}.`;
 
 export const BATCH_REVIEW_PROMPT = `${FINAL_SUBTITLE_REVIEW_PROMPT}
@@ -145,6 +166,9 @@ export const BATCH_REVIEW_PROMPT = `${FINAL_SUBTITLE_REVIEW_PROMPT}
 BATCH FORMAT (overrides the return format above). The input has globalBrief and items[]; review every item independently.
 Each item has its own candidateHash and finalEvents (eventId, displayed Greek text, the English words it renders and the
 range of source word IDs). Cite sourceWordIds only from the ranges shown for that item (e.g. "W000123").
+Also report category ambiguous_reference (severity major) when a displayed Greek text leans on «και τα δύο», «αυτά», «τους», «το»
+or a similar pronoun and the Greek-only viewer cannot tell what it stands for from that event or the one before it, while the
+English names it (e.g. Greek «Και τα δύο σκοτώνουν…» where the English says vitamin C and iodine). suggestedRepair must name the referent using only English that is shown.
 Return JSON only: {"items":[{"id":"S001","status":"approved"|"manual_review_required","candidateHash":"...",
 "reviewedEventIds":["E0001"],"findings":[...]}]}.`;
 
@@ -152,6 +176,7 @@ export const BATCH_REVIEW_REPAIR_PROMPT = `You are the GreekTube subtitle editor
 Greek subtitle slots. Fix every finding (meaning, omissions, negation, hedging, numbers, units, names, terminology, natural
 Greek) while keeping each text near its maxChars and never above hardChars. Never strengthen medical claims. Return the same number of texts per
 item, in order. No comma before και or ή. All-uppercase Greek has no tonos.
+For ambiguous_reference findings, name the referent in the Greek text (shortest natural form, English-named referents only).
 Return JSON only: {"items":[{"id":"S001","texts":["..."]}]}.`;
 
 /* ---------------- state ---------------- */
@@ -283,7 +308,8 @@ function textsFrom(response: Record<string, unknown>, id: string, count: number)
 /** margin: on healing passes the model is shown a slightly lower ceiling, because it overshoots by a few characters (the machine still gates on the real hardChars). */
 const slotView = (slots: Slot[], texts?: string[], margin = 0) => slots.map((slot, i) => {
   const shown = Math.max(8, slot.hardChars - margin), overBy = texts ? Array.from(texts[i] || "").length - shown : 0;
-  return { english: slot.english, maxChars: Math.min(slot.maxChars, shown), hardChars: shown, ...(texts ? { text: texts[i] } : {}), ...(overBy > 0 ? { overBy, wordsToCut: Math.ceil(overBy / 7) } : {}) };
+  const refs = referenceWords(slot.english);
+  return { english: slot.english, ...(refs.length ? { refs } : {}), maxChars: Math.min(slot.maxChars, shown), hardChars: shown, ...(texts ? { text: texts[i] } : {}), ...(overBy > 0 ? { overBy, wordsToCut: Math.ceil(overBy / 7) } : {}) };
 });
 
 function reviewItem(id: string, built: Built) {

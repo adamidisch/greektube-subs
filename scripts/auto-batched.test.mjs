@@ -4,8 +4,15 @@ import fs from 'node:fs';
 import pg from 'pg';
 import { createRunStore } from '../app/api/auto-subtitles/run-store.ts';
 import { runStep, startRun } from '../app/api/auto-subtitles/drive.ts';
-import { BATCH_BUDGET_REPAIR_PROMPT, BATCH_REVIEW_PROMPT, BATCH_REVIEW_REPAIR_PROMPT, BATCH_TRANSLATE_PROMPT, BRIEF_PROMPT, RUN_LIMITS } from '../app/api/auto-subtitles/batched.ts';
+import { referenceWords, REFERENCE_RULES, BATCH_BUDGET_REPAIR_PROMPT, BATCH_REVIEW_PROMPT, BATCH_REVIEW_REPAIR_PROMPT, BATCH_TRANSLATE_PROMPT, BRIEF_PROMPT, RUN_LIMITS } from '../app/api/auto-subtitles/batched.ts';
 import { WordAuthoringProviderError } from '../app/api/captions/word-authoring-provider.ts';
+
+// References: pronoun-like English words are handed to the model, and the rules reach the translate and review prompts.
+assert.deepEqual(referenceWords("and iodine is there's no microbe that is resistant to them"), ['them']);
+assert.deepEqual(referenceWords('the joy of both vitamin C and iodine'), ['both']);
+assert.deepEqual(referenceWords('This is central'), ['this']);
+assert.deepEqual(referenceWords('we eat meat and fish'), []);
+assert.ok(BATCH_TRANSLATE_PROMPT.includes(REFERENCE_RULES) && /ambiguous_reference/u.test(BATCH_REVIEW_PROMPT) && /refs/u.test(BATCH_BUDGET_REPAIR_PROMPT));
 
 const forbidden = Object.keys(process.env).filter(k => /DATABASE|POSTGRES|PGHOST|PGPASSWORD|NEON|FOUNDATION|DEEPSEEK|GREEKTUBE_DATA_TOKEN|BLOB/u.test(k) && k !== 'TEST_DATABASE_URL');
 assert.deepEqual(forbidden, [], `production-like variables present: ${forbidden.join(', ')}`);
