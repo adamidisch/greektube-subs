@@ -200,9 +200,8 @@ html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-l
 /* Fullscreen subtitles: readable background without the legacy outlined card. */
 html body .viewer.viewer.viewer .video-frame:fullscreen .subtitles,
 html body .viewer.viewer.viewer .video-frame.pseudo-fullscreen .subtitles{
-  border:0!important;
+  /* 7.28.0: background and outline follow the subtitle settings in fullscreen too. */
   border-radius:6px!important;
-  background:rgba(0,0,0,.58)!important;
   box-shadow:none!important;
   backdrop-filter:none!important;
 }

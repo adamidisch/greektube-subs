@@ -88,7 +88,7 @@ html body .app-shell.app-shell.app-shell .subtitles{
   border:1px solid rgba(255,255,255,.05)!important;
   border-radius:10px!important;
   box-shadow:0 6px 18px rgba(0,0,0,.22)!important;
-  background:rgba(8,9,13,.55)!important;
+  /* 7.28.0: no forced background — the player sets it from «Διαφάνεια φόντου». */
   backdrop-filter:blur(10px) saturate(1.15)!important;
   font-family:inherit!important;
   font-weight:620!important;

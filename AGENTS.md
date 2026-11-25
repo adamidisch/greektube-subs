@@ -9,6 +9,15 @@ These rules are the visual contract for every future change.
 - Do not copy references literally. Preserve GreekTube Subs identity and translate only the useful design principles.
 - A successful build is not sufficient. Complete the visual and responsive quality gate from the DesignerUI skill before publishing.
 
+## Premium by default (Adam, 25/11/2026)
+
+- Every screen, in every app we build, is designed to the level of Apple and Google first-party apps. "It works" is not done.
+- Settings and preference screens use grouped rows: label (and an optional one-line hint) on the left, a compact control on the right — switch, segmented control, or slider with its value. Never a full-width select or input for a short choice.
+- Give each section its own colour (icon tile, switches, selected states) from a small, harmonious palette. Colours must separate sections clearly in both themes.
+- Design light and dark separately. Light uses a warm, soft background with white cards that clearly stand off it — never flat grey.
+- Where a setting changes something visible, show a live preview next to it.
+- Before publishing, compare the result with how Apple or Google would ship the same screen and fix what falls short.
+
 ## Product direction
 
 - Keep the interface premium, calm and mobile-first with native iPhone-style proportions.

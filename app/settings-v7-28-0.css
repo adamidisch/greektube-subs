@@ -1,0 +1,178 @@
+/* v7.28.0 — Settings: grouped rows (iOS / Android pattern), one colour per section, dark and light designed separately.
+   Scoped to .gs-page; the selector weight beats the legacy .settings-page layers, which no longer match anything here. */
+
+html body .app-shell.app-shell.app-shell.app-shell .gs-page{
+  --gs-card:#151820; --gs-card-border:rgba(255,255,255,.075); --gs-divider:rgba(255,255,255,.065);
+  --gs-label:#F2F3F6; --gs-muted:#AEB3BD; --gs-track:#0c0f14; --gs-seg-border:rgba(255,255,255,.08); --gs-seg-text:#C9CDD5;
+  --gs-switch-off:#373c48; --gs-range:#2a2f3a; --gs-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 12px 32px rgba(0,0,0,.22);
+  width:100%!important;max-width:1080px!important;min-height:100%;margin:0 auto!important;padding:30px 0 44px!important;
+  color:var(--gs-label)!important;font-family:var(--font-ui,Inter),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+  background:none!important;border:0!important;box-shadow:none!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .gs-page{
+  --gs-card:#FFFFFF; --gs-card-border:#E7E2D8; --gs-divider:#EFEBE3; --gs-label:#1C1E23; --gs-muted:#5E6470;
+  --gs-track:#F2EFE8; --gs-seg-border:#E3DED3; --gs-seg-text:#4A4F59; --gs-switch-off:#D3CFC6; --gs-range:#E4E0D7;
+  --gs-shadow:0 1px 2px rgba(40,32,20,.05),0 10px 28px rgba(40,32,20,.06);
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-page [data-tone="blue"]{--tone:#5B8DEF}
+html body .app-shell.app-shell.app-shell.app-shell .gs-page [data-tone="amber"]{--tone:#C79A5D}
+html body .app-shell.app-shell.app-shell.app-shell .gs-page [data-tone="indigo"]{--tone:#7C74E0}
+html body .app-shell.app-shell.app-shell.app-shell .gs-page [data-tone="sage"]{--tone:#5E9C78}
+html body .app-shell.app-shell.app-shell.app-shell .gs-page *{box-sizing:border-box}
+
+/* Header */
+html body .app-shell.app-shell.app-shell.app-shell .gs-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:20px!important;margin:0 0 30px!important;padding:0!important;background:none!important;border:0!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-eyebrow{display:block!important;margin:0 0 10px!important;font-size:12px!important;font-weight:700!important;letter-spacing:.14em!important;color:#8B84EC!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .gs-eyebrow{color:#5F56C9!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-head h1{margin:0!important;font-size:34px!important;line-height:1.1!important;font-weight:700!important;letter-spacing:-.02em!important;color:var(--gs-label)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-head p{margin:10px 0 0!important;font-size:15px!important;line-height:1.5!important;color:var(--gs-muted)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-close{
+  flex:0 0 auto!important;display:grid!important;place-items:center!important;width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;
+  border-radius:12px!important;border:1px solid var(--gs-card-border)!important;background:var(--gs-card)!important;color:var(--gs-label)!important;cursor:pointer;
+  box-shadow:var(--gs-shadow)!important;transition:transform .1s ease,border-color .15s ease!important;
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-close:hover{border-color:var(--gs-muted)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-close:active{transform:scale(.95)}
+html body .app-shell.app-shell.app-shell.app-shell .gs-close svg{width:18px;height:18px}
+
+/* Columns: two on wide screens, one ordered list below */
+html body .app-shell.app-shell.app-shell.app-shell .gs-columns{display:flex!important;flex-direction:column!important;gap:0!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-column{display:contents!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-language{order:1}
+html body .app-shell.app-shell.app-shell.app-shell .gs-subtitles{order:2}
+html body .app-shell.app-shell.app-shell.app-shell .gs-playback{order:3}
+html body .app-shell.app-shell.app-shell.app-shell .gs-appearance{order:4}
+@media (min-width:1040px){
+  html body .app-shell.app-shell.app-shell.app-shell .gs-columns{display:grid!important;grid-template-columns:minmax(0,1.06fr) minmax(0,1fr)!important;gap:30px!important;align-items:start!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-column{display:block!important}
+}
+
+/* Sections */
+html body .app-shell.app-shell.app-shell.app-shell .gs-section{margin:0 0 28px!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-section-head{display:flex!important;align-items:center!important;gap:11px!important;margin:0 0 12px 2px!important;padding:0!important;background:none!important;border:0!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-icon{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border-radius:9px;color:#fff;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--tone) 88%,#fff),var(--tone));box-shadow:0 4px 12px color-mix(in srgb,var(--tone) 32%,transparent)}
+html body .app-shell.app-shell.app-shell.app-shell .gs-icon svg{width:17px;height:17px}
+html body .app-shell.app-shell.app-shell.app-shell .gs-section-head h2{margin:0!important;font-size:17px!important;font-weight:650!important;letter-spacing:-.01em!important;color:var(--gs-label)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-card{overflow:hidden;border-radius:16px!important;border:1px solid var(--gs-card-border)!important;background:var(--gs-card)!important;box-shadow:var(--gs-shadow)!important;padding:0!important}
+
+/* Rows */
+html body .app-shell.app-shell.app-shell.app-shell .gs-row{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:18px!important;
+  min-height:58px!important;margin:0!important;padding:12px 18px!important;background:none!important;border:0!important;cursor:default;
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-row+.gs-row{border-top:1px solid var(--gs-divider)!important}
+html body .app-shell.app-shell.app-shell.app-shell label.gs-row:not(.gs-row-slider){cursor:pointer}
+html body .app-shell.app-shell.app-shell.app-shell .gs-text{display:flex!important;flex-direction:column!important;gap:3px!important;min-width:0!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-label{font-size:15px!important;font-weight:560!important;line-height:1.3!important;color:var(--gs-label)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-text small{font-size:13px!important;line-height:1.35!important;color:var(--gs-muted)!important}
+
+/* Switch */
+html body .app-shell.app-shell.app-shell.app-shell .gs-switch{
+  -webkit-appearance:none!important;appearance:none!important;position:relative!important;flex:0 0 auto!important;
+  width:48px!important;height:28px!important;min-height:28px!important;margin:0!important;padding:0!important;border:0!important;border-radius:999px!important;
+  background:var(--gs-switch-off)!important;cursor:pointer;transition:background .18s ease!important;outline:none;
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-switch::before{
+  content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.28);transition:transform .2s cubic-bezier(.3,.7,.4,1);
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-switch:checked{background:var(--tone)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-switch:checked::before{transform:translateX(20px)}
+html body .app-shell.app-shell.app-shell.app-shell .gs-switch:focus-visible,
+html body .app-shell.app-shell.app-shell.app-shell .gs-seg button:focus-visible,
+html body .app-shell.app-shell.app-shell.app-shell .gs-row-slider input:focus-visible{outline:2px solid var(--tone)!important;outline-offset:2px!important}
+
+/* Segmented control */
+html body .app-shell.app-shell.app-shell.app-shell .gs-seg{
+  display:inline-flex!important;flex:0 0 auto!important;gap:2px!important;padding:3px!important;border-radius:11px!important;
+  background:var(--gs-track)!important;border:1px solid var(--gs-seg-border)!important;
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-seg button{
+  flex:1 1 auto!important;min-width:0!important;height:34px!important;min-height:34px!important;margin:0!important;padding:0 14px!important;
+  border:1px solid transparent!important;border-radius:8px!important;background:transparent!important;box-shadow:none!important;
+  color:var(--gs-seg-text)!important;font:inherit!important;font-size:14px!important;font-weight:600!important;white-space:nowrap!important;cursor:pointer;
+  transition:background .15s ease,color .15s ease,border-color .15s ease!important;
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-seg button:hover{color:var(--gs-label)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-seg button.on{
+  color:#fff!important;background:color-mix(in srgb,var(--tone) 34%,#1a1d25)!important;border-color:color-mix(in srgb,var(--tone) 60%,transparent)!important;
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .gs-seg button.on{
+  color:color-mix(in srgb,var(--tone) 72%,#000)!important;background:#fff!important;border-color:color-mix(in srgb,var(--tone) 40%,transparent)!important;
+  box-shadow:0 1px 3px rgba(40,32,20,.1)!important;
+}
+
+/* Slider rows */
+html body .app-shell.app-shell.app-shell.app-shell .gs-row-slider{flex-direction:column!important;align-items:stretch!important;gap:10px!important;padding-bottom:14px!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-slider-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-slider-head output{
+  flex:0 0 auto;padding:4px 9px;border-radius:8px;font-size:14px;font-weight:650;font-variant-numeric:tabular-nums;
+  color:color-mix(in srgb,var(--tone) 80%,#fff);background:color-mix(in srgb,var(--tone) 14%,transparent);
+}
+html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .gs-slider-head output{color:color-mix(in srgb,var(--tone) 72%,#000)}
+html body .app-shell.app-shell.app-shell.app-shell .gs-row-slider input[type="range"]{
+  -webkit-appearance:none!important;appearance:none!important;width:100%!important;height:28px!important;margin:0!important;padding:0!important;
+  background:transparent!important;border:0!important;cursor:pointer;touch-action:pan-y;
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-row-slider input[type="range"]::-webkit-slider-runnable-track{
+  height:6px;border-radius:999px;background:linear-gradient(to right,var(--tone) var(--gs-fill,50%),var(--gs-range) var(--gs-fill,50%));
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-row-slider input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:22px;height:22px;margin-top:-8px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 4px rgba(0,0,0,.35),0 0 0 3px color-mix(in srgb,var(--tone) 35%,transparent);
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-row-slider input[type="range"]::-moz-range-track{height:6px;border-radius:999px;background:var(--gs-range)}
+html body .app-shell.app-shell.app-shell.app-shell .gs-row-slider input[type="range"]::-moz-range-progress{height:6px;border-radius:999px;background:var(--tone)}
+html body .app-shell.app-shell.app-shell.app-shell .gs-row-slider input[type="range"]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+
+/* Live subtitle preview */
+html body .app-shell.app-shell.app-shell.app-shell .gs-preview{position:relative;overflow:hidden;aspect-ratio:16/7;margin:0 0 12px;border-radius:16px;border:1px solid var(--gs-card-border);box-shadow:var(--gs-shadow)}
+html body .app-shell.app-shell.app-shell.app-shell .gs-preview-scene{position:absolute;inset:0;
+  background:radial-gradient(120% 90% at 18% 20%,#5d6b7d 0%,transparent 55%),radial-gradient(90% 80% at 82% 30%,#8a6f55 0%,transparent 60%),
+             radial-gradient(100% 70% at 50% 110%,#2c3340 0%,transparent 70%),linear-gradient(160deg,#3b4452,#1d2129)}
+html body .app-shell.app-shell.app-shell.app-shell .gs-preview-sub{
+  position:absolute;left:50%;bottom:10%;transform:translateX(-50%);max-width:86%;width:max-content;padding:7px 12px;border-radius:10px;
+  text-align:center;color:#fff;font-weight:620;line-height:1.35;text-shadow:0 1px 2px rgba(0,0,0,.72);backdrop-filter:blur(10px) saturate(1.15);
+  transition:font-size .12s ease,background .12s ease;
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-preview[data-position="top"] .gs-preview-sub{bottom:auto;top:10%}
+html body .app-shell.app-shell.app-shell.app-shell .gs-preview-off{position:absolute;inset:auto 0 12% 0;text-align:center;font-size:14px;font-weight:600;color:rgba(255,255,255,.75)}
+
+/* Footer */
+html body .app-shell.app-shell.app-shell.app-shell .gs-foot{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;margin:6px 0 0!important;padding:20px 2px 0!important;border-top:1px solid var(--gs-divider)!important;background:none!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-foot small{display:inline-flex;align-items:center;gap:8px;font-size:14px!important;color:var(--gs-muted)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-dot{width:8px;height:8px;border-radius:50%;background:#5E9C78;box-shadow:0 0 0 3px rgba(94,156,120,.2)}
+html body .app-shell.app-shell.app-shell.app-shell .gs-foot button{
+  height:44px!important;min-height:44px!important;padding:0 20px!important;border-radius:12px!important;border:0!important;cursor:pointer;
+  background:#7C74E0!important;color:#fff!important;font:inherit!important;font-size:15px!important;font-weight:650!important;box-shadow:0 6px 18px rgba(124,116,224,.3)!important;
+}
+html body .app-shell.app-shell.app-shell.app-shell .gs-foot button:hover{background:#6D64D6!important}
+
+/* Mobile: 44px targets, 13px text floor, wide segmented controls drop under their label */
+@media (max-width:620px){
+  html body .app-shell.app-shell.app-shell.app-shell .gs-page{padding:18px 0 32px!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-head{margin-bottom:22px!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-head h1{font-size:28px!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-eyebrow{font-size:13px!important;letter-spacing:.1em!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-close{width:44px!important;height:44px!important;min-height:44px!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-row{padding:11px 14px!important;gap:12px!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-row-wide{flex-direction:column!important;align-items:stretch!important;gap:10px!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-row-wide .gs-seg{display:flex!important;width:100%!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-seg button{height:40px!important;min-height:40px!important;padding:0 10px!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-switch{width:52px!important;height:32px!important;min-height:32px!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-switch::before{width:26px;height:26px}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-preview{aspect-ratio:16/9}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-foot{flex-direction:column-reverse!important;align-items:stretch!important}
+  html body .app-shell.app-shell.app-shell.app-shell .gs-foot small{justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){
+  html body .app-shell.app-shell.app-shell.app-shell .gs-page *{transition:none!important}
+}
+
+/* Subtitle outline setting (player and preview). The frame classes win over every legacy subtitle box rule. */
+html body .app-shell.app-shell.app-shell.app-shell .subtitles.frame-none,
+html body .app-shell.app-shell.app-shell.app-shell .gs-preview-sub.frame-none{border:1px solid transparent!important;box-shadow:none!important}
+html body .app-shell.app-shell.app-shell.app-shell .subtitles.frame-subtle,
+html body .app-shell.app-shell.app-shell.app-shell .gs-preview-sub.frame-subtle{border:1px solid rgba(255,255,255,.05)!important;box-shadow:0 6px 18px rgba(0,0,0,.22)!important}
+html body .app-shell.app-shell.app-shell.app-shell .subtitles.frame-strong,
+html body .app-shell.app-shell.app-shell.app-shell .gs-preview-sub.frame-strong{border:1px solid rgba(255,255,255,.2)!important;box-shadow:0 10px 28px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.1)!important}
