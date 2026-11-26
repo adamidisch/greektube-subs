@@ -17,6 +17,7 @@ const GAP = 8;
 const EDGE = 8;
 const MAX_TARGET_W = 340;
 const MAX_TARGET_H = 140;
+const MAX_LINE_H = 48;
 
 const norm = (value: string) =>
   value.replace(/\s+/g, " ").replace(/\s*\([^)]*\)\s*$/, "").replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "").trim().toLowerCase();
@@ -62,7 +63,8 @@ function describe(el: Element): string {
   const explicit = el.getAttribute("data-tip");
   if (explicit) return explicit;
   const rect = el.getBoundingClientRect();
-  if (rect.width > MAX_TARGET_W || rect.height > MAX_TARGET_H) return "";
+  // Μεγάλες περιοχές (κάρτες, επιφάνεια βίντεο) δεν παίρνουν tooltip· μια μακριά γραμμή συνδέσμου επιτρέπεται.
+  if (rect.height > MAX_TARGET_H || (rect.width > MAX_TARGET_W && rect.height > MAX_LINE_H)) return "";
   const label = (el.getAttribute("aria-label") || "").trim();
   const title = (el.getAttribute("data-tip-title") || "").trim();
   const text = visibleText(el);
@@ -187,6 +189,13 @@ export default function TooltipLayer() {
       viaPointer = false;
       open(hit, true);
     };
+    // Κρύβεται μόνο όταν κυλά κάτι που περιέχει το στοιχείο (ή η σελίδα)· η αυτόματη κύλιση της μεταγραφής
+    // δεν πρέπει να κρύβει tooltip σε σταθερά κουμπιά δίπλα της.
+    const onScroll = (event: Event) => {
+      if (!current) return;
+      const source = event.target;
+      if (source === document || source === document.documentElement || (source instanceof Node && source.contains(current))) hide();
+    };
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") hide(); };
     const onFullscreen = () => { hide(); attach(); };
 
@@ -196,7 +205,7 @@ export default function TooltipLayer() {
     document.addEventListener("focusin", onFocusIn, true);
     document.addEventListener("focusout", hide, true);
     document.addEventListener("keydown", onKey, true);
-    document.addEventListener("scroll", hide, true);
+    document.addEventListener("scroll", onScroll, true);
     document.addEventListener("fullscreenchange", onFullscreen);
     document.addEventListener("webkitfullscreenchange", onFullscreen);
     document.addEventListener("visibilitychange", hide);
@@ -211,7 +220,7 @@ export default function TooltipLayer() {
       document.removeEventListener("focusin", onFocusIn, true);
       document.removeEventListener("focusout", hide, true);
       document.removeEventListener("keydown", onKey, true);
-      document.removeEventListener("scroll", hide, true);
+      document.removeEventListener("scroll", onScroll, true);
       document.removeEventListener("fullscreenchange", onFullscreen);
       document.removeEventListener("webkitfullscreenchange", onFullscreen);
       document.removeEventListener("visibilitychange", hide);

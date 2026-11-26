@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { APP_VERSION } from "./version";
+import { tr, useAppLanguage } from "./app-language";
 
 type PortalTargets = {
   mobileMenu: Element | null;
@@ -26,6 +27,7 @@ function AppMark() {
 }
 
 export default function VersionAboutSystem() {
+  useAppLanguage();
   const [open, setOpen] = useState(false);
   const [targets, setTargets] = useState<PortalTargets>({ mobileMenu: null, footer: null });
 
@@ -135,14 +137,14 @@ export default function VersionAboutSystem() {
   return (
     <>
       {targets.mobileMenu && createPortal(
-        <button type="button" className="mobile-version-label" onClick={() => setOpen(true)}>
+        <button type="button" className="mobile-version-label" data-tip={tr("Πληροφορίες για την έκδοση","About this version")} onClick={() => setOpen(true)}>
           <span><i />VERSION</span><strong>{APP_VERSION}</strong>
         </button>,
         targets.mobileMenu,
       )}
 
       {targets.footer && createPortal(
-        <button type="button" className="footer-version-label" onClick={() => setOpen(true)}>
+        <button type="button" className="footer-version-label" data-tip={tr("Πληροφορίες για την έκδοση","About this version")} onClick={() => setOpen(true)}>
           Version {APP_VERSION}
         </button>,
         targets.footer,

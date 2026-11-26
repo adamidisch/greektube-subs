@@ -9,6 +9,8 @@ export const TOOLTIP_TIPS: ReadonlyArray<readonly [string, string, string]> = [
   ["Βιβλιοθήκη", "Επιστροφή στη βιβλιοθήκη βίντεο", "Back to the video library"],
   ["Επιστροφή στη βιβλιοθήκη", "Επιστροφή στη βιβλιοθήκη βίντεο", "Back to the video library"],
   ["Αρχική σελίδα", "Μετάβαση στην αρχική σελίδα", "Go to the home page"],
+  ["GreekTube Subs αρχική", "Μετάβαση στην αρχική σελίδα", "Go to the home page"],
+  ["GreekTube Subs, αρχική σελίδα", "Μετάβαση στην αρχική σελίδα", "Go to the home page"],
   ["Πίσω στο βίντεο", "Επιστροφή στο βίντεο", "Back to the video"],
   ["Άνοιγμα μενού", "Άνοιγμα του μενού πλοήγησης", "Open the navigation menu"],
   ["Κλείσιμο μενού", "Κλείσιμο του μενού πλοήγησης", "Close the navigation menu"],
