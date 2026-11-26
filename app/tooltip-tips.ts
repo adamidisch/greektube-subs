@@ -20,6 +20,9 @@ export const TOOLTIP_TIPS: ReadonlyArray<readonly [string, string, string]> = [
   ["Αλλαγή ονόματος", "Αλλαγή του ονόματος χρήστη", "Change your username"],
   ["Εξαγωγή δεδομένων", "Λήψη των δεδομένων του προφίλ σε αρχείο", "Download your profile data as a file"],
 
+  ["Σκούρο φόντο", "Αλλαγή σε σκούρο φόντο", "Switch to the dark background"],
+  ["Φωτεινό φόντο", "Αλλαγή σε φωτεινό φόντο", "Switch to the light background"],
+
   // Σύνδεση
   ["Σύνδεση", "Σύνδεση σε υπάρχον λογαριασμό", "Sign in to an existing account"],
   ["Δημιουργία Λογαριασμού", "Δημιουργία νέου λογαριασμού", "Create a new account"],

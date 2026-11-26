@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { tr, useAppLanguage } from "./app-language";
 
 type ThemeMode = "dark" | "light" | "system";
 type PersonalState = { settings?: { theme?: ThemeMode } } & Record<string, unknown>;
@@ -76,6 +77,7 @@ function ThemeIcon({ theme }: { theme: "dark" | "light" }) {
 }
 
 export default function ThemeToggleEnhancer() {
+  const language = useAppLanguage();
   const [header, setHeader] = useState<HTMLElement | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
@@ -124,8 +126,8 @@ export default function ThemeToggleEnhancer() {
   }, []);
 
   const label = useMemo(
-    () => theme === "dark" ? "Ενεργοποίηση φωτεινού θέματος" : "Ενεργοποίηση σκούρου θέματος",
-    [theme],
+    () => theme === "dark" ? tr("Φωτεινό φόντο", "Light background") : tr("Σκούρο φόντο", "Dark background"),
+    [theme, language],
   );
 
   if (!header) return null;

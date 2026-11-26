@@ -129,7 +129,7 @@ export function SettingsPage({ settings, update, close, speeds }: {
         </>, undefined, "gs-playback")}
 
         {section("sage", ICONS.appearance, tr("Εμφάνιση"), <>
-          {segmented(tr("Θέμα"), settings.theme, [
+          {segmented(tr("Φόντο"), settings.theme, [
             { value: "dark", label: tr("Σκούρο") }, { value: "light", label: tr("Φωτεινό") }, { value: "system", label: tr("Σύστημα") }],
             value => update({ theme: value }))}
           {segmented(tr("Διάταξη βιβλιοθήκης"), settings.layout, [
