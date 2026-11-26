@@ -1,0 +1,225 @@
+"use client";
+
+import { useEffect } from "react";
+import { getAppLanguage, tr, useAppLanguage } from "./app-language";
+import { TOOLTIP_TIPS } from "./tooltip-tips";
+
+// Κοινό tooltip για κάθε κουμπί/εικονίδιο. Εμφανίζεται μόνο σε συσκευές με hover (ποντίκι) και στην
+// πλοήγηση με πληκτρολόγιο. Ένα στοιχείο εκτός ροής (position: fixed), άρα δεν μετακινεί τη διάταξη.
+// Πηγή κειμένου, με σειρά προτεραιότητας: data-tip → λεξικό (tooltip-tips.ts) → title/aria-label σε
+// κουμπιά που έχουν μόνο εικονίδιο. Κουμπιά με ορατό κείμενο χωρίς καταχώριση δεν παίρνουν tooltip.
+
+const TARGET = 'button,[role="button"],[role="tab"],[role="menuitem"],[role="switch"],a[href],summary,[data-tip]';
+const ID = "gt-tooltip";
+const SHOW_DELAY = 450;
+const HANDOFF_WINDOW = 350;
+const GAP = 8;
+const EDGE = 8;
+const MAX_TARGET_W = 340;
+const MAX_TARGET_H = 140;
+
+const norm = (value: string) =>
+  value.replace(/\s+/g, " ").replace(/\s*\([^)]*\)\s*$/, "").replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "").trim().toLowerCase();
+
+let dictCache: { lang: string; map: Map<string, string> } | null = null;
+function dictionary() {
+  const lang = getAppLanguage();
+  if (dictCache?.lang === lang) return dictCache.map;
+  const map = new Map<string, string>();
+  for (const [key, el, en] of TOOLTIP_TIPS) {
+    const text = lang === "en" ? en : el;
+    map.set(norm(key), text);
+    map.set(norm(tr(key)), text);
+  }
+  dictCache = { lang, map };
+  return map;
+}
+
+function visibleText(root: Element) {
+  let out = "";
+  const walk = (node: Node) => {
+    if (node.nodeType === 3) { out += node.nodeValue || ""; return; }
+    if (node.nodeType !== 1) return;
+    const el = node as Element;
+    const tag = el.tagName.toLowerCase();
+    if (tag === "svg" || tag === "style" || tag === "script" || el.getAttribute("aria-hidden") === "true") return;
+    el.childNodes.forEach(walk);
+  };
+  root.childNodes.forEach(walk);
+  return out.replace(/\s+/g, " ").trim();
+}
+
+function stripNativeTitle(el: Element) {
+  const title = el.getAttribute("title");
+  if (title === null) return;
+  if (title) el.setAttribute("data-tip-title", title);
+  el.removeAttribute("title");
+}
+
+function describe(el: Element): string {
+  if (typeof location !== "undefined" && location.pathname.startsWith("/admin")) return "";
+  if (el.closest("[data-notip],.video-tap-toggle,.player-cover")) return "";
+  const explicit = el.getAttribute("data-tip");
+  if (explicit) return explicit;
+  const rect = el.getBoundingClientRect();
+  if (rect.width > MAX_TARGET_W || rect.height > MAX_TARGET_H) return "";
+  const label = (el.getAttribute("aria-label") || "").trim();
+  const title = (el.getAttribute("data-tip-title") || "").trim();
+  const text = visibleText(el);
+  const map = dictionary();
+  const hit = map.get(norm(text)) || map.get(norm(label));
+  if (hit) {
+    // Συντόμευση πληκτρολογίου στο aria-label, π.χ. «Αποθήκευση στιγμής (M)».
+    const shortcut = label.match(/\(([^)]+)\)\s*$/);
+    return shortcut ? `${hit} (${shortcut[1]})` : hit;
+  }
+  const iconOnly = text.replace(/[^\p{L}\p{N}]/gu, "").length <= 2;
+  if (iconOnly) {
+    // Το πιο περιγραφικό από title/aria-label.
+    return title.length > label.length ? title : label || title;
+  }
+  if (title && norm(title) !== norm(text)) return title;
+  return "";
+}
+
+export default function TooltipLayer() {
+  useAppLanguage();
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+    const node = document.createElement("div");
+    node.id = ID;
+    node.className = "gt-tooltip";
+    node.setAttribute("role", "tooltip");
+    node.dataset.state = "hide";
+
+    const hostOf = () =>
+      ((document.fullscreenElement || (document as Document & { webkitFullscreenElement?: Element | null }).webkitFullscreenElement) as HTMLElement | null) ||
+      document.body;
+    const attach = () => {
+      const host = hostOf();
+      if (node.parentElement !== host) host.appendChild(node);
+    };
+    attach();
+
+    let current: Element | null = null;
+    let shown = false;
+    let showTimer = 0;
+    let watchTimer = 0;
+    let lastHidden = 0;
+    let viaPointer = true;
+
+    const place = (target: Element) => {
+      const r = target.getBoundingClientRect();
+      node.style.transform = "translate(0px,0px)";
+      const w = node.offsetWidth;
+      const h = node.offsetHeight;
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      let top = r.top - h - GAP;
+      if (top < EDGE) {
+        top = r.bottom + GAP;
+        if (top + h > vh - EDGE) top = Math.max(EDGE, vh - h - EDGE);
+      }
+      const left = Math.max(EDGE, Math.min(r.left + r.width / 2 - w / 2, vw - w - EDGE));
+      node.style.transform = `translate(${Math.round(left)}px,${Math.round(top)}px)`;
+    };
+
+    const hide = () => {
+      window.clearTimeout(showTimer);
+      window.clearInterval(watchTimer);
+      if (shown) lastHidden = Date.now();
+      shown = false;
+      node.dataset.state = "hide";
+      if (current && current.getAttribute("aria-describedby") === ID) current.removeAttribute("aria-describedby");
+      current = null;
+    };
+
+    const show = (target: Element, text: string) => {
+      attach();
+      node.textContent = text;
+      place(target);
+      node.dataset.state = "show";
+      target.setAttribute("aria-describedby", ID);
+      shown = true;
+      window.clearInterval(watchTimer);
+      watchTimer = window.setInterval(() => {
+        if (!current || !current.isConnected || (viaPointer && !current.matches(":hover"))) { hide(); return; }
+        const next = describe(current);
+        if (!next) { hide(); return; }
+        if (next !== node.textContent) { node.textContent = next; place(current); }
+      }, 300);
+    };
+
+    const open = (target: Element, immediate: boolean) => {
+      try {
+        stripNativeTitle(target);
+        const text = describe(target);
+        if (!text) { hide(); return; }
+        hide();
+        current = target;
+        const delay = immediate || Date.now() - lastHidden < HANDOFF_WINDOW ? 0 : SHOW_DELAY;
+        showTimer = window.setTimeout(() => {
+          if (current !== target || !target.isConnected) return;
+          const fresh = describe(target);
+          if (fresh) show(target, fresh);
+        }, delay);
+      } catch {
+        hide();
+      }
+    };
+
+    const onOver = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      const hit = (event.target as Element | null)?.closest?.(TARGET) || null;
+      if (hit === current) return;
+      viaPointer = true;
+      if (!hit) { hide(); return; }
+      open(hit, false);
+    };
+    const onOut = (event: PointerEvent) => {
+      if (event.pointerType === "mouse" && !event.relatedTarget) hide();
+    };
+    const onFocusIn = (event: FocusEvent) => {
+      const hit = (event.target as Element | null)?.closest?.(TARGET) || null;
+      if (!hit || !hit.matches(":focus-visible")) return;
+      viaPointer = false;
+      open(hit, true);
+    };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") hide(); };
+    const onFullscreen = () => { hide(); attach(); };
+
+    document.addEventListener("pointerover", onOver, true);
+    document.addEventListener("pointerout", onOut, true);
+    document.addEventListener("pointerdown", hide, true);
+    document.addEventListener("focusin", onFocusIn, true);
+    document.addEventListener("focusout", hide, true);
+    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("scroll", hide, true);
+    document.addEventListener("fullscreenchange", onFullscreen);
+    document.addEventListener("webkitfullscreenchange", onFullscreen);
+    document.addEventListener("visibilitychange", hide);
+    window.addEventListener("resize", hide);
+    window.addEventListener("blur", hide);
+
+    return () => {
+      hide();
+      document.removeEventListener("pointerover", onOver, true);
+      document.removeEventListener("pointerout", onOut, true);
+      document.removeEventListener("pointerdown", hide, true);
+      document.removeEventListener("focusin", onFocusIn, true);
+      document.removeEventListener("focusout", hide, true);
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("scroll", hide, true);
+      document.removeEventListener("fullscreenchange", onFullscreen);
+      document.removeEventListener("webkitfullscreenchange", onFullscreen);
+      document.removeEventListener("visibilitychange", hide);
+      window.removeEventListener("resize", hide);
+      window.removeEventListener("blur", hide);
+      node.remove();
+    };
+  }, []);
+
+  return null;
+}

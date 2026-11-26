@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { APP_VERSION } from "./version";
 import UserProfileEnhancer from "./UserProfileEnhancer";
+import TooltipLayer from "./TooltipLayer";
 import "./globals.css";
 import "./mobile-controls-fix.css";
 import "./ui-651.css";
@@ -58,6 +59,7 @@ import "./player-controls-v7-27-7.css";
 import "./settings-v7-28-0.css";
 import "./light-home-v7-29-0.css";
 import "./player-design-v7-30-0.css";
+import "./tooltip-v7-31-0.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -124,6 +126,7 @@ export default function RootLayout({
       >
         {children}
         <UserProfileEnhancer />
+        <TooltipLayer />
       </body>
     </html>
   );

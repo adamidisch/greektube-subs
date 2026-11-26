@@ -287,7 +287,7 @@ export default function UserProfileEnhancer() {
   }
 
   const profileUi = <div className="user-profile-shell" ref={shellRef}>
-    <button className="user-profile-trigger" type="button" aria-label={`Προφίλ ${profile.username}`} aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>
+    <button className="user-profile-trigger" type="button" data-tip={tr("Μενού προφίλ","Profile menu")} aria-label={`Προφίλ ${profile.username}`} aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>
       <span className="user-avatar"><UserIcon/></span>
       <span className="user-profile-name">{profile.username}</span>
       <span className="user-profile-chevron" aria-hidden="true">⌄</span>

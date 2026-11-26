@@ -1,0 +1,46 @@
+/* v7.31.0 — κοινό tooltip κουμπιών (TooltipLayer). Μόνο συσκευές με hover· εκτός ροής, χωρίς μετατόπιση διάταξης. */
+.gt-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147483000;
+  box-sizing: border-box;
+  max-width: min(360px, calc(100vw - 16px));
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1b1d23;
+  color: #f2f3f6;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34), 0 1px 3px rgba(0, 0, 0, 0.28);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.005em;
+  text-align: center;
+  text-transform: none;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease, visibility 0s linear 0.12s;
+  -webkit-font-smoothing: antialiased;
+}
+
+.gt-tooltip[data-state="show"] {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gt-tooltip {
+    transition: none;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .gt-tooltip {
+    display: none;
+  }
+}
