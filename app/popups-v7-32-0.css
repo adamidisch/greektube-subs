@@ -227,7 +227,7 @@ html body .modal label:not(:has(input[type="checkbox"], input[type="radio"])):no
 html body .modal small:not(#_) { font-size: 12px !important; }
 html body .modal time:not(#_) { font-size: 12px !important; }
 html body .modal time + p:not(#_) { font-size: 13px !important; line-height: 1.45 !important; }
-html[data-theme="light"] body .modal :is(small, .translation-mode-card p, time + p):not(#_) { color: var(--pp-muted) !important; }
+html[data-theme="light"] body .modal :is(small, .translation-mode-card p, time + p, .translation-mode-heading span, .auto-subtitles-hint):not(#_) { color: var(--pp-muted) !important; }
 html[data-theme="light"] body .modal time:not(#_) { background: rgba(91, 82, 214, 0.12) !important; color: var(--pp-accent-text) !important; }
 html[data-theme="light"] body .modal .translation-mode-card.translation-mode-card small:not(#_) { background: rgba(91, 82, 214, 0.12) !important; color: #4b43b8 !important; }
 html[data-theme="light"] body .modal .translation-mode-card.translation-mode-card.manual small:not(#_) { background: rgba(40, 150, 90, 0.14) !important; color: #1d6b43 !important; }
