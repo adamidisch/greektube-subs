@@ -222,6 +222,19 @@ html body :is(.user-profile-menu, .gts31-cc-menu, .gtp-volume-popup):not(#_) {
 }
 html body :is(.user-profile-menu, .gts31-cc-menu):not(#_) { border-radius: 16px !important; }
 
+/* 9. Ελάχιστα μεγέθη (12px) και ανοιχτό θέμα: κείμενα του Modal που ήταν ορισμένα μόνο για σκούρο φόντο */
+html body .modal label:not(:has(input[type="checkbox"], input[type="radio"])):not(#_) { color: var(--pp-muted) !important; font-size: 12.5px !important; font-weight: 600 !important; }
+html body .modal small:not(#_) { font-size: 12px !important; }
+html body .modal time:not(#_) { font-size: 12px !important; }
+html body .modal time + p:not(#_) { font-size: 13px !important; line-height: 1.45 !important; }
+html[data-theme="light"] body .modal :is(small, .translation-mode-card p, time + p):not(#_) { color: var(--pp-muted) !important; }
+html[data-theme="light"] body .modal time:not(#_) { background: rgba(91, 82, 214, 0.12) !important; color: var(--pp-accent-text) !important; }
+html[data-theme="light"] body .modal .translation-mode-card.translation-mode-card small:not(#_) { background: rgba(91, 82, 214, 0.12) !important; color: #4b43b8 !important; }
+html[data-theme="light"] body .modal .translation-mode-card.translation-mode-card.manual small:not(#_) { background: rgba(40, 150, 90, 0.14) !important; color: #1d6b43 !important; }
+html[data-theme="light"] body .modal .translation-mode-card.translation-mode-card .mode-icon svg:not(#_) { color: var(--pp-accent) !important; }
+html[data-theme="light"] body .modal .translation-mode-card.translation-mode-card.manual .mode-icon svg:not(#_) { color: #1d6b43 !important; }
+html[data-theme="light"] body .user-profile-menu:not(#_) { background: #ffffff !important; }
+
 /* 8. Κινητό: το παράθυρο μένει στο κέντρο, με περιθώρια */
 @media (max-width: 620px) {
   html body :is(.modal-backdrop, .gts33-bio-backdrop, .version-about-backdrop, .profile-editor-backdrop):not(#_) {
