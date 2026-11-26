@@ -2,6 +2,7 @@
 
 import DetailsSrtImport from "./DetailsSrtImport";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import AudioTimingCapturePanel from "./AudioTimingCapturePanel";
 import { APP_VERSION } from "./version";
 import SettingsIcon from "./SettingsIcon";
@@ -1285,15 +1286,15 @@ export default function GreekTubePlayer() {
     }catch{setIsPseudoFullscreen(true);}
   }
   function beginMoment(time=currentPlayer()?.getCurrentTime()||0,excerpt=captions?.cues[active]?.text||""){setMomentModal({time,excerpt});}
-  function quickMoment(){
+  function quickMomentAt(time:number,excerpt:string,until?:number){
     if(!selected)return;
-    const time=currentPlayer()?.getCurrentTime()||0;
-    const near=stateRef.current.moments.find(m=>m.videoId===selected.id&&Math.abs(m.time-time)<1.5);
+    const near=stateRef.current.moments.find(m=>m.videoId===selected.id&&(Math.abs(m.time-time)<1.5||(until!==undefined&&m.time>=time-0.5&&m.time<until-0.5)));
     if(near){setMomentToast({id:near.id,time:near.time});return;}
-    const m:Moment={id:uid(),videoId:selected.id,time,note:tr("Αποθηκευμένη στιγμή"),tags:[],excerpt:captions?.cues[active]?.text||""};
+    const m:Moment={id:uid(),videoId:selected.id,time,note:tr("Αποθηκευμένη στιγμή"),tags:[],excerpt};
     setState(s=>({...s,moments:[m,...s.moments]}));
     setMomentToast({id:m.id,time});
   }
+  function quickMoment(){quickMomentAt(currentPlayer()?.getCurrentTime()||0,captions?.cues[active]?.text||"");}
   async function shareVideo(){
     if(!selected)return;
     const url=buildMomentShareUrl(selected.id,0,1);
@@ -1370,7 +1371,7 @@ export default function GreekTubePlayer() {
           {seekDuration>0&&guideItems.map((item,index)=>item.time>1&&item.time<seekDuration?<i key={`c${index}`} className="gtp-tick" style={{left:`${(item.time/seekDuration)*100}%`}} aria-hidden="true"/>:null)}
           {seekPreview!==null&&seekDuration>0&&<output className="gtp-seek-preview" style={{left:`${Math.min(100,Math.max(0,(seekPreview/seekDuration)*100))}%`}}>{clock(seekPreview)}</output>}
           {seekBar}
-          {seekDuration>0&&moments.map(m=><button type="button" key={m.id} className="gtp-pin" style={{left:`${Math.min(100,Math.max(0,(m.time/seekDuration)*100))}%`}} aria-label={`${tr("Κρατημένη στιγμή")} ${clock(m.time)}`} onClick={()=>seek(m.time)}><svg viewBox="0 0 10 14" aria-hidden="true"><path d="M0 0h10v14L5 10 0 14z" fill="currentColor"/></svg></button>)}
+          {seekDuration>0&&moments.map(m=><button type="button" key={m.id} className="gtp-pin" style={{left:`${Math.min(100,Math.max(0,(m.time/seekDuration)*100))}%`}} aria-label={`${tr("Αποθηκευμένη στιγμή")} ${clock(m.time)}`} onClick={()=>seek(m.time)}><svg viewBox="0 0 10 14" aria-hidden="true"><path d="M0 0h10v14L5 10 0 14z" fill="currentColor"/></svg></button>)}
         </div>
         <div className="gtp-seek-times"><time>{clock(seekNow)}</time>{seekChapter&&<span className="gtp-chapter">{seekChapter.title}</span>}<time>{`−${clock(Math.max(0,seekDuration-seekNow))}`}</time></div>
       </div>
@@ -1509,8 +1510,8 @@ export default function GreekTubePlayer() {
                     <button className="gtp-skip" aria-label="Μπροστά 10 δευτερόλεπτα" onClick={()=>skip(10)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 11-8-8h4"/><path d="M14 1l3 3-3 3"/><text x="12" y="15.5" fontSize="7" fontWeight="700" fill="currentColor" stroke="none" textAnchor="middle">10</text></svg></button>
                   </div>
                   <div className="gtp-moment-wrap">
-                    <button className="gtp-moment" aria-label={tr("Κράτα τη στιγμή")+" (M)"} onClick={quickMoment}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span className="gtp-moment-text">{tr("Κράτα τη στιγμή")}{moments.length>0&&<b> · {moments.length}</b>}</span></button>
-                    {momentToast&&<div className="gtp-toast" role="status"><span className="gtp-toast-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span><span className="gtp-toast-copy"><strong>{tr("Κρατήθηκε")}</strong><time>{clock(momentToast.time)}{seekChapter?` · ${seekChapter.title}`:""}</time></span><button type="button" onClick={()=>{setMomentModal({time:momentToast.time,excerpt:state.moments.find(x=>x.id===momentToast.id)?.excerpt||"",id:momentToast.id});setMomentToast(null);}}>{tr("Σημείωση")}</button></div>}
+                    <button className="gtp-moment" aria-label={tr("Αποθήκευση στιγμής")+" (M)"} onClick={quickMoment}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span className="gtp-moment-text">{tr("Αποθήκευση στιγμής")}{moments.length>0&&<b> · {moments.length}</b>}</span></button>
+                    {momentToast&&<div className="gtp-toast" role="status"><span className="gtp-toast-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span><span className="gtp-toast-copy"><strong>{tr("Αποθηκεύτηκε","Saved")}</strong><time>{clock(momentToast.time)}{seekChapter?` · ${seekChapter.title}`:""}</time></span><button type="button" onClick={()=>{setMomentModal({time:momentToast.time,excerpt:state.moments.find(x=>x.id===momentToast.id)?.excerpt||"",id:momentToast.id});setMomentToast(null);}}>{tr("Σημείωση")}</button></div>}
                   </div>
                   <div className="gtp-tools">
                     <label className="gtp-speed" aria-label="Ταχύτητα αναπαραγωγής"><span className="gtp-speed-label">{tr("Ταχύτητα")}</span><b>{normalizedPlaybackSpeed(state.settings.speed)}×</b><select value={normalizedPlaybackSpeed(state.settings.speed)} onChange={event=>{const next=Number(event.target.value);setState(current=>({...current,settings:{...current.settings,speed:next}}));currentPlayer()?.setPlaybackRate(next);}}>{PLAYBACK_SPEEDS.map(speed=><option key={speed} value={speed}>{speed}×</option>)}</select></label>
@@ -1539,7 +1540,7 @@ export default function GreekTubePlayer() {
             {guideItems.length>0&&<section className={`video-guide editorial-guide ${guideOpen?"open":""}`}><button type="button" className="guide-toggle" aria-expanded={guideOpen} onClick={()=>setGuideOpen(open=>!open)}><span><small>{selected.creatorChapters?.length?"YOUTUBE CHAPTERS":"EDITORIAL GUIDE"}</small><strong>{tr("Οδηγός βίντεο")}</strong></span><span className="guide-toggle-meta">{guideItems.length?`${guideItems.length} βασικά σημεία`:tr("Υπό επιμέλεια")}<i aria-hidden="true">⌄</i></span></button>{guideOpen&&<div className="guide-content"><p className="guide-intro">{selected.creatorChapters?.length?tr("Κεφάλαια που έχει ορίσει ο δημιουργός του βίντεο στο YouTube."):tr("Επιλεγμένα σημεία με σύντομη περίληψη και context ώστε να πηγαίνεις κατευθείαν στην ουσία.")}</p>{guideItems.length?<div className="guide-list editorial-guide-list">{guideItems.map((item,index)=><button key={`${item.time}-${index}`} onClick={()=>seek(item.time)}><time>{clock(item.time)}</time><span><strong>{item.title}</strong>{item.summary&&<small>{item.summary}</small>}{item.comment&&<em><b>{tr("Σχόλιο")}</b>{item.comment}</em>}</span><i aria-hidden="true">▶</i></button>)}</div>:<div className="guide-empty">{tr("Ο οδηγός δεν έχει ακόμη επιμεληθεί για αυτό το βίντεο. Δεν εμφανίζουμε αυτόματα raw subtitle fragments.")}</div>}</div>}</section>}
             {nextVideos.length>0&&<section className="next-videos"><div className="section-title"><h2>{tr("Επόμενα βίντεο")}</h2><small>{nextVideos.length}</small></div><div className="next-video-row">{nextVideos.map(video=><button key={video.id} onClick={()=>void openVideo(video,video.lastPosition)}><img src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt=""/><span><strong>{appTitle(video)}</strong><small>{video.channel}</small></span></button>)}</div></section>}
           </div>
-          {transcriptOpen&&<SubtitleTranscript track={displayTrack} time={playhead} follow={state.settings.autoScroll} highlight={state.settings.highlight} seek={seek} moment={beginMoment} savedTimes={moments.map(m=>m.time)} close={()=>setTranscriptOpen(false)}/>}
+          {transcriptOpen&&<SubtitleTranscript track={displayTrack} time={playhead} follow={state.settings.autoScroll} highlight={state.settings.highlight} seek={seek} moment={beginMoment} quick={quickMomentAt} savedTimes={moments.map(m=>m.time)} close={()=>setTranscriptOpen(false)}/>}
         </section>
       </>}
       {momentModal&&<Modal title={tr("Αποθήκευση στιγμής")} close={()=>setMomentModal(null)}><form className="form moment-form" onSubmit={saveMoment}><div className="moment-preview"><time>{clock(momentModal.time)}</time><p>{momentModal.excerpt||tr("Η στιγμή θα αποθηκευτεί στο συγκεκριμένο σημείο του βίντεο.")}</p></div><label>{tr("Σύντομη σημείωση")}<input name="note" autoFocus placeholder={tr("Τι θέλεις να θυμάσαι από αυτό το σημείο;")}/></label><label>{tr("Ετικέτες")}<small>{tr("Προαιρετικά")}</small><input name="tags" placeholder={tr("π.χ. ινσουλίνη, διατροφή")}/></label><div className="modal-actions"><button type="button" className="secondary" onClick={()=>setMomentModal(null)}>{tr("Ακύρωση")}</button><button className="primary">{tr("Αποθήκευση στιγμής")}</button></div></form></Modal>}
@@ -1638,7 +1639,7 @@ function SpeakerBioModal({profile,close}:{profile:CanonicalSpeakerProfile;close:
     </section>
   </div>;
 }
-function Modal({title,close,children,busy=false}:{title:string;close:()=>void;children:React.ReactNode;busy?:boolean}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!busy)close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[busy,close]);return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title} aria-busy={busy}><header><h2>{title}</h2><button aria-label="Κλείσιμο" disabled={busy} onClick={close}>×</button></header>{children}</section></div>;}
+function Modal({title,close,children,busy=false}:{title:string;close:()=>void;children:React.ReactNode;busy?:boolean}){useEffect(()=>{const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!busy)close();};addEventListener("keydown",escape);return()=>removeEventListener("keydown",escape);},[busy,close]);const dialog=<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title} aria-busy={busy}><header><h2>{title}</h2><button aria-label="Κλείσιμο" disabled={busy} onClick={close}>×</button></header>{children}</section></div>;return typeof document==="undefined"?dialog:createPortal(dialog,document.body);}
 function EditPassword({close,authorized}:{close:()=>void;authorized:()=>void}){
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
