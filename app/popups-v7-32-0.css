@@ -67,12 +67,13 @@ html body :is(.modal, .gts33-bio-modal, .version-about-card, .profile-editor):no
   animation: ppPop 0.22s cubic-bezier(0.2, 0.75, 0.25, 1) both !important;
 }
 html body .modal:not(#_) {
-  width: min(500px, 100%) !important;
+  width: min(560px, 100%) !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
 }
-html body .modal:has(.manual-translate, .translation-choice):not(#_) { width: min(580px, 100%) !important; }
+/* Φόρμες με δύο στήλες (προσθήκη βίντεο, επιλογή μετάφρασης, χειροκίνητη μετάφραση) χρειάζονται πλάτος 640px. */
+html body .modal:has(.add-video-v740, .manual-translate, .translation-choice):not(#_) { width: min(640px, 100%) !important; }
 html body .modal > :not(header):not(#_) {
   flex: 1 1 auto !important;
   min-height: 0 !important;
