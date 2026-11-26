@@ -1,0 +1,247 @@
+/* v7.32.0 — ενιαίο premium design για όλα τα pop-ups.
+   Κεντραρισμένα παράθυρα (Modal, βιογραφικό, έκδοση, προφίλ) και αιωρούμενα μενού (προφίλ, υπότιτλοι, ένταση).
+   Φορτώνεται τελευταίο. Πρότυπο το παράθυρο βιογραφικού (v7-8-33). Το :not(#_) δίνει προβάδισμα έναντι
+   των παλαιότερων κανόνων με !important χωρίς να αλλάξουν τα αρχεία τους. */
+
+html {
+  --pp-card: radial-gradient(circle at 12% 0, rgba(124, 116, 224, 0.16), transparent 34%), linear-gradient(180deg, #1a1e25 0%, #14181e 100%);
+  --pp-border: rgba(255, 255, 255, 0.1);
+  --pp-shadow: 0 28px 80px rgba(0, 0, 0, 0.58), 0 0 0 1px rgba(124, 116, 224, 0.06);
+  --pp-pop-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+  --pp-scrim: rgba(4, 6, 10, 0.72);
+  --pp-text: #eef0f4;
+  --pp-text2: #c9cdd6;
+  --pp-muted: #aeb3bd;
+  --pp-line: rgba(255, 255, 255, 0.07);
+  --pp-line2: rgba(255, 255, 255, 0.14);
+  --pp-field: rgba(255, 255, 255, 0.045);
+  --pp-accent: #7c74e0;
+  --pp-accent-text: #b9b3f5;
+  --pp-glow: rgba(124, 116, 224, 0.42);
+  --pp-ring: rgba(124, 116, 224, 0.3);
+}
+html[data-theme="light"] {
+  --pp-card: radial-gradient(circle at 12% 0, rgba(124, 116, 224, 0.09), transparent 36%), linear-gradient(180deg, #ffffff 0%, #f8f7fb 100%);
+  --pp-border: rgba(54, 48, 84, 0.13);
+  --pp-shadow: 0 28px 76px rgba(35, 29, 56, 0.25), 0 2px 6px rgba(35, 29, 56, 0.06);
+  --pp-pop-shadow: 0 18px 44px rgba(35, 29, 56, 0.18);
+  --pp-scrim: rgba(28, 26, 39, 0.46);
+  --pp-text: #262331;
+  --pp-text2: #4a4655;
+  --pp-muted: #66616d;
+  --pp-line: rgba(54, 48, 84, 0.09);
+  --pp-line2: rgba(54, 48, 84, 0.2);
+  --pp-field: #f6f5fa;
+  --pp-accent: #5b52d6;
+  --pp-accent-text: #5b52d6;
+  --pp-glow: rgba(91, 82, 214, 0.38);
+  --pp-ring: rgba(91, 82, 214, 0.22);
+}
+
+@keyframes ppFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ppPop { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+/* 1. Φόντο παραθύρου: πάντα στο κέντρο, ίδια θόλωση και σκίαση */
+html body :is(.modal-backdrop, .gts33-bio-backdrop, .version-about-backdrop, .profile-editor-backdrop):not(#_) {
+  position: fixed !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 20px !important;
+  background: var(--pp-scrim) !important;
+  backdrop-filter: blur(10px) saturate(1.1) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(1.1) !important;
+  animation: ppFade 0.16s ease both !important;
+}
+
+/* 2. Κάρτα παραθύρου */
+html body :is(.modal, .gts33-bio-modal, .version-about-card, .profile-editor):not(#_) {
+  box-sizing: border-box !important;
+  max-height: min(780px, calc(100dvh - 40px)) !important;
+  margin: 0 !important;
+  border: 1px solid var(--pp-border) !important;
+  border-radius: 22px !important;
+  background: var(--pp-card) !important;
+  color: var(--pp-text) !important;
+  box-shadow: var(--pp-shadow) !important;
+  animation: ppPop 0.22s cubic-bezier(0.2, 0.75, 0.25, 1) both !important;
+}
+html body .modal:not(#_) {
+  width: min(500px, 100%) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+html body .modal:has(.manual-translate, .translation-choice):not(#_) { width: min(580px, 100%) !important; }
+html body .modal > :not(header):not(#_) {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+html body .version-about-card:not(#_) { width: min(480px, 100%) !important; padding: 20px !important; overflow: auto !important; }
+html body .profile-editor:not(#_) { width: min(440px, 100%) !important; overflow: hidden !important; }
+
+/* 3. Κεφαλίδα: τίτλος αριστερά, κουμπί κλεισίματος δεξιά */
+html body :is(.modal, .profile-editor) > header:not(#_) {
+  position: relative !important;
+  flex: 0 0 auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  height: auto !important;
+  min-height: 66px !important;
+  padding: 15px 16px 14px 22px !important;
+  border-bottom: 1px solid var(--pp-line) !important;
+  background: none !important;
+  text-align: left !important;
+}
+html body :is(.modal, .profile-editor) > header h2:not(#_) {
+  margin: 0 !important;
+  max-width: 100% !important;
+  color: var(--pp-text) !important;
+  font-size: 17px !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.012em !important;
+  line-height: 1.3 !important;
+  text-align: left !important;
+}
+html body .profile-editor > header span:not(#_) { color: var(--pp-accent-text) !important; }
+
+html body :is(.modal > header > button, .profile-editor > header > button, .version-about-close):not(#_) {
+  position: static !important;
+  flex: 0 0 auto !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border: 1px solid var(--pp-line2) !important;
+  border-radius: 11px !important;
+  background: var(--pp-field) !important;
+  color: var(--pp-muted) !important;
+  box-shadow: none !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.15s ease !important;
+}
+html body :is(.modal > header > button, .profile-editor > header > button, .version-about-close):hover:not(:disabled):not(#_) {
+  border-color: var(--pp-accent) !important;
+  background: var(--pp-field) !important;
+  color: var(--pp-text) !important;
+}
+html body :is(.modal > header > button, .profile-editor > header > button, .version-about-close):active:not(:disabled):not(#_) { transform: scale(0.96) !important; }
+html body :is(.modal > header > button, .profile-editor > header > button, .version-about-close):focus-visible:not(#_) {
+  outline: 2px solid var(--pp-ring) !important;
+  outline-offset: 2px !important;
+}
+
+/* 4. Πεδία φόρμας */
+html body .modal :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="submit"], [type="button"]):not(#_) {
+  min-height: 44px;
+  padding: 10px 13px;
+  border: 1px solid var(--pp-line2) !important;
+  border-radius: 12px !important;
+  background: var(--pp-field) !important;
+  color: var(--pp-text) !important;
+  font-size: 15px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+html body .modal :is(input, select, textarea):focus:not(#_) {
+  outline: none !important;
+  border-color: var(--pp-accent) !important;
+  box-shadow: 0 0 0 3px var(--pp-ring) !important;
+}
+html body .modal ::placeholder { color: var(--pp-muted); opacity: 0.8; }
+
+/* 5. Κουμπιά ενεργειών */
+@media (min-width: 621px) {
+  html body .modal-actions:not(#_) {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+  }
+}
+html body :is(.modal-actions, .profile-editor-actions) button:not(#_) {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 12px !important;
+  font-size: 13.5px !important;
+  font-weight: 650 !important;
+  transition: filter 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+html body :is(.modal-actions, .profile-editor-actions) button.primary:not(#_) {
+  border: 0 !important;
+  background: var(--pp-accent) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 20px -8px var(--pp-glow) !important;
+}
+html body :is(.modal-actions, .profile-editor-actions) button.primary:hover:not(:disabled):not(#_) { filter: brightness(1.07); }
+html body :is(.modal-actions, .profile-editor-actions) button.secondary:not(#_) {
+  border: 1px solid var(--pp-line2) !important;
+  background: transparent !important;
+  color: var(--pp-text) !important;
+  box-shadow: none !important;
+}
+html body :is(.modal-actions, .profile-editor-actions) button.secondary:hover:not(:disabled):not(#_) { border-color: var(--pp-accent) !important; }
+html body :is(.modal-actions, .profile-editor-actions) button:disabled:not(#_) { opacity: 0.5; }
+html body .add-video-v740 .modal-actions:not(#_) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 6. Παράθυρο έκδοσης: ίδια επιφάνεια, αναγνώσιμα μεγέθη */
+html body .version-about-pill:not(#_) { border: 1px solid rgba(255, 255, 255, 0.1); font-size: 12px !important; }
+html body .version-about-identity:not(#_) {
+  border: 1px solid var(--pp-line) !important;
+  background: var(--pp-field) !important;
+  box-shadow: none !important;
+}
+html body .version-about-identity h2:not(#_) { color: var(--pp-text) !important; font-size: 16px !important; }
+html body .version-about-identity p:not(#_) { color: var(--pp-muted) !important; font-size: 13px !important; }
+html body .version-about-current:not(#_) { background: var(--pp-field) !important; color: var(--pp-muted) !important; font-size: 12px !important; }
+html body .version-about-kicker:not(#_) { color: var(--pp-muted) !important; font-size: 12px !important; }
+html body .version-about-capabilities article:hover:not(#_) { background: var(--pp-field) !important; }
+html body .version-about-capabilities article > i:not(#_) { background: var(--pp-accent) !important; box-shadow: 0 0 0 3px var(--pp-ring) !important; }
+html body .version-about-capabilities strong:not(#_) { color: var(--pp-text) !important; font-size: 13.5px !important; }
+html body .version-about-capabilities p:not(#_) { color: var(--pp-muted) !important; font-size: 13px !important; line-height: 1.5 !important; }
+html body .version-about-description:not(#_) { border: 1px solid var(--pp-line) !important; background: var(--pp-field) !important; }
+html body .version-about-description p:not(#_) { color: var(--pp-text2) !important; font-size: 13px !important; line-height: 1.6 !important; }
+html body .version-about-footer:not(#_) { color: var(--pp-muted) !important; }
+html body .version-about-footer span:not(#_) { font-size: 12px !important; }
+html body .version-about-footer small:not(#_) { font-size: 12px !important; }
+
+/* 7. Αιωρούμενα μενού: ίδιο περίγραμμα και σκιά (μένουν δεμένα στο κουμπί τους) */
+html body :is(.user-profile-menu, .gts31-cc-menu, .gtp-volume-popup):not(#_) {
+  border: 1px solid var(--pp-border) !important;
+  box-shadow: var(--pp-pop-shadow) !important;
+}
+html body :is(.user-profile-menu, .gts31-cc-menu):not(#_) { border-radius: 16px !important; }
+
+/* 8. Κινητό: το παράθυρο μένει στο κέντρο, με περιθώρια */
+@media (max-width: 620px) {
+  html body :is(.modal-backdrop, .gts33-bio-backdrop, .version-about-backdrop, .profile-editor-backdrop):not(#_) {
+    place-items: center !important;
+    padding: 16px !important;
+  }
+  html body :is(.modal, .gts33-bio-modal, .version-about-card, .profile-editor):not(#_) {
+    max-height: calc(100dvh - 32px) !important;
+    border-radius: 20px !important;
+  }
+  html body :is(.modal > header > button, .profile-editor > header > button, .version-about-close):not(#_) {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  html body :is(.version-about-pill, .version-about-current, .version-about-kicker, .version-about-footer span, .version-about-footer small):not(#_) { font-size: 13px !important; }
+  html body .modal :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="submit"], [type="button"]):not(#_) { font-size: 16px; }
+  html body :is(.modal-actions, .profile-editor-actions) button:not(#_) { min-height: 46px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body :is(.modal-backdrop, .gts33-bio-backdrop, .version-about-backdrop, .profile-editor-backdrop, .modal, .gts33-bio-modal, .version-about-card, .profile-editor):not(#_) {
+    animation: none !important;
+  }
+}

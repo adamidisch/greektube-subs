@@ -137,14 +137,14 @@ export default function VersionAboutSystem() {
   return (
     <>
       {targets.mobileMenu && createPortal(
-        <button type="button" className="mobile-version-label" data-tip={tr("Πληροφορίες για την έκδοση","About this version")} onClick={() => setOpen(true)}>
+        <button type="button" className="mobile-version-label" data-tip={tr("Πληροφορίες έκδοσης","Version info")} onClick={() => setOpen(true)}>
           <span><i />VERSION</span><strong>{APP_VERSION}</strong>
         </button>,
         targets.mobileMenu,
       )}
 
       {targets.footer && createPortal(
-        <button type="button" className="footer-version-label" data-tip={tr("Πληροφορίες για την έκδοση","About this version")} onClick={() => setOpen(true)}>
+        <button type="button" className="footer-version-label" data-tip={tr("Πληροφορίες έκδοσης","Version info")} onClick={() => setOpen(true)}>
           Version {APP_VERSION}
         </button>,
         targets.footer,

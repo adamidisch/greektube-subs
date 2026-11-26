@@ -1,30 +1,107 @@
-/* v7.31.0 — κοινό tooltip κουμπιών (TooltipLayer). Μόνο συσκευές με hover· εκτός ροής, χωρίς μετατόπιση διάταξης. */
+/* Κοινό tooltip κουμπιών (TooltipLayer). v7.32.0: σχέδιο Α — μικρή ετικέτα, πλήκτρο συντόμευσης, βελάκι προς το κουμπί,
+   χρώματα που ακολουθούν το φόντο της εφαρμογής. Μόνο συσκευές με hover· εκτός ροής, χωρίς μετατόπιση διάταξης. */
 .gt-tooltip {
+  --gt-tt-bg: #1b1e26;
+  --gt-tt-text: #f2f3f6;
+  --gt-tt-line: rgba(255, 255, 255, 0.16);
+  --gt-tt-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --gt-tt-key-bg: rgba(255, 255, 255, 0.08);
+  --gt-tt-key-line: rgba(255, 255, 255, 0.16);
+  --gt-tt-key-text: #aeb3bd;
   position: fixed;
   left: 0;
   top: 0;
   z-index: 2147483000;
   box-sizing: border-box;
-  max-width: min(360px, calc(100vw - 16px));
-  padding: 7px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #1b1d23;
-  color: #f2f3f6;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34), 0 1px 3px rgba(0, 0, 0, 0.28);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 6px 8px 6px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--gt-tt-line);
+  background: var(--gt-tt-bg);
+  color: var(--gt-tt-text);
+  box-shadow: var(--gt-tt-shadow);
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
   letter-spacing: 0.005em;
-  text-align: center;
   text-transform: none;
-  white-space: normal;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.12s ease, visibility 0s linear 0.12s;
   -webkit-font-smoothing: antialiased;
+}
+
+html[data-theme="light"] .gt-tooltip {
+  --gt-tt-bg: #ffffff;
+  --gt-tt-text: #1b1d26;
+  --gt-tt-line: rgba(40, 36, 60, 0.2);
+  --gt-tt-shadow: 0 10px 28px rgba(40, 36, 60, 0.18), 0 1px 3px rgba(40, 36, 60, 0.1);
+  --gt-tt-key-bg: #f4f1ea;
+  --gt-tt-key-line: rgba(40, 36, 60, 0.2);
+  --gt-tt-key-text: #5f6573;
+}
+
+.gt-tooltip[data-key="0"] {
+  padding-right: 11px;
+}
+
+.gt-tooltip-text {
+  min-width: 0;
+  white-space: normal;
+  text-align: left;
+}
+
+.gt-tooltip-key {
+  flex: 0 0 auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--gt-tt-key-line);
+  border-radius: 6px;
+  background: var(--gt-tt-key-bg);
+  color: var(--gt-tt-key-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Βελάκι: το κέντρο του (--gt-caret-x) υπολογίζεται από το κουμπί, ώστε να το δείχνει και στις άκρες της οθόνης. */
+.gt-tooltip-caret {
+  position: absolute;
+  left: var(--gt-caret-x, 50%);
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  box-sizing: border-box;
+  background: var(--gt-tt-bg);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.gt-tooltip[data-place="top"] .gt-tooltip-caret {
+  bottom: -5px;
+  border-right: 1px solid var(--gt-tt-line);
+  border-bottom: 1px solid var(--gt-tt-line);
+}
+
+.gt-tooltip[data-place="bottom"] .gt-tooltip-caret {
+  top: -5px;
+  border-left: 1px solid var(--gt-tt-line);
+  border-top: 1px solid var(--gt-tt-line);
+}
+
+.gt-tooltip[data-place="none"] .gt-tooltip-caret {
+  display: none;
 }
 
 .gt-tooltip[data-state="show"] {

@@ -60,6 +60,7 @@ import "./settings-v7-28-0.css";
 import "./light-home-v7-29-0.css";
 import "./player-design-v7-30-0.css";
 import "./tooltip-v7-31-0.css";
+import "./popups-v7-32-0.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

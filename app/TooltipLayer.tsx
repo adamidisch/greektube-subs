@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { getAppLanguage, tr, useAppLanguage } from "./app-language";
 import { TOOLTIP_TIPS } from "./tooltip-tips";
 
+type Tip = { text: string; key: string };
+
 // Κοινό tooltip για κάθε κουμπί/εικονίδιο. Εμφανίζεται μόνο σε συσκευές με hover (ποντίκι) και στην
 // πλοήγηση με πληκτρολόγιο. Ένα στοιχείο εκτός ροής (position: fixed), άρα δεν μετακινεί τη διάταξη.
 // Πηγή κειμένου, με σειρά προτεραιότητας: data-tip → λεξικό (tooltip-tips.ts) → title/aria-label σε
@@ -13,7 +15,8 @@ const TARGET = 'button,[role="button"],[role="tab"],[role="menuitem"],[role="swi
 const ID = "gt-tooltip";
 const SHOW_DELAY = 450;
 const HANDOFF_WINDOW = 350;
-const GAP = 8;
+const GAP = 10;
+const CARET_INSET = 14;
 const EDGE = 8;
 const MAX_TARGET_W = 340;
 const MAX_TARGET_H = 140;
@@ -22,15 +25,15 @@ const MAX_LINE_H = 48;
 const norm = (value: string) =>
   value.replace(/\s+/g, " ").replace(/\s*\([^)]*\)\s*$/, "").replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "").trim().toLowerCase();
 
-let dictCache: { lang: string; map: Map<string, string> } | null = null;
+let dictCache: { lang: string; map: Map<string, Tip> } | null = null;
 function dictionary() {
   const lang = getAppLanguage();
   if (dictCache?.lang === lang) return dictCache.map;
-  const map = new Map<string, string>();
-  for (const [key, el, en] of TOOLTIP_TIPS) {
-    const text = lang === "en" ? en : el;
-    map.set(norm(key), text);
-    map.set(norm(tr(key)), text);
+  const map = new Map<string, Tip>();
+  for (const [key, el, en, shortcut] of TOOLTIP_TIPS) {
+    const tip: Tip = { text: lang === "en" ? en : el, key: shortcut || "" };
+    map.set(norm(key), tip);
+    map.set(norm(tr(key)), tip);
   }
   dictCache = { lang, map };
   return map;
@@ -57,31 +60,42 @@ function stripNativeTitle(el: Element) {
   el.removeAttribute("title");
 }
 
-function describe(el: Element): string {
-  if (typeof location !== "undefined" && location.pathname.startsWith("/admin")) return "";
-  if (el.closest("[data-notip],.video-tap-toggle,.player-cover")) return "";
+// Συντόμευση στο τέλος του κειμένου, π.χ. «Αποθήκευση στιγμής (M)», γίνεται πλήκτρο δίπλα στην ετικέτα.
+function splitShortcut(value: string): Tip {
+  const match = value.match(/^(.*?)\s*\(([^()]{1,12})\)\s*$/);
+  return match && match[1] ? { text: match[1].trim(), key: match[2].trim() } : { text: value.trim(), key: "" };
+}
+
+function describe(el: Element): Tip | null {
+  if (typeof location !== "undefined" && location.pathname.startsWith("/admin")) return null;
+  if (el.closest("[data-notip],.video-tap-toggle,.player-cover")) return null;
   const explicit = el.getAttribute("data-tip");
-  if (explicit) return explicit;
+  if (explicit) {
+    const tip = splitShortcut(explicit);
+    return { text: tip.text, key: el.getAttribute("data-tip-key") || tip.key };
+  }
   const rect = el.getBoundingClientRect();
   // Μεγάλες περιοχές (κάρτες, επιφάνεια βίντεο) δεν παίρνουν tooltip· μια μακριά γραμμή συνδέσμου επιτρέπεται.
-  if (rect.height > MAX_TARGET_H || (rect.width > MAX_TARGET_W && rect.height > MAX_LINE_H)) return "";
+  if (rect.height > MAX_TARGET_H || (rect.width > MAX_TARGET_W && rect.height > MAX_LINE_H)) return null;
   const label = (el.getAttribute("aria-label") || "").trim();
   const title = (el.getAttribute("data-tip-title") || "").trim();
   const text = visibleText(el);
   const map = dictionary();
   const hit = map.get(norm(text)) || map.get(norm(label));
   if (hit) {
-    // Συντόμευση πληκτρολογίου στο aria-label, π.χ. «Αποθήκευση στιγμής (M)».
-    const shortcut = label.match(/\(([^)]+)\)\s*$/);
-    return shortcut ? `${hit} (${shortcut[1]})` : hit;
+    const key = splitShortcut(label).key || hit.key;
+    // Ετικέτα ίδια με το ορατό κείμενο του κουμπιού: το tooltip δεν προσθέτει τίποτα (εκτός αν έχει συντόμευση).
+    if (!key && text && norm(hit.text) === norm(text)) return null;
+    return { text: hit.text, key };
   }
   const iconOnly = text.replace(/[^\p{L}\p{N}]/gu, "").length <= 2;
   if (iconOnly) {
     // Το πιο περιγραφικό από title/aria-label.
-    return title.length > label.length ? title : label || title;
+    const best = title.length > label.length ? title : label || title;
+    return best ? splitShortcut(best) : null;
   }
-  if (title && norm(title) !== norm(text)) return title;
-  return "";
+  if (title && norm(title) !== norm(text)) return splitShortcut(title);
+  return null;
 }
 
 export default function TooltipLayer() {
@@ -106,11 +120,33 @@ export default function TooltipLayer() {
     attach();
 
     let current: Element | null = null;
+    let shownTip: Tip | null = null;
     let shown = false;
     let showTimer = 0;
     let watchTimer = 0;
     let lastHidden = 0;
     let viaPointer = true;
+
+    // Ετικέτα, προαιρετικό πλήκτρο συντόμευσης και βελάκι που δείχνει το κουμπί.
+    const paint = (tip: Tip) => {
+      node.textContent = "";
+      const label = document.createElement("span");
+      label.className = "gt-tooltip-text";
+      label.textContent = tip.text;
+      node.appendChild(label);
+      if (tip.key) {
+        const key = document.createElement("kbd");
+        key.className = "gt-tooltip-key";
+        key.textContent = tip.key;
+        node.appendChild(key);
+      }
+      const caret = document.createElement("i");
+      caret.className = "gt-tooltip-caret";
+      caret.setAttribute("aria-hidden", "true");
+      node.appendChild(caret);
+      node.dataset.key = tip.key ? "1" : "0";
+      shownTip = tip;
+    };
 
     const place = (target: Element) => {
       const r = target.getBoundingClientRect();
@@ -119,12 +155,18 @@ export default function TooltipLayer() {
       const h = node.offsetHeight;
       const vw = document.documentElement.clientWidth;
       const vh = window.innerHeight;
+      let side = "top";
       let top = r.top - h - GAP;
       if (top < EDGE) {
+        side = "bottom";
         top = r.bottom + GAP;
-        if (top + h > vh - EDGE) top = Math.max(EDGE, vh - h - EDGE);
+        if (top + h > vh - EDGE) { top = Math.max(EDGE, vh - h - EDGE); side = "none"; }
       }
-      const left = Math.max(EDGE, Math.min(r.left + r.width / 2 - w / 2, vw - w - EDGE));
+      const center = r.left + r.width / 2;
+      const left = Math.max(EDGE, Math.min(center - w / 2, vw - w - EDGE));
+      const caret = Math.max(CARET_INSET, Math.min(center - left, w - CARET_INSET));
+      node.dataset.place = side;
+      node.style.setProperty("--gt-caret-x", `${Math.round(caret)}px`);
       node.style.transform = `translate(${Math.round(left)}px,${Math.round(top)}px)`;
     };
 
@@ -133,14 +175,15 @@ export default function TooltipLayer() {
       window.clearInterval(watchTimer);
       if (shown) lastHidden = Date.now();
       shown = false;
+      shownTip = null;
       node.dataset.state = "hide";
       if (current && current.getAttribute("aria-describedby") === ID) current.removeAttribute("aria-describedby");
       current = null;
     };
 
-    const show = (target: Element, text: string) => {
+    const show = (target: Element, tip: Tip) => {
       attach();
-      node.textContent = text;
+      paint(tip);
       place(target);
       node.dataset.state = "show";
       target.setAttribute("aria-describedby", ID);
@@ -150,15 +193,15 @@ export default function TooltipLayer() {
         if (!current || !current.isConnected || (viaPointer && !current.matches(":hover"))) { hide(); return; }
         const next = describe(current);
         if (!next) { hide(); return; }
-        if (next !== node.textContent) { node.textContent = next; place(current); }
+        if (!shownTip || next.text !== shownTip.text || next.key !== shownTip.key) { paint(next); place(current); }
       }, 300);
     };
 
     const open = (target: Element, immediate: boolean) => {
       try {
         stripNativeTitle(target);
-        const text = describe(target);
-        if (!text) { hide(); return; }
+        const tip = describe(target);
+        if (!tip) { hide(); return; }
         hide();
         current = target;
         const delay = immediate || Date.now() - lastHidden < HANDOFF_WINDOW ? 0 : SHOW_DELAY;
