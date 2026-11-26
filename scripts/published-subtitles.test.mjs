@@ -7,20 +7,24 @@ import { displaySubtitleTrack, subtitleInputKey } from '../app/subtitle-track.ts
 const preview = JSON.parse(fs.readFileSync(new URL('../public/previews/xYB6uYyRjCA.json', import.meta.url), 'utf8'));
 const english = Array.from({ length: 1073 }, (_, i) => ({ start: i * 6, duration: 5, text: `English cue ${i}` }));
 
-// 1. The restoration is the approved preview verbatim plus the single approved fix at 26:19.
+// 1. The restoration is the approved preview verbatim plus the two approved fixes at 26:19 and 1:39:35.
 const { payload, englishCues } = restoredSnapshot('xYB6uYyRjCA', 12, preview.events, english, { title: 'Sarah', channel: 'Channel', duration: 6800 });
 const track = payload.subtitleTrack;
 assert.equal(track.events.length, 1513);
 const changed = track.events.map((e, i) => JSON.stringify(e) === JSON.stringify(preview.events[i]) ? -1 : i).filter(i => i >= 0);
-assert.deepEqual(changed, [351], 'only the 26:19 phrase differs from the approved preview');
+assert.deepEqual(changed, [351, 1334], 'only the 26:19 and 1:39:35 phrases differ from the approved preview');
 assert.equal(track.events[351].text, 'Νομίζω, όλοι χρειαζόμαστε τουλάχιστον μία σταγόνα Lugol 15% τη μέρα');
+assert.equal(track.events[1334].text, 'Βιταμίνη C και ιώδιο σκοτώνουν όλα τα μικρόβια, κανένα δεν αντέχει.');
+assert.equal(track.events[1334].start, 5975.84, 'the corrected phrase keeps its timing');
+assert.equal(track.events[1334].duration, preview.events[1334].duration);
+assert.deepEqual(track.events[1334].sourceIndices, preview.events[1334].sourceIndices);
 assert.equal(Math.floor(track.events[351].start / 60), 26);
 assert.equal(track.audit.readable, true);
 assert.equal(track.approvalLevel, 'owner_approved');
 assert.equal(track.inputKey, subtitleInputKey(payload.cues));
 assert.equal(displaySubtitleTrack(payload.cues, track), track, 'the player shows the authored events, not the legacy packer');
 assert.equal(englishCues.length, 1073);
-assert.ok(preview.events.every((e, i) => i === 351 || e.text === track.events[i].text), 'the committed preview itself is untouched');
+assert.ok(preview.events.every((e, i) => i === 351 || i === 1334 || e.text === track.events[i].text), 'the committed preview itself is untouched');
 
 // 2. Anything other than the pinned approved preview is refused.
 const tampered = structuredClone(preview.events); tampered[10].text += ' x';
