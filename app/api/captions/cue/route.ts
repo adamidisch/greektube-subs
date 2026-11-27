@@ -3,6 +3,8 @@ import { verifyAdminSession } from "@/lib/admin-auth";
 import { publishTranscript, publishTranscriptCheckpoint, readPublishedTranscript, readTranscriptCheckpoint } from "../../transcript-blob";
 import { TRANSCRIPT_VERSION } from "../../shared-cache";
 import { correctPublishedOwnerCue, getOwnerTranslationManifest } from "../../owner-translation/store";
+import { reviewedTrack, type ReviewedSubtitleTrack } from "../../subtitle-track";
+import type { SubtitleEvent, TimedCue } from "@/app/subtitle-track";
 
 type CueEditRequest = {
   videoId?: unknown;
@@ -48,6 +50,31 @@ export async function PATCH(request: Request) {
       const status = /άλλαξε|επεξεργάζεται|δεν είναι δημοσιευμένη|integrity|canonical source/i.test(message) ? 409 : 500;
       return NextResponse.json({ error: message }, { status });
     }
+  }
+
+  // Authored tracks (automatic or reviewed subtitles): one Greek line changes in both the cue and its display
+  // event. English, timings and audio evidence stay as they are; the track is re-approved as owner_approved.
+  const full = await readPublishedTranscript(videoId, transcriptVersion, true).catch(() => null) as Record<string, unknown> | null;
+  const track = full?.subtitleTrack as ReviewedSubtitleTrack | undefined;
+  if (full && Array.isArray(full.cues) && Array.isArray(full.englishCues) && full.englishCues.length && track?.origin === "authored" && Array.isArray(track.events)) {
+    const cues = full.cues as TimedCue[];
+    if (cueIndex >= cues.length) return NextResponse.json({ error: "Δεν βρέθηκε ο υπότιτλος." }, { status: 404 });
+    if (String(cues[cueIndex]?.text ?? "") !== expectedText) return NextResponse.json({ error: "Ο υπότιτλος άλλαξε στο μεταξύ. Φόρτωσε ξανά τη σελίδα." }, { status: 409 });
+    const owners = track.events.flatMap((event, index) => event.sourceIndices.includes(cueIndex) ? [index] : []);
+    if (owners.length !== 1 || track.events[owners[0]].sourceIndices.length !== 1)
+      return NextResponse.json({ error: "Αυτός ο υπότιτλος δεν αλλάζει μόνος του. Χρησιμοποίησε την πλήρη επεξεργασία." }, { status: 409 });
+    const nextCues = cues.map((cue, index) => index === cueIndex ? { ...cue, text } : cue);
+    const events: SubtitleEvent[] = track.events.map((event, index) => index === owners[0] ? { ...event, text } : event);
+    let reviewed: ReviewedSubtitleTrack;
+    try {
+      reviewed = reviewedTrack(full.englishCues as TimedCue[], nextCues, events, "approved",
+        `${track.reviewNote.replace(/ Διορθώσεις κειμένου από τον διαχειριστή\.$/u, "")} Διορθώσεις κειμένου από τον διαχειριστή.`.slice(0, 2000), track.audioEvidence, "owner_approved");
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Ο υπότιτλος δεν περνά τον έλεγχο αναγνωσιμότητας." }, { status: 422 });
+    }
+    if (!await publishTranscript(videoId, transcriptVersion, { ...full, cues: nextCues, subtitleTrack: reviewed }))
+      return NextResponse.json({ error: "Η αποθήκευση απέτυχε." }, { status: 500 });
+    return NextResponse.json({ ok: true, cue: nextCues[cueIndex] });
   }
 
   // English is intentionally not read/touched — this endpoint only ever
