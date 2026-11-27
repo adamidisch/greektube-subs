@@ -27,7 +27,7 @@ html body .app-shell.app-shell.app-shell .brand-version{
   color:#f5f3ff!important;
   font-family:var(--font-geist-mono),monospace!important;
   font-size:10px!important;
-  font-weight:700!important;
+  font-weight:600!important;
   letter-spacing:.025em!important;
   line-height:1!important;
   opacity:1!important;
@@ -43,8 +43,8 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-version{colo
 /* Claude desktop treatment for Editorial Guide. */
 .editorial-guide{margin-top:18px;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
 .guide-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border:0;background:transparent;cursor:pointer;text-align:left}
-.guide-toggle small{display:block;color:#aaa1ef;font-size:9px;letter-spacing:.14em;font-weight:700;text-transform:uppercase;margin-bottom:4px}
-.guide-toggle strong{color:var(--text);font-size:15px;font-weight:620}
+.guide-toggle small{display:block;color:#aaa1ef;font-size:9px;letter-spacing:.14em;font-weight:600;text-transform:uppercase;margin-bottom:4px}
+.guide-toggle strong{color:var(--text);font-size:15px;font-weight:600}
 .guide-toggle-meta{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:10px}
 .guide-toggle-meta i{font-style:normal;display:inline-block;transition:transform .2s}
 .editorial-guide.open .guide-toggle-meta i{transform:rotate(180deg)}

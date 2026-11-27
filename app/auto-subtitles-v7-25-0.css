@@ -3,7 +3,7 @@
 .auto-subtitles-hint.ready{color:#cfe8d6}
 .auto-subtitles-flow{display:grid;gap:10px;margin-top:12px;color:#F2F3F6}
 .gts-owner-card .auto-subtitles-flow{padding:12px 0 2px;border-top:1px solid rgba(255,255,255,.07)}
-.auto-subtitles-headline{margin:0;font-size:15px;font-weight:650;line-height:1.4}
+.auto-subtitles-headline{margin:0;font-size:15px;font-weight:600;line-height:1.4}
 .auto-subtitles-detail{margin:0;color:#AEB3BD;font-size:13px;line-height:1.5}
 .auto-subtitles-progress{height:6px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.08)}
 .auto-subtitles-progress>span{display:block;height:100%;border-radius:inherit;background:#7c74e0;transition:width .6s ease}

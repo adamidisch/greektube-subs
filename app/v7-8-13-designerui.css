@@ -17,7 +17,7 @@ html body .app-shell.app-shell.app-shell .brand-home{
 }
 html body .app-shell.app-shell.app-shell .brand{
   font-size:13.5px!important;
-  font-weight:700!important;
+  font-weight:600!important;
   letter-spacing:-.025em!important;
 }
 html body .app-shell.app-shell.app-shell .brand b{font-weight:550!important}
@@ -32,7 +32,7 @@ html body .app-shell.app-shell.app-shell .brand-version{
   color:var(--muted)!important;
   font-family:var(--font-geist-mono),monospace!important;
   font-size:9.5px!important;
-  font-weight:650!important;
+  font-weight:600!important;
   letter-spacing:.01em!important;
   line-height:1!important;
 }
@@ -53,31 +53,31 @@ html body .app-shell.app-shell.app-shell .brand-version{
 .user-avatar{width:29px;height:29px;display:grid;place-items:center;flex:0 0 auto;border:1px solid rgba(124,116,224,.22);border-radius:9px;background:linear-gradient(145deg,rgba(124,116,224,.18),rgba(64,157,180,.08));color:#aaa2f3}
 .user-avatar{position:relative}
 .user-avatar svg,.user-menu-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
-.user-profile-name{max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:650;letter-spacing:-.01em}
+.user-profile-name{max-width:104px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;letter-spacing:-.01em}
 .user-profile-chevron{margin-top:-2px;color:var(--soft);font-size:12px}
 .user-profile-menu{position:absolute;top:calc(100% + 9px);right:0;width:286px;padding:9px;border:1px solid var(--line);border-radius:16px;background:rgba(17,19,24,.98);box-shadow:0 24px 65px rgba(0,0,0,.34);backdrop-filter:blur(18px);animation:v7813-menu-in .16s ease-out}
 @keyframes v7813-menu-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .user-profile-summary{display:flex;align-items:center;gap:11px;padding:9px 9px 12px;border-bottom:1px solid var(--line)}
 .user-avatar-large{width:39px;height:39px;border-radius:12px}.user-avatar-large svg{width:20px;height:20px}
 .user-profile-summary strong,.user-profile-summary small,.user-menu-row strong,.user-menu-row small{display:block}
-.user-profile-summary strong{font-size:13px;font-weight:680}.user-profile-summary small{margin-top:2px;color:var(--muted);font-size:11px}
+.user-profile-summary strong{font-size:13px;font-weight:600}.user-profile-summary small{margin-top:2px;color:var(--muted);font-size:11px}
 .user-menu-row{width:100%;min-height:52px;display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;margin-top:5px;padding:7px 8px;border:0;border-radius:11px;background:transparent;text-align:left}
 .user-menu-row:not(:disabled):hover,.user-menu-row:not(:disabled):focus-visible{background:rgba(124,116,224,.08);outline:0}
 .user-menu-row:disabled{cursor:default;opacity:.55}
 .user-menu-icon{width:34px;height:34px;display:grid;place-items:center;border:1px solid rgba(124,116,224,.16);border-radius:10px;background:rgba(124,116,224,.07);color:#aaa2f3}
-.user-menu-row strong{font-size:12px;font-weight:650}.user-menu-row small{margin-top:2px;color:var(--muted);font-size:10.5px;line-height:1.35}
+.user-menu-row strong{font-size:12px;font-weight:600}.user-menu-row small{margin-top:2px;color:var(--muted);font-size:10.5px;line-height:1.35}
 
 .profile-editor-backdrop{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;padding:18px;background:rgba(5,15,22,.58);backdrop-filter:blur(9px)}
 .profile-editor{width:min(440px,100%);overflow:hidden;border:1px solid var(--line);border-radius:19px;background:var(--panel);box-shadow:0 30px 90px rgba(0,0,0,.34)}
 .profile-editor>header{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px 13px 18px;border-bottom:1px solid var(--line)}
-.profile-editor>header span{display:block;margin-bottom:3px;color:#aaa2f3;font-size:9px;font-weight:750;letter-spacing:.12em}
-.profile-editor>header h2{margin:0;font-size:18px;font-weight:700;letter-spacing:-.025em}
+.profile-editor>header span{display:block;margin-bottom:3px;color:#aaa2f3;font-size:9px;font-weight:600;letter-spacing:.12em}
+.profile-editor>header h2{margin:0;font-size:18px;font-weight:600;letter-spacing:-.025em}
 .profile-editor>header>button{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--raised);color:var(--muted);font-size:20px}
-.profile-editor form{padding:18px}.profile-editor label{display:block;margin-bottom:7px;color:var(--muted);font-size:11px;font-weight:650}
+.profile-editor form{padding:18px}.profile-editor label{display:block;margin-bottom:7px;color:var(--muted);font-size:11px;font-weight:600}
 .profile-name-field{height:48px;display:flex;align-items:center;gap:9px;padding:0 10px;border:1px solid var(--line);border-radius:13px;background:var(--raised);transition:border-color .16s,box-shadow .16s,background .16s}
 .profile-name-field:focus-within{border-color:rgba(124,116,224,.5);box-shadow:0 0 0 3px rgba(124,116,224,.09)}
 .profile-name-field.available{border-color:rgba(66,206,147,.38)}.profile-name-field.taken,.profile-name-field.invalid{border-color:rgba(220,102,92,.42)}
-.profile-name-field input{min-width:0;flex:1;border:0;outline:0;background:transparent;font-size:14px;font-weight:620}
+.profile-name-field input{min-width:0;flex:1;border:0;outline:0;background:transparent;font-size:14px;font-weight:600}
 .profile-availability{min-height:18px;margin:7px 2px 0;color:var(--muted);font-size:10.5px}.profile-availability.available{color:#45b786}.profile-availability.taken,.profile-availability.invalid{color:#df7169}
 .profile-editor form>p{margin:13px 1px 18px;color:var(--muted);font-size:11px;line-height:1.55}
 .profile-editor-actions{display:flex;justify-content:flex-end;gap:8px}.profile-editor-actions button{min-width:98px}.profile-editor-actions button:disabled{cursor:default;opacity:.55}
@@ -138,7 +138,7 @@ html[data-theme="light"] .profile-name-field{border-color:rgba(15,48,64,.13);bac
 
 /* Heading and section markers */
 html[data-theme="light"] body .app-shell.app-shell.app-shell .home-intro span{color:#2d8197!important}
-html[data-theme="light"] body .app-shell.app-shell.app-shell .home-intro h1{background:linear-gradient(105deg,#0d2534 0%,#24495a 62%,#557481 100%)!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;color:transparent!important;font-weight:710!important}
+html[data-theme="light"] body .app-shell.app-shell.app-shell .home-intro h1{background:linear-gradient(105deg,#0d2534 0%,#24495a 62%,#557481 100%)!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;color:transparent!important;font-weight:600!important}
 html[data-theme="light"] body .app-shell.app-shell.app-shell .home-intro h1:after{width:46px!important;background:linear-gradient(90deg,#287f97,#79c9da)!important}
 html[data-theme="light"] body .app-shell.app-shell.app-shell .featured-meta>span:before,html[data-theme="light"] body .app-shell.app-shell.app-shell .section-title h2:before,html[data-theme="light"] body .app-shell.app-shell.app-shell .continue-title-line h2:before{background:linear-gradient(180deg,#63bfd3,#267f96)!important;box-shadow:none!important}
 

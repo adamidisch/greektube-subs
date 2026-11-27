@@ -290,7 +290,7 @@ html body .viewer.viewer.viewer .gts31-skip>small{
   right:4px;
   bottom:3px;
   color:currentColor;
-  font:700 13px/1 var(--font-geist-mono),monospace;
+  font:600 13px/1 var(--font-geist-mono),monospace;
   opacity:.72;
 }
 
@@ -327,7 +327,7 @@ html body .viewer.viewer.viewer .gts31-speed>select{
   appearance:none;
   background:transparent;
   color:var(--g31-amber);
-  font:700 13px/1 var(--font-geist-mono),monospace;
+  font:600 13px/1 var(--font-geist-mono),monospace;
   text-align:center;
   text-align-last:center;
   outline:0;
@@ -473,7 +473,7 @@ html body .viewer.viewer.viewer .gts31-moment-count{
   border-radius:50%;
   background:var(--g31-indigo);
   color:#fff;
-  font:700 13px/1 var(--font-geist-mono),monospace;
+  font:600 13px/1 var(--font-geist-mono),monospace;
 }
 
 /* CC uses the approved speed-menu language instead of a new visual pattern. */

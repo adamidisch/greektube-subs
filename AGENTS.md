@@ -28,8 +28,8 @@ These rules are the visual contract for every future change.
 ## Typography
 
 - Never use interface text below 12px on desktop or 13px on mobile.
-- Use 14–16px for controls, menus and important metadata.
-- Use font weight 550–700 for interactive labels.
+- Controls, menus and labels: 13–14px (labels and fields 13px, weight 500). Metadata 12px. Inputs that can take focus stay 16px on mobile.
+- Font weights: 400, 500 and 600 only. Nothing heavier (Adam, 27/11/2026: fonts were too big and too bold).
 - Maintain strong contrast: primary text at least `#F2F3F6` and secondary text at least `#AEB3BD` on dark surfaces.
 - Greek text must be natural and correctly accented. Fully uppercase Greek must not contain tonos.
 
@@ -46,10 +46,18 @@ These rules are the visual contract for every future change.
 
 - Touch targets must be at least 44×44px on mobile.
 - Buttons must look interactive through shape, border, fill and state feedback.
-- Popovers must be compact, anchored to their trigger and use readable labels with 44px rows.
+- Popovers must be compact, anchored to their trigger and use readable labels. Rows are 34px with a mouse (`pointer: fine`) and 44px on touch.
 - Selected states must have a clear background, border and checkmark where appropriate.
 - Do not create large empty panels around tiny labels.
 - Use consistent radii: 10–12px for controls and 12–16px for cards or popovers.
+
+## Self-evident baseline (Adam, 27/11/2026)
+
+- Full list: project doc `design-rules` and Notion «Platform Foundation — Global Rules» (section «Working products»).
+- Never use a native `<select>`, `alert`/`confirm` or `title` tooltip. Use `app/UiDropdown.tsx` and the shared `TooltipLayer`.
+- Controls in the same row share height and vertical centre. Nothing touches the edge of its bar (header padding 16px).
+- Visible control sizes: 32 / 36 px (44 only for the main play button). Touch devices get a 44px hit area.
+- Before saying «done», run `tools/ui-audit.js` on the live page (console or Claude in Chrome) at desktop and 390px, light and dark, and report the result.
 
 ## Tables and lists
 

@@ -13,7 +13,7 @@ html body .app-shell.app-shell.app-shell .mobile-menu .mobile-add{
   color:#d9d5ff!important;
   box-shadow:none!important;
   font-size:13px!important;
-  font-weight:680!important;
+  font-weight:600!important;
 }
 html[data-theme="light"] body .app-shell.app-shell.app-shell .mobile-menu .mobile-add{
   border-color:rgba(100,87,205,.22)!important;
@@ -30,7 +30,7 @@ html body .app-shell.app-shell.app-shell .icon-button,
 html body .app-shell.app-shell.app-shell .sync-library{
   border-radius:11px!important;
   box-shadow:none!important;
-  font-weight:620!important;
+  font-weight:600!important;
   transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease,transform .15s ease!important;
 }
 html body .app-shell.app-shell.app-shell .secondary:hover,
@@ -108,7 +108,7 @@ html body .app-shell.app-shell.app-shell .app-footer:before{
 html body .app-shell.app-shell.app-shell .app-footer-brand{
   color:#f2f3f5!important;
   font-size:12.5px!important;
-  font-weight:680!important;
+  font-weight:600!important;
 }
 html body .app-shell.app-shell.app-shell .app-footer-brand b{color:#9ca2ad!important}
 html body .app-shell.app-shell.app-shell .app-footer>p{color:#aeb4bd!important}

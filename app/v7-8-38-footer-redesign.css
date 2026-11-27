@@ -79,14 +79,14 @@
 .app-footer .app-footer-brand > span:last-child {
   color: #f6f3ec !important;
   font-size: 15px !important;
-  font-weight: 650 !important;
+  font-weight: 600 !important;
   line-height: 1 !important;
   letter-spacing: -.01em !important;
 }
 
 .app-footer .app-footer-brand b {
   color: #9d8ff5 !important;
-  font-weight: 650 !important;
+  font-weight: 600 !important;
 }
 
 .app-footer > p {

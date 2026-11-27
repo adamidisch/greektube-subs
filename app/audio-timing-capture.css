@@ -19,7 +19,7 @@
   margin-bottom: 5px;
   color: #b9aaff;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 600;
   letter-spacing: .11em;
 }
 .audio-proof-kicker i {
@@ -29,7 +29,7 @@
   background: #8d73ff;
   box-shadow: 0 0 12px rgba(141, 115, 255, .9);
 }
-.audio-proof-copy h2 { margin: 0; color: #fff; font-size: 14px; font-weight: 680; letter-spacing: -.015em; }
+.audio-proof-copy h2 { margin: 0; color: #fff; font-size: 14px; font-weight: 600; letter-spacing: -.015em; }
 .audio-proof-copy p { margin: 4px 0 0; color: rgba(236, 235, 246, .66); font-size: 12px; line-height: 1.45; }
 .audio-proof-status { min-width: 0; }
 .audio-proof-status > span { display: block; margin-top: 6px; color: rgba(244, 242, 251, .72); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
@@ -49,7 +49,7 @@
   color: #fff;
   font: inherit;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   text-decoration: none;
   cursor: pointer;
 }
@@ -76,7 +76,7 @@
   font-size: 12px;
 }
 .audio-proof-login input:focus { border-color: rgba(166, 144, 255, .72); box-shadow: 0 0 0 3px rgba(132, 104, 245, .13); }
-.audio-proof-login form button { min-height: 36px; padding: 0 13px; border: 0; border-radius: 9px; background: #8a70f5; color: #fff; font: inherit; font-size: 12px; font-weight: 650; }
+.audio-proof-login form button { min-height: 36px; padding: 0 13px; border: 0; border-radius: 9px; background: #8a70f5; color: #fff; font: inherit; font-size: 12px; font-weight: 600; }
 
 @media (max-width: 760px) {
   .audio-proof-panel { grid-template-columns: 1fr; gap: 13px; padding: 15px; }

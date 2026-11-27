@@ -71,7 +71,7 @@ html[data-theme="light"] .gt-tooltip {
   color: var(--gt-tt-key-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
 }
 

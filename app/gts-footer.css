@@ -74,8 +74,8 @@ html body footer.app-footer{
 .gts-standard-footer-brand:hover{opacity:.92}
 .gts-standard-footer-brand:focus-visible{outline:2px solid rgba(157,143,245,.8);outline-offset:5px;border-radius:6px}
 .gts-standard-footer-logo{width:31px;height:25px;flex:0 0 auto;display:block;background:url('/gtslogo.svg') center/contain no-repeat}
-.gts-standard-footer-brand>span{font-size:17px;line-height:1;font-weight:700;letter-spacing:-.025em;white-space:nowrap}
-.gts-standard-footer-brand b{color:#a294f7;font-weight:700}
+.gts-standard-footer-brand>span{font-size:17px;line-height:1;font-weight:600;letter-spacing:-.025em;white-space:nowrap}
+.gts-standard-footer-brand b{color:#a294f7;font-weight:600}
 .gts-standard-footer-description{max-width:450px;margin:0 0 8px;color:#adaeba;font-size:14px;line-height:1.55;letter-spacing:-.01em}
 .gts-standard-footer-made{margin:0;color:#797d8c;font-size:13px;line-height:1.45}
 .gts-standard-footer-made b{color:#a092f5;font-weight:600}

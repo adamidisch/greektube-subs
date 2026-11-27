@@ -88,6 +88,8 @@ function describe(el: Element): Tip | null {
     if (!key && text && norm(hit.text) === norm(text)) return null;
     return { text: hit.text, key };
   }
+  // Κουμπί με ορατό κείμενο και πιο περιγραφική ετικέτα (π.χ. «Υπότιτλοι» → «Επιλογές υποτίτλων»): το tooltip δείχνει την ετικέτα.
+  if (label && text && norm(label) !== norm(text) && norm(label).length > norm(text).length) return splitShortcut(label);
   const iconOnly = text.replace(/[^\p{L}\p{N}]/gu, "").length <= 2;
   if (iconOnly) {
     // Το πιο περιγραφικό από title/aria-label.

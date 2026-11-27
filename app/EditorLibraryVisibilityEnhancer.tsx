@@ -11,10 +11,10 @@ const wrapStyle:CSSProperties={
   marginTop:10,padding:"12px 12px 11px",border:"1px solid rgba(145,145,180,.18)",borderRadius:12,
   background:"rgba(255,255,255,.025)",display:"grid",gap:9,
 };
-const labelStyle:CSSProperties={fontSize:11,fontWeight:800,letterSpacing:".08em",color:"rgba(210,210,230,.62)"};
+const labelStyle:CSSProperties={fontSize:12,fontWeight:600,letterSpacing:".08em",color:"rgba(210,210,230,.62)"};
 const rowStyle:CSSProperties={display:"grid",gridTemplateColumns:"1fr 1fr",gap:7};
 const buttonBase:CSSProperties={
-  minHeight:34,borderRadius:9,border:"1px solid rgba(150,150,185,.2)",fontSize:12,fontWeight:800,cursor:"pointer",
+  minHeight:34,borderRadius:9,border:"1px solid rgba(150,150,185,.2)",fontSize:12,fontWeight:600,cursor:"pointer",
   transition:"background .18s ease,border-color .18s ease,color .18s ease,opacity .18s ease",
 };
 

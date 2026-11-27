@@ -1,7 +1,7 @@
 /* v7.12.18 — one-step SRT import on the video details screen */
 .details-srt-files{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
 .details-srt-files button{display:flex!important;align-items:center;gap:10px;width:100%;min-height:44px;min-width:0;text-align:left;font-size:14px}
-.details-srt-files button b{flex:none;padding:3px 7px;border-radius:7px;background:rgba(142,124,255,.18);color:#c7beff;font-size:12px;font-weight:700;letter-spacing:.06em}
+.details-srt-files button b{flex:none;padding:3px 7px;border-radius:7px;background:rgba(142,124,255,.18);color:#c7beff;font-size:12px;font-weight:600;letter-spacing:.06em}
 .details-srt-files button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .details-srt-files button.picked{border-color:rgba(137,207,166,.55)!important}
 .details-srt-files button.picked b{background:rgba(137,207,166,.18);color:#89cfa6}

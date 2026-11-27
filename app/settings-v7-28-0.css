@@ -22,9 +22,9 @@ html body .app-shell.app-shell.app-shell.app-shell .gs-page *{box-sizing:border-
 
 /* Header */
 html body .app-shell.app-shell.app-shell.app-shell .gs-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:20px!important;margin:0 0 30px!important;padding:0!important;background:none!important;border:0!important}
-html body .app-shell.app-shell.app-shell.app-shell .gs-eyebrow{display:block!important;margin:0 0 10px!important;font-size:12px!important;font-weight:700!important;letter-spacing:.14em!important;color:#8B84EC!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-eyebrow{display:block!important;margin:0 0 10px!important;font-size:12px!important;font-weight:600!important;letter-spacing:.14em!important;color:#8B84EC!important}
 html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .gs-eyebrow{color:#5F56C9!important}
-html body .app-shell.app-shell.app-shell.app-shell .gs-head h1{margin:0!important;font-size:34px!important;line-height:1.1!important;font-weight:700!important;letter-spacing:-.02em!important;color:var(--gs-label)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-head h1{margin:0!important;font-size:34px!important;line-height:1.1!important;font-weight:600!important;letter-spacing:-.02em!important;color:var(--gs-label)!important}
 html body .app-shell.app-shell.app-shell.app-shell .gs-head p{margin:10px 0 0!important;font-size:15px!important;line-height:1.5!important;color:var(--gs-muted)!important}
 html body .app-shell.app-shell.app-shell.app-shell .gs-close{
   flex:0 0 auto!important;display:grid!important;place-items:center!important;width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;
@@ -53,7 +53,7 @@ html body .app-shell.app-shell.app-shell.app-shell .gs-section-head{display:flex
 html body .app-shell.app-shell.app-shell.app-shell .gs-icon{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border-radius:9px;color:#fff;
   background:linear-gradient(160deg,color-mix(in srgb,var(--tone) 88%,#fff),var(--tone));box-shadow:0 4px 12px color-mix(in srgb,var(--tone) 32%,transparent)}
 html body .app-shell.app-shell.app-shell.app-shell .gs-icon svg{width:17px;height:17px}
-html body .app-shell.app-shell.app-shell.app-shell .gs-section-head h2{margin:0!important;font-size:17px!important;font-weight:650!important;letter-spacing:-.01em!important;color:var(--gs-label)!important}
+html body .app-shell.app-shell.app-shell.app-shell .gs-section-head h2{margin:0!important;font-size:17px!important;font-weight:600!important;letter-spacing:-.01em!important;color:var(--gs-label)!important}
 html body .app-shell.app-shell.app-shell.app-shell .gs-card{overflow:hidden;border-radius:16px!important;border:1px solid var(--gs-card-border)!important;background:var(--gs-card)!important;box-shadow:var(--gs-shadow)!important;padding:0!important}
 
 /* Rows */
@@ -107,7 +107,7 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .gs-seg b
 html body .app-shell.app-shell.app-shell.app-shell .gs-row-slider{flex-direction:column!important;align-items:stretch!important;gap:10px!important;padding-bottom:14px!important}
 html body .app-shell.app-shell.app-shell.app-shell .gs-slider-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:16px!important}
 html body .app-shell.app-shell.app-shell.app-shell .gs-slider-head output{
-  flex:0 0 auto;padding:4px 9px;border-radius:8px;font-size:14px;font-weight:650;font-variant-numeric:tabular-nums;
+  flex:0 0 auto;padding:4px 9px;border-radius:8px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;
   color:color-mix(in srgb,var(--tone) 80%,#fff);background:color-mix(in srgb,var(--tone) 14%,transparent);
 }
 html[data-theme="light"] body .app-shell.app-shell.app-shell.app-shell .gs-slider-head output{color:color-mix(in srgb,var(--tone) 72%,#000)}
@@ -132,7 +132,7 @@ html body .app-shell.app-shell.app-shell.app-shell .gs-preview-scene{position:ab
              radial-gradient(100% 70% at 50% 110%,#2c3340 0%,transparent 70%),linear-gradient(160deg,#3b4452,#1d2129)}
 html body .app-shell.app-shell.app-shell.app-shell .gs-preview-sub{
   position:absolute;left:50%;bottom:10%;transform:translateX(-50%);max-width:86%;width:max-content;padding:7px 12px;border-radius:10px;
-  text-align:center;color:#fff;font-weight:620;line-height:1.35;text-shadow:0 1px 2px rgba(0,0,0,.72);backdrop-filter:blur(10px) saturate(1.15);
+  text-align:center;color:#fff;font-weight:600;line-height:1.35;text-shadow:0 1px 2px rgba(0,0,0,.72);backdrop-filter:blur(10px) saturate(1.15);
   transition:font-size .12s ease,background .12s ease;
 }
 html body .app-shell.app-shell.app-shell.app-shell .gs-preview[data-position="top"] .gs-preview-sub{bottom:auto;top:10%}
@@ -144,7 +144,7 @@ html body .app-shell.app-shell.app-shell.app-shell .gs-foot small{display:inline
 html body .app-shell.app-shell.app-shell.app-shell .gs-dot{width:8px;height:8px;border-radius:50%;background:#5E9C78;box-shadow:0 0 0 3px rgba(94,156,120,.2)}
 html body .app-shell.app-shell.app-shell.app-shell .gs-foot button{
   height:44px!important;min-height:44px!important;padding:0 20px!important;border-radius:12px!important;border:0!important;cursor:pointer;
-  background:#7C74E0!important;color:#fff!important;font:inherit!important;font-size:15px!important;font-weight:650!important;box-shadow:0 6px 18px rgba(124,116,224,.3)!important;
+  background:#7C74E0!important;color:#fff!important;font:inherit!important;font-size:15px!important;font-weight:600!important;box-shadow:0 6px 18px rgba(124,116,224,.3)!important;
 }
 html body .app-shell.app-shell.app-shell.app-shell .gs-foot button:hover{background:#6D64D6!important}
 

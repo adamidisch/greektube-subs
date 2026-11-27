@@ -138,7 +138,7 @@ html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button:focus-vi
 
 html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button>span{
   font-size:13px!important;
-  font-weight:650!important;
+  font-weight:600!important;
 }
 
 html body .app-shell.app-shell.app-shell:not(.viewer) .load-more-button>svg{

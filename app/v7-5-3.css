@@ -24,7 +24,7 @@ html body .app-shell.app-shell.app-shell .brand-version::after{
   color:#f5f3ff!important;
   font-family:var(--font-geist-mono),monospace!important;
   font-size:10px!important;
-  font-weight:700!important;
+  font-weight:600!important;
   letter-spacing:.025em!important;
   line-height:1!important;
   opacity:1!important;
@@ -82,7 +82,7 @@ html body .app-shell.app-shell.app-shell .video-details::after{
   transform:translateX(-50%)!important;
   color:var(--muted)!important;
   font-size:9px!important;
-  font-weight:650!important;
+  font-weight:600!important;
   letter-spacing:.09em!important;
   line-height:1!important;
   white-space:nowrap!important;

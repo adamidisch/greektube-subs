@@ -127,7 +127,7 @@ html[data-theme="light"] .player-opening-details>i{background:rgba(38,52,61,.1)}
   animation:gtsStartupSpin .8s linear infinite;
 }
 .player-cover .cover-loading small{
-  font-size:9px;font-weight:760;letter-spacing:.09em;
+  font-size:9px;font-weight:600;letter-spacing:.09em;
   text-shadow:0 2px 12px rgba(0,0,0,.55);
 }
 @keyframes gtsOpeningSpin{
@@ -152,7 +152,7 @@ html body .app-shell.app-shell.app-shell:not(.viewer) .home-intro h1{
   -webkit-text-fill-color:transparent!important;
   color:transparent!important;
   font-size:clamp(30px,3.2vw,39px)!important;
-  font-weight:760!important;
+  font-weight:600!important;
   line-height:1.08!important;
   letter-spacing:-.042em!important;
   text-wrap:balance;
@@ -176,7 +176,7 @@ html body .app-shell.app-shell.app-shell:not(.viewer) .featured-panel h2{
   -webkit-text-fill-color:transparent!important;
   color:transparent!important;
   font-size:clamp(21px,1.75vw,25px)!important;
-  font-weight:730!important;
+  font-weight:600!important;
   line-height:1.15!important;
   letter-spacing:-.032em!important;
   text-wrap:balance;
@@ -197,7 +197,7 @@ html body .viewer.viewer.viewer .player-greek-title{
   -webkit-text-fill-color:transparent!important;
   color:transparent!important;
   font-size:25px!important;
-  font-weight:735!important;
+  font-weight:600!important;
   line-height:1.17!important;
   letter-spacing:-.032em!important;
   text-wrap:balance;

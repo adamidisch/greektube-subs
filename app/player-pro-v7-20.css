@@ -76,7 +76,7 @@ html body .viewer.viewer.viewer.viewer.viewer .gts31-play{
 }
 html body .viewer.viewer.viewer.viewer.viewer .gts31-play>svg{width:16px!important;height:16px!important}
 html body .viewer.viewer.viewer.viewer.viewer .gts31-speed{width:58px!important;min-width:58px!important;height:40px!important;flex:0 0 58px!important}
-html body .viewer.viewer.viewer.viewer.viewer .gts31-speed>select{height:40px!important;font-size:14px!important;font-weight:650!important;font-variant-numeric:tabular-nums}
+html body .viewer.viewer.viewer.viewer.viewer .gts31-speed>select{height:40px!important;font-size:14px!important;font-weight:600!important;font-variant-numeric:tabular-nums}
 html body .viewer.viewer.viewer.viewer.viewer .gts31-volume{width:40px!important;height:40px!important;flex:0 0 40px!important}
 html body .viewer.viewer.viewer.viewer.viewer .gts31-segment{
   min-height:40px!important;height:40px!important;flex-direction:row!important;gap:7px!important;
@@ -115,7 +115,7 @@ html body .viewer.viewer.viewer.viewer.viewer .gts31-skip{
   width:48px!important;min-width:48px!important;flex:0 0 48px!important;
 }
 html body .viewer.viewer.viewer.viewer.viewer .gts31-skip>small{
-  position:static!important;font-size:12px!important;font-weight:650!important;line-height:1!important;
+  position:static!important;font-size:12px!important;font-weight:600!important;line-height:1!important;
   font-variant-numeric:tabular-nums;opacity:.85;
 }
 @media (max-width:720px){

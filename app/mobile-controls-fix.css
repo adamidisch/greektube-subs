@@ -12,7 +12,7 @@ html body .brand-version::before,html body .brand-version::after{display:none!im
 .player-seek-bar::-moz-range-thumb{width:11px;height:11px;border:2px solid #7c74e0;border-radius:50%;background:#12151a}
 .player-seek-bar:disabled{pointer-events:none;opacity:.35}
 @media(max-width:620px){
-html body .viewer .brand-version{display:inline-flex!important;align-items:center!important;justify-content:center!important;height:19px!important;margin-left:6px!important;padding:0 6px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:6px!important;background:#171a20!important;color:#aeb4c0!important;font-weight:700!important;letter-spacing:.02em!important;white-space:nowrap!important}
+html body .viewer .brand-version{display:inline-flex!important;align-items:center!important;justify-content:center!important;height:19px!important;margin-left:6px!important;padding:0 6px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:6px!important;background:#171a20!important;color:#aeb4c0!important;font-weight:600!important;letter-spacing:.02em!important;white-space:nowrap!important}
 html body .viewer .video-frame .subtitles.bottom{bottom:4.5%!important}
 html body .settings-page{padding-top:28px!important} html body .settings-page-header{padding-right:46px!important}
 html body .player-seek-bar{height:24px} html body .player-seek-bar::-webkit-slider-thumb{width:15px;height:15px;margin-top:-6px} html body .player-seek-bar::-moz-range-thumb{width:13px;height:13px}
