@@ -11,7 +11,7 @@
     width: auto !important; margin: 0 !important; gap: 6px !important; padding: 36px 16px 10px !important;
     border: 0 !important; border-radius: 0 0 12px 12px !important; box-shadow: none !important; color: #f2f3f6 !important;
     background: linear-gradient(to top, rgba(8, 9, 13, 0.9) 0%, rgba(8, 9, 13, 0.62) 55%, rgba(8, 9, 13, 0) 100%) !important;
-    --gtp-card: #14161c; --gtp-card-2: rgba(255, 255, 255, 0.1); --gtp-line: rgba(255, 255, 255, 0.12); --gtp-line-2: rgba(255, 255, 255, 0.2);
+    --gtp-card: #14161c; --gtp-card-2: #20232c; --gtp-line: rgba(255, 255, 255, 0.12); --gtp-line-2: rgba(255, 255, 255, 0.2);
     --gtp-text: #f2f3f6; --gtp-soft: #d6d9e0; --gtp-muted: #c2c6cf; --gtp-track: rgba(255, 255, 255, 0.22);
     opacity: 1; transform: none; visibility: visible;
     transition: opacity 0.24s ease, transform 0.24s ease, visibility 0s linear 0s;
@@ -22,6 +22,10 @@
     opacity: 0 !important; transform: translateY(10px) !important; pointer-events: none !important; visibility: hidden !important;
     transition: opacity 0.28s ease, transform 0.28s ease, visibility 0s linear 0.28s !important;
   }
+
+  /* Μενού υποτίτλων: συμπαγές φόντο και χωρίς αναδίπλωση στις γραμμές */
+  html body .viewer .sticky-player .gts31-cc-menu:not(#_) { background: #181b22 !important; width: max-content !important; max-width: min(320px, 92vw) !important; }
+  html body .viewer .sticky-player .gts31-cc-menu button:not(#_) { white-space: nowrap !important; }
 
   /* Ο δρομέας κρύβεται μαζί με τα controls */
   html body .viewer .video-frame.player-ui-hidden:not(:hover) :is(.video-tap-toggle, .player-cover):not(#_) { cursor: none; }
