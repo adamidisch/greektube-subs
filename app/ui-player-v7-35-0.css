@@ -1,0 +1,36 @@
+/* v7.35.0 — Controls πάνω στο βίντεο, στυλ YouTube (desktop/tablet).
+   Εμφανίζονται με κίνηση του ποντικιού, κλικ ή focus και κρύβονται μετά από ~3,6 s όσο παίζει το βίντεο, με animation.
+   Σε pause μένουν ορατά. Ανοιχτό μενού (ταχύτητα, υπότιτλοι, ένταση) ή hover/focus πάνω στα controls τα κρατά ορατά.
+   Σε κινητό (≤760px) η κάρτα controls μένει κάτω από το βίντεο: δεν χωράει overlay σε 390px. Η λογική είναι στο controlsVisible. */
+
+@media (min-width: 761px) {
+  html body .viewer .sticky-player:not(#_) { position: relative !important; }
+
+  html body .viewer .sticky-player .gtp-controls:not(#_) {
+    position: absolute !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 9 !important;
+    width: auto !important; margin: 0 !important; gap: 6px !important; padding: 36px 16px 10px !important;
+    border: 0 !important; border-radius: 0 0 12px 12px !important; box-shadow: none !important; color: #f2f3f6 !important;
+    background: linear-gradient(to top, rgba(8, 9, 13, 0.9) 0%, rgba(8, 9, 13, 0.62) 55%, rgba(8, 9, 13, 0) 100%) !important;
+    --gtp-card: #14161c; --gtp-card-2: rgba(255, 255, 255, 0.1); --gtp-line: rgba(255, 255, 255, 0.12); --gtp-line-2: rgba(255, 255, 255, 0.2);
+    --gtp-text: #f2f3f6; --gtp-soft: #d6d9e0; --gtp-muted: #c2c6cf; --gtp-track: rgba(255, 255, 255, 0.22);
+    opacity: 1; transform: none; visibility: visible;
+    transition: opacity 0.24s ease, transform 0.24s ease, visibility 0s linear 0s;
+  }
+
+  /* Κρυμμένα: μόνο όσο παίζει το βίντεο και τίποτα δεν τα κρατά ανοιχτά */
+  html body .viewer .sticky-player:has(.video-frame.player-ui-hidden) .gtp-controls:not(:hover):not(:focus-within):not(:has(.is-open, [aria-expanded="true"], [open])):not(#_) {
+    opacity: 0 !important; transform: translateY(10px) !important; pointer-events: none !important; visibility: hidden !important;
+    transition: opacity 0.28s ease, transform 0.28s ease, visibility 0s linear 0.28s !important;
+  }
+
+  /* Ο δρομέας κρύβεται μαζί με τα controls */
+  html body .viewer .video-frame.player-ui-hidden:not(:hover) :is(.video-tap-toggle, .player-cover):not(#_) { cursor: none; }
+
+  /* Οι υπότιτλοι ανεβαίνουν πάνω από τα controls όσο φαίνονται, και κατεβαίνουν όταν κρύβονται */
+  html body .viewer .video-frame.player-ui-visible .subtitles.bottom:not(#_) { bottom: max(112px, 13%) !important; }
+  html body .viewer .video-frame.player-ui-hidden .subtitles.bottom:not(#_) { bottom: 5% !important; transition: bottom 0.24s ease; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body .viewer .sticky-player .gtp-controls:not(#_) { transition: none !important; }
+}

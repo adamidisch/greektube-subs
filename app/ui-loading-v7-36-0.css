@@ -1,0 +1,20 @@
+/* v7.36.0 — Loading χωρίς «λάμψη».
+   Η βιβλιοθήκη εμφανίζεται αμέσως από την τοπική cache. Το skeleton (μόνο για πρώτη επίσκεψη ή άδεια cache) εμφανίζεται
+   μετά από 250 ms, άρα γρήγορες φορτώσεις δεν δείχνουν τίποτα, και δεν έχει κείμενο ή εικονίδιο στο μεγάλο πλαίσιο. */
+@keyframes gtLoadingIn { from { opacity: 0; } to { opacity: 1; } }
+
+html body .app-shell .featured.featured-loading:not(#_),
+html body .app-shell .video-grid.skeleton-grid:not(#_) {
+  animation: gtLoadingIn 0.2s ease 0.25s both;
+}
+html body .app-shell .home-loading-mark:not(#_),
+html body .app-shell .home-loading-status:not(#_) { display: none !important; }
+
+/* Το περιεχόμενο μπαίνει απαλά αντί να εμφανίζεται απότομα */
+@keyframes gtContentIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+html body .app-shell .featured:not(.featured-loading):not(#_),
+html body .app-shell .video-grid:not(.skeleton-grid):not(#_) { animation: gtContentIn 0.22s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  html body .app-shell .featured:not(#_), html body .app-shell .video-grid:not(#_) { animation: none !important; }
+}

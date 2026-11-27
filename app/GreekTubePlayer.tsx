@@ -376,6 +376,8 @@ export default function GreekTubePlayer() {
   useAppLanguage();
   const [state,setState]=useState<AppState>({videos:[],moments:[],settings:DEFAULT_SETTINGS});
   const [hydrated,setHydrated]=useState(false);
+  // Η βιβλιοθήκη φαίνεται αμέσως από την τοπική cache και δεν περιμένει το δίκτυο. Το hydrated (αποθήκευση στον server) μένει όπως ήταν.
+  const [libraryShown,setLibraryShown]=useState(false);
   const [libraryLoadFailed,setLibraryLoadFailed]=useState(false);
   const [view,setView]=useState<"library"|"settings">("library");
   const [selectedId,setSelectedId]=useState<string|null>(null);
@@ -529,7 +531,7 @@ export default function GreekTubePlayer() {
     if(isAlignmentProofRequest(location.search)){
       proofModeRef.current=true;
       proofVersionRef.current=isV81AlignmentProofRequest(location.search)?"v81":"v8";
-      setHydrated(true);
+      setHydrated(true);setLibraryShown(true);
       return;
     }
     let fallback:AppState|null=null;
@@ -537,6 +539,7 @@ export default function GreekTubePlayer() {
     if(fallback?.videos){
       const fallbackState={settings:normalizedSettings(fallback.settings),videos:fallback.videos,moments:fallback.moments||[]};
       setState(current=>mergeAppStates(current,fallbackState));
+      if(fallback.videos.length)setLibraryShown(true);
     }
     try{
       const r=await fetch("/api/state",{credentials:"same-origin",cache:"no-store"});
@@ -546,7 +549,7 @@ export default function GreekTubePlayer() {
       }else if(!fallback?.videos?.length){setLibraryLoadFailed(true);}
     }catch{
       if(!fallback?.videos?.length)setLibraryLoadFailed(true);
-    }finally{setHydrated(true);}
+    }finally{setHydrated(true);setLibraryShown(true);}
   })(); },[]);
   useEffect(()=>{
     stateRef.current=state;
@@ -794,7 +797,7 @@ export default function GreekTubePlayer() {
   },[state.videos,libraryVideos,category,search,sort,filter,newVideoIds]);
   const visibleVideos=filtered.slice(0,visibleCount);
   const continueVideos=libraryVideos.filter(v=>v.lastPosition>=CONTINUE_MIN_SECONDS&&v.progress>=CONTINUE_MIN_PROGRESS&&v.progress<WATCHED_THRESHOLD).sort((a,b)=>(b.lastWatched||"").localeCompare(a.lastWatched||"")).slice(0,5);
-  const featured=useMemo(()=>hydrated?pickHomeFeaturedVideo(libraryVideos):null,[hydrated,libraryVideos]);
+  const featured=useMemo(()=>libraryShown?pickHomeFeaturedVideo(libraryVideos):null,[libraryShown,libraryVideos]);
   const featuredHasHistory=Boolean(featured&&Number.isFinite(latestViewedAt(featured)));
   const featuredResumeTime=featured&&featuredHasHistory&&featured.lastPosition>=CONTINUE_MIN_SECONDS&&featured.progress<WATCHED_THRESHOLD?featured.lastPosition:0;
   const featuredMoments=featured?state.moments.filter(m=>m.videoId===featured.id):[];
@@ -1569,7 +1572,7 @@ export default function GreekTubePlayer() {
     <header className="app-header"><Brand home={goHome}/><nav className="desktop-nav"><button className={!settingsFromLibrary?"active":""} onClick={returnToLibrary}>{tr("Βιβλιοθήκη")}</button><button data-gts-settings-trigger="true" className={settingsFromLibrary?"active":""} onClick={openLibrarySettings}>{tr("Ρυθμίσεις")}</button></nav><div className="gts-header-actions"><div className="gts-theme-slot"/><div className="gts-profile-slot"/></div><button className={`mobile-menu-toggle ${mobileMenu?"active":""}`} aria-label={mobileMenu?tr("Κλείσιμο μενού"):tr("Άνοιγμα μενού")} aria-expanded={mobileMenu} onClick={()=>setMobileMenu(value=>!value)}><i/><i/><i/></button>{mobileMenu&&<div className="mobile-menu"><button className={!settingsFromLibrary?"active":""} onClick={goHome}>{tr("Βιβλιοθήκη")}</button><button data-gts-settings-trigger="true" className={settingsFromLibrary?"active":""} onClick={openLibrarySettings}>{tr("Ρυθμίσεις")}</button></div>}</header>
     <>
       <section className="home-intro"><span>{tr("ΒΙΝΤΕΟ ΒΙΒΛΙΟΘΗΚΗ")}</span><h1>{tr("Αυτόματοι ελληνικοί υπότιτλοι")}</h1></section>
-      {!hydrated&&<section className="featured featured-loading" role="status" aria-label={tr("Φόρτωση προτεινόμενου βίντεο")} aria-busy="true"><div className="home-featured-loading-image"><span className="home-loading-mark" aria-hidden="true">▶</span><span className="home-loading-status">{tr("Φόρτωση βιβλιοθήκης…")}</span></div><div className="home-featured-loading-info" aria-hidden="true"><i className="home-loading-line short"/><i className="home-loading-line title"/><i className="home-loading-line medium"/><i className="home-loading-line wide"/><i className="home-loading-button"/></div></section>}
+      {!libraryShown&&<section className="featured featured-loading" role="status" aria-label={tr("Φόρτωση προτεινόμενου βίντεο")} aria-busy="true"><div className="home-featured-loading-image"><span className="home-loading-mark" aria-hidden="true">▶</span><span className="home-loading-status">{tr("Φόρτωση βιβλιοθήκης…")}</span></div><div className="home-featured-loading-info" aria-hidden="true"><i className="home-loading-line short"/><i className="home-loading-line title"/><i className="home-loading-line medium"/><i className="home-loading-line wide"/><i className="home-loading-button"/></div></section>}
       {hydrated&&libraryLoadFailed&&libraryVideos.length===0&&<section className="home-library-error" role="alert"><strong>{tr("Η βιβλιοθήκη δεν φορτώθηκε.")}</strong><button type="button" onClick={()=>location.reload()}>{tr("Επανάληψη φόρτωσης")}</button></section>}
       {hydrated&&featured&&<section className={`featured ${newVideoIds.has(featured.id)?"featured-new":""}`} aria-label="Προτεινόμενο βίντεο">
         <button className="featured-media" onClick={()=>void openVideo(featured,featuredResumeTime)} aria-label={`${tr("Άνοιγμα βίντεο")}: ${appTitle(featured)}`}>
@@ -1594,7 +1597,7 @@ export default function GreekTubePlayer() {
       <section className="library-tools clean-library-tools"><div className="search"><SearchIcon/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder={tr("Αναζήτηση βίντεο")}/>{search&&<button type="button" aria-label="Καθαρισμός αναζήτησης" onClick={()=>setSearch("")}>×</button>}</div><UiDropdown className="library-sort" ariaLabel="Ταξινόμηση" value={sort} options={[{value:"recent",label:tr("Πρόσφατα")},{value:"title",label:tr("Τίτλος")},{value:"progress",label:tr("Πρόοδος")}]} onChange={setSort}/><div className="quick-filters"><button className={filter==="all"?"active":""} onClick={()=>setFilter("all")}>{tr("Όλα")}</button><button className={filter==="new"?"active":""} onClick={()=>setFilter("new")}>{tr("Νέα")}</button><button className={filter==="favorites"?"active":""} onClick={()=>setFilter("favorites")}>{tr("♥ Αγαπημένα")}</button><button className={filter==="recent"?"active":""} onClick={()=>setFilter("recent")}>{tr("Ιστορικό προβολών")}</button><button className={filter==="hidden"?"active":""} onClick={()=>setFilter("hidden")}>{tr("Κρυφά")}</button></div></section>
       <div className="library-result-line"><span>{hydrated?`${filtered.length} ${tr("βίντεο")}`:tr("Φόρτωση…")}</span>{search&&<b>{tr("Αναζήτηση:")}{search}</b>}{syncMessage&&<b>{syncMessage}</b>}<button type="button" className="sync-library" disabled={syncing} onClick={()=>void requestSync()}>{syncing?tr("Συγχρονισμός…"):tr("Συγχρονισμός")}</button></div>
       <div className="category-row">{CATEGORIES.map(c=><button key={c} className={category===c?"active":""} data-tip={c==="all"?tr("Όλα τα βίντεο","All videos"):`${tr("Κατηγορία","Category")} «${tr(CATEGORY_LABELS[c])}»`} onClick={()=>setCategory(c)}>{tr(CATEGORY_LABELS[c])}</button>)}</div>
-      {!hydrated?<section className="video-grid skeleton-grid" aria-label="Φόρτωση βιβλιοθήκης">{Array.from({length:6}).map((_,index)=><div className="video-card skeleton-card" key={index}><div className="thumb"/><div className="card-info"><i/><i/><i/></div></div>)}</section>:<section className={`video-grid ${state.settings.layout} ${state.settings.compact?"compact":""}`}>{visibleVideos.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} edit={requestEdit} settings={state.settings} isNew={newVideoIds.has(v.id)}/>)}</section>}
+      {!libraryShown?<section className="video-grid skeleton-grid" aria-label="Φόρτωση βιβλιοθήκης">{Array.from({length:6}).map((_,index)=><div className="video-card skeleton-card" key={index}><div className="thumb"/><div className="card-info"><i/><i/><i/></div></div>)}</section>:<section className={`video-grid ${state.settings.layout} ${state.settings.compact?"compact":""}`}>{visibleVideos.map(v=><VideoCard key={v.id} video={v} open={openVideo} patch={patchVideo} edit={requestEdit} settings={state.settings} isNew={newVideoIds.has(v.id)}/>)}</section>}
       {hydrated&&visibleVideos.length<filtered.length&&<div className="load-more-wrap"><button className="load-more-button" type="button" data-tip={tr("Περισσότερα βίντεο","More videos")} onClick={()=>setVisibleCount(count=>count+LIBRARY_PAGE_SIZE)}><span>{tr("Περισσότερα")}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg><small>+{Math.min(LIBRARY_PAGE_SIZE,filtered.length-visibleVideos.length)} {tr("βίντεο")}</small></button></div>}
       {hydrated&&filtered.length===0&&<div className="empty polished-empty"><b>⌕</b><h2>{tr("Δεν βρέθηκαν βίντεο")}</h2><p>{tr("Δοκίμασε διαφορετική κατηγορία, ομιλητή ή λέξη αναζήτησης.")}</p></div>}
       <SiteFooter />

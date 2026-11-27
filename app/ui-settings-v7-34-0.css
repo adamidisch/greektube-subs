@@ -1,0 +1,42 @@
+/* v7.34.0 — Settings: ένα μόνο scroll, compact preview, κλίμακα γραμματοσειράς 12/13/16/26 και βάρη 500/600. */
+
+/* Ένα scroll: το layer κυλά, το shell και το scroll δεν έχουν δικό τους scroller. Η σελίδα πίσω κλειδώνει. */
+html:has(.settings-screen-layer) { overflow: hidden !important; }
+html body .settings-screen-layer:not(#_) { overflow-y: auto !important; overflow-x: hidden !important; overscroll-behavior: contain; scrollbar-gutter: stable; }
+html body .settings-screen-layer .settings-screen-shell:not(#_) {
+  display: block !important; height: auto !important; min-height: 100dvh !important; max-height: none !important; overflow: visible !important;
+}
+html body .settings-screen-layer .settings-screen-scroll:not(#_) { height: auto !important; max-height: none !important; overflow: visible !important; scrollbar-gutter: auto; }
+html body .settings-screen-layer .settings-screen-shell > .app-header:not(#_) {
+  position: sticky !important; top: 0 !important; z-index: 5 !important; background: var(--bg) !important;
+}
+
+/* Compact preview */
+html body .gs-preview:not(#_) { aspect-ratio: auto !important; height: 96px !important; margin: 0 0 10px !important; border-radius: 12px !important; }
+html body .gs-preview-sub:not(#_) { bottom: 8px !important; padding: 4px 10px !important; border-radius: 8px !important; line-height: 1.3 !important; font-weight: 500 !important; }
+html body .gs-preview[data-position="top"] .gs-preview-sub:not(#_) { bottom: auto !important; top: 8px !important; }
+html body .gs-preview-sub:not(#_) > span { display: block; }
+html body .gs-preview-off:not(#_) { font-size: 13px !important; font-weight: 500 !important; }
+@keyframes gsPreviewIn { from { opacity: 0; transform: translateX(-50%) translateY(3px); } to { opacity: 1; transform: translateX(-50%); } }
+html body .gs-preview-sub:not(#_) { animation: gsPreviewIn 0.16s ease-out both; }
+
+/* Τυπογραφία και ύψη σειρών */
+html body .gs-head h1:not(#_) { font-size: 26px !important; font-weight: 600 !important; }
+html body .gs-head p:not(#_) { font-size: 13px !important; }
+html body .gs-eyebrow:not(#_) { font-size: 12px !important; font-weight: 600 !important; }
+html body .gs-section-head h2:not(#_) { font-size: 16px !important; font-weight: 600 !important; }
+html body .gs-label:not(#_) { font-size: 13px !important; font-weight: 500 !important; }
+html body .gs-text small:not(#_) { font-size: 12px !important; }
+html body .gs-slider-head output:not(#_) { font-size: 12px !important; font-weight: 600 !important; }
+html body .gs-row:not(#_) { min-height: 48px !important; padding: 8px 16px !important; gap: 14px !important; }
+html body .gs-row-slider:not(#_) { padding-bottom: 12px !important; gap: 8px !important; }
+html body .gs-seg button:not(#_) { height: 30px !important; min-height: 30px !important; padding: 0 12px !important; font-size: 13px !important; font-weight: 500 !important; }
+html body .gs-seg button.on:not(#_) { font-weight: 600 !important; }
+html body .gs-foot small:not(#_), html body .gs-foot button:not(#_) { font-size: 13px !important; }
+
+@media (pointer: coarse) {
+  html body .gs-seg button:not(#_) { height: 36px !important; min-height: 36px !important; }
+  html body .gs-row:not(#_) { min-height: 52px !important; }
+}
+@media (max-width: 620px) { html body .gs-head h1:not(#_) { font-size: 20px !important; } }
+@media (prefers-reduced-motion: reduce) { html body .gs-preview-sub:not(#_) { animation: none; } }

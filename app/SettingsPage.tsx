@@ -70,8 +70,9 @@ export function SettingsPage({ settings, update, close, speeds }: {
     <div className="gs-preview" data-position={settings.subtitlePosition} aria-hidden="true">
       <div className="gs-preview-scene" />
       {settings.subtitles
-        ? <span className={`gs-preview-sub frame-${frame}`} style={{ fontSize: `${settings.subtitleSize}px`, background: `rgba(8,9,13,${settings.opacity})` }}>
-            {tr("Έτσι θα φαίνονται οι υπότιτλοι.", "This is how subtitles will look.")}
+        ? <span key={settings.subtitleMode} className={`gs-preview-sub frame-${frame}`} style={{ fontSize: `${settings.subtitleSize}px`, background: `rgba(8,9,13,${settings.opacity})` }}>
+            {settings.subtitleMode !== "el" && <span lang="en">This is how subtitles will look.</span>}
+            {settings.subtitleMode !== "en" && <span lang="el">Έτσι θα φαίνονται οι υπότιτλοι.</span>}
           </span>
         : <span className="gs-preview-off">{tr("Οι υπότιτλοι είναι κλειστοί", "Subtitles are off")}</span>}
     </div>;
