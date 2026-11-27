@@ -22,7 +22,7 @@ export const FOUNDATION_AI_URL = "https://platform-foundation-delta.vercel.app/a
 export async function foundationSubtitleJson(system: string, input: unknown,
   options: { secret?: string; url?: string; fetcher?: typeof fetch; maxTokens?: 900 | 1600 | 4000 | 6000; model?: SubtitleModel } = {}): Promise<unknown> {
   const secret = options.secret ?? process.env.FOUNDATION_SEARCHAI_HMAC_SECRET;
-  if (!secret || secret.length < 32) throw new WordAuthoringProviderError(503, 30);
+  if (!secret || secret.length < 32) { console.error("[foundation-ai] HMAC secret missing or shorter than 32 characters"); throw new WordAuthoringProviderError(503, 30); }
   const now = Math.floor(Date.now() / 1000);
   const body = Buffer.from(JSON.stringify({ v: 1, issued_at: now, expires_at: now + 90, app: { id: "greektube" },
     request: { mode: "subtitle", system, context: input, user_id: "greektube-admin", max_tokens: options.maxTokens ?? 4000,
@@ -38,9 +38,11 @@ export async function foundationSubtitleJson(system: string, input: unknown,
       const raw = response.headers.get("retry-after");
       throw new WordAuthoringProviderError(response.ok ? 502 : response.status, raw && /^\d+$/u.test(raw) ? Math.max(20, Number(raw)) : 30);
     }
-    return JSON.parse(payload.answer);
+    try { return JSON.parse(payload.answer); }
+    catch { console.error(`[foundation-ai] answer is not JSON: ${payload.answer.slice(0, 120).replace(/\s+/g, " ")}`); throw new WordAuthoringProviderError(502, 30); }
   } catch (error) {
     if (error instanceof WordAuthoringProviderError) throw error;
+    console.error(`[foundation-ai] call failed: ${error instanceof Error ? error.name + ": " + error.message : "unknown"}`);
     throw new WordAuthoringProviderError(502, 30);
   } finally { clearTimeout(timeout); }
 }
