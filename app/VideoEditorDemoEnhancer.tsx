@@ -93,7 +93,7 @@ function EditableField({label,value,onCommit,multiline,type,options}:{label:stri
   if(!editing)return(
     <div className="gts-field" role="button" tabIndex={0} onClick={beginEdit} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();beginEdit();}}}>
       <span className="gts-field-label">{label}</span>
-      <span className={`gts-field-value${value?"":" empty"}`}>{display}</span>
+      <span className={`gts-field-value${value?"":" is-empty"}`}>{display}</span>
       <svg className="gts-field-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
     </div>
   );
@@ -717,7 +717,7 @@ const styles=`
 .gts-field:focus-visible{outline:2px solid var(--e-indigo);outline-offset:2px}
 .gts-field-label{font-family:var(--e-display);font-size:12px;font-weight:600;letter-spacing:.05em;color:var(--e-dim)}
 .gts-field-value{font-size:14px;color:var(--e-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gts-field-value.empty{color:var(--e-dim)}
+.gts-field-value.is-empty{color:var(--e-dim)}
 .gts-field-pen{position:absolute;top:11px;right:11px;width:14px;height:14px;color:var(--e-dim);opacity:0;transition:opacity .15s}
 .gts-field:hover .gts-field-pen{opacity:1}
 .gts-field.editing{cursor:default;border-color:rgba(155,143,248,.55);background:var(--e-sunk);box-shadow:0 0 0 3px rgba(155,143,248,.1)}
