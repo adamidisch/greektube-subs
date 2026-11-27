@@ -53,3 +53,12 @@ assert.deepEqual(glossaryViolations("your A1C was high", "το σάκχαρό σ
 assert.equal(spellRangeNumbers("within that 3 to four hours"), "within that 3 to 4 hours");
 assert.equal(spellRangeNumbers("one of the 3 or four"), "one of the 3 or 4", "bare one is not a number");
 console.log("glossary latin terms and range numbers: ok");
+
+// Ranges and GLUT4: "10 or 15 minute" ~ "10–15 λεπτά", "glute 4" ~ "GLUT4".
+const rangePacket = (sourceText, words) => ({ sourceText, globalBrief: { glossary: [] },
+  words: words.map((text, i) => ({ wordId: `W${String(i + 1).padStart(6, "0")}`, cueIndex: 0, text, startMs: i * 300, endMs: i * 300 + 250 })) });
+const one = (n, text) => ({ phrases: [{ firstWordId: "W000001", lastWordId: `W${String(n).padStart(6, "0")}`, text }] });
+assert.equal(parseWordPhrases(one(5, "βόλτα 10–15 λεπτών"), rangePacket("go on a 10 or 15 minute", ["go", "on", "a", "10", "or", "15", "minute"].slice(0, 5)))[0].text.length > 0, true, "range with an en dash");
+assert.equal(parseWordPhrases(one(4, "ο μεταφορέας GLUT4 ανοίγει"), rangePacket("exercise opens glute 4 now", ["exercise", "opens", "glute", "4"]))[0].text.includes("GLUT4"), true, "glute 4 equals GLUT4");
+assert.throws(() => parseWordPhrases(one(2, "βόλτα 10 λεπτών"), rangePacket("walk 10 or 15", ["walk", "10"])), /Numeric content changed/u, "a dropped number is still caught");
+console.log("range and GLUT4 numbers: ok");

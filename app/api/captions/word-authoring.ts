@@ -98,7 +98,9 @@ export function spellRangeNumbers(text: string) {
     (_m, first: string, sep: string, word: string) => first + sep + NUMBER_WORDS[word.toLowerCase()]);
 }
 function numbers(text: string) {
-  return (text.match(/(?<![\p{L}\p{N}])[−-]?\d+(?:[.,:/–-]\d+)*\s*%?/gu) || [])
+  // Ranges ("10–15", "10-15") count as two numbers, like "10 or 15"; ASR "glute 4" is the transporter GLUT4.
+  const cleaned = text.replace(/\bglu(?:t|te)\s?(\d)\b/giu, "GLUT$1");
+  return (cleaned.match(/(?<![\p{L}\p{N}])[−-]?\d+(?:[.,:/]\d+)*\s*%?/gu) || [])
     .map(n => n.replace(/\s/gu, "").replace(/,/gu, ".").replace(/[−–]/gu, "-"));
 }
 export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): Phrase[] {
@@ -124,7 +126,7 @@ export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): P
     return { firstWordId: p.firstWordId, lastWordId: p.lastWordId, text, hardBreakBefore: p.hardBreakBefore === true };
   });
   if (cursor !== packet.words.length) fail("Greek phrase word coverage is incomplete");
-  if (JSON.stringify(numbers(spellRangeNumbers(packet.sourceText))) !== JSON.stringify(numbers(phrases.map(p => p.text).join(" ")))) fail("Numeric content changed during translation");
+  if (JSON.stringify(numbers(spellRangeNumbers(packet.sourceText))) !== JSON.stringify(numbers(phrases.map(p => p.text).join(" ")))) fail(`Numeric content changed during translation: ${numbers(spellRangeNumbers(packet.sourceText)).join(" ")} vs ${numbers(phrases.map(p => p.text).join(" ")).join(" ")}`);
   const glossary = Array.isArray(packet.globalBrief.glossary) ? packet.globalBrief.glossary as TranslationGlossaryEntry[] : [];
   const missing = glossaryViolations(packet.sourceText, phrases.map(p => p.text).join(" "), glossary);
   if (missing.length) fail(`Glossary term not rendered with an approved Greek term: ${missing.map(m => `${m.source} → ${m.accepted.join(" / ")}`).join("; ")}`);
