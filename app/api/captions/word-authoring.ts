@@ -97,6 +97,16 @@ export function spellRangeNumbers(text: string) {
   return text.replace(/(\d+(?:[.,]\d+)?)(\s*(?:to|or|-|–)\s*)(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/giu,
     (_m, first: string, sep: string, word: string) => first + sep + NUMBER_WORDS[word.toLowerCase()]);
 }
+const ABBREVIATIONS = /(?:π\.χ|κ\.λπ|κλπ|δηλ|κ\.ά|μ\.Χ|π\.Χ|Δρ|κ|κα|χλμ|λ|γρ|mg|ml|vs|etc|e\.g|i\.e)$/iu;
+/** A Greek sentence that starts in lowercase after . ! ; … means words were cut while shortening ("Συνεχίστε. άσκηση μπορείτε"). */
+export function cutSentence(text: string) {
+  for (const match of text.matchAll(/([.!;…])["»”']?\s+(\p{Script=Greek}[\p{L}]*)/gu)) {
+    const word = match[2], before = text.slice(0, match.index);
+    if (word[0] === word[0].toLocaleLowerCase("el") && word[0] !== word[0].toLocaleUpperCase("el") && !ABBREVIATIONS.test(before.trim()))
+      return text.slice(Math.max(0, match.index - 25), match.index + match[0].length + 25);
+  }
+  return null;
+}
 function numbers(text: string) {
   // Ranges ("10–15", "10-15") count as two numbers, like "10 or 15"; ASR "glute 4" is the transporter GLUT4.
   const cleaned = text.replace(/\bglu(?:t|te)\s?(\d)\b/giu, "GLUT$1");
@@ -126,6 +136,8 @@ export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): P
     return { firstWordId: p.firstWordId, lastWordId: p.lastWordId, text, hardBreakBefore: p.hardBreakBefore === true };
   });
   if (cursor !== packet.words.length) fail("Greek phrase word coverage is incomplete");
+  const cut = cutSentence(phrases.map(p => p.text).join(" "));
+  if (cut) fail(`A Greek sentence starts in lowercase, so words were cut while shortening: «${cut}». Render the full meaning of the English (e.g. "Whatever exercise" → «Όποια άσκηση»)`);
   const sourceNumbers = numbers(spellRangeNumbers(packet.sourceText)), greekNumbers = numbers(phrases.map(p => p.text).join(" "));
   // A number the speaker said as a word ("two") may be written as a digit in Greek, but never dropped or invented.
   const spokenWords = new Set((packet.sourceText.toLowerCase().match(/\b[a-z]+\b/gu) || []).filter(w => w in NUMBER_WORDS).map(w => NUMBER_WORDS[w]));

@@ -7,7 +7,7 @@ type Captions={transcriptVersion?:number;cues?:Cue[];subtitleTrack?:Track};
 type Edit={videoId:string;cueIndex:number;version:number;expected:string;top:number;left:number;width:number};
 
 function currentVideoId(){return new URLSearchParams(location.search).get("video")||"";}
-function pausePlayer(){document.querySelector<HTMLButtonElement>('.play-toggle[aria-label="Παύση"]')?.click();}
+function pausePlayer(){document.querySelector<HTMLButtonElement>('.gtp-play[aria-label="Παύση"],.play-toggle[aria-label="Παύση"]')?.click();}
 
 /** Owner-only: double-click a Greek subtitle (on the video or in the transcript) to correct its wording. */
 export default function CueEditEnhancer(){

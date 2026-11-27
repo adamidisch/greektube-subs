@@ -1525,7 +1525,7 @@ export default function GreekTubePlayer() {
                   {seekBar}
                 </div>}
                 {state.settings.subtitles&&(()=>{const gi=subtitleEventAt(displayTrack.events,playhead),ei=subtitleEventAt(englishTrack.events,playhead);const greek=subtitleLines(displayTrack.events[gi]?.text||"").join("\n"),english=subtitleLines(englishTrack.events[ei]?.text||"").join("\n");if(!greek&&!english)return null;return <div data-event={state.settings.subtitleMode==="en"?undefined:gi} className={`subtitles ${state.settings.subtitlePosition} frame-${state.settings.subtitleFrame??"subtle"}`} style={{"--subtitle-size":`${state.settings.subtitleSize}px`,background:`rgba(0,0,0,${state.settings.opacity})`} as CSSProperties}>{state.settings.subtitleMode==="en"?english:state.settings.subtitleMode==="dual"?<><span>{greek}</span>{english&&<small>{english}</small>}</>:greek}</div>;})()}
-                <button className="video-tap-toggle" aria-label={isPlaying?tr("Παύση βίντεο"):tr("Αναπαραγωγή βίντεο")} onClick={handleVideoTap}/>
+                <button className="video-tap-toggle" aria-label={isPlaying?tr("Παύση βίντεο"):tr("Αναπαραγωγή βίντεο")} onClick={handleVideoTap}/><div className={`yt-pause-shield ${isPlaying?"":"is-on"}`} aria-hidden="true"/>
                 {(isFullscreen||isPseudoFullscreen)&&showFsExit&&<button className="custom-fullscreen" title={tr("Έξοδος από πλήρη οθόνη")} aria-label="Έξοδος από πλήρη οθόνη" onClick={e=>{e.preventDefault();e.stopPropagation();e.currentTarget.blur();void toggleFullscreen();}}><FullscreenExitIcon/></button>}
               </div>
               <div className="gtp-controls">

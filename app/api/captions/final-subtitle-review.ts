@@ -9,7 +9,9 @@ A glossary entry's greek rendering and its alternates are all approved: never re
 Review EVERY finalEvents item exactly as displayed. Do not rewrite, shorten or return replacement phrases.
 Check omissions, additions, actors/actions, causal direction, pronoun ambiguity, analogies, compound terms,
 quantities, negations, uncertainty, attribution and natural Greek. Ask whether a Greek-only viewer understands
-the same object and relationship. Never remove a distinguishing concept merely to pass reading speed.
+the same object and relationship. Read every Greek sentence as a whole: if it is not a complete,
+grammatical Greek sentence (a word dropped while shortening, e.g. "Whatever exercise you can do" shown as «άσκηση μπορείτε»),
+report omission with severity major. Never remove a distinguishing concept merely to pass reading speed.
 Accept faithful idiomatic synonyms. If English ASR remains ambiguous, report source_uncertainty rather than
 inventing a correction. A numeric/layout pass is not meaning approval. Never claim human acoustic review.
 Echo candidateHash unchanged and list every final event ID exactly once in reviewedEventIds.

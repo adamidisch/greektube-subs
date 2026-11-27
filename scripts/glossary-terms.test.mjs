@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { glossaryViolations, withApprovedEquivalents, acceptedRenderings } from "../app/api/captions/glossary-terms.ts";
-import { parseWordPhrases, spellRangeNumbers } from "../app/api/captions/word-authoring.ts";
+import { parseWordPhrases, spellRangeNumbers, cutSentence } from "../app/api/captions/word-authoring.ts";
 
 const glossary = withApprovedEquivalents([{ source: "ketosis", greek: "κέτωση" }]);
 const thyroid = glossary.find(entry => entry.source === "underactive thyroid");
@@ -62,3 +62,9 @@ assert.equal(parseWordPhrases(one(5, "βόλτα 10–15 λεπτών"), rangePa
 assert.equal(parseWordPhrases(one(4, "ο μεταφορέας GLUT4 ανοίγει"), rangePacket("exercise opens glute 4 now", ["exercise", "opens", "glute", "4"]))[0].text.includes("GLUT4"), true, "glute 4 equals GLUT4");
 assert.throws(() => parseWordPhrases(one(2, "βόλτα 10 λεπτών"), rangePacket("walk 10 or 15", ["walk", "10"])), /Numeric content changed/u, "a dropped number is still caught");
 console.log("range and GLUT4 numbers: ok");
+
+// 7.40.1: a Greek sentence starting in lowercase after a full stop means words were cut while shortening.
+assert.ok(cutSentence("περπατήστε με τις φίλες σας. Συνεχίστε. άσκηση μπορείτε, κάντε την."));
+assert.equal(cutSentence("Συνεχίστε. Όποια άσκηση μπορείτε, κάντε την."), null);
+assert.equal(cutSentence("Τρώτε π.χ. φρούτα και λαχανικά."), null);
+console.log("cut-sentence ok");

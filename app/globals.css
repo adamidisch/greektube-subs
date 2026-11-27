@@ -3820,3 +3820,6 @@ body{background:
   .viewer .watch-layout.transcript-open .subtitle-cc-control{grid-column:3!important;grid-row:2!important;width:100%!important}
 }
 /* Paused player title: compact context without competing with subtitles. */
+
+/* 7.40.1: YouTube shows its own "more videos" strip when paused; our controls sit on an opaque band instead. */
+.yt-pause-shield{position:absolute;left:0;right:0;bottom:0;height:150px;z-index:2;pointer-events:none;opacity:0;transition:opacity .15s;background:linear-gradient(to top,#000 0,#000 92px,rgba(0,0,0,.6) 120px,transparent 150px)}.yt-pause-shield.is-on{opacity:1}
