@@ -65,6 +65,9 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Αυτός ο υπότιτλος δεν αλλάζει μόνος του. Χρησιμοποίησε την πλήρη επεξεργασία." }, { status: 409 });
     const nextCues = cues.map((cue, index) => index === cueIndex ? { ...cue, text } : cue);
     const events: SubtitleEvent[] = track.events.map((event, index) => index === owners[0] ? { ...event, text } : event);
+    const edited = events[owners[0]], chars = Array.from(text.replace(/\s+/gu, " ").trim()).length, most = Math.floor(edited.duration * 17);
+    if (chars > Math.min(84, most))
+      return NextResponse.json({ error: `Πολύ μεγάλο για τον χρόνο του (${edited.duration.toFixed(1)} δευτ.): έως ${Math.min(84, most)} χαρακτήρες, τώρα ${chars}.` }, { status: 422 });
     let reviewed: ReviewedSubtitleTrack;
     try {
       reviewed = reviewedTrack(full.englishCues as TimedCue[], nextCues, events, "approved",

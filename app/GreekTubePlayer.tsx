@@ -646,7 +646,7 @@ export default function GreekTubePlayer() {
   },[]);
   useEffect(()=>{if(hydrated&&!localStorage.getItem(APP_LANGUAGE_KEY)&&state.settings.appLanguage)setAppLanguage(state.settings.appLanguage)},[hydrated,state.settings.appLanguage]);
   useEffect(()=>{
-    const refresh=(event:Event)=>{if((event as CustomEvent).detail?.videoId!==selectedId)return;void fetch(`/api/captions?videoId=${selectedId}&includeEnglish=1`,{cache:"no-store"}).then(response=>response.ok?response.json():null).then(data=>{if(data?.cues)setCaptions(data)}).catch(()=>undefined)};
+    const refresh=(event:Event)=>{if((event as CustomEvent).detail?.videoId!==selectedId)return;void fetch(`/api/captions?videoId=${selectedId}&includeEnglish=1&fresh=${Date.now()}`,{cache:"no-store"}).then(response=>response.ok?response.json():null).then(data=>{if(data?.cues)setCaptions(data)}).catch(()=>undefined)};
     window.addEventListener("greektube:subtitle-track-updated",refresh);return()=>window.removeEventListener("greektube:subtitle-track-updated",refresh);
   },[selectedId]);
   useEffect(()=>{const openSettings=()=>{setMobileMenu(false);setView("settings")};window.addEventListener("greektube:open-settings",openSettings);return()=>window.removeEventListener("greektube:open-settings",openSettings)},[]);

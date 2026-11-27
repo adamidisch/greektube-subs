@@ -153,9 +153,10 @@ export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): P
 
 /** Dynamic programming over whole semantic phrases; English anchors determine every boundary. */
 export function authorWordPhrases(packet: WordAuthoringPacket, phrases: Phrase[], holdMs = 250): SubtitleEvent[] {
-  // Fast speakers: after the normal reading speed fails, accept a denser line instead of holding the whole video back.
-  try { return authorWordPhrasesAt(packet, phrases, holdMs, 20, 1, 600); } catch (error) {
-    try { return authorWordPhrasesAt(packet, phrases, holdMs, 26, 0.5, 1500); } catch { throw error; }
+  // After the normal grouping fails, a phrase may also span a longer pause (up to 1.5 s) instead of holding the video back.
+  // The limits match the publication audit (17 cps, 1–7 s): a looser event here could never be published.
+  try { return authorWordPhrasesAt(packet, phrases, holdMs, 17, 1, 600); } catch (error) {
+    try { return authorWordPhrasesAt(packet, phrases, holdMs, 17, 1, 1500); } catch { throw error; }
   }
 }
 function authorWordPhrasesAt(packet: WordAuthoringPacket, phrases: Phrase[], holdMs: number, maxCps: number, minDuration: number, maxGapMs: number): SubtitleEvent[] {
