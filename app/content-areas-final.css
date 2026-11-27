@@ -43,7 +43,7 @@ html body .app-shell.app-shell.app-shell .card-info>p:not(.card-original-title){
 }
 @media(max-width:620px){
   html body .app-shell.app-shell.app-shell .card-info{padding:10px!important}
-  html body .app-shell.app-shell.app-shell .card-info strong{font-size:12.5px!important;min-height:34px!important}
+  html body .app-shell.app-shell.app-shell .card-info strong{font-size:13px!important;min-height:34px!important}
   html body .app-shell.app-shell.app-shell .card-info span,
   html body .app-shell.app-shell.app-shell .card-info small{font-size:12px!important}
   html body .app-shell.app-shell.app-shell .card-info>p:not(.card-original-title){display:none!important}
@@ -66,7 +66,7 @@ html body .app-shell.app-shell.app-shell .card-info>p:not(.card-original-title){
   }
   html body .app-shell.app-shell.app-shell .mobile-watch-summary strong{
     display:block!important;overflow:hidden!important;color:#f6f3ec!important;
-    font-size:13.5px!important;font-weight:600!important;line-height:1.25!important;
+    font-size:14px!important;font-weight:600!important;line-height:1.25!important;
     text-overflow:ellipsis!important;white-space:nowrap!important;
   }
   html body .app-shell.app-shell.app-shell .mobile-watch-summary small{
@@ -128,7 +128,7 @@ html body .app-shell.app-shell.app-shell .transcript time{
   color:#b9b0ff!important;font-size:12px!important;font-weight:600!important;font-family:inherit!important;
 }
 html body .app-shell.app-shell.app-shell .transcript span{
-  color:#d8dbe2!important;font-size:13.5px!important;line-height:1.58!important;
+  color:#d8dbe2!important;font-size:14px!important;line-height:1.58!important;
 }
 html body .app-shell.app-shell.app-shell .transcript i{
   width:32px!important;height:32px!important;display:grid!important;place-items:center!important;
@@ -148,7 +148,7 @@ html body .app-shell.app-shell.app-shell .transcript>button.active i{opacity:1!i
   }
   html body .app-shell.app-shell.app-shell .moment>time{
     width:max-content!important;padding:4px 9px!important;border-radius:7px!important;background:rgba(127,163,122,.18)!important;
-    color:#8fbf86!important;font-family:inherit!important;font-size:12.5px!important;font-weight:600!important;
+    color:#8fbf86!important;font-family:inherit!important;font-size:13px!important;font-weight:600!important;
   }
   html body .app-shell.app-shell.app-shell .moment strong{color:#d9e5d6!important;font-size:13px!important;font-weight:500!important}
   html body .app-shell.app-shell.app-shell .moment p{display:none!important}
@@ -166,7 +166,7 @@ html body .app-shell.app-shell.app-shell .transcript>button.active i{opacity:1!i
   }
   html body .app-shell.app-shell.app-shell .guide-list time{
     min-width:0!important;padding:4px 9px!important;border-radius:7px!important;background:rgba(227,162,60,.15)!important;
-    color:#e3a23c!important;font-family:inherit!important;font-size:12.5px!important;font-weight:600!important;
+    color:#e3a23c!important;font-family:inherit!important;font-size:13px!important;font-weight:600!important;
   }
   html body .app-shell.app-shell.app-shell .guide-list span{color:#ede2cc!important;font-size:13px!important;line-height:1.4!important}
 
@@ -179,7 +179,7 @@ html body .app-shell.app-shell.app-shell .transcript>button.active i{opacity:1!i
   html body .app-shell.app-shell.app-shell .next-video-row img{width:100%!important;height:78px!important;display:block!important;object-fit:cover!important;filter:brightness(.78) saturate(.88)!important}
   html body .app-shell.app-shell.app-shell .next-video-row button>span{display:block!important;padding:10px 12px!important}
   html body .app-shell.app-shell.app-shell .next-video-row strong{
-    display:block!important;overflow:hidden!important;color:#f6f3ec!important;font-size:12.5px!important;font-weight:500!important;
+    display:block!important;overflow:hidden!important;color:#f6f3ec!important;font-size:13px!important;font-weight:500!important;
     line-height:1.35!important;-webkit-line-clamp:2!important;
   }
   html body .app-shell.app-shell.app-shell .next-video-row small{display:block!important;margin-top:4px!important;color:#8b9099!important;font-size:12px!important}
@@ -295,7 +295,7 @@ html body .app-shell.app-shell.app-shell .form select{
   border:1px solid rgba(255,255,255,.1)!important;border-radius:12px!important;background:rgba(255,255,255,.04)!important;
   color:#f6f3ec!important;font-size:16px!important;
 }
-html body .app-shell.app-shell.app-shell .form label{gap:8px!important;color:#8b9099!important;font-size:12.5px!important;font-weight:590!important}
+html body .app-shell.app-shell.app-shell .form label{gap:8px!important;color:#8b9099!important;font-size:13px!important;font-weight:590!important}
 
 /* ---- video cards: background was almost the same shade as the page
    background (#141c vs #08090c) with a very faint 10% border, so cards
@@ -341,7 +341,7 @@ html body .app-shell.app-shell.app-shell .back-library,
 html body .app-shell.app-shell.app-shell .back-to-video{
   height:40px!important;min-width:0!important;padding:0 10px!important;
   border:0!important;border-radius:10px!important;background:transparent!important;
-  color:#9a9fa8!important;font-size:13.5px!important;font-weight:600!important;
+  color:#9a9fa8!important;font-size:14px!important;font-weight:600!important;
 }
 html body .app-shell.app-shell.app-shell .back-library:hover,
 html body .app-shell.app-shell.app-shell .back-to-video:hover{background:rgba(255,255,255,.05)!important;color:#f6f3ec!important}
@@ -436,7 +436,7 @@ html body .app-shell.app-shell.app-shell .load-more-button{
   box-shadow:0 10px 28px rgba(0,0,0,.16)!important;transition:transform .18s ease,border-color .18s ease,background .18s ease!important;
 }
 html body .app-shell.app-shell.app-shell .load-more-button:hover{transform:translateY(-1px)!important;border-color:rgba(143,134,232,.62)!important;background:rgba(124,116,224,.15)!important}
-html body .app-shell.app-shell.app-shell .load-more-button span{font-size:12.5px!important;font-weight:600!important}
+html body .app-shell.app-shell.app-shell .load-more-button span{font-size:13px!important;font-weight:600!important}
 html body .app-shell.app-shell.app-shell .load-more-button small{font-size:12px!important;color:#9296a1!important}
 html body .app-shell.app-shell.app-shell .skeleton-card{pointer-events:none!important;overflow:hidden!important}
 html body .app-shell.app-shell.app-shell .skeleton-card .thumb,

@@ -325,7 +325,7 @@ html body .brand-version::before,html body .brand-version::after{display:none!im
 .card-meta-line{display:flex;align-items:center;gap:8px;min-width:0}
 .card-meta-line>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ui-muted);font-size:12px}
 .card-meta-line>em{margin-left:auto;color:var(--ui-indigo-2);font-size:12px;font-style:normal;font-weight:600}
-.card-info>strong{display:-webkit-box;min-height:40px;margin-top:7px;overflow:hidden;color:var(--ui-text);font-size:13.5px;line-height:1.45;font-weight:600;letter-spacing:-.012em;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.card-info>strong{display:-webkit-box;min-height:40px;margin-top:7px;overflow:hidden;color:var(--ui-text);font-size:14px;line-height:1.45;font-weight:600;letter-spacing:-.012em;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 .card-info .card-original-title{margin-top:5px;color:var(--ui-soft);font-size:12px;line-height:1.38}
 .card-info>small{margin-top:7px;color:var(--ui-soft);font-size:12px}
 .card-info>p:not(.card-original-title){margin-top:8px;color:var(--ui-muted);font-size:12px;line-height:1.52;-webkit-line-clamp:2}

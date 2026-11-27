@@ -93,3 +93,45 @@ html body .gts31-cc-menu button i:not(#_) { font-style: normal; font-size: 13px;
 
 /* ---------- 4. Τυπογραφία: τίποτα βαρύτερο από 600 ---------- */
 :where(b, strong, th, h1, h2, h3, h4, h5, h6) { font-weight: 600; }
+
+/* ---------- 5. v7.38.0 — Mobile και στιγμές ---------- */
+
+/* Ταξινόμηση βιβλιοθήκης: πάντα με δικό μας βελάκι, χωρίς το παλιό background */
+html body .ui-dd.library-sort:not(#_) { background-image: none !important; justify-content: space-between !important; gap: 8px !important; padding-inline: 12px !important; }
+html body .ui-dd.library-sort:not(#_) .ui-dd-chevron { display: block !important; }
+html body .ui-dd.library-sort:not(#_) .ui-dd-value { overflow: hidden; text-overflow: ellipsis; }
+
+/* Pins στη μπάρα: μεγαλύτερη περιοχή αφής χωρίς να αλλάξει η εμφάνιση */
+html body .viewer .gtp-pin:not(#_)::after { content: ""; position: absolute; inset: -14px -10px; }
+
+/* Κάρτα αποθηκευμένης στιγμής: ώρα + τίτλος + απόσπασμα + μία γραμμή εικονιδίων */
+html body .app-shell .moments .moment:not(#_) {
+  display: grid !important; grid-template-columns: auto minmax(0, 1fr) !important; grid-template-areas: "time body" "actions actions" !important;
+  gap: 8px 12px !important; align-items: start !important; padding: 12px !important; border-radius: 14px !important;
+}
+html body .app-shell .moments .moment > time:not(#_) { grid-area: time; align-self: start; }
+html body .app-shell .moments .moment > div:not(.moment-actions):not(#_) { grid-area: body; display: block !important; min-width: 0 !important; height: auto !important; }
+html body .app-shell .moments .moment strong:not(#_) { display: block !important; font: 600 14px/1.3 Inter, system-ui, sans-serif !important; color: var(--text) !important; }
+html body .app-shell .moments .moment p:not(#_) {
+  display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 3px 0 0 !important;
+  font: 400 13px/1.4 Inter, system-ui, sans-serif !important; color: var(--muted) !important;
+}
+html body .app-shell .moments .moment .moment-actions:not(#_) { grid-area: actions; display: flex !important; gap: 8px !important; flex-wrap: wrap; }
+html body .app-shell .moments .moment .moment-actions button:not(#_) {
+  display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; flex: 1 1 0 !important;
+  height: 36px !important; min-height: 36px !important; padding: 0 10px !important; border-radius: 10px !important; white-space: nowrap;
+  font: 500 13px/1 Inter, system-ui, sans-serif !important;
+}
+html body .app-shell .moments .moment .moment-actions button svg:not(#_) { width: 16px; height: 16px; flex: none; }
+html body .app-shell .moments .moment .moment-actions button.danger:not(#_) { color: #d9776f !important; }
+
+@media (max-width: 620px) {
+  /* Κουμπί επιστροφής: μόνο ‹ (36×36) ώστε να μη κόβεται το κείμενο */
+  html body .app-header .ghost.back-library:not(#_), html body .app-header .ghost.back-to-video:not(#_) {
+    width: var(--ui-ctl) !important; min-width: var(--ui-ctl) !important; padding: 0 !important; font-size: 0 !important; display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  }
+  html body .app-header .ghost.back-library > span:not(#_), html body .app-header .ghost.back-to-video > span:not(#_) { font-size: 22px !important; line-height: 1 !important; font-weight: 500 !important; }
+  /* Στις στιγμές μένουν μόνο τα εικονίδια, με στόχο αφής 44px */
+  html body .app-shell .moments .moment .moment-actions button span:not(#_) { display: none; }
+  html body .app-shell .moments .moment .moment-actions button:not(#_) { height: 44px !important; min-height: 44px !important; }
+}

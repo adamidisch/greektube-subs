@@ -132,7 +132,11 @@ export function SettingsPage({ settings, update, close, speeds }: {
         {section("sage", ICONS.appearance, tr("Εμφάνιση"), <>
           {segmented(tr("Φόντο"), settings.theme, [
             { value: "dark", label: tr("Σκούρο") }, { value: "light", label: tr("Φωτεινό") }, { value: "system", label: tr("Σύστημα") }],
-            value => update({ theme: value }))}
+            value => {
+              // Το γρήγορο κουμπί θέματος κρατά δική του επιλογή στο localStorage και την επαναφέρει αν διαφέρει. Η επιλογή στα Settings πρέπει να την ενημερώνει.
+              try { if (value === "system") localStorage.removeItem("greektube-quick-theme:v1"); else localStorage.setItem("greektube-quick-theme:v1", value); } catch {}
+              update({ theme: value });
+            })}
           {segmented(tr("Διάταξη βιβλιοθήκης"), settings.layout, [
             { value: "grid", label: tr("Πλέγμα") }, { value: "list", label: tr("Λίστα") }], value => update({ layout: value }))}
           {toggle("compact", tr("Συμπαγείς κάρτες"))}

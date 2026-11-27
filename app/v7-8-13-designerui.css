@@ -16,7 +16,7 @@ html body .app-shell.app-shell.app-shell .brand-home{
   box-shadow:none!important;
 }
 html body .app-shell.app-shell.app-shell .brand{
-  font-size:13.5px!important;
+  font-size:14px!important;
   font-weight:600!important;
   letter-spacing:-.025em!important;
 }
@@ -182,7 +182,7 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .card-progress{back
 /* ---------- Footer: compact, finished and close to the page end ---------- */
 html body main.app-shell.app-shell.app-shell:not(.viewer){padding-bottom:18px!important}
 html body .app-shell.app-shell.app-shell .app-footer{gap:7px!important;margin:36px 0 0!important;padding:20px 0 0!important;border-top:1px solid rgba(255,255,255,.075)!important}
-html body .app-shell.app-shell.app-shell .app-footer-brand{gap:8px!important;font-size:12.5px!important;letter-spacing:-.02em!important}
+html body .app-shell.app-shell.app-shell .app-footer-brand{gap:8px!important;font-size:13px!important;letter-spacing:-.02em!important}
 html body .app-shell.app-shell.app-shell .app-footer>p{max-width:430px!important;color:var(--muted)!important;font-size:12px!important;line-height:1.45!important}
 html body .app-shell.app-shell.app-shell .app-footer-note{color:var(--soft)!important;font-size:12px!important}
 html[data-theme="light"] body .app-shell.app-shell.app-shell .app-footer{border-color:rgba(15,48,64,.09)!important}

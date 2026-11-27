@@ -170,7 +170,7 @@ html body :is(.modal-actions, .profile-editor-actions) button:not(#_) {
   min-height: 42px;
   padding: 0 18px;
   border-radius: 12px !important;
-  font-size: 13.5px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   transition: filter 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
@@ -207,7 +207,7 @@ html body .version-about-current:not(#_) { background: var(--pp-field) !importan
 html body .version-about-kicker:not(#_) { color: var(--pp-muted) !important; font-size: 12px !important; }
 html body .version-about-capabilities article:hover:not(#_) { background: var(--pp-field) !important; }
 html body .version-about-capabilities article > i:not(#_) { background: var(--pp-accent) !important; box-shadow: 0 0 0 3px var(--pp-ring) !important; }
-html body .version-about-capabilities strong:not(#_) { color: var(--pp-text) !important; font-size: 13.5px !important; }
+html body .version-about-capabilities strong:not(#_) { color: var(--pp-text) !important; font-size: 14px !important; }
 html body .version-about-capabilities p:not(#_) { color: var(--pp-muted) !important; font-size: 13px !important; line-height: 1.5 !important; }
 html body .version-about-description:not(#_) { border: 1px solid var(--pp-line) !important; background: var(--pp-field) !important; }
 html body .version-about-description p:not(#_) { color: var(--pp-text2) !important; font-size: 13px !important; line-height: 1.6 !important; }
@@ -223,7 +223,7 @@ html body :is(.user-profile-menu, .gts31-cc-menu, .gtp-volume-popup):not(#_) {
 html body :is(.user-profile-menu, .gts31-cc-menu):not(#_) { border-radius: 16px !important; }
 
 /* 9. Ελάχιστα μεγέθη (12px) και ανοιχτό θέμα: κείμενα του Modal που ήταν ορισμένα μόνο για σκούρο φόντο */
-html body .modal label:not(:has(input[type="checkbox"], input[type="radio"])):not(#_) { color: var(--pp-muted) !important; font-size: 12.5px !important; font-weight: 600 !important; }
+html body .modal label:not(:has(input[type="checkbox"], input[type="radio"])):not(#_) { color: var(--pp-muted) !important; font-size: 13px !important; font-weight: 600 !important; }
 html body .modal small:not(#_) { font-size: 12px !important; }
 html body .modal time:not(#_) { font-size: 12px !important; }
 html body .modal time + p:not(#_) { font-size: 13px !important; line-height: 1.45 !important; }
