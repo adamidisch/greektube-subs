@@ -425,6 +425,7 @@ export default function GreekTubePlayer() {
   const closeSpeakerBio=useCallback(()=>setSpeakerBioOpen(false),[]);
   const [modal,setModal]=useState(false);
   const [autoVideo,setAutoVideo]=useState<Video|null>(null);
+  const {ready:captureReady}=useCaptureExtension();
   const [addRequest,setAddRequest]=useState(false);
   const [syncRequest,setSyncRequest]=useState(false);
   const [syncing,setSyncing]=useState(false);
@@ -1495,7 +1496,7 @@ export default function GreekTubePlayer() {
           <div className="video-details-option">
             <small>{upperGreekLabel(tr("Αυτόματη μετάφραση"))}</small>
             <p>{tr("Η αυτόματη μετάφραση ελέγχεται πριν από τη δημοσίευση. Ο ακουστικός έλεγχος εμφανίζεται ξεχωριστά.","Automatic translation is checked before publication. Audio review is reported separately.")}</p>
-            <button type="button" className="secondary" onClick={()=>{const next={...selected,translationMode:"professional" as TranslationMode};patchVideo(selected.id,{translationMode:"professional"});void openVideo(next,selected.lastPosition,false,true);}}>{tr("Ξεκίνα αυτόματη μετάφραση")}</button>
+            <button type="button" className="secondary" onClick={()=>{const next={...selected,translationMode:"professional" as TranslationMode};patchVideo(selected.id,{translationMode:"professional"});if(captureReady===true){setAutoVideo(next);return;}void openVideo(next,selected.lastPosition,false,true);}}>{tr("Ξεκίνα αυτόματη μετάφραση")}</button>
           </div>
         </section>
       </section>}
@@ -1578,7 +1579,7 @@ export default function GreekTubePlayer() {
         video={translationChoiceVideo}
         close={()=>setTranslationChoiceVideo(null)}
         backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}}
-        onQuick={()=>{const next={...translationChoiceVideo,translationMode:"professional" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"professional"});void rebuildTranslation(next);}}
+        onQuick={()=>{const next={...translationChoiceVideo,translationMode:"professional" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"professional"});if(captureReady===true)setAutoVideo(next);else void rebuildTranslation(next);}}
         onOpenManual={()=>void requestManualImport(translationChoiceVideo)}
       />}
       <SiteFooter />
@@ -1632,7 +1633,7 @@ export default function GreekTubePlayer() {
     {editingVideo&&<EditVideo video={editingVideo} close={()=>setEditingVideo(null)} save={patch=>{patchVideo(editingVideo.id,{...patch,metadataVersion:6});setEditingVideo(null);}} rebuild={()=>{const video=editingVideo;setEditingVideo(null);setTranslationChoiceVideo(video);}}/>}
     {manualImportRequest&&<EditPassword close={()=>setManualImportRequest(null)} authorized={()=>{setProImportVideo(manualImportRequest);setManualImportRequest(null);}}/>}
     {proImportVideo&&<ManualTranslateModal video={proImportVideo} authorizationRequired={()=>{setManualImportRequest(proImportVideo);setProImportVideo(null);}} close={()=>setProImportVideo(null)} done={async result=>{localStorage.setItem(`greektube-transcript:${proImportVideo.id}:v12`,JSON.stringify(result));patchVideo(proImportVideo.id,{captions:result.cues,translationMode:"manual-pro",title:isGreekTitle(proImportVideo.title)?proImportVideo.title:result.title||proImportVideo.title,originalTitle:proImportVideo.originalTitle||result.originalTitle});const video={...proImportVideo,captions:result.cues,translationMode:"manual-pro" as TranslationMode};setProImportVideo(null);setTranslationChoiceVideo(null);await openVideo(video,undefined,false,false,result);}}/>}
-    {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"professional" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"professional"});void rebuildTranslation(next);}} onOpenManual={()=>void requestManualImport(translationChoiceVideo)}/>}
+    {translationChoiceVideo&&<TranslationChoiceModal video={translationChoiceVideo} close={()=>setTranslationChoiceVideo(null)} backToLibrary={()=>{setTranslationChoiceVideo(null);setProImportVideo(null);goHome();}} onQuick={()=>{const next={...translationChoiceVideo,translationMode:"professional" as TranslationMode};setTranslationChoiceVideo(null);patchVideo(translationChoiceVideo.id,{translationMode:"professional"});if(captureReady===true)setAutoVideo(next);else void rebuildTranslation(next);}} onOpenManual={()=>void requestManualImport(translationChoiceVideo)}/>}
   </main>
   {settingsFromLibrary&&<div className="settings-screen-layer" role="dialog" aria-modal="true" aria-label="Ρυθμίσεις"><div className="app-shell viewer settings-from-library settings-screen-shell"><header className="app-header"><button className="ghost back-library" data-tip={tr("Επιστροφή στη βιβλιοθήκη","Back to library")} autoFocus onClick={returnToLibrary}><span aria-hidden="true">‹</span> {tr("Βιβλιοθήκη")}</button><Brand home={goHome}/><div className="gts-header-actions"><div className="gts-theme-slot"/><button className="icon-button active" aria-label="Ρυθμίσεις" onClick={returnToLibrary}><SettingsIcon/></button><div className="gts-profile-slot"/></div></header><div className="settings-screen-scroll"><SettingsPage settings={state.settings} update={patchSettings} close={returnToLibrary} speeds={PLAYBACK_SPEEDS}/></div></div></div>}
   </>;
