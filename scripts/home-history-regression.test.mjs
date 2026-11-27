@@ -27,7 +27,7 @@ const page=read("app/page.tsx");
 const layout=read("app/layout.tsx");
 const css=read("app/home-loading-polish-v7-12-3.css");
 assert.match(player,/useState<AppState>\(\{videos:\[\],moments:\[\],settings:DEFAULT_SETTINGS\}\)/,"initial render must not contain old seed");
-assert.match(player,/\{!hydrated&&<section className="featured featured-loading"/,"skeleton is visible before hydration");
+assert.match(player,/\{!libraryShown&&<section className="featured featured-loading"/,"skeleton is visible until the library is shown (cache or server)");
 assert.match(player,/\{hydrated&&featured&&<section/,"do not show featured until loaded");
 assert.match(player,/pickHomeFeaturedVideo\(libraryVideos\)/,"home uses latest-watch chooser");
 assert.match(player,/patchVideo\(video\.id,\{views:\(video\.views\|\|0\)\+1,lastWatched:new Date\(\)\.toISOString\(\)\}\)/,"opening video updates watch history");
