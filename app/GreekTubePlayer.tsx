@@ -382,9 +382,17 @@ export default function GreekTubePlayer() {
   // Όταν η βιβλιοθήκη είναι έτοιμη (cache ή server), το splash κρύβεται μία φορά, μετά από δύο frames ώστε το layout να έχει σταθεροποιηθεί.
   useEffect(()=>{
     if(!libraryShown)return;
-    let second=0;
-    const first=requestAnimationFrame(()=>{second=requestAnimationFrame(()=>{document.documentElement.dataset.appReady="1";});});
-    return()=>{cancelAnimationFrame(first);cancelAnimationFrame(second);};
+    // Αποκάλυψη όταν το DOM ησυχάσει για 100ms (χωρίς αλλαγές layout), το πολύ 700ms μετά.
+    let timer=0,raf=0,done=false;
+    const observer=new MutationObserver(()=>{window.clearTimeout(timer);timer=window.setTimeout(finish,100);});
+    function finish(){
+      if(done)return;done=true;observer.disconnect();window.clearTimeout(timer);window.clearTimeout(cap);
+      raf=requestAnimationFrame(()=>{document.documentElement.dataset.appReady="1";});
+    }
+    const cap=window.setTimeout(finish,700);
+    observer.observe(document.body,{childList:true,subtree:true});
+    timer=window.setTimeout(finish,100);
+    return()=>{done=true;observer.disconnect();window.clearTimeout(timer);window.clearTimeout(cap);cancelAnimationFrame(raf);};
   },[libraryShown]);
   const [libraryLoadFailed,setLibraryLoadFailed]=useState(false);
   const [view,setView]=useState<"library"|"settings">("library");
