@@ -32,8 +32,9 @@ export async function foundationSubtitleJson(system: string, input: unknown,
   try {
     const response = await (options.fetcher ?? fetch)(options.url ?? process.env.FOUNDATION_SEARCHAI_URL ?? FOUNDATION_AI_URL, {
       method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body, signature }) });
-    const payload = await response.json().catch(() => ({})) as { ok?: boolean; answer?: unknown };
+    const payload = await response.json().catch(() => ({})) as { ok?: boolean; answer?: unknown; code?: unknown; error?: unknown };
     if (!response.ok || payload.ok !== true || typeof payload.answer !== "string") {
+      console.error(`[foundation-ai] status=${response.status} code=${String(payload.code ?? "")} error=${String(payload.error ?? "").slice(0, 160)}`);
       const raw = response.headers.get("retry-after");
       throw new WordAuthoringProviderError(response.ok ? 502 : response.status, raw && /^\d+$/u.test(raw) ? Math.max(20, Number(raw)) : 30);
     }
