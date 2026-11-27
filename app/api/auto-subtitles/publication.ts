@@ -1,8 +1,18 @@
 import type { SubtitleEvent, TimedCue } from "../../subtitle-track.ts";
 import { reviewedTrack, subtitleContentHash } from "../subtitle-track.ts";
 import { parseManualSubtitleText } from "../manual-captions/parser.ts";
-import { numberTokensMatch } from "../captions/numeric-integrity.ts";
+import { canonicalNumberTokens } from "../captions/numeric-integrity.ts";
+import { NUMBER_WORDS, spellRangeNumbers } from "../captions/word-authoring.ts";
 import { evidenceFor, exactSrt, tokensText, type CapturedToken } from "./youtube-words.ts";
+
+/** Same rules as the authoring gate: ranges ("3 to four"), ASR "glute 4" = GLUT4, and a spoken "two" written as 2. */
+export function displayNumbersMatch(english: string, greek: string) {
+  const left = canonicalNumberTokens(spellRangeNumbers(english).replace(/\bglu(?:t|te)\s?(\d)\b/giu, "GLUT $1")).sort();
+  const right = canonicalNumberTokens(greek.replace(/GLUT(\d)/gu, "GLUT $1"));
+  const spoken = new Set((english.toLowerCase().match(/\b[a-z]+\b/gu) || []).filter(w => w in NUMBER_WORDS).map(w => NUMBER_WORDS[w]));
+  for (const token of left) { const at = right.indexOf(token); if (at < 0) return false; right.splice(at, 1); }
+  return right.every(token => spoken.has(token));
+}
 
 export type AutoIssue = { start: number; end: number; english: string; issue: string };
 
@@ -13,7 +23,7 @@ export function buildPublication(trackEvents: SubtitleEvent[], tokens: CapturedT
   const english: TimedCue[] = events.map(event => ({ start: event.start, duration: event.duration,
     text: tokensText(tokens.slice(event.sourceWordRange[0], event.sourceWordRange[1] + 1)) }));
   const greek: TimedCue[] = events.map(event => ({ start: event.start, duration: event.duration, text: event.text }));
-  const issues: AutoIssue[] = events.flatMap((event, index) => numberTokensMatch(english[index].text, event.text) ? [] :
+  const issues: AutoIssue[] = events.flatMap((event, index) => displayNumbersMatch(english[index].text, event.text) ? [] :
     [{ start: event.start, end: event.start + event.duration, english: english[index].text, issue: `Οι αριθμοί διαφέρουν: «${event.text}»` }]);
   if (issues.length) return { issues };
   const regroupedEvidence = evidenceFor(english, tokens, captureHash);

@@ -90,7 +90,7 @@ export function buildWordAuthoringPacket(source: TimedCue[], translation: TimedC
   return packet;
 }
 
-const NUMBER_WORDS: Record<string, string> = { zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9", ten: "10",
+export const NUMBER_WORDS: Record<string, string> = { zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9", ten: "10",
   eleven: "11", twelve: "12", thirteen: "13", fourteen: "14", fifteen: "15", sixteen: "16", seventeen: "17", eighteen: "18", nineteen: "19", twenty: "20" };
 /** "3 to four" is the range 3–4: only a number word right after a digit and a range connector counts as a number. */
 export function spellRangeNumbers(text: string) {
