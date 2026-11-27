@@ -125,7 +125,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="el">
+    <html lang="el" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{var d=document.documentElement,t=null,s=null;\ntry{t=localStorage.getItem(\"greektube-quick-theme:v1\")}catch(e){}\nif(t!==\"dark\"&&t!==\"light\"){try{s=JSON.parse(localStorage.getItem(\"greektube-personal-state:v1\")||\"null\");t=s&&s.settings&&s.settings.theme}catch(e){}}\nif(t===\"system\")t=matchMedia(\"(prefers-color-scheme: light)\").matches?\"light\":\"dark\";\nif(t!==\"dark\"&&t!==\"light\")t=\"dark\";\nd.dataset.theme=t;d.style.colorScheme=t;\nif(location.pathname===\"/\"){\nwindow.__gtState=fetch(\"/api/state\",{credentials:\"same-origin\",cache:\"no-store\"}).then(function(r){return r.ok?r.json():null}).catch(function(){return null});\nsetTimeout(function(){d.dataset.appReady=\"1\"},7000);\n}\n}catch(e){}})();" }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} antialiased`}
       >

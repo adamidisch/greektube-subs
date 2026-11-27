@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { database } from "@/db/postgres";
 import { editorialVideoTitle } from "./editorial-video-titles";
 import NavigationAwareGreekTubePlayer from "./NavigationAwareGreekTubePlayer";
+import AppSplash from "./AppSplash";
 import GreekTubePlayer from "./GreekTubePlayer";
 import CueEditEnhancer from "./CueEditEnhancer";
 import ThemeToggleEnhancer from "./ThemeToggleEnhancer";
@@ -138,6 +139,7 @@ export default async function Home({
 
   return (
     <>
+      <AppSplash />
       <NavigationAwareGreekTubePlayer />
       <CueEditEnhancer />
       <ThemeToggleEnhancer />

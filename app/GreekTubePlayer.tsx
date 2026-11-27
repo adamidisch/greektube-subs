@@ -379,6 +379,13 @@ export default function GreekTubePlayer() {
   const [hydrated,setHydrated]=useState(false);
   // Η βιβλιοθήκη φαίνεται αμέσως από την τοπική cache και δεν περιμένει το δίκτυο. Το hydrated (αποθήκευση στον server) μένει όπως ήταν.
   const [libraryShown,setLibraryShown]=useState(false);
+  // Όταν η βιβλιοθήκη είναι έτοιμη (cache ή server), το splash κρύβεται μία φορά, μετά από δύο frames ώστε το layout να έχει σταθεροποιηθεί.
+  useEffect(()=>{
+    if(!libraryShown)return;
+    let second=0;
+    const first=requestAnimationFrame(()=>{second=requestAnimationFrame(()=>{document.documentElement.dataset.appReady="1";});});
+    return()=>{cancelAnimationFrame(first);cancelAnimationFrame(second);};
+  },[libraryShown]);
   const [libraryLoadFailed,setLibraryLoadFailed]=useState(false);
   const [view,setView]=useState<"library"|"settings">("library");
   const [selectedId,setSelectedId]=useState<string|null>(null);
@@ -543,11 +550,17 @@ export default function GreekTubePlayer() {
       if(fallback.videos.length)setLibraryShown(true);
     }
     try{
-      const r=await fetch("/api/state",{credentials:"same-origin",cache:"no-store"});
-      if(r.ok){
-        const j=await r.json();
-        if(j.state?.videos)setState(current=>mergeAppStates(current,{settings:normalizedSettings(j.state.settings),videos:j.state.videos,moments:j.state.moments||[]}));
-      }else if(!fallback?.videos?.length){setLibraryLoadFailed(true);}
+      // Το /api/state ξεκινά από το <head> (layout.tsx) πριν φορτώσει το JS. Αν δεν υπάρχει ή απέτυχε, γίνεται κανονικό fetch.
+      const early=(window as unknown as {__gtState?:Promise<unknown>}).__gtState;
+      (window as unknown as {__gtState?:Promise<unknown>}).__gtState=undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let j:any=early?await early.catch(()=>null):null;
+      if(!j){
+        const r=await fetch("/api/state",{credentials:"same-origin",cache:"no-store"});
+        if(r.ok)j=await r.json();
+        else if(!fallback?.videos?.length){setLibraryLoadFailed(true);}
+      }
+      if(j?.state?.videos)setState(current=>mergeAppStates(current,{settings:normalizedSettings(j.state.settings),videos:j.state.videos,moments:j.state.moments||[]}));
     }catch{
       if(!fallback?.videos?.length)setLibraryLoadFailed(true);
     }finally{setHydrated(true);setLibraryShown(true);}
