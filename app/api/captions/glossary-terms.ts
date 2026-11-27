@@ -64,6 +64,11 @@ function sourceMentions(sourceText: string, term: string) {
 }
 
 function renderingPresent(greekText: string, rendering: string) {
+  // Latin/alphanumeric terms (A1C, HbA1c, LDL) stay in Latin script: match them literally, not by Greek stems.
+  if (!/\p{Script=Greek}/u.test(rendering)) {
+    const literal = rendering.trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/gu, "\\$&").replace(/\s+/gu, "\\s+");
+    return literal.length > 0 && new RegExp(`(?<![\\p{L}\\p{N}])${literal}(?:s)?(?![\\p{L}\\p{N}])`, "iu").test(greekText);
+  }
   const tokens = greekTokens(greekText);
   const stems = greekTokens(rendering).filter(word => word.length >= 3).map(greekStem);
   return stems.length > 0 && stems.every(stem => tokens.some(token => token.startsWith(stem)));

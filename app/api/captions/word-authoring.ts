@@ -90,6 +90,13 @@ export function buildWordAuthoringPacket(source: TimedCue[], translation: TimedC
   return packet;
 }
 
+const NUMBER_WORDS: Record<string, string> = { zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9", ten: "10",
+  eleven: "11", twelve: "12", thirteen: "13", fourteen: "14", fifteen: "15", sixteen: "16", seventeen: "17", eighteen: "18", nineteen: "19", twenty: "20" };
+/** "3 to four" is the range 3–4: only a number word right after a digit and a range connector counts as a number. */
+export function spellRangeNumbers(text: string) {
+  return text.replace(/(\d+(?:[.,]\d+)?)(\s*(?:to|or|-|–)\s*)(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/giu,
+    (_m, first: string, sep: string, word: string) => first + sep + NUMBER_WORDS[word.toLowerCase()]);
+}
 function numbers(text: string) {
   return (text.match(/(?<![\p{L}\p{N}])[−-]?\d+(?:[.,:/–-]\d+)*\s*%?/gu) || [])
     .map(n => n.replace(/\s/gu, "").replace(/,/gu, ".").replace(/[−–]/gu, "-"));
@@ -117,7 +124,7 @@ export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): P
     return { firstWordId: p.firstWordId, lastWordId: p.lastWordId, text, hardBreakBefore: p.hardBreakBefore === true };
   });
   if (cursor !== packet.words.length) fail("Greek phrase word coverage is incomplete");
-  if (JSON.stringify(numbers(packet.sourceText)) !== JSON.stringify(numbers(phrases.map(p => p.text).join(" ")))) fail("Numeric content changed during translation");
+  if (JSON.stringify(numbers(spellRangeNumbers(packet.sourceText))) !== JSON.stringify(numbers(phrases.map(p => p.text).join(" ")))) fail("Numeric content changed during translation");
   const glossary = Array.isArray(packet.globalBrief.glossary) ? packet.globalBrief.glossary as TranslationGlossaryEntry[] : [];
   const missing = glossaryViolations(packet.sourceText, phrases.map(p => p.text).join(" "), glossary);
   if (missing.length) fail(`Glossary term not rendered with an approved Greek term: ${missing.map(m => `${m.source} → ${m.accepted.join(" / ")}`).join("; ")}`);

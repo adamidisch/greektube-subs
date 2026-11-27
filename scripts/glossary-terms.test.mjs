@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { glossaryViolations, withApprovedEquivalents, acceptedRenderings } from "../app/api/captions/glossary-terms.ts";
-import { parseWordPhrases } from "../app/api/captions/word-authoring.ts";
+import { parseWordPhrases, spellRangeNumbers } from "../app/api/captions/word-authoring.ts";
 
 const glossary = withApprovedEquivalents([{ source: "ketosis", greek: "κέτωση" }]);
 const thyroid = glossary.find(entry => entry.source === "underactive thyroid");
@@ -45,3 +45,11 @@ import { foundationSubtitleJson } from "../app/api/captions/word-authoring-provi
     fetcher: async () => new Response(JSON.stringify({ ok: false }), { status: 503 }) }), /Subtitle provider failed \(503\)/u);
   console.log("foundation provider: ok");
 }
+
+// Latin-script terms (A1C) are matched literally; number words next to a digit range count as numbers.
+const a1c = [{ source: "A1C", greek: "A1C", alternates: ["γλυκοζυλιωμένη αιμοσφαιρίνη"] }];
+assert.deepEqual(glossaryViolations("your A1C was high", "το A1C σου ήταν υψηλό", a1c), [], "A1C kept in Latin script is accepted");
+assert.deepEqual(glossaryViolations("your A1C was high", "το σάκχαρό σου ήταν υψηλό", a1c).map(v => v.source), ["A1C"], "A1C missing is still flagged");
+assert.equal(spellRangeNumbers("within that 3 to four hours"), "within that 3 to 4 hours");
+assert.equal(spellRangeNumbers("one of the 3 or four"), "one of the 3 or 4", "bare one is not a number");
+console.log("glossary latin terms and range numbers: ok");
