@@ -343,7 +343,7 @@ function itemFrom(response: Record<string, unknown>, id: string) {
 /** Advances the run by at most one batch. Mutates state; throws RunStop when a cap or the step time is reached. */
 export async function advanceBatch(state: RunState, ctx: Ctx) {
   if (!state.brief) {
-    const brief = await ai(state, ctx, "brief", BRIEF_PROMPT, { transcript: briefInput(ctx.run.source, state.sourceRange) }, 1600, "deepseek-flash");
+    const brief = await ai(state, ctx, "brief", BRIEF_PROMPT, { transcript: briefInput(ctx.run.source, state.sourceRange) }, 4000, "deepseek-flash");
     if (typeof brief.mainTopic !== "string" || !Array.isArray(brief.glossary)) throw new RunStop("provider", "Η ανάλυση του βίντεο δεν επέστρεψε σωστή μορφή.");
     state.brief = { ...brief, glossary: (brief.glossary as unknown[]).filter(entry => entry && typeof (entry as { source?: unknown }).source === "string" && typeof (entry as { greek?: unknown }).greek === "string").slice(0, 30) };
   }
