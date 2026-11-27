@@ -31,8 +31,8 @@ export default function NextVideosEnhancer(){
       border-radius:999px!important;
       background:rgba(255,255,255,.055)!important;
       color:var(--soft)!important;
-      font-size:9px!important;
-      font-weight:650!important;
+      font-size:12px!important;
+      font-weight:600!important;
     }
     .viewer .next-video-row{
       display:grid!important;
@@ -85,7 +85,7 @@ export default function NextVideosEnhancer(){
       margin-top:5px!important;
       overflow:hidden!important;
       color:var(--soft)!important;
-      font-size:9.5px!important;
+      font-size:12px!important;
       line-height:1.2!important;
       text-overflow:ellipsis!important;
       white-space:nowrap!important;
@@ -102,8 +102,8 @@ export default function NextVideosEnhancer(){
         padding:8px!important;
       }
       .viewer .next-video-row>button img{width:100%!important;border-radius:8px!important}
-      .viewer .next-video-row>button strong{font-size:11.5px!important;line-height:1.38!important}
-      .viewer .next-video-row>button small{font-size:9.5px!important}
+      .viewer .next-video-row>button strong{font-size:12px!important;line-height:1.38!important}
+      .viewer .next-video-row>button small{font-size:12px!important}
     }
     @media(max-width:700px){
       .viewer .next-videos{margin-top:26px!important}
@@ -117,7 +117,7 @@ export default function NextVideosEnhancer(){
       }
       .viewer .next-video-row>button img{width:112px!important}
       .viewer .next-video-row>button strong{font-size:12.5px!important}
-      .viewer .next-video-row>button small{font-size:10.5px!important}
+      .viewer .next-video-row>button small{font-size:12px!important}
     }
   `}</style>;
 }

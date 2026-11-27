@@ -138,7 +138,7 @@ export default function ThemeToggleEnhancer() {
           type="button"
           className="theme-quick-toggle"
           aria-label={label}
-          title={label}
+          data-tip={label}
           onClick={() => {
             const next = theme === "dark" ? "light" : "dark";
             setTheme(next);

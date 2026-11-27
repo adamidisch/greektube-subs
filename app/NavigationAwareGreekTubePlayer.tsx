@@ -543,7 +543,7 @@ export default function NavigationAwareGreekTubePlayer() {
         background: rgba(8,9,13,.78);
         color: #fff;
         font-size: 14px;
-        font-weight: 750;
+        font-weight: 600;
         letter-spacing: -.02em;
         line-height: 1;
         backdrop-filter: blur(10px);

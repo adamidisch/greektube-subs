@@ -21,7 +21,7 @@ html body .app-shell.app-shell.app-shell .brand-version{
 html body .app-shell.app-shell.app-shell .brand-version::after{
   content:"ver 7.5.2"!important;
   color:var(--text)!important;
-  font-size:10px!important;
+  font-size:12px!important;
   line-height:1!important;
   font-weight:600!important;
   letter-spacing:.03em!important;
@@ -40,6 +40,6 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .brand-version{
     min-height:22px!important;
     padding:0 8px!important;
   }
-  html body .app-shell.app-shell.app-shell:not(.viewer) .brand-version::after{font-size:9.5px!important}
+  html body .app-shell.app-shell.app-shell:not(.viewer) .brand-version::after{font-size:12px!important}
   html body .app-shell.app-shell.app-shell.viewer .brand-version{display:none!important}
 }

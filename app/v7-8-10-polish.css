@@ -20,9 +20,9 @@
 }
 .video-source-row>span{
   padding:3px 8px;border-radius:6px;background:var(--raised);
-  color:var(--muted);flex-shrink:0;font-size:9px;font-weight:600;letter-spacing:.06em;
+  color:var(--muted);flex-shrink:0;font-size:12px;font-weight:600;letter-spacing:.06em;
 }
-.video-source-row a,.video-source-row strong{color:var(--text);text-decoration:none;font-size:11px}
+.video-source-row a,.video-source-row strong{color:var(--text);text-decoration:none;font-size:12px}
 .video-source-row a:hover{color:var(--accent2)}
 .video-source-row>a+a,
 .video-source-row>strong+a{

@@ -148,7 +148,7 @@ export default function LogoPreferenceSystem() {
           max-width:310px;
           margin:5px 0 0;
           color:var(--muted);
-          font-size:10px;
+          font-size:12px;
           line-height:1.5;
         }
         .logo-preference-heading>span{
@@ -160,8 +160,8 @@ export default function LogoPreferenceSystem() {
           border-radius:999px;
           background:rgba(143,127,240,.08);
           color:#aaa1ef;
-          font-size:7px;
-          font-weight:750;
+          font-size:12px;
+          font-weight:600;
           letter-spacing:.09em;
         }
         .logo-preference-options{
@@ -212,8 +212,8 @@ export default function LogoPreferenceSystem() {
         .logo-preference-preview>strong{
           padding:0 5px;
           color:#f4f5f6;
-          font-size:8px;
-          font-weight:650;
+          font-size:12px;
+          font-weight:600;
           letter-spacing:-.02em;
           white-space:nowrap;
         }
@@ -229,8 +229,8 @@ export default function LogoPreferenceSystem() {
           display:block;
           overflow:hidden;
           color:var(--text);
-          font-size:10.5px;
-          font-weight:650;
+          font-size:12px;
+          font-weight:600;
           line-height:1.25;
           text-overflow:ellipsis;
           white-space:nowrap;
@@ -240,7 +240,7 @@ export default function LogoPreferenceSystem() {
           margin-top:4px;
           overflow:hidden;
           color:var(--soft);
-          font-size:8px;
+          font-size:12px;
           line-height:1.25;
           text-overflow:ellipsis;
           white-space:nowrap;
@@ -253,7 +253,7 @@ export default function LogoPreferenceSystem() {
           border:1px solid var(--line);
           border-radius:50%;
           color:transparent;
-          font-size:9px;
+          font-size:12px;
           font-style:normal;
         }
         .logo-preference-option.active>i{
@@ -269,12 +269,12 @@ export default function LogoPreferenceSystem() {
           background:#f0ecff;
         }
         @media(max-width:620px){
-          .logo-preference-heading p{font-size:11px}
+          .logo-preference-heading p{font-size:12px}
           .logo-preference-options{grid-template-columns:1fr}
           .logo-preference-option{min-height:70px;grid-template-columns:54px minmax(0,1fr) 20px;padding:9px 10px}
           .logo-preference-preview{width:54px;height:44px}
-          .logo-preference-copy>strong{font-size:11.5px}
-          .logo-preference-copy>small{font-size:9px}
+          .logo-preference-copy>strong{font-size:12px}
+          .logo-preference-copy>small{font-size:12px}
         }
       `}</style>
     </>

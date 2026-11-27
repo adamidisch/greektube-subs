@@ -5,8 +5,8 @@ export default function EditorProductionPolishEnhancer(){
     .gts-editor-title .gts-editor-kicker{font-size:0!important}
     .gts-editor-title .gts-editor-kicker::after{
       content:"VIDEO EDITOR";
-      font-size:8px;
-      font-weight:760;
+      font-size:12px;
+      font-weight:600;
       letter-spacing:.14em;
     }
   `}</style>;

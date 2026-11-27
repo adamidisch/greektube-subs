@@ -11,7 +11,7 @@
 .gts-editor-title .gts-editor-kicker::after {
   content: "VIDEO EDITOR";
   color: #9084ee;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: .13em;
 }

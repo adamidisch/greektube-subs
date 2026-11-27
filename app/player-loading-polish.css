@@ -34,7 +34,7 @@ html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-l
 html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading small{
   color:rgba(248,249,255,.9)!important;
   font-family:var(--font-ui),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
-  font-size:8.5px!important;
+  font-size:12px!important;
   font-weight:600!important;
   line-height:1!important;
   letter-spacing:.105em!important;
@@ -60,7 +60,7 @@ html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-l
     flex-basis:24px!important;
   }
   html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame .cover-loading small{
-    font-size:8px!important;
+    font-size:12px!important;
     letter-spacing:.1em!important;
   }
 }

@@ -110,7 +110,7 @@ html body footer.app-footer{
   .gts-standard-footer-description{font-size:13px}
   .gts-standard-footer-nav{gap:16px}
   .gts-standard-footer-nav a{font-size:13px}
-  .gts-standard-footer-meta{font-size:11.5px}
+  .gts-standard-footer-meta{font-size:12px}
 }
 
 /* Viewer already has its own closing rhythm. Do not stack footer margin on top of it. */

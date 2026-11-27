@@ -140,10 +140,10 @@ export default function SkipRangeTransferEnhancer(){
     </div>,target)}
     <style>{`
       .gts-range-transfer{margin-left:auto;display:flex;align-items:center;gap:6px}
-      .gts-range-transfer button{height:29px;padding:0 10px;border:1px solid rgba(255,255,255,.10);border-radius:8px;background:rgba(255,255,255,.035);color:#bfc3cc;font:600 10px/1 var(--font-geist-sans),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.01em;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease}
+      .gts-range-transfer button{height:29px;padding:0 10px;border:1px solid rgba(255,255,255,.10);border-radius:8px;background:rgba(255,255,255,.035);color:#bfc3cc;font:600 12px/1 var(--font-geist-sans),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.01em;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease}
       .gts-range-transfer button:hover{background:rgba(143,127,240,.09);border-color:rgba(143,127,240,.30);color:#fff}
       .gts-range-transfer button:disabled{opacity:.55;cursor:default}
-      @media(max-width:700px){.gts-editor-ranges .gts-editor-section-head{flex-wrap:wrap}.gts-range-transfer{order:3;width:100%;margin:7px 0 0}.gts-range-transfer button{flex:1;height:36px;font-size:11px}}
+      @media(max-width:700px){.gts-editor-ranges .gts-editor-section-head{flex-wrap:wrap}.gts-range-transfer{order:3;width:100%;margin:7px 0 0}.gts-range-transfer button{flex:1;height:36px;font-size:12px}}
     `}</style>
   </>;
 }

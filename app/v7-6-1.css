@@ -22,7 +22,7 @@
   line-height:1;
   color:#b3a9fa;
   font-family:var(--font-geist-mono);
-  font-size:10px;
+  font-size:12px;
   font-weight:600;
 }
 .guide-list.editorial-guide-list>button>i{
@@ -32,7 +32,7 @@
   border-radius:0;
   background:none;
   color:var(--soft);
-  font-size:10px;
+  font-size:12px;
   padding-top:3px;
 }
 
@@ -63,15 +63,15 @@ html[data-theme="light"] body .app-shell.app-shell.app-shell .settings-page sele
 
 /* v7.8.3 — typography normalization for player sections, moments and next-video cards */
 .section-title h2{font-size:15px!important;font-weight:600!important;letter-spacing:-.01em!important}
-.video-meta-kicker{font-size:11px!important;font-weight:450!important;letter-spacing:0!important}
+.video-meta-kicker{font-size:12px!important;font-weight:450!important;letter-spacing:0!important}
 .video-meta-kicker strong{font-size:13px!important;font-weight:600!important;color:var(--text)!important}
-.video-category-label{font-size:9.5px!important;font-weight:600!important;letter-spacing:.06em!important}
+.video-category-label{font-size:12px!important;font-weight:600!important;letter-spacing:.06em!important}
 .player-greek-title{font-size:20px!important;font-weight:600!important;line-height:1.25!important;letter-spacing:-.015em!important}
-.video-source-row{font-size:11px;font-weight:450}
-.video-source-row>span{font-size:9px;font-weight:600;letter-spacing:.06em}
-.video-source-row a,.video-source-row strong{font-size:11px;font-weight:500}
+.video-source-row{font-size:12px;font-weight:450}
+.video-source-row>span{font-size:12px;font-weight:600;letter-spacing:.06em}
+.video-source-row a,.video-source-row strong{font-size:12px;font-weight:500}
 .moment strong{font-size:13px!important;font-weight:600!important}
 .moment p{font-size:12px!important;font-weight:450!important}
-.moment-actions button{font-size:11px!important;font-weight:600!important}
+.moment-actions button{font-size:12px!important;font-weight:600!important}
 .card-info strong{font-size:13px!important;font-weight:600!important;line-height:1.35!important}
-.card-info span,.card-info small,.card-info p{font-size:11px!important;font-weight:450!important}
+.card-info span,.card-info small,.card-info p{font-size:12px!important;font-weight:450!important}

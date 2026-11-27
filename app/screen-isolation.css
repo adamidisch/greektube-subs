@@ -127,7 +127,7 @@ html[data-theme="light"] .player-opening-details>i{background:rgba(38,52,61,.1)}
   animation:gtsStartupSpin .8s linear infinite;
 }
 .player-cover .cover-loading small{
-  font-size:9px;font-weight:600;letter-spacing:.09em;
+  font-size:12px;font-weight:600;letter-spacing:.09em;
   text-shadow:0 2px 12px rgba(0,0,0,.55);
 }
 @keyframes gtsOpeningSpin{

@@ -23,7 +23,7 @@ html body .app-shell.app-shell.app-shell .brand-version::after{
   display:block!important;
   color:#f5f3ff!important;
   font-family:var(--font-geist-mono),monospace!important;
-  font-size:10px!important;
+  font-size:12px!important;
   font-weight:600!important;
   letter-spacing:.025em!important;
   line-height:1!important;
@@ -81,7 +81,7 @@ html body .app-shell.app-shell.app-shell .video-details::after{
   top:calc(50% + 42px)!important;
   transform:translateX(-50%)!important;
   color:var(--muted)!important;
-  font-size:9px!important;
+  font-size:12px!important;
   font-weight:600!important;
   letter-spacing:.09em!important;
   line-height:1!important;
@@ -99,7 +99,7 @@ html body .app-shell.app-shell.app-shell .video-details::after{
     min-height:21px!important;
     padding:0 7px!important;
   }
-  html body .app-shell.app-shell.app-shell:not(.viewer) .brand-version::after{font-size:9px!important}
+  html body .app-shell.app-shell.app-shell:not(.viewer) .brand-version::after{font-size:12px!important}
   html body .app-shell.app-shell.app-shell.viewer .brand-version{display:none!important}
   html body .app-shell.app-shell.app-shell .video-details::before{
     left:calc(50% - 22px)!important;
@@ -107,7 +107,7 @@ html body .app-shell.app-shell.app-shell .video-details::after{
     width:44px!important;
     height:44px!important;
   }
-  html body .app-shell.app-shell.app-shell .video-details::after{top:calc(50% + 38px)!important;font-size:8px!important}
+  html body .app-shell.app-shell.app-shell .video-details::after{top:calc(50% + 38px)!important;font-size:12px!important}
 }
 
 @media(prefers-reduced-motion:reduce){

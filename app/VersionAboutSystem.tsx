@@ -176,13 +176,13 @@ export default function VersionAboutSystem() {
           border-radius:10px;
           background:rgba(143,127,240,.055);
           color:#898f9c;
-          font-size:9px;
+          font-size:12px;
           letter-spacing:.08em;
           text-transform:uppercase;
         }
-        .mobile-version-label span{display:flex;align-items:center;gap:7px;font-weight:650}
+        .mobile-version-label span{display:flex;align-items:center;gap:7px;font-weight:600}
         .mobile-version-label span i{width:5px;height:5px;border-radius:50%;background:#9183ee;box-shadow:0 0 9px rgba(145,131,238,.42)}
-        .mobile-version-label strong{color:#b7b0e8;font-family:var(--font-geist-mono),monospace;font-size:9px;font-weight:600;letter-spacing:.02em}
+        .mobile-version-label strong{color:#b7b0e8;font-family:var(--font-geist-mono),monospace;font-size:12px;font-weight:600;letter-spacing:.02em}
         .mobile-version-label:active{background:rgba(143,127,240,.1)}
 
         .footer-version-label{
@@ -197,7 +197,7 @@ export default function VersionAboutSystem() {
           background:transparent;
           color:var(--soft);
           font-family:var(--font-geist-mono),monospace;
-          font-size:8px;
+          font-size:12px;
           letter-spacing:.025em;
           transition:border-color .16s ease,color .16s ease,background .16s ease;
         }
@@ -241,8 +241,8 @@ export default function VersionAboutSystem() {
           background:#19182a;
           color:#f1efff;
           font-family:var(--font-geist-mono),monospace;
-          font-size:8px;
-          font-weight:650;
+          font-size:12px;
+          font-weight:600;
           letter-spacing:.075em;
         }
         .version-about-pill i{width:5px;height:5px;border-radius:50%;background:#b9aeff;box-shadow:0 0 10px rgba(185,174,255,.68)}
@@ -283,18 +283,18 @@ export default function VersionAboutSystem() {
           box-shadow:0 7px 17px rgba(48,42,83,.16),inset 0 1px 0 rgba(255,255,255,.08);
         }
         .version-about-mark span{font-size:12px;transform:translateX(1px)}
-        .version-about-identity h2{margin:0;font-size:14px;font-weight:720;letter-spacing:-.025em}
-        .version-about-identity p{margin:3px 0 0;color:#656977;font-size:10px;line-height:1.3}
-        .version-about-current{padding:5px 7px;border-radius:8px;background:rgba(34,35,49,.07);color:#545768;font-family:var(--font-geist-mono),monospace;font-size:8px;font-weight:650}
+        .version-about-identity h2{margin:0;font-size:14px;font-weight:600;letter-spacing:-.025em}
+        .version-about-identity p{margin:3px 0 0;color:#656977;font-size:12px;line-height:1.3}
+        .version-about-current{padding:5px 7px;border-radius:8px;background:rgba(34,35,49,.07);color:#545768;font-family:var(--font-geist-mono),monospace;font-size:12px;font-weight:600}
 
         .version-about-section{margin-top:22px}
-        .version-about-kicker{display:block;margin-bottom:10px;color:#5f6070;font-size:8px;font-weight:760;letter-spacing:.115em}
+        .version-about-kicker{display:block;margin-bottom:10px;color:#5f6070;font-size:12px;font-weight:600;letter-spacing:.115em}
         .version-about-capabilities{display:grid;gap:3px}
         .version-about-capabilities article{display:grid;grid-template-columns:11px 1fr;gap:8px;padding:8px 5px;border-radius:10px}
         .version-about-capabilities article:hover{background:rgba(255,255,255,.18)}
         .version-about-capabilities article>i{width:5px;height:5px;margin-top:6px;border-radius:50%;background:#6958d4;box-shadow:0 0 0 3px rgba(105,88,212,.09)}
-        .version-about-capabilities strong{display:block;font-size:11.5px;font-weight:720;line-height:1.35}
-        .version-about-capabilities p{margin:2px 0 0;color:#545864;font-size:10px;line-height:1.47}
+        .version-about-capabilities strong{display:block;font-size:12px;font-weight:600;line-height:1.35}
+        .version-about-capabilities p{margin:2px 0 0;color:#545864;font-size:12px;line-height:1.47}
 
         .version-about-description{
           margin-top:17px;
@@ -304,24 +304,24 @@ export default function VersionAboutSystem() {
           background:rgba(255,255,255,.18);
         }
         .version-about-description .version-about-kicker{margin-bottom:7px}
-        .version-about-description p{margin:0;color:#3f424c;font-size:10.5px;line-height:1.62}
+        .version-about-description p{margin:0;color:#3f424c;font-size:12px;line-height:1.62}
         .version-about-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:0 2px;color:#6b6d76}
-        .version-about-footer span{font-size:9px;font-weight:700}
-        .version-about-footer small{font-family:var(--font-geist-mono),monospace;font-size:8px}
+        .version-about-footer span{font-size:12px;font-weight:600}
+        .version-about-footer small{font-family:var(--font-geist-mono),monospace;font-size:12px}
 
         @keyframes versionBackdropIn{from{opacity:0}to{opacity:1}}
         @keyframes versionCardIn{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
 
         @media(max-width:620px){
-          .footer-version-label{font-size:9px;min-height:30px;margin-top:7px}
+          .footer-version-label{font-size:12px;min-height:30px;margin-top:7px}
           .version-about-backdrop{align-items:end;padding:12px}
           .version-about-card{width:100%;max-height:calc(100dvh - 24px);padding:15px;border-radius:20px}
           .version-about-topline{margin-bottom:14px}
           .version-about-identity{grid-template-columns:38px minmax(0,1fr) auto;padding:11px}
           .version-about-section{margin-top:19px}
           .version-about-capabilities article{padding:7px 4px}
-          .version-about-capabilities strong{font-size:11.5px}
-          .version-about-capabilities p{font-size:10px;line-height:1.43}
+          .version-about-capabilities strong{font-size:12px}
+          .version-about-capabilities p{font-size:12px;line-height:1.43}
           .version-about-description{margin-top:14px}
           .version-about-footer{padding-bottom:max(2px,env(safe-area-inset-bottom))}
         }

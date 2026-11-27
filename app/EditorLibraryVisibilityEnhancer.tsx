@@ -96,7 +96,7 @@ export default function EditorLibraryVisibilityEnhancer(){
         button.dataset.adminDeleteVideo=id;
         button.textContent="Διαγραφή οριστικά";
         button.setAttribute("aria-label","Οριστική διαγραφή βίντεο");
-        Object.assign(button.style,{position:"absolute",right:"10px",bottom:"10px",zIndex:"8",padding:"8px 10px",borderRadius:"9px",border:"1px solid rgba(255,120,120,.35)",background:"rgba(65,20,24,.92)",color:"#ffd7d7",fontSize:"11px",fontWeight:"800",cursor:"pointer"});
+        Object.assign(button.style,{position:"absolute",right:"10px",bottom:"10px",zIndex:"8",padding:"8px 10px",borderRadius:"9px",border:"1px solid rgba(255,120,120,.35)",background:"rgba(65,20,24,.92)",color:"#ffd7d7",fontSize:"11px",fontWeight:"600",cursor:"pointer"});
         button.addEventListener("click",async event=>{
           event.preventDefault();event.stopPropagation();
           if(!window.confirm("Να διαγραφεί οριστικά αυτό το βίντεο; Η ενέργεια δεν αναιρείται."))return;
@@ -152,7 +152,7 @@ export default function EditorLibraryVisibilityEnhancer(){
         <button type="button" style={visible?activeStyle:idleStyle} disabled={loading} onClick={()=>void setLibraryVisible(true)}>ΟΡΑΤΟ</button>
         <button type="button" style={!visible?activeStyle:idleStyle} disabled={loading} onClick={()=>void setLibraryVisible(false)}>ΚΡΥΦΟ</button>
       </div>
-      {status&&<small style={{fontSize:11,lineHeight:1.45,color:"rgba(215,215,230,.62)"}}>{status}</small>}
+      {status&&<small style={{fontSize:12,lineHeight:1.45,color:"rgba(215,215,230,.62)"}}>{status}</small>}
     </div>,
     target,
   );

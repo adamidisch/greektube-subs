@@ -151,7 +151,7 @@ export default function OwnerSourceImportPanel({ videoId, playedTrack, onPreview
         .sourceImport h3{margin:0 0 5px;font-size:16px}
         .sourceImport p{margin:0;color:#c8c7cc;font-size:14px;line-height:1.45}
         .fileRow{display:flex;gap:8px;flex-wrap:wrap;min-width:0}
-        button{min-height:44px;max-width:100%;padding:8px 12px;border:0;border-radius:10px;font:inherit;font-size:14px;font-weight:650;overflow-wrap:anywhere;cursor:pointer}
+        button{min-height:44px;max-width:100%;padding:8px 12px;border:0;border-radius:10px;font:inherit;font-size:14px;font-weight:600;overflow-wrap:anywhere;cursor:pointer}
         .secondary{background:#2a2930;color:#f5f4f6}
         .publish{background:#f4b252;color:#1b1409}
         button:focus-visible{outline:2px solid #f4b252;outline-offset:2px}

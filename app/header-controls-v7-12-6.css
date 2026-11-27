@@ -288,7 +288,7 @@ html body .account-shell .account-identity {
 }
 html body .account-shell .account-identity>span {
   color:var(--muted);
-  font-size:11px;
+  font-size:12px;
   line-height:1.2;
 }
 html body .account-shell .account-identity>strong {

@@ -139,7 +139,7 @@ export default function MobileUXFixesEnhancer(){
     .next-video-row>button[data-gts-watched="1"]{display:none!important}
     .next-videos[data-gts-visible-count="0"]{display:none!important}
     .next-videos .section-title small[data-gts-count]{font-size:0!important}
-    .next-videos .section-title small[data-gts-count]::after{content:attr(data-gts-count);font-size:9px!important}
+    .next-videos .section-title small[data-gts-count]::after{content:attr(data-gts-count);font-size:12px!important}
     /* Use the accessible React label; do not append a second pseudo-element copy. */
 
     /* v7.9.0 — subtitles float over the image without a card/frame. */
@@ -190,7 +190,7 @@ export default function MobileUXFixesEnhancer(){
       }
       html body .viewer.viewer.viewer .gts31-owner-marker{height:20px!important}
       html body .viewer.viewer.viewer .gts31-owner-copy>strong{font-size:13px!important;line-height:1.2!important}
-      html body .viewer.viewer.viewer .gts31-owner-copy>small{font-size:11.5px!important;line-height:1.2!important}
+      html body .viewer.viewer.viewer .gts31-owner-copy>small{font-size:12px!important;line-height:1.2!important}
       html body .viewer.viewer.viewer .gts31-owner-actions{gap:6px!important}
       html body .viewer.viewer.viewer .gts31-owner-actions>button{
         width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important;border-radius:11px!important;
@@ -213,7 +213,7 @@ export default function MobileUXFixesEnhancer(){
         width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important;flex-basis:40px!important;border-radius:11px!important;
       }
       html body .viewer.viewer.viewer .gts31-skip>svg{width:18px!important;height:18px!important}
-      html body .viewer.viewer.viewer .gts31-skip>small{right:3px!important;bottom:2px!important;font-size:11.5px!important}
+      html body .viewer.viewer.viewer .gts31-skip>small{right:3px!important;bottom:2px!important;font-size:12px!important}
       html body .viewer.viewer.viewer .gts31-play-cluster .gts31-play{
         width:49px!important;min-width:49px!important;height:49px!important;min-height:49px!important;flex-basis:49px!important;border-radius:14px!important;
       }
@@ -233,7 +233,7 @@ export default function MobileUXFixesEnhancer(){
         min-width:0!important;width:100%!important;min-height:50px!important;gap:3px!important;padding:7px 3px!important;border-radius:10px!important;
       }
       html body .viewer.viewer.viewer .gts31-controls-row-2 .gts31-segment>svg{width:15px!important;height:15px!important;flex-basis:15px!important}
-      html body .viewer.viewer.viewer .gts31-controls-row-2 .gts31-segment>span{display:block!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:11.5px!important;line-height:1.05!important}
+      html body .viewer.viewer.viewer .gts31-controls-row-2 .gts31-segment>span{display:block!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:12px!important;line-height:1.05!important}
 
       html body .viewer.viewer.viewer .watch-layout.watch-layout .video-frame:not(.pseudo-fullscreen){
         border-radius:17px!important;

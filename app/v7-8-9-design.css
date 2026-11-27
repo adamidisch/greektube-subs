@@ -28,7 +28,7 @@
 }
 .viewer .player-original-title{
   font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
-  font-size:11px!important;
+  font-size:12px!important;
   font-weight:450!important;
   color:var(--muted)!important;
 }
