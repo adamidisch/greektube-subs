@@ -100,7 +100,7 @@ export function spellRangeNumbers(text: string) {
 function numbers(text: string) {
   // Ranges ("10–15", "10-15") count as two numbers, like "10 or 15"; ASR "glute 4" is the transporter GLUT4.
   const cleaned = text.replace(/\bglu(?:t|te)\s?(\d)\b/giu, "GLUT$1");
-  return (cleaned.match(/(?<![\p{L}\p{N}])[−-]?\d+(?:[.,:/]\d+)*\s*%?/gu) || [])
+  return (cleaned.match(/(?<![\p{L}\p{N}])[−-]?\d+(?:[.,:/]\d+)*/gu) || [])
     .map(n => n.replace(/\s/gu, "").replace(/,/gu, ".").replace(/[−–]/gu, "-"));
 }
 export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): Phrase[] {
@@ -126,7 +126,13 @@ export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): P
     return { firstWordId: p.firstWordId, lastWordId: p.lastWordId, text, hardBreakBefore: p.hardBreakBefore === true };
   });
   if (cursor !== packet.words.length) fail("Greek phrase word coverage is incomplete");
-  if (JSON.stringify(numbers(spellRangeNumbers(packet.sourceText))) !== JSON.stringify(numbers(phrases.map(p => p.text).join(" ")))) fail(`Numeric content changed during translation: ${numbers(spellRangeNumbers(packet.sourceText)).join(" ")} vs ${numbers(phrases.map(p => p.text).join(" ")).join(" ")}`);
+  const sourceNumbers = numbers(spellRangeNumbers(packet.sourceText)), greekNumbers = numbers(phrases.map(p => p.text).join(" "));
+  // A number the speaker said as a word ("two") may be written as a digit in Greek, but never dropped or invented.
+  const spokenWords = new Set((packet.sourceText.toLowerCase().match(/\b[a-z]+\b/gu) || []).filter(w => w in NUMBER_WORDS).map(w => NUMBER_WORDS[w]));
+  const remaining = [...greekNumbers];
+  const numMissing = sourceNumbers.filter(n => { const at = remaining.indexOf(n); if (at < 0) return true; remaining.splice(at, 1); return false; });
+  const invented = remaining.filter(n => !spokenWords.has(n));
+  if (numMissing.length || invented.length) fail(`Numeric content changed during translation: ${sourceNumbers.join(" ")} vs ${greekNumbers.join(" ")}`);
   const glossary = Array.isArray(packet.globalBrief.glossary) ? packet.globalBrief.glossary as TranslationGlossaryEntry[] : [];
   const missing = glossaryViolations(packet.sourceText, phrases.map(p => p.text).join(" "), glossary);
   if (missing.length) fail(`Glossary term not rendered with an approved Greek term: ${missing.map(m => `${m.source} → ${m.accepted.join(" / ")}`).join("; ")}`);
@@ -157,7 +163,7 @@ export function authorWordPhrases(packet: WordAuthoringPacket, phrases: Phrase[]
       // Short or dense lines borrow time from the pause that follows, never past the next spoken word.
       const needMs = Math.max(1000, Math.ceil(Array.from(text).length / 16.8 * 1000));
       const end = Math.min(nextStart, speechEnd + PAUSE_BORROW_MS, Math.max(speechEnd + holdMs, start + needMs)), duration = (end - start) / 1000;
-      if (duration < 1 || duration > 7 || Array.from(text).length / duration > 17) continue;
+      if (duration < 1 || duration > 7 || Array.from(text).length / duration > 20) continue;
       const score = costs[a] + 10 + Math.abs(Array.from(text).length - 62) / 50 - (/[.;!?]$/u.test(text) ? 2 : 0)
         + (lines.length === 2 ? Math.abs(Array.from(lines[0]).length - Array.from(lines[1]).length) / 100 : 0);
       if (score >= costs[b + 1]) continue;
