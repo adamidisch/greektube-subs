@@ -142,9 +142,11 @@ export function parseWordPhrases(value: unknown, packet: WordAuthoringPacket): P
 /** Dynamic programming over whole semantic phrases; English anchors determine every boundary. */
 export function authorWordPhrases(packet: WordAuthoringPacket, phrases: Phrase[], holdMs = 250): SubtitleEvent[] {
   // Fast speakers: after the normal reading speed fails, accept a denser line instead of holding the whole video back.
-  try { return authorWordPhrasesAt(packet, phrases, holdMs, 20); } catch (error) { try { return authorWordPhrasesAt(packet, phrases, holdMs, 26); } catch { throw error; } }
+  try { return authorWordPhrasesAt(packet, phrases, holdMs, 20, 1, 600); } catch (error) {
+    try { return authorWordPhrasesAt(packet, phrases, holdMs, 26, 0.5, 1500); } catch { throw error; }
+  }
 }
-function authorWordPhrasesAt(packet: WordAuthoringPacket, phrases: Phrase[], holdMs: number, maxCps: number): SubtitleEvent[] {
+function authorWordPhrasesAt(packet: WordAuthoringPacket, phrases: Phrase[], holdMs: number, maxCps: number, minDuration: number, maxGapMs: number): SubtitleEvent[] {
   const indexes = new Map(packet.words.map((word, index) => [word.wordId, index]));
   const costs = Array(phrases.length + 1).fill(Infinity) as number[];
   const paths: ({ previous: number; event: SubtitleEvent } | undefined)[] = Array(phrases.length + 1);
@@ -156,7 +158,7 @@ function authorWordPhrasesAt(packet: WordAuthoringPacket, phrases: Phrase[], hol
       const first = indexes.get(phrases[a].firstWordId)!, last = indexes.get(phrases[b].lastWordId)!;
       if (b > a) {
         const previous = indexes.get(phrases[b - 1].lastWordId)!;
-        if (phrases[b].hardBreakBefore || packet.words[indexes.get(phrases[b].firstWordId)!].startMs - packet.words[previous].endMs > 600) break;
+        if (phrases[b].hardBreakBefore || packet.words[indexes.get(phrases[b].firstWordId)!].startMs - packet.words[previous].endMs > maxGapMs) break;
       }
       text = normalise(`${text} ${phrases[b].text}`);
       if (Array.from(text).length > 84) break;
@@ -167,7 +169,7 @@ function authorWordPhrasesAt(packet: WordAuthoringPacket, phrases: Phrase[], hol
       // Short or dense lines borrow time from the pause that follows, never past the next spoken word.
       const needMs = Math.max(1000, Math.ceil(Array.from(text).length / 16.8 * 1000));
       const end = Math.min(nextStart, speechEnd + PAUSE_BORROW_MS, Math.max(speechEnd + holdMs, start + needMs)), duration = (end - start) / 1000;
-      if (duration < 1 || duration > 7 || Array.from(text).length / duration > maxCps) continue;
+      if (duration < minDuration || duration > 7 || Array.from(text).length / duration > maxCps) continue;
       const score = costs[a] + 10 + Math.abs(Array.from(text).length - 62) / 50 - (/[.;!?]$/u.test(text) ? 2 : 0)
         + (lines.length === 2 ? Math.abs(Array.from(lines[0]).length - Array.from(lines[1]).length) / 100 : 0);
       if (score >= costs[b + 1]) continue;
