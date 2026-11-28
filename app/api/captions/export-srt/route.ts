@@ -1,7 +1,7 @@
 import { rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { getTranscript, TRANSCRIPT_VERSION } from "../../shared-cache";
-import { fetchSupadataTranscript } from "../../supadata";
+import { fetchSupadataTranscript, SupadataLimitError } from "../../supadata";
 
 // Read-only export for the PRO translation workflow. This route never writes
 // to video_transcripts, never acquires a processing lock, and never calls a
@@ -66,7 +66,17 @@ export async function GET(request: Request) {
       // No cached transcript yet (brand-new video): fetch the English
       // source directly. This never touches video_transcripts or the
       // processing lock — it is a plain read for export purposes only.
-      const source = await fetchSupadataTranscript(videoId).catch(() => null);
+      let source: { cues: { start: number; duration: number; text: string }[] } | null = null;
+      try {
+        source = await fetchSupadataTranscript(videoId);
+      } catch (error) {
+        if (error instanceof SupadataLimitError) {
+          return NextResponse.json(
+            { error: "Έφτασε το ημερήσιο όριο για τα transcripts. Δοκίμασε αύριο." },
+            { status: 429, headers: { "Cache-Control": "no-store" } },
+          );
+        }
+      }
       if (source?.cues.length) cues = source.cues;
     }
 

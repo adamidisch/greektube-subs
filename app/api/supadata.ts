@@ -1,3 +1,4 @@
+import { database } from "@/db/postgres";
 export type SupadataCue = {
   start: number;
   duration: number;
@@ -102,7 +103,78 @@ async function pollJob(jobId: string, key: string) {
   throw new Error("Supadata transcript job timed out");
 }
 
-export async function fetchSupadataTranscript(videoId: string): Promise<SupadataTranscript> {
+// Cost guard. Every Supadata transcript call is a paid credit, so:
+// 1. a video whose English source is already stored is never fetched again;
+// 2. new fetches are capped per UTC day (SUPADATA_DAILY_LIMIT, default 5);
+// 3. if the database is unreachable the cap fails closed, so no credit is spent blind.
+const DAILY_LIMIT = Math.max(1, Number(process.env.SUPADATA_DAILY_LIMIT) || 5);
+let guardTablesReady = false;
+
+export class SupadataLimitError extends Error {
+  constructor() {
+    super("Supadata daily limit reached");
+    this.name = "SupadataLimitError";
+  }
+}
+
+async function ensureGuardTables() {
+  if (guardTablesReady) return;
+  const db = database();
+  await db.query(`CREATE TABLE IF NOT EXISTS supadata_source_cache (
+    video_id text PRIMARY KEY,
+    lang text NOT NULL,
+    cues jsonb NOT NULL,
+    fetched_at timestamptz NOT NULL DEFAULT now()
+  )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS supadata_daily_usage (
+    day date PRIMARY KEY,
+    calls integer NOT NULL DEFAULT 0
+  )`);
+  guardTablesReady = true;
+}
+
+async function readStoredSource(videoId: string): Promise<SupadataTranscript | null> {
+  try {
+    await ensureGuardTables();
+    const rows = (await database().query(
+      `SELECT lang, cues FROM supadata_source_cache WHERE video_id = $1`,
+      [videoId],
+    )) as { lang: string; cues: SupadataCue[] }[];
+    const row = rows[0];
+    if (!row || !Array.isArray(row.cues) || !row.cues.length) return null;
+    return { lang: row.lang, cues: row.cues };
+  } catch {
+    return null;
+  }
+}
+
+async function storeSource(videoId: string, transcript: SupadataTranscript) {
+  try {
+    await database().query(
+      `INSERT INTO supadata_source_cache (video_id, lang, cues) VALUES ($1, $2, $3::jsonb)
+       ON CONFLICT (video_id) DO NOTHING`,
+      [videoId, transcript.lang, JSON.stringify(transcript.cues)],
+    );
+  } catch {
+    // Storing is best effort: the transcript was already paid for and is returned to the caller.
+  }
+}
+
+async function reserveDailyCall() {
+  await ensureGuardTables();
+  // Atomic: the counter only moves while it is under the limit, so a blocked
+  // request does not keep inflating the number.
+  const rows = (await database().query(
+    `INSERT INTO supadata_daily_usage (day, calls) VALUES (CURRENT_DATE, 1)
+     ON CONFLICT (day) DO UPDATE SET calls = supadata_daily_usage.calls + 1
+     WHERE supadata_daily_usage.calls < $1
+     RETURNING calls`,
+    [DAILY_LIMIT],
+  )) as { calls: number }[];
+  if (!rows.length) throw new SupadataLimitError();
+}
+
+async function fetchSupadataTranscriptUncached(videoId: string): Promise<SupadataTranscript> {
   const key = apiKey();
   const endpoint = new URL(API_BASE);
   endpoint.searchParams.set("url", `https://www.youtube.com/watch?v=${videoId}`);
@@ -130,6 +202,15 @@ export async function fetchSupadataTranscript(videoId: string): Promise<Supadata
   const payload = await response.json() as SupadataResult;
   const transcript = transcriptFromPayload(payload);
   if (!transcript) throw new Error("Supadata returned an empty native transcript");
+  return transcript;
+}
+
+export async function fetchSupadataTranscript(videoId: string): Promise<SupadataTranscript> {
+  const stored = await readStoredSource(videoId);
+  if (stored) return stored;
+  await reserveDailyCall();
+  const transcript = await fetchSupadataTranscriptUncached(videoId);
+  await storeSource(videoId, transcript);
   return transcript;
 }
 
