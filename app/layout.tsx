@@ -66,6 +66,7 @@ import "./ui-settings-v7-34-0.css";
 import "./ui-player-v7-35-0.css";
 import "./ui-loading-v7-36-0.css";
 import "./player-controls-below-7-40-6.css";
+import "./cue-edit-premium-7-40-8.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

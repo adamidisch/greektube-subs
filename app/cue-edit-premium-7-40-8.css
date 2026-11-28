@@ -1,0 +1,32 @@
+/* v7.40.8 — Διόρθωση υπότιτλου: κεντρικό premium παράθυρο (ίδιο στυλ με τα υπόλοιπα pop-ups). */
+.cue-edit-backdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:16px;background:rgba(6,7,12,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cue-edit-fade .18s ease-out}
+.cue-edit-card{width:min(540px,100%);box-sizing:border-box;padding:20px 22px 18px;border-radius:16px;border:1px solid rgba(124,116,224,.35);background:linear-gradient(180deg,#1a1c25 0%,#14161d 100%);color:#eceef4;box-shadow:0 24px 70px rgba(0,0,0,.5);font-family:Inter,system-ui,sans-serif;animation:cue-edit-rise .22s cubic-bezier(.2,.8,.2,1)}
+.cue-edit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.cue-edit-kicker{margin:0 0 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#c79a5d}
+.cue-edit-title{margin:0;font-size:17px;font-weight:600;color:#f3f4f8}
+.cue-edit-close{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#c9ccd6;font-size:18px;line-height:1;cursor:pointer}
+.cue-edit-close:hover{background:rgba(255,255,255,.1)}
+.cue-edit-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.cue-edit-chip{padding:4px 9px;border-radius:999px;font-size:12px;color:#cfd3dd;background:rgba(124,116,224,.14);border:1px solid rgba(124,116,224,.28);font-variant-numeric:tabular-nums}
+.cue-edit-chip.cps{color:#e4cfa7;background:rgba(199,154,93,.12);border-color:rgba(199,154,93,.3)}
+.cue-edit-area{width:100%;min-height:92px;resize:vertical;box-sizing:border-box;padding:11px 12px;border-radius:12px;border:1px solid rgba(124,116,224,.45);background:rgba(255,255,255,.03);color:#f3f4f8;font:inherit;font-size:15px;line-height:1.5;outline:none}
+.cue-edit-area:focus{border-color:#a59ef5;box-shadow:0 0 0 3px rgba(124,116,224,.22)}
+.cue-edit-area:disabled{opacity:.6}
+.cue-edit-error{margin:8px 0 0;font-size:12.5px;color:#ff9b93}
+.cue-edit-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;flex-wrap:wrap}
+.cue-edit-count{font-size:12px;color:#8e93a3}
+.cue-edit-actions{display:flex;gap:8px}
+.cue-edit-btn{height:34px;padding:0 14px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:background .15s ease,opacity .15s ease}
+.cue-edit-btn:disabled{opacity:.5;cursor:default}
+.cue-edit-btn.ghost{background:transparent;border-color:rgba(255,255,255,.14);color:#cfd3dd}
+.cue-edit-btn.ghost:hover:not(:disabled){background:rgba(255,255,255,.06)}
+.cue-edit-btn.solid{background:#7c74e0;color:#fff}
+.cue-edit-btn.solid:hover:not(:disabled){background:#8f87ea}
+@keyframes cue-edit-fade{from{opacity:0}to{opacity:1}}
+@keyframes cue-edit-rise{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.cue-edit-backdrop,.cue-edit-card{animation:none}}
+html[data-theme="light"] .cue-edit-card{background:#ffffff;color:#1b1d24;border-color:rgba(124,116,224,.3)}
+html[data-theme="light"] .cue-edit-title{color:#1b1d24}
+html[data-theme="light"] .cue-edit-area{background:#fbfbfd;color:#1b1d24}
+html[data-theme="light"] .cue-edit-close{color:#3b3f4d;background:#f3f4f8}
+html[data-theme="light"] .cue-edit-btn.ghost{color:#3b3f4d;border-color:rgba(0,0,0,.14)}

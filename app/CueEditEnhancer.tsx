@@ -1,24 +1,36 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useEffect,useRef,useState} from "react";
 
 type Cue={start?:number;duration?:number;text?:string};
 type Track={origin?:string;events?:{text?:string;sourceIndices?:number[]}[]};
 type Captions={transcriptVersion?:number;cues?:Cue[];subtitleTrack?:Track};
-type Edit={videoId:string;cueIndex:number;version:number;expected:string;top:number;left:number;width:number};
+type Edit={videoId:string;cueIndex:number;version:number;expected:string;start:number;duration:number};
+type Target={index:number;element:HTMLElement};
 
 function currentVideoId(){return new URLSearchParams(location.search).get("video")||"";}
 function pausePlayer(){document.querySelector<HTMLButtonElement>('.gtp-play[aria-label="Παύση"],.play-toggle[aria-label="Παύση"]')?.click();}
+function clock(seconds:number){const s=Math.max(0,Math.floor(seconds));return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;}
 
-/** Owner-only: double-click a Greek subtitle (on the video or in the transcript) to correct its wording. */
+/** Owner-only: right-click (or double-click) a Greek subtitle on the video or in the transcript to correct its wording. */
 export default function CueEditEnhancer(){
   const [edit,setEdit]=useState<Edit|null>(null);
   const [text,setText]=useState("");
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
+  const allowedRef=useRef(false);
+  const openRef=useRef<(target:Target)=>void>(()=>{});
+
+  useEffect(()=>{
+    let cancelled=false;
+    fetch("/api/admin-auth",{cache:"no-store",credentials:"same-origin"})
+      .then(r=>r.ok?r.json():null).catch(()=>null)
+      .then(auth=>{if(!cancelled)allowedRef.current=Boolean((auth as {authorized?:boolean}|null)?.authorized);});
+    return()=>{cancelled=true;};
+  },[]);
 
   useEffect(()=>{
     // The display event under the pointer: a transcript row, or the subtitle shown on the video (it ignores pointer events).
-    const targetFor=(event:MouseEvent)=>{
+    const targetFor=(event:MouseEvent):Target|null=>{
       const row=(event.target as Element|null)?.closest<HTMLElement>(".transcript-event button[data-seek]");
       if(row)return {index:Number(row.dataset.seek),element:row};
       const overlay=document.querySelector<HTMLElement>(".subtitles[data-event]");
@@ -27,27 +39,44 @@ export default function CueEditEnhancer(){
       if(event.clientX<r.left-8||event.clientX>r.right+8||event.clientY<r.top-8||event.clientY>r.bottom+8)return null;
       return {index:Number(overlay.dataset.event),element:overlay};
     };
-    const dblclick=async(event:MouseEvent)=>{
-      const target=targetFor(event),videoId=currentVideoId();
-      if(!target||!videoId||!Number.isInteger(target.index)||target.index<0)return;
-      event.preventDefault();event.stopPropagation();
-      const auth=await fetch("/api/admin-auth",{cache:"no-store",credentials:"same-origin"}).then(r=>r.ok?r.json():null).catch(()=>null) as {authorized?:boolean}|null;
-      if(!auth?.authorized)return;
+    const openEdit=async(target:Target)=>{
+      const videoId=currentVideoId();
+      if(!videoId||!Number.isInteger(target.index)||target.index<0)return;
       pausePlayer();
-      const rect=target.element.getBoundingClientRect();
       const response=await fetch(`/api/captions?videoId=${encodeURIComponent(videoId)}&includeEnglish=1&edit=${Date.now()}`,{cache:"no-store"}).catch(()=>null);
       const record=response?.ok?await response.json() as Captions:null;
       const events=record?.subtitleTrack?.origin==="authored"?record.subtitleTrack.events:undefined;
       const mapped=events?events[target.index]?.sourceIndices:[target.index];
       const cueIndex=mapped?.length===1?mapped[0]:-1;
-      const expected=String(record?.cues?.[cueIndex]?.text||"");
+      const cue=record?.cues?.[cueIndex];
+      const expected=String(cue?.text||"");
       setText(expected);setBusy(false);
       setError(!record||!Number.isFinite(record.transcriptVersion)?"Δεν φορτώθηκαν οι υπότιτλοι. Δοκίμασε ξανά.":cueIndex<0||!expected?"Αυτός ο υπότιτλος δεν αλλάζει μόνος του.":"");
-      setEdit({videoId,cueIndex,version:Number(record?.transcriptVersion),expected,top:rect.bottom+8,left:rect.left,width:rect.width});
+      setEdit({videoId,cueIndex,version:Number(record?.transcriptVersion),expected,start:Number(cue?.start||0),duration:Number(cue?.duration||0)});
     };
-    const listener=(event:MouseEvent)=>{void dblclick(event);};
-    document.addEventListener("dblclick",listener,true);
-    return()=>document.removeEventListener("dblclick",listener,true);
+    openRef.current=target=>{void openEdit(target);};
+    const onDoubleClick=(event:MouseEvent)=>{
+      if(!allowedRef.current)return;
+      const target=targetFor(event);
+      if(!target)return;
+      event.preventDefault();event.stopPropagation();
+      openRef.current(target);
+    };
+    // Capture phase: for the owner the subtitle right-click opens the correction instead of the save-moment menu.
+    // Everyone else gets the normal browser menu, because the handler returns before preventDefault.
+    const onContextMenu=(event:MouseEvent)=>{
+      if(!allowedRef.current)return;
+      const target=targetFor(event);
+      if(!target)return;
+      event.preventDefault();event.stopPropagation();
+      openRef.current(target);
+    };
+    document.addEventListener("dblclick",onDoubleClick,true);
+    document.addEventListener("contextmenu",onContextMenu,true);
+    return()=>{
+      document.removeEventListener("dblclick",onDoubleClick,true);
+      document.removeEventListener("contextmenu",onContextMenu,true);
+    };
   },[]);
 
   async function save(){
@@ -64,10 +93,35 @@ export default function CueEditEnhancer(){
   }
 
   if(!edit)return null;
-  const width=Math.max(320,Math.min(edit.width,560));
-  return <div role="dialog" aria-label="Διόρθωση ελληνικού υπότιτλου" onMouseDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()} onDoubleClick={event=>event.stopPropagation()} style={{position:"fixed",zIndex:10000,top:Math.max(8,Math.min(edit.top,window.innerHeight-200)),left:Math.max(8,Math.min(edit.left,window.innerWidth-width-8)),width:`min(${width}px, calc(100vw - 16px))`,padding:12,border:"1px solid rgba(143,127,240,.38)",borderRadius:12,background:"#15151a",boxShadow:"0 18px 60px rgba(0,0,0,.45)"}}>
-    <textarea autoFocus value={text} disabled={busy||edit.cueIndex<0} aria-label="Κείμενο υπότιτλου" onChange={event=>{setText(event.target.value);setError("")}} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();setEdit(null)}else if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();void save();}}} style={{width:"100%",minHeight:76,resize:"vertical",border:"1px solid rgba(179,169,250,.55)",borderRadius:8,outline:"none",background:"rgba(255,255,255,.04)",color:"#f5f4fb",font:"inherit",fontSize:16,lineHeight:1.45,padding:"9px 10px"}}/>
-    {error&&<div role="alert" style={{marginTop:6,color:"#ff8e86",fontSize:12}}>{error}</div>}
-    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}><button type="button" className="secondary compact" disabled={busy} onClick={()=>setEdit(null)}>Ακύρωση</button><button type="button" className="primary compact" disabled={busy||edit.cueIndex<0} onClick={()=>void save()}>{busy?"Αποθήκευση…":"Αποθήκευση"}</button></div>
+  const canSave=!busy&&edit.cueIndex>=0&&text.trim().length>0;
+  const cps=edit.duration>0?(text.length/edit.duration).toFixed(1):"";
+  return <div className="cue-edit-backdrop" onMouseDown={()=>setEdit(null)}>
+    <div role="dialog" aria-modal="true" aria-label="Διόρθωση ελληνικού υπότιτλου" className="cue-edit-card" onMouseDown={event=>event.stopPropagation()} onClick={event=>event.stopPropagation()} onDoubleClick={event=>event.stopPropagation()}>
+      <header className="cue-edit-head">
+        <div>
+          <p className="cue-edit-kicker">Διόρθωση υπότιτλου</p>
+          <h2 className="cue-edit-title">Ελληνικός υπότιτλος</h2>
+        </div>
+        <button type="button" className="cue-edit-close" aria-label="Κλείσιμο" onClick={()=>setEdit(null)}>×</button>
+      </header>
+      <div className="cue-edit-meta">
+        <span className="cue-edit-chip">{clock(edit.start)} – {clock(edit.start+edit.duration)}</span>
+        {cps&&<span className="cue-edit-chip cps">{cps} χαρ./δευτ.</span>}
+      </div>
+      <textarea className="cue-edit-area" autoFocus value={text} disabled={busy||edit.cueIndex<0} aria-label="Κείμενο υπότιτλου"
+        onChange={event=>{setText(event.target.value);setError("")}}
+        onKeyDown={event=>{
+          if(event.key==="Escape"){event.preventDefault();setEdit(null);}
+          else if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();void save();}
+        }}/>
+      {error&&<p role="alert" className="cue-edit-error">{error}</p>}
+      <footer className="cue-edit-foot">
+        <span className="cue-edit-count">{text.length} χαρακτήρες · Enter για αποθήκευση</span>
+        <div className="cue-edit-actions">
+          <button type="button" className="cue-edit-btn ghost" disabled={busy} onClick={()=>setEdit(null)}>Ακύρωση</button>
+          <button type="button" className="cue-edit-btn solid" disabled={!canSave} onClick={()=>void save()}>{busy?"Αποθήκευση…":"Αποθήκευση"}</button>
+        </div>
+      </footer>
+    </div>
   </div>;
 }
